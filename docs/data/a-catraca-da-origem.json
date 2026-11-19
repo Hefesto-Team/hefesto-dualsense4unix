@@ -51,7 +51,7 @@
       "data": "2026-11-19",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 956,
+      "piso": 955,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -82,7 +82,7 @@
         "core/sysfs_leds.py": 7,
         "core/system_check.py": 2,
         "daemon/battery_journal.py": 2,
-        "daemon/connection.py": 34,
+        "daemon/connection.py": 33,
         "daemon/ganho_da_haptica.py": 5,
         "daemon/ipc_handlers.py": 71,
         "daemon/ipc_rumble_policy.py": 2,
@@ -253,20 +253,20 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 436
+      "universo": 437
     },
     "tamanho": {
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1273201,
+      "piso": 1273970,
       "por_item": {
-        "docs": 107174,
+        "docs": 107176,
         "scripts": 114765,
-        "src": 323306,
-        "tests": 727956
+        "src": 323553,
+        "tests": 728476
       },
-      "razao": "tamanho: +358 linhas (1272843 -> 1273201), pagas por Origem: D-1911-O-COMANDO-DO-EVENTO-E-DO-COMPUTADOR; registrado no fecho, topo 60c44b986678",
+      "razao": "tamanho: +769 linhas (1273201 -> 1273970), pagas por Origem: D-1911-A-ABERTURA-QUE-FALHA-ESPERA-O-RECUO, D-1911-O-LACO-QUE-MORRE-OU-TRAVA-VOLTA-SOZINHO; registrado no fecho, topo d5112e475f38",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2097,10 +2097,16 @@
           "de": 1272843,
           "para": 1273201,
           "razao": "tamanho: +358 linhas (1272843 -> 1273201), pagas por Origem: D-1911-O-COMANDO-DO-EVENTO-E-DO-COMPUTADOR; registrado no fecho, topo 60c44b986678"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1273201,
+          "para": 1273970,
+          "razao": "tamanho: +769 linhas (1273201 -> 1273970), pagas por Origem: D-1911-A-ABERTURA-QUE-FALHA-ESPERA-O-RECUO, D-1911-O-LACO-QUE-MORRE-OU-TRAVA-VOLTA-SOZINHO; registrado no fecho, topo d5112e475f38"
         }
       ],
       "unidade": "linhas",
-      "universo": 3538
+      "universo": 3540
     }
   }
 }
