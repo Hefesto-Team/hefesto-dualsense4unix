@@ -5,6 +5,7 @@ entrada; o que ainda escapar do pedido vira recusa com uma linha no diário.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -64,15 +65,13 @@ def test_o_fracionario_cabe_so_nos_tipos_de_ponto_flutuante() -> None:
 
 
 def test_o_erro_que_escapa_do_pedido_vira_recusa_com_linha_no_diario(
-        filho, tmp_path, monkeypatch) -> None:  # noqa: F811
+        filho, tmp_path, monkeypatch, caplog) -> None:  # noqa: F811
     proc, valor, _ = filho
     servico = _servico(proc.pid, tmp_path)
-    avisos: list[tuple[str, dict[str, Any]]] = []
-    monkeypatch.setattr(leitor.logger, "warning",
-                        lambda evento, **campos: avisos.append((evento, campos)))
     original = leitor.processo_do_jogo
     monkeypatch.setattr(leitor, "processo_do_jogo", lambda *a: 1 / 0)
-    assert "recusa" in servico.atender({"verbo": "varrer", "tipo": "i32", "valor": 7})
-    assert avisos and avisos[0][1]["verbo"] == "varrer"
+    with caplog.at_level(logging.WARNING, logger=leitor.logger.name):
+        assert "recusa" in servico.atender({"verbo": "varrer", "tipo": "i32", "valor": 7})
+    assert [r.exc_info[0] for r in caplog.records if r.exc_info] == [ZeroDivisionError]
     monkeypatch.setattr(leitor, "processo_do_jogo", original)
     assert servico.atender(_ler(valor))["valores"]["vida"] == VALOR

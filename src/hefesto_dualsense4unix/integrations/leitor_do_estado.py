@@ -16,6 +16,7 @@ import ctypes
 import ctypes.util
 import errno
 import json
+import logging
 import os
 import re
 import secrets
@@ -30,9 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.utils.logging_config import get_logger
-
-logger = get_logger(__name__)
+logger = logging.getLogger("hefesto_dualsense4unix.integrations.leitor_do_estado")
 
 HZ_MAXIMO = 30
 ENTRADAS_POR_RECEITA = 64
@@ -523,7 +522,7 @@ class ServicoDoLeitor:
         except LeituraRecusadaError as exc:
             return {"recusa": exc.frase}
         except Exception:
-            logger.warning("leitor_pedido_recusado", verbo=str(pedido.get("verbo")),
+            logger.warning("pedido «%s» recusado pelo leitor", pedido.get("verbo"),
                            exc_info=True)
             return {"recusa": "O pedido não tem a forma declarada."}
 
