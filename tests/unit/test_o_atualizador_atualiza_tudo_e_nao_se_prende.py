@@ -197,6 +197,12 @@ def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar(
     assert servico == ["reiniciar", "reabrir"] * 2
 
 
+def test_o_reinicio_pronto_fica_gravado() -> None:
+    andamento = at._Andamento([], {}, {})
+    at._rodar_o_servico(andamento, lambda: True, lambda: True)
+    assert at._ler_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO)["reinicio"]["selo"] == at.PRONTA
+
+
 def test_o_pedido_de_tentar_roda_de_novo_a_peca_que_falhou_com_a_fila_viva() -> None:
     d = _Diario()
     steam = {"aberta": True}
