@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1270764,
+      "piso": 1271411,
       "por_item": {
-        "docs": 107126,
-        "scripts": 114707,
-        "src": 322669,
-        "tests": 726262
+        "docs": 107131,
+        "scripts": 114765,
+        "src": 322852,
+        "tests": 726663
       },
-      "razao": "tamanho: +275 linhas (1270489 -> 1270764), pagas por Origem: D-1911-O-RADIO-COLADO-PEDE-UM-ADAPTADOR-NO-PAR, D-3009-O-TETO-DA-BUSCA; registrado no fecho, topo d60b5b855d29",
+      "razao": "tamanho: +647 linhas (1270764 -> 1271411), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-1911-O-GRUB-MUDA-SO-O-VALOR-DA-LINHA, D-1911-O-MODULO-DA-CASA-E-A-COPIA-QUE-O-DKMS-GUARDA; registrado no fecho, topo 2aa43de32105",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2067,10 +2067,16 @@
           "de": 1270489,
           "para": 1270764,
           "razao": "tamanho: +275 linhas (1270489 -> 1270764), pagas por Origem: D-1911-O-RADIO-COLADO-PEDE-UM-ADAPTADOR-NO-PAR, D-3009-O-TETO-DA-BUSCA; registrado no fecho, topo d60b5b855d29"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1270764,
+          "para": 1271411,
+          "razao": "tamanho: +647 linhas (1270764 -> 1271411), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-1911-O-GRUB-MUDA-SO-O-VALOR-DA-LINHA, D-1911-O-MODULO-DA-CASA-E-A-COPIA-QUE-O-DKMS-GUARDA; registrado no fecho, topo 2aa43de32105"
         }
       ],
       "unidade": "linhas",
-      "universo": 3523
+      "universo": 3528
     }
   }
 }
