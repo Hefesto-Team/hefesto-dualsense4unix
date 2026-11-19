@@ -215,6 +215,25 @@ def test_a_vez_que_nao_abre_aparece_e_ninguem_segura(
     assert not (lar / "outro").exists()
 
 
+def test_o_processo_que_sai_no_meio_nao_e_bandeja_e_o_ilegivel_aparece(
+        lar: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    sessao = f"XDG_RUNTIME_DIR={lar / 'run'}".encode()
+    linha = b"\0".join([b"python3", b"-m", b"hefesto_dualsense4unix.cli.app", b"tray", b""])
+    viva = lar / "proc" / "41"
+    viva.mkdir(parents=True)
+    (viva / "cmdline").write_bytes(linha)
+    (viva / "environ").write_bytes(sessao + b"\0")
+    assert ab._e_bandeja_da_sessao(viva, sessao) is True
+    assert ab._e_bandeja_da_sessao(lar / "proc" / "42", sessao) is False
+    assert capsys.readouterr().out == "", "o processo que saiu no meio virou aviso"
+    torta = lar / "proc" / "43"
+    torta.mkdir()
+    (torta / "cmdline").write_bytes(linha)
+    (torta / "environ").mkdir()
+    assert ab._e_bandeja_da_sessao(torta, sessao) is False
+    assert "não consegui ler o processo 43" in capsys.readouterr().out
+
+
 def test_o_sigterm_sai_pelo_finally_e_solta_a_vez(lar: pathlib.Path, subidas: Any) -> None:
     _feitas, filhos = subidas
     bandeja = _POPEN(LINHA)

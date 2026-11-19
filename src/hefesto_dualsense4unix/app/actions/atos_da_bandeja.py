@@ -166,24 +166,26 @@ def _e_a_linha_da_bandeja(argv: list[bytes]) -> bool:
     return False
 
 
+def _e_bandeja_da_sessao(pasta: Path, sessao: bytes) -> bool:
+    """O processo de `pasta` é uma bandeja desta sessão; o que saiu no meio da leitura não é."""
+    try:
+        return (pasta.stat().st_uid == os.getuid()
+                and _e_a_linha_da_bandeja((pasta / "cmdline").read_bytes().split(b"\0"))
+                and sessao in (pasta / "environ").read_bytes().split(b"\0"))
+    except (FileNotFoundError, ProcessLookupError):
+        return False
+    except OSError as erro:
+        console.print(f"[yellow]não consegui ler o processo {pasta.name}:[/] {erro}")
+        return False
+
+
 def bandejas_da_sessao() -> list[int]:
     """As bandejas desta sessão pelo `/proc`: o mesmo usuário e o mesmo `XDG_RUNTIME_DIR`."""
     sessao = f"XDG_RUNTIME_DIR={os.environ.get('XDG_RUNTIME_DIR', '')}".encode()
-    achadas: list[int] = []
-    for pasta in Path("/proc").iterdir():
-        if not pasta.name.isdigit() or int(pasta.name) == os.getpid():
-            continue
-        try:
-            if pasta.stat().st_uid != os.getuid():
-                continue
-            if not _e_a_linha_da_bandeja((pasta / "cmdline").read_bytes().split(b"\0")):
-                continue
-            ambiente = (pasta / "environ").read_bytes().split(b"\0")
-        except OSError:
-            continue
-        if sessao in ambiente:
-            achadas.append(int(pasta.name))
-    return sorted(achadas)
+    return sorted(
+        int(pasta.name) for pasta in Path("/proc").iterdir()
+        if pasta.name.isdigit() and int(pasta.name) != os.getpid()
+        and _e_bandeja_da_sessao(pasta, sessao))
 
 
 def fechar_as_bandejas(pids: list[int], prazo: float) -> list[int]:
