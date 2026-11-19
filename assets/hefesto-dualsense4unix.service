@@ -26,6 +26,11 @@ OnFailure=hefesto-dualsense4unix-presenca.service
 Type=notify
 NotifyAccess=main
 TimeoutStartSec=30
+# O-LACO-QUE-MORRE-OU-TRAVA-VOLTA-SOZINHO-01: o fio do vigia do laço manda `WATCHDOG=1` a cada
+# meio prazo só enquanto a batida do laço e o tique do controle andam
+# (`vigia_do_laco.alimentar_o_watchdog`). Laço preso ou morto cala o aviso, e o systemd reinicia o
+# serviço pelo `Restart=on-failure`. O prazo fica acima do pior laço parado medido (7,9 s).
+WatchdogSec=30
 # AUTOSWITCH-FLOOD-FIX-01: o ambiente gráfico (DISPLAY, WAYLAND_DISPLAY e XAUTHORITY)
 # não vem pela unit: o serviço sobe em default.target, antes de a sessão exportá-lo,
 # e o `_ensure_display_env` do autoswitch o busca em `systemctl --user show-environment`

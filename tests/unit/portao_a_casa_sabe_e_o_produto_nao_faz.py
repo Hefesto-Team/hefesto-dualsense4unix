@@ -21,7 +21,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "pyproject.toml",
         'hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"',
         "console_script da CLI; é também o ExecStart da unit do daemon "
-        "(`assets/hefesto-dualsense4unix.service:34` (`ExecStart`), `daemon start --foreground`)",
+        "(`assets/hefesto-dualsense4unix.service:39` (`ExecStart`), `daemon start --foreground`)",
     ),
     "__main__.py": (
         "src/hefesto_dualsense4unix/__main__.py",
@@ -794,7 +794,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "(True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1694`, "
+        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1698`, "
         "dentro de "
         "`set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço antigo, a linha 1300, caducou; "

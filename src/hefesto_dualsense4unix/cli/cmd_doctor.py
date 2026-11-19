@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import re
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,7 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
 
 
 _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
+_TIQUE_PARADO_S = 2.0
 _PREFIXO_DA_VOLTA = "poll.laco.lenta."
 _PREFIXO_DO_OCUPANTE = "poll.pool.ocupante."
 _SEM_AMOSTRA = "sem_amostra"
@@ -126,7 +128,8 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
     p99 e o pior da última janela, e o relógio lento que estava no pior tique.
     ``None`` quando o daemon ainda não mediu (ou não conhece a medida). Antes de a
     primeira janela fechar, o p99 e o pior ainda não existem, e a linha fica só
-    com a contagem: medida que não há não sai como zero.
+    com a contagem: medida que não há não sai como zero. O último tique mais velho
+    que ``_TIQUE_PARADO_S`` é falha: o serviço responde, mas o controle não é lido.
     """
     if not isinstance(counters, dict):
         return None
@@ -141,6 +144,13 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
 
     estouros = counters.get("poll.tique.estouros", 0)
     contagem = f"tique do laço: {estouros} de {medidos} acima de 16,7 ms"
+    ultimo = counters.get("poll.tique.ultimo_ms")
+    if isinstance(ultimo, int) and not isinstance(ultimo, bool):
+        ha_s = max(time.time() - ultimo / 1000, 0.0)
+        if ha_s > _TIQUE_PARADO_S:
+            parado = formata_pt_br(ha_s)
+            return ("[FAIL]", f"tique do laço parado há {parado} s: o controle não é lido")
+        contagem = f"{contagem}, o último há {formata_pt_br(ha_s)} s"
     if "poll.tique.p99_us" not in counters:
         return ("[ OK ]", contagem)
     relogio = _o_pior_nome(counters, _PREFIXO_DO_RELOGIO)

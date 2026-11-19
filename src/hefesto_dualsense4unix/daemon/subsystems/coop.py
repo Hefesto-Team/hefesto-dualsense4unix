@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
@@ -15,7 +17,7 @@ from hefesto_dualsense4unix.core.led_control import player_led_pattern
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
@@ -156,6 +158,7 @@ class CoopManager:
     _redescobrir: bool = False
     _pedido_dos_nos: tuple[bool, str | None] = (False, None)
     _nos_vistos: tuple[dict[str, Path], dict[str, EntradaDeFora]] | None = None
+    _jogadores_em_falha: frozenset[tuple[str, str]] = frozenset()
 
     def __init__(self, daemon: DaemonProtocol) -> None:
         self._daemon = daemon
@@ -417,7 +420,23 @@ class CoopManager:
         for identity in [
             mac for mac, p in self._players.items() if p.cedido_ao_primario
         ]:
-            self._teardown_player(identity)
+            self._isolar("cedido", identity, functools.partial(self._teardown_player, identity))
+
+    def _isolar(self, passo: str, identity: str, fn: Callable[[], Any]) -> None:
+        """Um jogador que levanta não leva os outros: a pilha vai ao diário uma vez por episódio."""
+        chave = (passo, identity)
+        try:
+            fn()
+        except Exception as exc:
+            if chave not in self._jogadores_em_falha:
+                self._jogadores_em_falha = self._jogadores_em_falha | {chave}
+                logger.warning(
+                    "coop_jogador_falhou", passo=passo, identity=identity, err=str(exc),
+                    exc_info=exc,
+                )
+            return
+        if chave in self._jogadores_em_falha:
+            self._jogadores_em_falha = self._jogadores_em_falha - {chave}
 
 
     def sync(
@@ -481,12 +500,6 @@ class CoopManager:
             self._repintar_se_o_numero_mudou()
             return
         self._nos_vistos = achados
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            mascara_efetiva,
-            vpad_ficou_para_tras,
-        )
-        from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
-
         vistos = achados[0]
         sozinho = not vistos and not _a_mesa_tem_dualsense(self)
         self._seguir_o_p1_emprestado(sozinho)
@@ -502,60 +515,79 @@ class CoopManager:
         desired_caminho = self._caminho()
         desired_roupa = self._roupa() if self._players else None
 
+        mascara_espera = origem if force else "coop_tique"
         for mac in list(self._players):
-            player = self._players[mac]
-            if self._segura_ou_espera_no_lugar(player, want.get(mac)):
-                continue
-            proprio = None if player.no_p1 else player.vpad
-            if mac not in want:
-                self._teardown_player(mac)
-            elif player.evdev_path != want[mac]:
-                logger.info(
-                    "coop_player_node_changed",
-                    identity=mac,
-                    old=player.evdev_path,
-                    new=want[mac],
-                )
-                self._teardown_player(mac)
-            elif player.reader.grab_state == "failed":
-                logger.warning("coop_player_grab_failed_retry", identity=mac)
-                self._teardown_player(mac)
-            elif proprio is not None and not vpad_vivo(proprio):
-                logger.warning("coop_player_vpad_morto_respawn", identity=mac)
-                self._teardown_player(mac)
-            elif proprio is not None and vpad_ficou_para_tras(
-                getattr(proprio, "flavor", None),
-                mac,
-                desired_flavor,
-                vpad=proprio,
-                caminho=desired_caminho,
-            ):
-                if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
-                    continue
-                logger.info(
-                    "coop_player_flavor_changed",
-                    identity=mac,
-                    old=getattr(player.vpad, "flavor", None),
-                    new=mascara_efetiva(mac, desired_flavor),
-                )
-                self._teardown_player(mac)
-            elif proprio is not None and a_roupa_mudou(proprio, desired_roupa):
-                if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
-                    continue
-                self._trocar_a_roupa(mac)
+            self._isolar("sync", mac, functools.partial(
+                self._reconciliar_o_jogador, mac, want.get(mac), desired_flavor,
+                desired_caminho, desired_roupa, mascara_espera,
+            ))
 
         for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
-                self._spawn_player(
+                self._isolar("nascer", mac, functools.partial(
+                    self._spawn_player,
                     mac,
                     want[mac],
                     externo=mac in externos,
                     no_p1=sozinho and mac in externos and self._o_p1_esta_livre(),
-                )
+                ))
         self._sentar_o_de_fora_no_p1(sozinho)
         self._publicar_a_mesa({*dualsenses, *([primary] if primary else [])})
 
         self._apply_coop_player_leds()
+
+    def _reconciliar_o_jogador(
+        self, mac: str, caminho: str | None, desired_flavor: Any, desired_caminho: Any,
+        desired_roupa: Any, mascara_espera: str | None,
+    ) -> None:
+        """Derruba, recria ou troca a roupa de UM jogador do `sync` pelo que a mesa pede agora."""
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascara_efetiva,
+            vpad_ficou_para_tras,
+        )
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
+        from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
+
+        player = self._players[mac]
+        if self._segura_ou_espera_no_lugar(player, caminho):
+            return
+        proprio = None if player.no_p1 else player.vpad
+        if caminho is None:
+            self._teardown_player(mac)
+        elif player.evdev_path != caminho:
+            logger.info(
+                "coop_player_node_changed",
+                identity=mac,
+                old=player.evdev_path,
+                new=caminho,
+            )
+            self._teardown_player(mac)
+        elif player.reader.grab_state == "failed":
+            logger.warning("coop_player_grab_failed_retry", identity=mac)
+            self._teardown_player(mac)
+        elif proprio is not None and not vpad_vivo(proprio):
+            logger.warning("coop_player_vpad_morto_respawn", identity=mac)
+            self._teardown_player(mac)
+        elif proprio is not None and vpad_ficou_para_tras(
+            getattr(proprio, "flavor", None),
+            mac,
+            desired_flavor,
+            vpad=proprio,
+            caminho=desired_caminho,
+        ):
+            if self._a_mascara_espera_o_jogo(mac, mascara_espera):
+                return
+            logger.info(
+                "coop_player_flavor_changed",
+                identity=mac,
+                old=getattr(player.vpad, "flavor", None),
+                new=mascara_efetiva(mac, desired_flavor),
+            )
+            self._teardown_player(mac)
+        elif proprio is not None and a_roupa_mudou(proprio, desired_roupa):
+            if self._a_mascara_espera_o_jogo(mac, mascara_espera):
+                return
+            self._trocar_a_roupa(mac)
 
     def _nos_de_agora(
         self, force: bool, origem: str | None
@@ -1221,21 +1253,25 @@ class CoopManager:
             i for i, p in self._players.items() if p.vpad is None and not self._na_fila(i)
         ]
         for identity in self._na_ordem_da_carta(pendentes):
-            player = self._players.get(identity)
-            if player is None or player.vpad is not None or self._na_fila(identity):
-                continue
-            state = player.reader.grab_state
-            if state == "held":
-                if self._pode_nascer_na_ordem(player):
-                    self._nascer_na_ordem(player)
-            elif state == "failed":
-                logger.warning(
-                    "coop_player_grab_failed_drop",
-                    identity=identity,
-                    evdev=player.evdev_path,
-                )
-                self._teardown_player(identity)
-                self._retry_spawn = True
+            self._isolar("promover", identity, functools.partial(self._promover_um, identity))
+
+    def _promover_um(self, identity: str) -> None:
+        """Cria o vpad de quem confirmou o grab; derruba quem o grab recusou."""
+        player = self._players.get(identity)
+        if player is None or player.vpad is not None or self._na_fila(identity):
+            return
+        state = player.reader.grab_state
+        if state == "held":
+            if self._pode_nascer_na_ordem(player):
+                self._nascer_na_ordem(player)
+        elif state == "failed":
+            logger.warning(
+                "coop_player_grab_failed_drop",
+                identity=identity,
+                evdev=player.evdev_path,
+            )
+            self._teardown_player(identity)
+            self._retry_spawn = True
 
     def _make_player_rumble_sink(self, identity: str) -> Callable[[int, int], None]:
         """Sink de FF do vpad de UM jogador → rumble no controle DELE (por MAC).
@@ -2180,13 +2216,11 @@ class CoopManager:
         com_curva = alguma_curva(store)
         arranjo_de_movimento = roteador_ativo(store)
         for player in list(self._players.values()):
-            if player.vpad is None or self._espera(player):
-                continue
-            if player.cedido_ao_primario:
-                continue
-            if o_pad_da_peca_muda_repousa(player.vpad, player.motion_reader):
+            if player.vpad is None or self._espera(player) or player.cedido_ao_primario:
                 continue
             try:
+                if o_pad_da_peca_muda_repousa(player.vpad, player.motion_reader):
+                    continue
                 snap = player.reader.snapshot()
                 andar_os_acionadores(self._daemon)
                 botoes = snap.buttons_pressed

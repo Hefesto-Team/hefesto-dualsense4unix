@@ -854,110 +854,119 @@ async def reconnect_loop(
         alvos_antes = alvos_conectados_de(daemon) or {}
         transportes_antes = transportes_dos_alvos_de(daemon) or {}
         anunciar_a_chegada(daemon, {}, alvos_antes)
+        falhando = False
         while not daemon._is_stopping():
-            comeco_da_volta = time.monotonic()
             try:
-                await daemon._run_blocking(daemon.controller.connect)
+                comeco_da_volta = time.monotonic()
+                try:
+                    await daemon._run_blocking(daemon.controller.connect)
+                except Exception as exc:
+                    logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
+                    await _restore_hidden_before_reopen(daemon)
+                    await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
+                    continue
+
+                depois_do_connect = time.monotonic()
+                armar_gatilho_da_cor(daemon)
+                armar_gatilho_da_cor_por_numeracao(daemon)
+                await vigiar_escritor_cru(daemon, forcar=True)
+                await carimbar_o_nascimento(daemon)
+                _passar_os_cabos_sem_segurar_a_volta(daemon)
+
+                is_connected = bool(daemon.controller.is_connected())
+                alvos_agora = alvos_conectados_de(daemon)
+                transportes_agora = transportes_dos_alvos_de(daemon)
+                trocando = trocas_de_transporte_pendentes(daemon)
+                falta_abrir = _falta_abrir_alguem(daemon)
+                espera_da_abertura = recuo_da_abertura
+                recuo_da_abertura = (
+                    min(recuo_da_abertura * 2, RECONNECT_PROBE_INTERVAL_SEC)
+                    if falta_abrir
+                    else PASSO_ENQUANTO_UMA_ABERTURA_FALTA_SEC
+                )
+                if _avisar_quem_conectou(
+                    alvos_antes, alvos_agora, transportes_antes, transportes_agora
+                ):
+                    avisar_que_a_mesa_mudou(daemon)
+                if is_connected and not was_connected:
+                    daemon._arm_input_grace()
+                    publicar_a_borda_do_primario(daemon, alvos_antes, alvos_agora)
+
+                    with contextlib.suppress(Exception):
+                        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                            upgrade_primary_vpad_to_uhid,
+                        )
+
+                        def _promover_vpad() -> bool:
+                            with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
+                                return upgrade_primary_vpad_to_uhid(daemon)
+
+                        await daemon._run_blocking(_promover_vpad)
+                    if not restored:
+                        with contextlib.suppress(Exception):
+                            await _restore_last_profile(daemon)
+                        restored = True
+                    await reaplicar_som_em_todos_os_alvos(daemon)
+                    anunciar_a_chegada(daemon, alvos_antes, alvos_agora or {})
+                    was_connected = True
+                elif not is_connected and was_connected and trocando:
+                    await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
+                elif not is_connected and was_connected:
+                    registrar_queda_da_bateria(
+                        daemon, "probe_offline", asyncio.get_running_loop().time()
+                    )
+                    publicar_a_queda_de_cada_alvo(daemon, alvos_antes, alvos_agora, "probe_offline")
+                    logger.info("controller_disconnected", reason="probe_offline")
+                    was_connected = False
+                elif alvos_agora is not None:
+                    await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
+                    if transportes_agora is not None:
+                        await reaplicar_som_de_quem_trocou_de_transporte(
+                            daemon, alvos_antes, alvos_agora, transportes_antes, transportes_agora
+                        )
+
+                if alvos_agora is not None:
+                    alvos_antes = alvos_agora
+                if transportes_agora is not None:
+                    transportes_antes = transportes_agora
+
+                _dizer_se_a_volta_demorou(comeco_da_volta, depois_do_connect)
+                if is_connected:
+                    with contextlib.suppress(Exception):
+                        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                            rehide_physical_hidraw,
+                        )
+                        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                            broker_executor_for,
+                        )
+
+                        await asyncio.get_running_loop().run_in_executor(
+                            broker_executor_for(daemon), rehide_physical_hidraw, daemon
+                        )
+                    prazo = {"falta_abrir_em": espera_da_abertura} if falta_abrir else {}
+                    if await _wait_online_or_hotplug(daemon, watch, **prazo):
+                        logger.info(
+                            "backend_hotplug_reconcile", trigger="input_dir_change"
+                        )
+                else:
+                    gatilho_lightbar = registro_de_gatilhos_de(daemon).obter(
+                        NOME_DO_GATILHO_DA_LIGHTBAR
+                    )
+                    if gatilho_lightbar is not None:
+                        gatilho_lightbar.desarmar()
+                    _relogio.RELOGIO.varrer()
+                    passo = espera_da_abertura if falta_abrir else RECONNECT_PROBE_INTERVAL_SEC
+                    await _wait_or_stop(
+                        daemon,
+                        PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC if trocando else passo,
+                    )
             except Exception as exc:
-                logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
-                await _restore_hidden_before_reopen(daemon)
+                if not falhando:
+                    logger.warning("volta_da_reconexao_falhou", err=str(exc), exc_info=exc)
+                falhando = True
                 await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
                 continue
-
-            depois_do_connect = time.monotonic()
-            armar_gatilho_da_cor(daemon)
-            armar_gatilho_da_cor_por_numeracao(daemon)
-            await vigiar_escritor_cru(daemon, forcar=True)
-            await carimbar_o_nascimento(daemon)
-            _passar_os_cabos_sem_segurar_a_volta(daemon)
-
-            is_connected = bool(daemon.controller.is_connected())
-            alvos_agora = alvos_conectados_de(daemon)
-            transportes_agora = transportes_dos_alvos_de(daemon)
-            trocando = trocas_de_transporte_pendentes(daemon)
-            falta_abrir = _falta_abrir_alguem(daemon)
-            espera_da_abertura = recuo_da_abertura
-            recuo_da_abertura = (
-                min(recuo_da_abertura * 2, RECONNECT_PROBE_INTERVAL_SEC)
-                if falta_abrir
-                else PASSO_ENQUANTO_UMA_ABERTURA_FALTA_SEC
-            )
-            if _avisar_quem_conectou(
-                alvos_antes, alvos_agora, transportes_antes, transportes_agora
-            ):
-                avisar_que_a_mesa_mudou(daemon)
-            if is_connected and not was_connected:
-                daemon._arm_input_grace()
-                publicar_a_borda_do_primario(daemon, alvos_antes, alvos_agora)
-
-                with contextlib.suppress(Exception):
-                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                        upgrade_primary_vpad_to_uhid,
-                    )
-
-                    def _promover_vpad() -> bool:
-                        with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-                            return upgrade_primary_vpad_to_uhid(daemon)
-
-                    await daemon._run_blocking(_promover_vpad)
-                if not restored:
-                    with contextlib.suppress(Exception):
-                        await _restore_last_profile(daemon)
-                    restored = True
-                await reaplicar_som_em_todos_os_alvos(daemon)
-                anunciar_a_chegada(daemon, alvos_antes, alvos_agora or {})
-                was_connected = True
-            elif not is_connected and was_connected and trocando:
-                await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
-            elif not is_connected and was_connected:
-                registrar_queda_da_bateria(
-                    daemon, "probe_offline", asyncio.get_running_loop().time()
-                )
-                publicar_a_queda_de_cada_alvo(daemon, alvos_antes, alvos_agora, "probe_offline")
-                logger.info("controller_disconnected", reason="probe_offline")
-                was_connected = False
-            elif alvos_agora is not None:
-                await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
-                if transportes_agora is not None:
-                    await reaplicar_som_de_quem_trocou_de_transporte(
-                        daemon, alvos_antes, alvos_agora, transportes_antes, transportes_agora
-                    )
-
-            if alvos_agora is not None:
-                alvos_antes = alvos_agora
-            if transportes_agora is not None:
-                transportes_antes = transportes_agora
-
-            _dizer_se_a_volta_demorou(comeco_da_volta, depois_do_connect)
-            if is_connected:
-                with contextlib.suppress(Exception):
-                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                        rehide_physical_hidraw,
-                    )
-                    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-                        broker_executor_for,
-                    )
-
-                    await asyncio.get_running_loop().run_in_executor(
-                        broker_executor_for(daemon), rehide_physical_hidraw, daemon
-                    )
-                prazo = {"falta_abrir_em": espera_da_abertura} if falta_abrir else {}
-                if await _wait_online_or_hotplug(daemon, watch, **prazo):
-                    logger.info(
-                        "backend_hotplug_reconcile", trigger="input_dir_change"
-                    )
-            else:
-                gatilho_lightbar = registro_de_gatilhos_de(daemon).obter(
-                    NOME_DO_GATILHO_DA_LIGHTBAR
-                )
-                if gatilho_lightbar is not None:
-                    gatilho_lightbar.desarmar()
-                _relogio.RELOGIO.varrer()
-                passo = espera_da_abertura if falta_abrir else RECONNECT_PROBE_INTERVAL_SEC
-                await _wait_or_stop(
-                    daemon,
-                    PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC if trocando else passo,
-                )
+            falhando = False
     finally:
         await _soltar_a_troca_em_fundo(daemon)
         if desfazer_o_sino is not None:
@@ -1662,9 +1671,9 @@ async def _esperar_a_tarefa_cair(task: asyncio.Future[Any]) -> None:
         await asyncio.wait({task}, timeout=0.5)
         if not task.done():
             task.cancel()
-    if not task.cancelled():
-        with contextlib.suppress(BaseException):
-            task.exception()
+    if not task.cancelled() and task.exception() is not None:
+        nome = getattr(task, "get_name", lambda: repr(task))()
+        logger.warning("shutdown_tarefa_caiu_com_erro", tarefa=nome, exc_info=task.exception())
 
 
 async def parar_as_tarefas(daemon: DaemonProtocol) -> None:

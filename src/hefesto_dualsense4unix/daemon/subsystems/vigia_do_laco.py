@@ -22,6 +22,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, TextIO, TypeVar
 
+from hefesto_dualsense4unix.utils import sd_notify
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
@@ -200,6 +201,8 @@ class VigiaDoLaco:
         self._do_tique: dict[str, int] = {}
         self._numeros: Path | None = None
         self._retrato_em = 0.0
+        self._ultimo_tique = self._batida
+        self._watchdog_em = float("-inf")
 
 
     def _abrir_as_pilhas(self) -> None:
@@ -324,13 +327,38 @@ class VigiaDoLaco:
             logger.warning("vigia_do_laco_sem_arquivo", err=str(erro))
 
 
+    def tique(self) -> None:
+        """O ``_poll_loop`` fechou um tique; chamado do fio do laço, só troca um número."""
+        self._ultimo_tique = self._relogio()
+
+
+    def alimentar_o_watchdog(self, agora: float) -> None:
+        """``WATCHDOG=1`` a cada meio prazo, só com a batida do laço e o tique novos.
+
+        Laço preso ou ``_poll_loop`` morto calam o aviso, e o systemd reinicia o serviço no prazo
+        do ``WatchdogSec``. Sem watchdog na unit, não faz nada.
+        """
+        prazo = sd_notify.prazo_do_watchdog()
+        if prazo is None:
+            return
+        metade = prazo / 2
+        if agora - self._watchdog_em < metade:
+            return
+        if agora - self._batida > metade or agora - self._ultimo_tique > metade:
+            return
+        if sd_notify.vivo():
+            self._watchdog_em = agora
+
+
     def _olhar_sempre(self) -> None:
         while not self._parar.wait(self.passo_s / 2):
             try:
                 self.olhar()
                 self._dizer_as_voltas()
                 self._dizer_o_pool()
-                self._escrever_os_numeros(self._relogio())
+                agora = self._relogio()
+                self._escrever_os_numeros(agora)
+                self.alimentar_o_watchdog(agora)
             except Exception:
                 logger.warning("vigia_do_laco_levantou", exc_info=True)
 
@@ -344,6 +372,7 @@ class VigiaDoLaco:
         with contextlib.suppress(OSError):
             self._numeros = runtime_dir(ensure=True) / ARQUIVO_DOS_NUMEROS
         self._batida = self._relogio()
+        self._ultimo_tique = self._batida
         self._armar()
         self._tarefa = self._laco.create_task(self._bater(), name="vigia_do_laco")
         self._fio = threading.Thread(target=self._olhar_sempre, name="hefesto-vigia-do-laco",

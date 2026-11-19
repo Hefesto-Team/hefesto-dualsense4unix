@@ -12,7 +12,7 @@ import pkgutil
 import signal
 import threading
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -738,6 +738,7 @@ class Daemon:
     _alto_falante_subsystem: Any = None
     _conexoes_subsystem: Any = None
     _reconnect_task: asyncio.Task[Any] | None = None
+    _codigo_de_saida: int | None = None
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
     _last_rebackend_ts: float = field(default=float("-inf"))
@@ -900,7 +901,9 @@ class Daemon:
             from hefesto_dualsense4unix.integrations.virtual_pad import FioDeNascimento
 
             self._fio_de_nascimento = FioDeNascimento()
-            self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
+            tarefas = _TarefasVigiadas(self)
+            self._tasks = tarefas
+            tarefas.nascer("poll_loop", self._poll_loop, "laco_morreu")
             await subir(self)
             if self._is_stopping():
                 return
@@ -954,10 +957,10 @@ class Daemon:
             await subir(self, depois_do_controle=True)
             if self._is_stopping():
                 return
-            self._reconnect_task = asyncio.create_task(
-                reconnect_loop(self), name="reconnect_loop"
+            tarefas.nascer(
+                "reconnect_loop", functools.partial(reconnect_loop, self), "reconexao_morreu",
+                guardar=functools.partial(setattr, self, "_reconnect_task"),
             )
-            self._tasks.append(self._reconnect_task)
             parada = self._stop_event
             assert parada is not None
             await parada.wait()
@@ -982,6 +985,7 @@ class Daemon:
                 )
 
                 _soltar_a_mesa(None)
+                _sair_se_o_laco_nao_volta(self)
 
     def stop(self) -> None:
         """Sinaliza parada; idempotente."""
@@ -4276,19 +4280,25 @@ class Daemon:
 
                     _reconciliar_launch(self)
                 elif nome == "coop":
-                    get_coop_manager(self).sync()
+                    with passos.isolado("coop_sync"):
+                        get_coop_manager(self).sync()
                     try:
                         reconciliar_as_mascaras(self)
                     except Exception as exc:
                         logger.warning("mascara_reconciliacao_falhou", err=str(exc))
             medidor.registrar(loop.time() - tick_started, vencidos)
+            _gravar_medida(self.store, "poll.tique.ultimo_ms", round(time.time() * 1000))
+            vigia = vigia_ativo()
+            if vigia is not None:
+                vigia.tique()
 
         while not self._is_stopping():
             tick_started = loop.time()
             medidor.abrir(tick_started, aperto.levar_o_previsto())
             grace_passed = tick_started >= self._input_ready_at
             if grace_passed:
-                get_coop_manager(self).forward_all()
+                with passos.isolado("coop_repasse"):
+                    get_coop_manager(self).forward_all()
                 fechar_o_p1_que_nasceu(self)
             if not self.controller.is_connected():
                 if was_connected:
@@ -4296,7 +4306,8 @@ class Daemon:
                     soltar_o_que_o_controle_segurava(self)
                 was_connected = False
                 previous_buttons = frozenset()
-                levar_o_big_picture(self, None, frozenset())
+                with passos.isolado("big_picture"):
+                    levar_o_big_picture(self, None, frozenset())
                 terminar_o_tique(tick_started)
                 stop_event = self._stop_event
                 assert stop_event is not None
@@ -4315,7 +4326,8 @@ class Daemon:
                     soltar_o_que_o_controle_segurava(self, quem)
                     queda = {"reason": str(exc), "uniq": quem}
                     self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, queda)
-                    levar_o_big_picture(self, None, frozenset())
+                    with passos.isolado("big_picture"):
+                        levar_o_big_picture(self, None, frozenset())
                 terminar_o_tique(tick_started)
                 stop_event = self._stop_event
                 assert stop_event is not None
@@ -4340,7 +4352,8 @@ class Daemon:
             self.store.bump("poll.tick")
 
             if tick_started >= next_rumble_assert_at:
-                self._reassert_rumble(tick_started)
+                with passos.isolado("rumble"):
+                    self._reassert_rumble(tick_started)
                 next_rumble_assert_at = tick_started + 0.200
 
             if tick_started >= evdev_watchdog_next_at:
@@ -4367,7 +4380,8 @@ class Daemon:
             grace_passed = tick_started >= self._input_ready_at
             gamepad_dispatched = False
             if grace_passed and self._gamepad_device is not None:
-                self._dispatch_gamepad_emulation(state, buttons_pressed)
+                with passos.isolado("pad"):
+                    self._dispatch_gamepad_emulation(state, buttons_pressed)
                 if self._touchpad_reader is not None:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                         discard_touchpad_motion,
@@ -4447,9 +4461,11 @@ class Daemon:
             emu_buttons = botoes_com_os_gatilhos(emu_buttons, emu_l2, emu_r2)
             alimentar_o_desktop(emu_active and not gamepad_dispatched)
             if not gamepad_dispatched:
-                emu_buttons = levar_o_big_picture(self, None, emu_buttons)[0]
+                with passos.isolado("big_picture"):
+                    emu_buttons = levar_o_big_picture(self, None, emu_buttons)[0]
                 if self._mouse_device is not None and emu_active:
-                    self._dispatch_mouse_emulation(state, emu_buttons)
+                    with passos.isolado("mouse"):
+                        self._dispatch_mouse_emulation(state, emu_buttons)
                 else:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                         discard_touchpad_motion,
@@ -4472,23 +4488,26 @@ class Daemon:
                     teclas_do_analogico_no_desktop(self, state)
 
                 if self._keyboard_device is not None and emu_active:
-                    if self._teclado_so_no_jogo:
-                        self._prime_keyboard_emulation(emu_buttons)
-                    else:
-                        self._dispatch_keyboard_emulation(emu_buttons)
+                    with passos.isolado("teclado"):
+                        if self._teclado_so_no_jogo:
+                            self._prime_keyboard_emulation(emu_buttons)
+                        else:
+                            self._dispatch_keyboard_emulation(emu_buttons)
 
             despachar_no_jogo(self, state, emu_buttons, no_jogo=gamepad_dispatched)
 
             from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos
 
-            observar_os_atalhos(
-                self, buttons_pressed, now=tick_started,
-                gatilhos_do_posto=(state.l2_raw, state.r2_raw),
-            )
+            with passos.isolado("atalhos"):
+                observar_os_atalhos(
+                    self, buttons_pressed, now=tick_started,
+                    gatilhos_do_posto=(state.l2_raw, state.r2_raw),
+                )
 
             if self._plugins_subsystem is not None:
-                active_profile = self.store.active_profile
-                self._plugins_subsystem.tick(state, active_profile)
+                with passos.isolado("plugins"):
+                    active_profile = self.store.active_profile
+                    self._plugins_subsystem.tick(state, active_profile)
 
             pressed_now = current_buttons - previous_buttons
             released_now = previous_buttons - current_buttons
@@ -4870,6 +4889,100 @@ class _RelogiosLentos:
 _FALHOU: Final = object()
 
 
+TETO_DE_MORTES_SEGUIDAS: Final[int] = 5
+RECUO_DO_LACO_S: Final[float] = 0.5
+TETO_DO_RECUO_DO_LACO_S: Final[float] = 8.0
+VIDA_QUE_ZERA_AS_MORTES_S: Final[float] = 60.0
+CODIGO_DO_LACO_QUE_NAO_VOLTA: Final[int] = 70
+
+
+@dataclass
+class _LacoComDono:
+    """O laço que renasce: quem o cria, a linha da morte, e a conta das mortes seguidas."""
+
+    fabrica: Callable[[], Coroutine[Any, Any, Any]]
+    evento: str
+    guardar: Callable[[asyncio.Task[Any]], Any] | None
+    mortes: int = 0
+    nasceu_em: float = 0.0
+
+
+class _TarefasVigiadas(list["asyncio.Task[Any]"]):
+    """As tarefas do serviço: a que morre com exceção fora da parada vai ao diário com a pilha.
+
+    Todo ``append`` vigia a tarefa (os subsistemas acrescentam as deles aqui). O laço nascido por
+    :meth:`nascer` tem dono: morto, renasce com o recuo dobrando de ``RECUO_DO_LACO_S`` até
+    ``TETO_DO_RECUO_DO_LACO_S``; a morte além de ``TETO_DE_MORTES_SEGUIDAS`` para o serviço com
+    ``CODIGO_DO_LACO_QUE_NAO_VOLTA``, e o systemd o reinicia. Uma vida de
+    ``VIDA_QUE_ZERA_AS_MORTES_S`` zera a conta.
+    """
+
+    def __init__(self, daemon: Any) -> None:
+        super().__init__()
+        self._daemon = daemon
+        self._donos: dict[str, _LacoComDono] = {}
+
+    def append(self, tarefa: asyncio.Task[Any]) -> None:
+        super().append(tarefa)
+        tarefa.add_done_callback(self._terminou)
+
+    def nascer(
+        self,
+        nome: str,
+        fabrica: Callable[[], Coroutine[Any, Any, Any]],
+        evento: str,
+        *,
+        guardar: Callable[[asyncio.Task[Any]], Any] | None = None,
+    ) -> asyncio.Task[Any]:
+        """Lança o laço ``nome`` com dono; ``evento`` é a linha da morte no diário."""
+        dono = self._donos.setdefault(nome, _LacoComDono(fabrica, evento, guardar))
+        return self._lancar(nome, dono)
+
+    def _lancar(self, nome: str, dono: _LacoComDono) -> asyncio.Task[Any]:
+        laco = asyncio.get_running_loop()
+        tarefa: asyncio.Task[Any] = laco.create_task(dono.fabrica(), name=nome)
+        dono.nasceu_em = laco.time()
+        self.append(tarefa)
+        if dono.guardar is not None:
+            dono.guardar(tarefa)
+        return tarefa
+
+    def _terminou(self, tarefa: asyncio.Task[Any]) -> None:
+        if tarefa.cancelled() or self._daemon._is_stopping():
+            return
+        exc = tarefa.exception()
+        if exc is None:
+            return
+        nome = tarefa.get_name()
+        dono = self._donos.get(nome)
+        if dono is None:
+            logger.error("tarefa_morreu", tarefa=nome, err=str(exc), exc_info=exc)
+            return
+        laco = tarefa.get_loop()
+        if laco.time() - dono.nasceu_em >= VIDA_QUE_ZERA_AS_MORTES_S:
+            dono.mortes = 0
+        dono.mortes += 1
+        logger.error(dono.evento, mortes=dono.mortes, err=str(exc), exc_info=exc)
+        if dono.mortes > TETO_DE_MORTES_SEGUIDAS:
+            logger.error("laco_nao_volta", tarefa=nome, mortes=dono.mortes)
+            self._daemon._codigo_de_saida = CODIGO_DO_LACO_QUE_NAO_VOLTA
+            self._daemon.stop()
+            return
+        recuo = min(RECUO_DO_LACO_S * 2 ** (dono.mortes - 1), TETO_DO_RECUO_DO_LACO_S)
+        laco.call_later(recuo, self._relancar, nome, dono)
+
+    def _relancar(self, nome: str, dono: _LacoComDono) -> None:
+        if not self._daemon._is_stopping():
+            self._lancar(nome, dono)
+
+
+def _sair_se_o_laco_nao_volta(daemon: Any) -> None:
+    """O laço que não voltou sai com código de falha: o systemd reinicia ou chama a presença."""
+    codigo = getattr(daemon, "_codigo_de_saida", None)
+    if codigo is not None:
+        raise SystemExit(codigo)
+
+
 class _PassosDoLaco:
     """O embrulho ÚNICO dos passos do `_poll_loop`: uma falha não derruba o laço nem some.
 
@@ -4895,6 +5008,16 @@ class _PassosDoLaco:
 
     def deu_certo(self, nome: str) -> None:
         self._em_erro.discard(nome)
+
+    @contextlib.contextmanager
+    def isolado(self, nome: str) -> Iterator[None]:
+        """O bloco que levanta conta como falha de ``nome``, e o tique segue depois dele."""
+        try:
+            yield
+        except Exception as exc:
+            self.falhou(nome, exc)
+            return
+        self.deu_certo(nome)
 
     def passo(self, nome: str, fn: Callable[[], Any]) -> Any:
         """Roda ``fn``; devolve o resultado de ``fn``, ou ``_FALHOU``."""

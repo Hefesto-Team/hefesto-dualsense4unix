@@ -1,4 +1,4 @@
-"""O aviso do daemon ao systemd: «estou pronto» e «estou parando».
+"""O aviso do daemon ao systemd: «estou pronto», «estou vivo» e «estou parando».
 
 A unit é ``Type=notify`` com ``NotifyAccess=main``: o ``start`` só volta com ``READY=1`` (o IPC
 escutando). Este módulo é o dono ÚNICO do aviso e do soquete: ``guardar_o_soquete``, na entrada
@@ -64,11 +64,31 @@ def parando() -> bool:
     return notificar("STOPPING=1")
 
 
+def vivo() -> bool:
+    """``WATCHDOG=1``: o laço anda; sem ele no prazo do ``WatchdogSec``, o systemd reinicia."""
+    return notificar("WATCHDOG=1")
+
+
+def prazo_do_watchdog() -> float | None:
+    """O ``WatchdogSec`` da unit em segundos, se for deste processo; ``None`` sem watchdog."""
+    pid = _guardadas.get("WATCHDOG_PID") or os.environ.get("WATCHDOG_PID")
+    micros = _guardadas.get("WATCHDOG_USEC") or os.environ.get("WATCHDOG_USEC")
+    if not micros or (pid and pid != str(os.getpid())):
+        return None
+    try:
+        prazo = int(micros) / 1e6
+    except ValueError:
+        return None
+    return prazo if prazo > 0 else None
+
+
 __all__ = [
     "PRAZO_DA_PARTIDA_S",
     "VARIAVEIS_DO_PRINCIPAL",
     "guardar_o_soquete",
     "notificar",
     "parando",
+    "prazo_do_watchdog",
     "pronto",
+    "vivo",
 ]
