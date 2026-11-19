@@ -96,6 +96,7 @@ TETO_POR_CONTROLE = 12
 TETO_TOTAL = 40
 JANELA_DO_TETO_S = 1.0
 INTERVALO_S = 1.0 / 60.0
+FOLGA_DA_CONTINUA_S = 2 * INTERVALO_S
 RELEITURA_DA_RECEITA_S = 1.0
 PORTA_DO_TATO = "receita do tato"
 CORPO_MAX_PEDACOS = 16
@@ -4300,10 +4301,15 @@ class Passo:
         return donos
 
     def _amostras_devidas(self, chave: str, agora: float) -> int:
-        """Quantas amostras cabem desde o último pedaço desta forma (no máximo um décimo de s)."""
+        """Quantas amostras cabem desde o último pedaço desta forma.
+
+        No máximo :data:`FOLGA_DA_CONTINUA_S` (o alvo da fila do tocador): o tempo de um
+        soluço o tocador já tocou em silêncio, e repô-lo só atrasaria o corpo.
+        """
         antes = self._continua_em.get(chave)
         self._continua_em[chave] = agora
-        decorrido = INTERVALO_S if antes is None else max(0.0, min(0.1, agora - antes))
+        decorrido = (
+            INTERVALO_S if antes is None else max(0.0, min(FOLGA_DA_CONTINUA_S, agora - antes)))
         return round(formas_de_haptica.TAXA * decorrido)
 
     def _levar_a_continua(self, uniq: str, amostras: Any, fonte: str) -> None:

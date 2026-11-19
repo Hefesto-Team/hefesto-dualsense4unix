@@ -867,6 +867,8 @@ def bloco_com_timbre(
 FREQUENCIA_DO_TOQUE_HZ = formas.FORMAS[formas.TOQUE].componentes[0][0]
 ATAQUE_DO_TOQUE_MS = formas.FORMAS[formas.TOQUE].ataque_ms
 QUADROS_DO_CORPO_NA_FILA = _TAXA // 10
+TIQUES_DO_TATO_POR_S = 60
+ALVO_DO_CORPO_NA_FILA = 2 * _TAXA // TIQUES_DO_TATO_POR_S
 VALIDADE_DOS_LADOS_S = 1.0
 CANAIS_DO_LADO: dict[str, tuple[int, ...]] = {
     "esquerdo": (2,),
@@ -1214,16 +1216,19 @@ class TocadorDoRumble:
     ) -> None:
         """O pedaço da ``fonte`` no ``lado``, atrás do que já espera na própria fila.
 
-        Cada fonte e lado tem a fila dele, com o teto dele; o bloco soma todas. Nunca espera,
-        nunca levanta.
+        Cada fonte e lado tem a fila dele, com o teto dele; o bloco soma todas. A fila que
+        esvaziou (o bloco tocou zeros no lugar, ou ia tocar) volta com no máximo
+        :data:`ALVO_DO_CORPO_NA_FILA`: o que passa sai do lado mais velho, e o atraso de um
+        soluço não fica. Nunca espera, nunca levanta.
         """
         if not len(amostras):
             return
-        lado = lado if lado in CANAIS_DO_LADO else "centro"
+        chave = (str(fonte), lado if lado in CANAIS_DO_LADO else "centro")
         with self._trava:
-            fila = self._corpos.setdefault((str(fonte), lado), array("f"))
+            teto = QUADROS_DO_CORPO_NA_FILA if chave in self._corpos else ALVO_DO_CORPO_NA_FILA
+            fila = self._corpos.setdefault(chave, array("f"))
             fila.extend(amostras)
-            sobra = len(fila) - QUADROS_DO_CORPO_NA_FILA
+            sobra = len(fila) - teto
             if sobra > 0:
                 del fila[:sobra]
             self._sink = str(sink or "")
