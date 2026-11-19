@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1266476,
+      "piso": 1268064,
       "por_item": {
-        "docs": 107097,
-        "scripts": 114558,
-        "src": 321145,
-        "tests": 723676
+        "docs": 107102,
+        "scripts": 114623,
+        "src": 321845,
+        "tests": 724494
       },
-      "razao": "tamanho: +422 linhas (1266054 -> 1266476), pagas por Origem: D-1911-A-MUDANCA-FEITA-A-MAO-SOBE-EM-MINUTOS; registrado no fecho, topo 473c0e698cd5",
+      "razao": "tamanho: +1588 linhas (1266476 -> 1268064), pagas por Origem: D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-1911-A-LINHA-QUE-REINSTALA-TEM-GLIFO-PROPRIO, D-1911-O-REGISTRO-ABRE-NA-JANELA, D-1911-O-UMU-AUSENTE-SE-OFERECE; registrado no fecho, topo 992f50471fd2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2019,6 +2019,12 @@
           "de": 1266054,
           "para": 1266476,
           "razao": "tamanho: +422 linhas (1266054 -> 1266476), pagas por Origem: D-1911-A-MUDANCA-FEITA-A-MAO-SOBE-EM-MINUTOS; registrado no fecho, topo 473c0e698cd5"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1266476,
+          "para": 1268064,
+          "razao": "tamanho: +1588 linhas (1266476 -> 1268064), pagas por Origem: D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-1911-A-LINHA-QUE-REINSTALA-TEM-GLIFO-PROPRIO, D-1911-O-REGISTRO-ABRE-NA-JANELA, D-1911-O-UMU-AUSENTE-SE-OFERECE; registrado no fecho, topo 992f50471fd2"
         }
       ],
       "unidade": "linhas",
