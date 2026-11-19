@@ -1944,6 +1944,7 @@ def editor_alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     janela, salvo o «Programa aberto». Sair de «Eventos» leva junto o momento e o comando.
     """
     from hefesto_dualsense4unix.app.actions.profiles_actions import mensagem_do_salvar
+    from hefesto_dualsense4unix.utils.maquina import gravar_os_comandos_dos_eventos
 
     novo = str(o.get("v") or o.get("valor") or "").strip()
     if novo not in ALVOS_DO_PERFIL:
@@ -1953,35 +1954,48 @@ def editor_alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         return None
     mudanca: dict[str, Any] = {"alvo": novo}
     if novo != "eventos":
-        mudanca.update(evento=None, evento_comando=None)
+        mudanca.update(evento=None)
     _gravar(prof.model_copy(update=mudanca), ctx, p)
+    if novo != "eventos":
+        gravar_os_comandos_dos_eventos({prof.name: None})
     return _dizer(f"{mensagem_do_salvar(prof.name)} · aplica em {ROTULO_DO_ALVO[novo]}")
 
 
 @gesto("10-perfis.html", "editor.quando", grava="_gravar")
 def editor_quando(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Quando», do alvo Eventos: o momento (`evento`) e o comando (`evento_comando`).
+    """«Quando», do alvo Eventos: o momento (`Profile.evento`) e o comando.
 
     Quem chama: o `eventos_do_perfil` do daemon (Controle conectado, Meu comando) e o autoswitch
     (Programa aberto); Cena, Menu, Pausa e Hora marcada gravam sem motor, por falta de fonte.
 
     Os dois campos mandam o gesto; `data-que="comando"` marca o do comando, o outro é o momento.
+    O comando se grava neste computador (`maquina.comando_do_evento`), nunca no perfil: o arquivo
+    que se exporta ou importa não leva comando para rodar.
     """
     from hefesto_dualsense4unix.app.actions.profiles_actions import mensagem_do_salvar
+    from hefesto_dualsense4unix.utils.maquina import (
+        comando_do_evento,
+        gravar_os_comandos_dos_eventos,
+    )
 
     if not _so_mudou(o):
         return None
     prof = _o_perfil_no_disco(_perfil_do_editor(ctx))
     valor = str(o.get("valor") or "").strip()
-    por_comando = str(o.get("que") or "") == "comando"
-    momento = prof.evento if por_comando else (valor or None)
-    comando = valor if por_comando else (prof.evento_comando or "")
-    if momento is not None and momento not in EVENTOS_DO_PERFIL:
-        raise RuntimeError(f"“{momento}” não é um momento que o perfil conhece. Nada foi salvo.")
-    if (momento, comando or None) == (prof.evento, prof.evento_comando):
-        return None
-    _gravar(prof.model_copy(update={"evento": momento, "evento_comando": comando or None}),
-            ctx, p)
+    momento = prof.evento
+    if str(o.get("que") or "") == "comando":
+        if valor == comando_do_evento(prof.name):
+            return None
+        if not gravar_os_comandos_dos_eventos({prof.name: valor}):
+            raise RuntimeError(f"O comando de “{prof.name}” não foi salvo.")
+    else:
+        momento = valor or None
+        if momento is not None and momento not in EVENTOS_DO_PERFIL:
+            raise RuntimeError(
+                f"“{momento}” não é um momento que o perfil conhece. Nada foi salvo.")
+        if momento == prof.evento:
+            return None
+        _gravar(prof.model_copy(update={"evento": momento}), ctx, p)
     rotulo = ROTULO_DO_MOMENTO[momento] if momento else "—"
     return _dizer(f"{mensagem_do_salvar(prof.name)} · quando: {rotulo}")
 

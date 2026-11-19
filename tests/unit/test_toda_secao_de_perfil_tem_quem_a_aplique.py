@@ -336,9 +336,6 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "comando) e pelo autoswitch (Programa aberto). Nada chega ao controle."
         )
     ),
-    "evento_comando": SecaoDireta(
-        razao="Ver `evento`: o comando do «Meu comando», rodado pelo `eventos_do_perfil`."
-    ),
     "nome_do_jogo": SecaoDireta(
         razao=(
             "O-PERFIL-QUE-NASCE-NA-LANCADORES-DIZ-O-JOGO-E-LEVA-A-MASCARA-01: o nome que a aba "

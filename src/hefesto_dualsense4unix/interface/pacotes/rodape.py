@@ -196,6 +196,22 @@ def perfil_do_rodape(state: Any) -> str:
     return perfil.nome_do_ativo(state)
 
 
+def _sem_o_comando(bruto: bytes) -> bytes:
+    """Os bytes do perfil sem o «Meu comando», que é deste computador e não viaja no arquivo."""
+    perfil._com_o_src()
+    import json as _json
+
+    from hefesto_dualsense4unix.profiles.schema import CHAVE_DO_COMANDO_NO_ARQUIVO
+
+    if CHAVE_DO_COMANDO_NO_ARQUIVO.encode() not in bruto:
+        return bruto
+    dados = _json.loads(bruto)
+    if not isinstance(dados, dict) or CHAVE_DO_COMANDO_NO_ARQUIVO not in dados:
+        return bruto
+    del dados[CHAVE_DO_COMANDO_NO_ARQUIVO]
+    return (_json.dumps(dados, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
 @gesto("*", "exportar")
 def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Escreve o perfil ativo num `.json` na pasta pessoal do usuário.
@@ -227,7 +243,7 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not escolhido:
         return
     destino = pathlib.Path(escolhido)
-    destino.write_bytes(origem.read_bytes())
+    destino.write_bytes(_sem_o_comando(origem.read_bytes()))
     print(f"[exportar] {destino}")
 
 
@@ -259,7 +275,7 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     perfil._com_o_src()
     import json as _json
 
-    from hefesto_dualsense4unix.profiles.schema import Profile
+    from hefesto_dualsense4unix.profiles.schema import CHAVE_DO_COMANDO_NO_ARQUIVO, Profile
 
     origem = pathlib.Path(caminho)
     try:
@@ -280,7 +296,8 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     while destino.exists():
         n += 1
         destino = pasta / f"{base}-{n}.json"
-    destino.write_text(_json.dumps(dados, ensure_ascii=False, indent=2),
+    sem_o_comando = {k: v for k, v in dados.items() if k != CHAVE_DO_COMANDO_NO_ARQUIVO}
+    destino.write_text(_json.dumps(sem_o_comando, ensure_ascii=False, indent=2),
                        encoding="utf-8")
     print(f"[importar] {novo.name!r} → {destino}")
     perfil.a_volta_do_perfil(ctx, p)

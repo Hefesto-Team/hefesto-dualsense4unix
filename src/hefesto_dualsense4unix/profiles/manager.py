@@ -132,10 +132,12 @@ def esquecer_o_perfil_apagado(nome: str) -> None:
     """O apagado sai da memória do boot (O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01).
 
     O `profile delete` chama depois de apagar (o ativo, recusa): sai a escolha e o último
-    jogo, e sai o Point and click que apontava para ele (o do computador e o de cada perfil),
-    pela mesma passada do renomear. Sem a escolha, vale o que vale numa instalação limpa: o
-    perfil segue o computador, e o computador, o molde Point and click.
+    jogo, o «Meu comando» que o computador guardava para ele, e o Point and click que apontava
+    para ele (o do computador e o de cada perfil), pela mesma passada do renomear. Sem a escolha,
+    vale o que vale numa instalação limpa: o perfil segue o computador, e o computador, o molde
+    Point and click.
     """
+    from hefesto_dualsense4unix.utils.maquina import gravar_os_comandos_dos_eventos
     from hefesto_dualsense4unix.utils.session import (
         esquecer_a_escolha,
         esquecer_o_ultimo_jogo,
@@ -146,6 +148,8 @@ def esquecer_o_perfil_apagado(nome: str) -> None:
         save_freestyle_ligado(False)
     esquecer_a_escolha(nome)
     esquecer_o_ultimo_jogo(nome)
+    if not gravar_os_comandos_dos_eventos({nome: None}):
+        logger.warning("comando_do_evento_nao_esquecido", name=nome)
     _levar_o_point_and_click(nome, None, origem="apagar")
     logger.info("profile_deleted", name=nome)
 
@@ -184,10 +188,15 @@ def levar_o_perfil_renomeado(era: str, novo: str) -> None:
     """As lembranças de ``era`` passam a dizer ``novo``: o renomear, irmão do apagado.
 
     Quem renomeia chama depois de gravar o novo e apagar o velho. Vão ao nome novo a escolha
-    do boot (e o espelho), o último jogo e o Point and click (``perfil:<nome>``), o do
-    computador e o de cada perfil do disco. Casa pelo slug, como o apagado.
+    do boot (e o espelho), o último jogo, o «Meu comando» que o computador guarda e o Point and
+    click (``perfil:<nome>``), o do computador e o de cada perfil do disco. Casa pelo slug, como
+    o apagado.
     """
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+    from hefesto_dualsense4unix.utils.maquina import (
+        comando_do_evento,
+        gravar_os_comandos_dos_eventos,
+    )
     from hefesto_dualsense4unix.utils.session import (
         _ultimo_jogo_cru,
         espelhar_a_escolha,
@@ -204,6 +213,9 @@ def levar_o_perfil_renomeado(era: str, novo: str) -> None:
         espelhar_a_escolha()
     if _era(_ultimo_jogo_cru()):
         lembrar_o_ultimo_jogo(novo)
+    comando = comando_do_evento(era)
+    if comando and not gravar_os_comandos_dos_eventos({era: None, novo: comando}):
+        logger.warning("comando_do_evento_nao_levado", era=era, novo=novo)
     _levar_o_point_and_click(era, "perfil:" + novo, origem="renomear")
     logger.info("profile_renamed", era=era, novo=novo)
 

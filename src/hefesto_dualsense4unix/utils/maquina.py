@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileSpeakerConfig,
     RumbleConfig,
 )
+from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.lugar import (
     FORMA_DO_CAMINHO,
@@ -116,6 +117,8 @@ _DATA_ISO = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _MAXIMO_DO_ARRANJO = 256
 
 _DOZE_HEX = re.compile(r"[0-9a-fA-F]{12}")
+
+_SLUG_DO_PERFIL = re.compile(r"^[a-z0-9_]{1,128}$")
 
 
 class RadioDeclarado(BaseModel):
@@ -1136,6 +1139,19 @@ class MaquinaConfig(BaseModel):
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
     computador: ComputadorDeclarado = Field(default_factory=ComputadorDeclarado)
     perfil_por_jogo: dict[str, bool] = Field(default_factory=dict)
+    comandos_dos_eventos: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("comandos_dos_eventos", mode="before")
+    @classmethod
+    def _chave_e_o_slug_e_none_esquece_o_comando(cls, valor: Any) -> Any:
+        """A chave é o slug do perfil; ``{"comandos_dos_eventos": {s: None}}`` esquece o comando."""
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        for chave in vivos:
+            if not isinstance(chave, str) or not _SLUG_DO_PERFIL.match(chave):
+                raise ValueError(f"chave de comando {chave!r} não é o slug de um perfil")
+        return vivos
 
     @field_validator("perfil_por_jogo")
     @classmethod
@@ -1827,6 +1843,42 @@ def gravar_o_mudo_do_microfone(endereco: object, mudo: bool) -> bool:
         return gravar_maquina({"controles": {chave: {"microfone_mudo": bool(mudo)}}})
     except (ValueError, OSError) as exc:
         logger.warning("maquina_mudo_do_microfone_nao_gravou", err=str(exc)[:200])
+        return False
+
+
+def chave_do_comando(nome: object) -> str | None:
+    """A chave de ``comandos_dos_eventos``: o slug do nome, o arquivo que o produto grava e lê."""
+    if not isinstance(nome, str):
+        return None
+    try:
+        chave = slugify(nome)
+    except ValueError:
+        return None
+    return chave if _SLUG_DO_PERFIL.match(chave) else None
+
+
+def comando_do_evento(nome: object, maquina: MaquinaConfig | None = None) -> str:
+    """O «Meu comando» que este computador guarda para o perfil ``nome``. **Nunca levanta.**"""
+    chave = chave_do_comando(nome)
+    if chave is None:
+        return ""
+    if maquina is None:
+        maquina = carregar_maquina()
+    return maquina.comandos_dos_eventos.get(chave, "")
+
+
+def gravar_os_comandos_dos_eventos(por_nome: Mapping[str, str | None]) -> bool:
+    """Grava ``{nome do perfil: comando}``; vazio ou ``None`` esquece. **Nunca levanta.**"""
+    mudanca: dict[str, str | None] = {}
+    for nome, comando in por_nome.items():
+        chave = chave_do_comando(nome)
+        if chave is None:
+            return False
+        mudanca[chave] = (comando or "").strip() or None
+    try:
+        return gravar_maquina({"comandos_dos_eventos": mudanca})
+    except (ValueError, OSError) as exc:
+        logger.warning("maquina_comando_do_evento_nao_gravou", err=str(exc)[:200])
         return False
 
 

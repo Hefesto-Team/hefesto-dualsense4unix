@@ -2,7 +2,9 @@
 
 OS-EVENTOS-DO-PERFIL-ENTRAM-PELO-QUE-O-DAEMON-JA-SABE-01: «Controle conectado» entra ao
 `controller.connected` (cabo ou rádio); «Programa aberto» é o `match` pelo autoswitch; «Meu
-comando» entra quando o comando escrito passa a sair com 0 (sem shell, a cada 15 s, prazo de 5 s).
+comando» entra quando o comando escrito passa a sair com 0 (sem shell, a cada 15 s, prazo de 5 s);
+o comando é o que este computador guarda para o perfil (`maquina.comando_do_evento`), nunca o
+que veio no arquivo do perfil.
 Cena, Menu, Pausa e Hora marcada gravam sem motor: falta a fonte. Nenhum evento tira o perfil de
 um jogo em cena, a escolha manual dos últimos 30 s nem o Modo Nativo; o motor sobe depois do
 controle, e a conexão do boot é a da sessão restaurada.
@@ -16,11 +18,12 @@ import os
 import shlex
 import signal
 import time
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from typing import Any
 
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.maquina import carregar_maquina, chave_do_comando
 
 logger = get_logger(__name__)
 
@@ -77,6 +80,11 @@ async def rodar_o_comando(texto: str, prazo: float = PRAZO_DO_COMANDO_S) -> tupl
     return proc.returncode == 0, f"saiu com {proc.returncode}: {fim[0][:200]}".rstrip(": ")
 
 
+def comandos_do_computador() -> Mapping[str, str]:
+    """``{slug do perfil: comando}`` que este computador guarda. Nunca levanta."""
+    return carregar_maquina().comandos_dos_eventos
+
+
 class EventosDoPerfil:
     """O motor: ouve o barramento, pergunta os comandos e ativa o perfil do evento."""
 
@@ -87,10 +95,12 @@ class EventosDoPerfil:
         ler_perfis: Callable[[], Iterable[Any]],
         rodar: Callable[[str], Awaitable[tuple[bool, str]]] = rodar_o_comando,
         relogio: Callable[[], float] = time.monotonic,
+        ler_comandos: Callable[[], Mapping[str, str]] = comandos_do_computador,
     ) -> None:
         self._daemon = daemon
         self._ativar = ativar
         self._ler_perfis = ler_perfis
+        self._ler_comandos = ler_comandos
         self._rodar = rodar
         self._relogio = relogio
         self._comandos: dict[tuple[str, str], tuple[bool, str]] = {}
@@ -134,6 +144,15 @@ class EventosDoPerfil:
             logger.warning("perfil_de_evento_sem_perfis", momento=momento, err=str(exc))
             return []
 
+    def _perfis_com_comando(self) -> list[tuple[Any, str]]:
+        """Os perfis do «Meu comando» que têm comando neste computador, com o comando."""
+        perfis = self._perfis_do(MEU_COMANDO)
+        if not perfis:
+            return []
+        comandos = self._ler_comandos()
+        com_comando = ((p, comandos.get(chave_do_comando(p.name) or "", "")) for p in perfis)
+        return [(p, comando) for p, comando in com_comando if comando]
+
     async def ao_conectar(self) -> bool:
         """Um controle conectou: entra o primeiro perfil de «Controle conectado»."""
         perfis = await asyncio.to_thread(self._perfis_do, CONTROLE_CONECTADO)
@@ -144,11 +163,13 @@ class EventosDoPerfil:
 
         Nunca levanta: a leitura e a ativação dizem a própria falha, e o laço segue no tempo dele.
         """
-        perfis = await asyncio.to_thread(self._perfis_do, MEU_COMANDO)
+        perfis = await asyncio.to_thread(self._perfis_com_comando)
         vistos: set[tuple[str, str]] = set()
         entraram: list[str] = []
-        for perfil in perfis:
-            chave = (perfil.name, str(getattr(perfil, "evento_comando", None) or ""))
+        for perfil, comando in perfis:
+            chave = (perfil.name, comando)
+            if chave in vistos:
+                continue
             vistos.add(chave)
             certo, porque = await self._rodar(chave[1])
             antes = self._comandos.get(chave)
@@ -203,6 +224,7 @@ __all__ = [
     "PRAZO_DO_COMANDO_S",
     "EventosDoPerfil",
     "argv_do_comando",
+    "comandos_do_computador",
     "perfis_do_momento",
     "rodar_o_comando",
     "start_eventos_do_perfil",

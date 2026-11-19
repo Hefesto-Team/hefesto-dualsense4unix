@@ -11,6 +11,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     MatchCriteria,
 )
+from hefesto_dualsense4unix.utils.maquina import comando_do_evento
 
 from hefesto_dualsense4unix.app.actions.profiles_actions import (  # isort:skip
     explicacao_da_disputa,
@@ -33,8 +34,9 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "(session.json e active_profile.txt), os dois manual-only desde o PERFIL-03.",
     "editor.alvo": "SÓ NO HTML: o «Aplicar em» (jogos, navegação, programas, eventos) é "
     "`profiles/schema.Profile.alvo`; a escolha por janela deixa de fora o perfil de evento.",
-    "editor.quando": "SÓ NO HTML: o «Quando» do alvo Eventos é `Profile.evento` e "
-    "`Profile.evento_comando`; o `daemon/subsystems/eventos_do_perfil` chama três dos sete.",
+    "editor.quando": "SÓ NO HTML: o «Quando» do alvo Eventos é `Profile.evento` e o comando que "
+    "este computador guarda (`maquina.comando_do_evento`); o "
+    "`daemon/subsystems/eventos_do_perfil` chama três dos sete.",
     "editor.ordem": "SÓ NO HTML: arrastar na lista «Qual vale primeiro» regrava a `priority` dos "
     "perfis do mesmo jogo, reaproveitando os valores que eles já têm; o desempate do manager é "
     "`manager._chave_de_selecao`.",
@@ -227,7 +229,8 @@ def _pacote_do_editor(
         "estilo_recado": ESTILO_APLICA_E_SAI,
         "alvo": _alvo_do_perfil(profile),
         "evento": str(getattr(profile, "evento", None) or ""),
-        "evento_comando": str(getattr(profile, "evento_comando", None) or ""),
+        "evento_comando": (comando_do_evento(getattr(profile, "name", None))
+                           if getattr(profile, "alvo", None) == "eventos" else ""),
         "ordem": _ordem_do_jogo(profile, perfis or [], ativo),
         "modo": str(getattr(getattr(profile, "mode", None), "kind", "")
                     or MODO_SEM_OPINIAO),

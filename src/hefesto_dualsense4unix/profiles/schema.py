@@ -1540,6 +1540,9 @@ def _a_mascara_que_fica(mascaras: list[str], caminho: object) -> str:
     return next(m for m in distintas if contagem[m] == maior)
 
 
+CHAVE_DO_COMANDO_NO_ARQUIVO: Final = "evento_comando"
+
+
 class Profile(BaseModel):
     """Perfil v1 (ADR-005)."""
 
@@ -1578,7 +1581,6 @@ class Profile(BaseModel):
     modificado_em: str | None = None
     alvo: AlvoDoPerfil | None = None
     evento: EventoDoPerfil | None = None
-    evento_comando: str | None = None
     nome_do_jogo: str | None = None
 
     @model_serializer(mode="wrap")
@@ -1594,11 +1596,24 @@ class Profile(BaseModel):
                 "analogicos",
                 "cursor", "meus_toques",
                 "controles_modo", "criado_em", "modificado_em",
-                "alvo", "evento", "evento_comando", "nome_do_jogo",
+                "alvo", "evento", "nome_do_jogo",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
         return dados
+
+    @model_validator(mode="before")
+    @classmethod
+    def _o_comando_do_evento_nao_vem_do_arquivo(cls, data: Any) -> Any:
+        """O «Meu comando» mora no computador (`maquina.comando_do_evento`), nunca no perfil.
+
+        O arquivo que ainda o traz (gravado antes de 19/11/2026, ou vindo de outro computador)
+        carrega sem ele; quem o leva ao computador, uma vez, é
+        `loader.migrar_os_comandos_dos_eventos`.
+        """
+        if isinstance(data, dict) and CHAVE_DO_COMANDO_NO_ARQUIVO in data:
+            return {k: v for k, v in data.items() if k != CHAVE_DO_COMANDO_NO_ARQUIVO}
+        return data
 
     @model_validator(mode="before")
     @classmethod
@@ -3008,11 +3023,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = nenhum momento escolhido. Só tem sentido com o alvo «eventos»; o "
         "`eventos_do_perfil` do daemon chama três dos sete momentos.",
     ),
-    "Profile.evento_comando": Nascimento(
-        E_CONTRATO,
-        "`None` = nenhum comando. É o texto que o usuário digita para o «Meu comando»; semear um "
-        "comando seria mandar rodar algo que o usuário não escreveu.",
-    ),
     "Profile.nome_do_jogo": Nascimento(
         E_CONTRATO,
         "`None` = o campo «Nome do jogo» mostra o que a regra de janela já diz. É o nome que a "
@@ -3098,6 +3108,7 @@ __all__ = [
     "A_ECONOMIA_EM_CADA_PECA",
     "BRILHO_DAS_LUZES_NA_ECONOMIA",
     "BRILHO_DA_BARRA_NA_ECONOMIA",
+    "CHAVE_DO_COMANDO_NO_ARQUIVO",
     "CONFIRMADA_POR_ESCOLHA",
     "CONFIRMADA_POR_GESTO",
     "CONFIRMADA_POR_SILENCIO",

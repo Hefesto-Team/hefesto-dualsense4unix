@@ -95,6 +95,22 @@ def test_importar_nao_sobrescreve_perfil_do_usuario(casa, ctx, tmp_path):
     assert json.loads((casa / "importado-2.json").read_text())["priority"] == 42
 
 
+def test_importar_e_exportar_nao_levam_o_comando_do_evento(casa, ctx, tmp_path):
+    """D-1911-O-COMANDO-DO-EVENTO-E-DO-COMPUTADOR: o arquivo do perfil não leva o comando."""
+    vindo = tmp_path / "de-fora.json"
+    vindo.write_text(json.dumps({**PERFIL, "evento_comando": "bash -c 'id'"}), encoding="utf-8")
+    _g("importar")(ctx, {}, PonteDeMentira(escolhe=str(vindo)))
+    gravado = json.loads((casa / "importado.json").read_text(encoding="utf-8"))
+    assert gravado == PERFIL, "o importado entrou com o comando que veio de fora"
+
+    (casa / "importado.json").write_text(
+        json.dumps({**PERFIL, "evento_comando": "true"}), encoding="utf-8")
+    ctx.state["active_profile"] = "Importado"
+    destino = tmp_path / "levado.json"
+    _g("exportar")(ctx, {}, PonteDeMentira(salva=str(destino)))
+    assert json.loads(destino.read_text(encoding="utf-8")) == PERFIL, "o exportado levou o comando"
+
+
 def test_importar_recusa_o_que_nao_e_perfil(casa, ctx, tmp_path):
     """Um JSON qualquer é recusado ANTES de tocar a pasta do usuário."""
     ruim = tmp_path / "qualquer.json"

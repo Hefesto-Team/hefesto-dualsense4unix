@@ -54,7 +54,6 @@ FORA: dict[str, str] = {
     "criado_em": "é a data em que o arquivo nasceu, lida pela lista da aba Perfis",
     "alvo": "é onde o perfil vale, lido pela aba Perfis; nenhum motor o lê ainda",
     "evento": "é o momento que chama o perfil nos eventos; nenhum motor o lê ainda",
-    "evento_comando": "é o comando do «Meu comando»; nenhum motor o lê ainda",
     "nome_do_jogo": "é o nome que o editor mostra no campo «Nome do jogo»; nenhum motor o lê",
     "modificado_em": "é a data da última mudança do perfil, lida pela lista da aba Perfis",
     "controles_modo": "é a escolha do botão «Modo automático» da aba Controles, lida pela tela",

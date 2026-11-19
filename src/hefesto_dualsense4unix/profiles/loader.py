@@ -40,7 +40,11 @@ from pydantic import ValidationError
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as _mascarar
-from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+from hefesto_dualsense4unix.profiles.schema import (
+    CHAVE_DO_COMANDO_NO_ARQUIVO,
+    MatchCriteria,
+    Profile,
+)
 from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.profiles.steam_app import (
     e_janela_do_cliente_steam,
@@ -1052,6 +1056,79 @@ def o_mudo_do_microfone_vai_para_o_controle(
     return levados
 
 
+_COMANDOS_FORAM_PARA_O_COMPUTADOR_MARKER = ".comandos_dos_eventos_foram_para_o_computador"
+
+
+def _o_comando_que_vai(path: Path, dados: dict[str, object]) -> tuple[str, str] | None:
+    """``(nome, comando)`` do perfil que leva o «Meu comando» ao computador, ou ``None``.
+
+    Só vai o do arquivo que o produto lê para aquele nome (o slug do nome) e que carrega: o
+    `nome-2.json` de um importado não leva o comando dele.
+    """
+    from hefesto_dualsense4unix.utils.maquina import chave_do_comando
+
+    nome, comando = dados.get("name"), dados.get(CHAVE_DO_COMANDO_NO_ARQUIVO)
+    if not (isinstance(nome, str) and isinstance(comando, str) and comando.strip()):
+        return None
+    if chave_do_comando(nome) != path.stem:
+        return None
+    try:
+        Profile.model_validate(dados)
+    except ValidationError:
+        return None
+    return nome, comando
+
+
+def migrar_os_comandos_dos_eventos(dest_dir: Path | None = None) -> dict[str, str] | None:
+    """Leva ao `maquina.json` o «Meu comando» que os perfis ainda guardam, uma vez.
+
+    O comando que o computador já guarda vence. Todo perfil sai sem o campo, com a versão de
+    antes no `.historico`, e o diário diz quantos foram. Devolve ``{nome: comando}`` levado, ou
+    ``None`` quando já foi feito ou a gravação no computador falhou (o processo seguinte tenta).
+    """
+    from hefesto_dualsense4unix.utils import maquina as _maquina
+
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _COMANDOS_FORAM_PARA_O_COMPUTADOR_MARKER
+    if marker.exists():
+        return None
+    with _anota_o_semeio(directory), FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return None
+        declarado = _maquina.carregar_maquina()
+        com_o_campo: list[tuple[Path, dict[str, object]]] = []
+        for path in sorted(directory.glob("*.json")):
+            dados = _dados_crus_do_perfil(path)
+            if dados is not None and CHAVE_DO_COMANDO_NO_ARQUIVO in dados:
+                com_o_campo.append((path, dados))
+        levados = {
+            nome: comando
+            for nome, comando in filter(None, (_o_comando_que_vai(p, d) for p, d in com_o_campo))
+            if not _maquina.comando_do_evento(nome, declarado)
+        }
+        if levados and not _maquina.gravar_os_comandos_dos_eventos(levados):
+            logger.warning("comandos_dos_eventos_nao_foram_ao_computador", perfis=sorted(levados))
+            return None
+        regravados: list[str] = []
+        for path, dados in com_o_campo:
+            sem = {k: v for k, v in dados.items() if k != CHAVE_DO_COMANDO_NO_ARQUIVO}
+            try:
+                _arquivar_versao(path.stem, path.read_bytes(), raiz=directory)
+                _atomic_write_json(path, sem)
+            except (OSError, ValueError) as exc:
+                logger.warning("comando_do_evento_nao_saiu_do_perfil", arquivo=path.name,
+                               err=str(exc)[:200])
+                continue
+            regravados.append(path.name)
+        try:
+            marker.write_text("done\n", encoding="utf-8")
+        except OSError as exc:
+            logger.warning("comandos_dos_eventos_marca_nao_gravou", err=str(exc)[:200])
+    logger.info("comandos_dos_eventos_foram_ao_computador", levados=len(levados),
+                perfis=sorted(levados), regravados=regravados)
+    return levados
+
+
 def o_carimbo_da_escolha_ganha_o_nome_novo(dest_dir: Path | None = None) -> list[str]:
     """Regrava o carimbo da ponte que um perfil guardou com o nome de antes de 30/10/2026.
 
@@ -1128,6 +1205,7 @@ def _maybe_seed_presets() -> None:
         return
     _seed_attempted = True
     try:
+        migrar_os_comandos_dos_eventos()
         with contextlib.suppress(Exception):
             migrate_default_profile_name()
         with contextlib.suppress(Exception):
@@ -2705,6 +2783,7 @@ __all__ = [
     "load_all_profiles",
     "load_profile",
     "migrar_generos_para_estilos_de_jogo",
+    "migrar_os_comandos_dos_eventos",
     "migrate_coop_local_match",
     "migrate_default_profile_name",
     "o_carimbo_da_escolha_ganha_o_nome_novo",

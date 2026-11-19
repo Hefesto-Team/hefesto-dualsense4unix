@@ -50,6 +50,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchCriteria,
     Profile,
 )
+from hefesto_dualsense4unix.utils.maquina import comando_do_evento
 
 from tests.conftest import skip_sem_gi_real
 
@@ -226,14 +227,15 @@ def test_sair_de_eventos_leva_o_momento_e_o_comando(lar: Path) -> None:
     a10_perfis.editor_quando(
         ctx, {"valor": "~/pausa.sh", "que": "comando", "evento": "change"}, ponte)
     perfil = loader.load_profile("Ao pausar")
-    assert (perfil.alvo, perfil.evento, perfil.evento_comando) == ("eventos", "pausa", "~/pausa.sh")
+    assert (perfil.alvo, perfil.evento, comando_do_evento("Ao pausar")) == (
+        "eventos", "pausa", "~/pausa.sh")
 
     fora = a10_perfis.pacote(ctx)
     assert fora["editor.alvo.eventos"] == "sim"
 
     a10_perfis.editor_alvo(ctx, {"v": "jogos"}, ponte)
     perfil = loader.load_profile("Ao pausar")
-    assert (perfil.alvo, perfil.evento, perfil.evento_comando) == ("jogos", None, None)
+    assert (perfil.alvo, perfil.evento, comando_do_evento("Ao pausar")) == ("jogos", None, "")
 
 
 def test_o_quando_so_aceita_os_momentos_da_lista_e_o_clique_solto_nao_grava(lar: Path) -> None:
