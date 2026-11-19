@@ -279,3 +279,40 @@ def test_os_gestos_de_cada_jogador_saem_com_hora(
     assert [x.split(" ", 1)[1] for x in linhas] == [
         f"[gesto] 08-conexoes.html · {j} → aplicado" for j in de_pe]
     assert all(_HORA.match(x) for x in linhas)
+
+
+def test_cem_leituras_mudas_iguais_deixam_uma_linha_e_a_volta_deixa_a_conta() -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo as hv
+
+    linhas: list[str] = []
+    piloto = SimpleNamespace(_folga=hv.FolgaDoServicoMudo(anotar=lambda _l: None),
+                             _mudo_no_diario=hv.UmaLinhaPorMudanca("[daemon mudo]",
+                                                                   linhas.append))
+    erro = FileNotFoundError(2, "No such file or directory")
+    for _ in range(100):
+        hv.Piloto._da_resposta(piloto, None, erro)
+    assert linhas == ["[daemon mudo] [Errno 2] No such file or directory"]
+    hv.Piloto._da_resposta(piloto, None, TimeoutError("timed out"))
+    hv.Piloto._da_resposta(piloto, {"ok": 1}, None)
+    assert len(linhas) == 3 and linhas[1] == "[daemon mudo] timed out"
+    assert re.fullmatch(r"\[daemon mudo\] voltou: 101 leituras falharam desde \d\d:\d\d:\d\d",
+                        linhas[2])
+    hv.Piloto._da_resposta(piloto, {"ok": 1}, None)
+    assert len(linhas) == 3
+
+
+def test_o_fio_do_disco_gira_o_diario_no_teto(estado: Path, fluxo: Any) -> None:
+    pedaco = "x" * 1023
+    for _ in range(3 * 1024):
+        print(pedaco, file=fluxo)
+        if _ % 256 == 0:
+            _escoar(fluxo)
+    _escoar(fluxo)
+    print("depois do giro", file=fluxo)
+    _escoar(fluxo)
+    log = estado / "interface.log"
+    assert (estado / "interface.log.1").exists()
+    assert log.stat().st_size <= ab.TETO_DO_DIARIO + ab.TETO_DA_FILA_DO_DIARIO + 4096
+    assert _ler(estado)[-1].endswith("depois do giro")

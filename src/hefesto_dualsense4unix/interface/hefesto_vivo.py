@@ -1470,6 +1470,34 @@ def _o_servico_so_demorou(erro: BaseException) -> bool:
             or isinstance(erro.__cause__, PRAZO_VENCIDO))
 
 
+class UmaLinhaPorMudanca:
+    """O erro que se repete a cada leitura deixa uma linha quando o texto muda, e a volta deixa
+    uma linha com quantas leituras falharam e desde que hora."""
+
+    def __init__(self, prefixo: str, anotar: Callable[[str], None] | None = None) -> None:
+        self.prefixo = prefixo
+        self._anotar = anotar or FolgaDoServicoMudo._ao_diario
+        self._texto = ""
+        self.falhas = 0
+        self._desde = ""
+
+    def falhou(self, erro: BaseException) -> None:
+        texto = f"{self.prefixo} {erro}"
+        if not self.falhas:
+            self._desde = time.strftime("%H:%M:%S")
+        self.falhas += 1
+        if texto != self._texto:
+            self._texto = texto
+            self._anotar(texto)
+
+    def voltou(self) -> None:
+        if not self.falhas:
+            return
+        quantas = "1 leitura falhou" if self.falhas == 1 else f"{self.falhas} leituras falharam"
+        self._anotar(f"{self.prefixo} voltou: {quantas} desde {self._desde}")
+        self.falhas, self._texto = 0, ""
+
+
 class FolgaDoServicoMudo:
     """O estado que o tique pinta quando o serviço não respondeu — RECONECTAR-SAMBA-02.
 
@@ -1778,6 +1806,8 @@ class Piloto:
         self._pintura_no_ar = False
         self._pular = 0
         self._folga = FolgaDoServicoMudo()
+        self._mudo_no_diario = UmaLinhaPorMudanca("[daemon mudo]")
+        self._externos_no_diario = UmaLinhaPorMudanca("[externos] não li o inventário:")
         self._geracao_vista = 0
         self._st_de_agora: dict[str, Any] = {}
         self.custo_do_ipc: deque[float] = deque(maxlen=self.CUSTOS_GUARDADOS)
@@ -2348,10 +2378,11 @@ class Piloto:
                     external=True,
                 )
             except Exception as e:
-                print(f"[externos] não li o inventário: {e}", file=sys.stderr)
+                self._externos_no_diario.falhou(e)
                 return
             finally:
                 self._externos_no_ar = False
+            self._externos_no_diario.voltou()
             from hefesto_dualsense4unix.app.actions.home_actions import externos_na_mesa
 
             bruto = r.get("external") if isinstance(r, dict) else None
@@ -2365,8 +2396,9 @@ class Piloto:
     ) -> dict[str, Any]:
         """O estado a pintar a partir de UMA resposta do leitor — boa ou muda."""
         if erro is not None:
-            print(f"[daemon mudo] {erro}", file=sys.stderr)
+            self._mudo_no_diario.falhou(erro)
             return self._folga.mudo(erro)
+        self._mudo_no_diario.voltou()
         bom = st if isinstance(st, dict) else {}
         self._folga.respondeu(bom)
         return bom

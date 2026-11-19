@@ -195,9 +195,10 @@ class _FilaDoDiario(io.RawIOBase):
     saíram, no ponto em que saíram.
     """
 
-    def __init__(self, arquivo: BinaryIO) -> None:
+    def __init__(self, arquivo: BinaryIO, caminho: Path | None = None) -> None:
         super().__init__()
         self.arquivo = arquivo
+        self.caminho = caminho
         self._vez = threading.Condition()
         self._linhas: deque[bytes] = deque()
         self._na_fila = 0
@@ -257,6 +258,22 @@ class _FilaDoDiario(io.RawIOBase):
         while (dados := self._tirar_da_fila()) is not None:
             with contextlib.suppress(OSError):
                 self.arquivo.write(dados)
+            self._girar_se_passou_do_teto()
+
+    def _girar_se_passou_do_teto(self) -> None:
+        if self.caminho is None:
+            return
+        try:
+            if self.caminho.stat().st_size <= TETO_DO_DIARIO:
+                return
+            self.caminho.replace(self.caminho.with_name(self.caminho.name + ".1"))
+            novo = self.caminho.open("ab", buffering=0)
+        except OSError:
+            return
+        with self._vez:
+            velho, self.arquivo = self.arquivo, novo
+        with contextlib.suppress(OSError):
+            velho.close()
 
     def escoar(self, prazo: float) -> bool:
         """Espera a fila chegar ao disco, com o pedaço sem quebra junto. Diz se chegou."""
@@ -304,7 +321,7 @@ def diario_da_janela() -> TextIO | None:
     except OSError as erro:
         print(f"  sem diário da janela ({erro})", file=sys.stderr)
         return None
-    fila = _FilaDoDiario(arquivo)
+    fila = _FilaDoDiario(arquivo, diario)
     escritor = io.TextIOWrapper(
         io.BufferedWriter(fila), encoding="utf-8", errors="replace", line_buffering=True)
     atexit.register(_escoar_o_diario, escritor, fila)
