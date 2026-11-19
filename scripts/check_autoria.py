@@ -392,7 +392,7 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
     if revs:
         ruins += auditar(revs, novos_de, casa, lista)
         ruins += auditar_tags(tags_, casa, lista)
-    if not ruins and lista is not None:
+    if not ruins and lista is not None and not lista.invalidas:
         for sha in dict.fromkeys(com_recibo):
             ruins += _o_completo(sha)
     return _veredito(ruins, f"push para {remoto}", lista)

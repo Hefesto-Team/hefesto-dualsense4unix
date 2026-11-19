@@ -47,14 +47,14 @@ if [ -n "$DE" ]; then
   mapfile -t NOMES < <(git diff --name-only "$DE^" "$DE")
   CONTA="$(git diff --numstat "$DE^" "$DE")"
 else
-  CONTA="$(git diff --numstat HEAD -- "${NOMES[@]}")"
   for n in "${NOMES[@]}"; do
-    if [ -n "$(git ls-files --others --exclude-standard -- "$n")" ]; then
-      CONTA+=$'\n'"$(wc -l < "$n") 0 $n"
-    elif ! grep -qxF -- "$n" <<< "$(cut -f3 <<< "$CONTA")"; then
-      recusa "$n não tem mudança a subir"
-    fi
+    [ -n "$(git diff --name-only HEAD -- "$n"; git ls-files --others --exclude-standard -- "$n")" ] \
+      || recusa "$n não tem mudança a subir"
   done
+  mapfile -t NOVOS < <(git ls-files --others --exclude-standard -- "${NOMES[@]}")
+  mapfile -t NOMES < <(git diff --name-only HEAD -- "${NOMES[@]}"; [ ${#NOVOS[@]} -eq 0 ] || printf '%s\n' "${NOVOS[@]}")
+  CONTA="$(git diff --numstat HEAD -- "${NOMES[@]}")"
+  for n in ${NOVOS[@]+"${NOVOS[@]}"}; do CONTA+=$'\n'"$(wc -l < "$n") 0 $n"; done
 fi
 LINHAS="$(awk '$1 ~ /^[0-9]+$/ {s += $1 + $2} END {print s + 0}' <<< "$CONTA")"
 
@@ -110,7 +110,7 @@ t=$SECONDS
 "${RAPIDO[@]}" >> "$LOG" 2>&1
 rc=$?
 R=$((SECONDS - t))
-[ "$rc" -eq 0 ] || para "rápido: vermelho; sem install, e o commit fica local"
+[ "$rc" -eq 0 ] || { grep -a '^REPROVOU' "$LOG" | tail -n 1; para "rápido: vermelho; sem install, e o commit fica local"; }
 diz "rápido: verde"
 
 read -r -a ARGS <<< "${HEFESTO_INSTALL_ARGS:---dev}"

@@ -9,6 +9,7 @@ import pytest
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "subir-mudanca-pequena.sh"
 REGISTRA = (
     '#!/bin/bash\necho "$(basename "$0") $*" >> "$HEFESTO_REGISTRO"\n'
+    '[ "${RC_DO_RAPIDO:-0}" = 0 ] || echo "REPROVOU: 1 vermelho(s) de 2 -> a-origem"\n'
     'exit "${RC_DO_RAPIDO:-0}"\n'
 )
 
@@ -68,7 +69,7 @@ def test_dois_arquivos_sobem_e_o_terceiro_sujo_fica_fora(repo: Path) -> None:
     assert list((repo / ".git" / "hefesto-pista-curta").glob("*.log"))
 
 
-@pytest.mark.parametrize("caso", ["seis-arquivos", "151-linhas", "install"])
+@pytest.mark.parametrize("caso", ["seis-arquivos", "151-linhas", "install", "pasta"])
 def test_o_grande_e_o_de_risco_recusam_antes_do_commit(repo: Path, caso: str) -> None:
     antes = git(repo, "rev-parse", "HEAD")
     if caso == "seis-arquivos":
@@ -78,9 +79,13 @@ def test_o_grande_e_o_de_risco_recusam_antes_do_commit(repo: Path, caso: str) ->
     elif caso == "151-linhas":
         nomes = ["a0.txt"]
         (repo / "a0.txt").write_text("x\n" * 150)
-    else:
+    elif caso == "install":
         nomes = ["install.sh"]
         (repo / "install.sh").write_text(REGISTRA + "\n")
+    else:
+        nomes = ["."]
+        (repo / "install.sh").write_text(REGISTRA + "\n")
+        (repo / "novo.txt").write_text("novo\n")
     p = subir(repo, *nomes)
     assert p.returncode == 2
     assert "isto é do fecho" in p.stderr
@@ -94,6 +99,7 @@ def test_rapido_vermelho_nao_chama_o_install(repo: Path) -> None:
     assert p.returncode == 1
     assert registro(repo) == ["portoes.sh --rapido"]
     assert "sem install" in p.stdout
+    assert "-> a-origem" in p.stdout
 
 
 def test_integracao_a_frente_do_dev_recusa(repo: Path) -> None:
