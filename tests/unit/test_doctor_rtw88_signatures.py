@@ -284,6 +284,7 @@ class TestCheckWifiPowersave:
             (sys_raiz / "class" / "net" / ifc / "device").symlink_to(dev)
         if bateria:
             (sys_raiz / "class" / "power_supply" / "BAT0").mkdir(parents=True)
+            (sys_raiz / "class" / "power_supply" / "BAT0" / "type").write_text("Battery\n")
         return _roda_check(
             tmp_path, "check_wifi_powersave", self.RAIZ, tmp_path / "nm", jornal, wifi,
             ferramenta, sys_raiz,

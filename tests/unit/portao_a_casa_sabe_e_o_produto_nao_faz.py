@@ -75,7 +75,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
         "`install.sh:3743` (`PROTON_PIN_PY`, com `--ensure`) e "
         "`uninstall.sh:1676` (`PROTON_PIN_PY`) o rodam; "
-        "`scripts/doctor.sh:3864` (`check_proton_pin`, --report) também",
+        "`scripts/doctor.sh:3900` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
@@ -99,7 +99,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "`scripts/doctor.sh:3805` (`check_exame_da_mesa`) o roda — e o "
+        "`scripts/doctor.sh:3841` (`check_exame_da_mesa`) o roda — e o "
         "`install.sh:4004` (`bash`) roda o doctor",
     ),
 }
@@ -1419,7 +1419,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/ensaios/o_travamento_fator_a_fator.py:884` (`quem_esta_varrendo`) pergunta quem "
         "varre "
         "com a classe, e `QUEDA_MINIMA_MEDIDA` e `QUEDA_MAXIMA_MEDIDA` são os que o "
-        "`scripts/doctor.sh:2963` (`Discovering`) cita (régua: "
+        "`scripts/doctor.sh:2999` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
         "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4641 (`varrendo`))."
@@ -1526,7 +1526,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "opt-out continua gravado. Sai com o piloto da aba Controles."
     ),
     "integrations/storm_doctor.py::classificar_o_historico": (
-        "30/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3174` "
+        "30/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3210` "
         "(`classificar_o_historico`), num heredoc Python, para resumir as famílias do rádio no "
         "kernel-watch (régua: `tests/unit/test_o_doctor_resume_as_familias_do_radio.py`). O "
         "leitor do produto era o sino da Conexões, que saiu com tudo o que só ele usava em "

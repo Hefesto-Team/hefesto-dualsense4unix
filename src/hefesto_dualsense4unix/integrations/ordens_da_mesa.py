@@ -219,6 +219,7 @@ class Leitura:
     nomes_declarados: Mapping[str, str] = field(default_factory=dict)
     tipos_declarados: Mapping[str, str] = field(default_factory=dict)
     nomes_das_entradas: Mapping[str, str] = field(default_factory=dict)
+    bateria: bool = False
 
 
 def mesmo_hub_fisico(
@@ -449,7 +450,13 @@ def teclado_so_no_hub(leitura: Leitura) -> Ordem | None:
 
 
 def dongle_dorme(leitura: Leitura) -> Ordem | None:
-    """R5 — o adaptador Bluetooth está autorizado a dormir."""
+    """R5 — o adaptador Bluetooth está autorizado a dormir.
+
+    Com bateria a regra 81 deixa o adaptador com o kernel, e a instalação não o
+    acorda: a ordem cala.
+    """
+    if leitura.bateria:
+        return None
     dormindo = [
         aparelho
         for aparelho in leitura.censo.conectados()

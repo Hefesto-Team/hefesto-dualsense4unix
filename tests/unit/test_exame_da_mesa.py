@@ -31,7 +31,7 @@ def _ensaio_do_radio(tmp_path: Path, valor: str | None, *, com_conf: bool) -> di
     conf = tmp_path / "hefesto-btusb-no-autosuspend.conf"
     if com_conf:
         conf.write_text("options btusb enable_autosuspend=0\n", encoding="utf-8")
-    return {"parametro": parametro, "conf": conf}
+    return {"parametro": parametro, "conf": conf, "bluetooth": tmp_path / "sem-bluetooth"}
 
 
 def _porta(raiz: Path, nome: str, controle: str) -> None:
@@ -394,6 +394,8 @@ def _radio_e_portas(tmp_path: Path) -> dict:
         "parametro_do_radio": ensaio["parametro"],
         "conf_do_radio": ensaio["conf"],
         "raiz_usb": portas,
+        "fontes_de_energia": tmp_path / "sem-fontes",
+        "bluetooth": ensaio["bluetooth"],
         "modulos": tmp_path / "modules-vazio",  # (noqa-acento)
         "diretorio_do_modulo": tmp_path / "sem-modulo",
     }

@@ -97,9 +97,13 @@ class Maquina:
             )
         energia = self.sys / "class/power_supply"
         energia.mkdir(parents=True)
-        (energia / "ps-controller-battery-aa:bb:cc:00:00:01").mkdir()
+        controle = energia / "ps-controller-battery-aa:bb:cc:00:00:01"
+        controle.mkdir()
+        (controle / "type").write_text("Battery\n", encoding="utf-8")
+        (controle / "scope").write_text("Device\n", encoding="utf-8")
         if bateria:
             (energia / "BAT0").mkdir()
+            (energia / "BAT0" / "type").write_text("Battery\n", encoding="utf-8")
         (self.proc / "stat").write_text("cpu 1 2 3\nbtime 1000000000\n", encoding="utf-8")
 
     def _cliente(self, nome: str, corpo: str) -> None:

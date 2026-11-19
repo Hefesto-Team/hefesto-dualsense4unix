@@ -47,6 +47,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.integrations import bateria_do_computador
+
 if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Leitura, Ordem
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -118,11 +120,28 @@ def _texto_de(caminho: Path) -> str | None:
         return None
 
 
+def _no_usb(no: Path) -> bool:
+    """O nó do ``/sys`` pendura num aparelho USB? Algum pai tem ``subsystem`` ``usb``."""
+    return any(
+        (pai / "subsystem").resolve().name == "usb" for pai in no.resolve().parents
+    )
+
+
+def radio_fora_do_usb(bluetooth: Path = Path("/sys/class/bluetooth")) -> bool:
+    """Há rádio Bluetooth e nenhum é USB (UART, SDIO, PCIe)? O ``btusb`` não o alcança."""
+    try:
+        radios = [no for no in bluetooth.iterdir() if no.name.startswith("hci")]
+    except OSError:
+        return False
+    return bool(radios) and not any(_no_usb(no) for no in radios)
+
+
 def energia_do_radio(
     *,
     parametro: Path = Path("/sys/module/btusb/parameters/enable_autosuspend"),
     conf: Path | None = None,
     raiz: Path = Path("/"),
+    bluetooth: Path = Path("/sys/class/bluetooth"),
 ) -> Item:
     """O rádio dos controles está proibido de dormir? (`doctor.sh` `check_btusb_autosuspend`)
 
@@ -131,7 +150,8 @@ def energia_do_radio(
     próximo probe, e a regra 81 só segura o adaptador de classe ``e0`` em
     máquina sem bateria: é atenção. Sem o parâmetro, o `btusb` não está
     carregado e nada foi medido. O conf é o que o kmod lê sob ``raiz``
-    (`regra_que_o_kmod_le`), ou o ``conf`` dado.
+    (`regra_que_o_kmod_le`), ou o ``conf`` dado. Rádio que não é USB
+    (:func:`radio_fora_do_usb` em ``bluetooth``) não passa pelo `btusb`: certo.
     """
     valor = _texto_de(parametro)
     if valor in ("N", "0"):
@@ -140,6 +160,13 @@ def energia_do_radio(
             rotulo=ROTULO_ENERGIA_DO_RADIO,
             estado=ESTADO_CERTO,
             porque="O sistema não desliga o rádio dos controles.",
+        )
+    if radio_fora_do_usb(bluetooth):
+        return Item(
+            chave="energia_do_radio",
+            rotulo=ROTULO_ENERGIA_DO_RADIO,
+            estado=ESTADO_CERTO,
+            porque="O adaptador Bluetooth não é USB: a economia do btusb não se aplica.",
         )
     presente = (
         conf.is_file()
@@ -217,10 +244,33 @@ def regra_que_o_kmod_le(nome: str, raiz: Path = Path("/")) -> Path | None:
     return None
 
 
+VENDORES_QUE_A_CASA_ACORDA = frozenset({"054c", "057e", "2dc8", "045e"})
+CLASSE_DO_ADAPTADOR = "e0"
+
+
+def a_casa_mantem_acordado(porta: Path, *, bateria: bool) -> bool:
+    """O aparelho é um que a regra 81 põe em ``on``? (`doctor.sh` `_doctor_a_casa_acorda`)
+
+    Os quatro fabricantes de controle, sempre; o adaptador de classe ``e0``, só em
+    computador sem bateria. Hub e o resto ficam com o kernel.
+    """
+    if _texto_de(porta / "idVendor") in VENDORES_QUE_A_CASA_ACORDA:
+        return True
+    return not bateria and _texto_de(porta / "bDeviceClass") == CLASSE_DO_ADAPTADOR
+
+
 def energia_das_portas(
-    *, raiz: Path = Path("/sys/bus/usb/devices")
+    *,
+    raiz: Path = Path("/sys/bus/usb/devices"),
+    fontes_de_energia: Path = bateria_do_computador.FONTES,
 ) -> Item:
-    """Nenhuma porta USB em economia de energia? (`doctor.sh:2301-2321`)"""
+    """O que a casa mantém acordado está em ``on``? (`doctor.sh` `check_usb_power_devices`)
+
+    Conta só o que :func:`a_casa_mantem_acordado` cobre; o resto em ``auto`` é a
+    economia do kernel, que a instalação não muda.
+    """
+    bateria = bateria_do_computador.tem_bateria(fontes_de_energia)
+    lidas = 0
     total = 0
     dormindo = 0
     try:
@@ -231,10 +281,13 @@ def energia_das_portas(
         controle = _texto_de(porta / "power" / "control")
         if controle is None or not (porta / "idVendor").exists():
             continue
+        lidas += 1
+        if not a_casa_mantem_acordado(porta, bateria=bateria):
+            continue
         total += 1
         if controle == "auto":
             dormindo += 1
-    if total == 0:
+    if lidas == 0:
         return Item(
             chave="energia_das_portas",
             rotulo=ROTULO_ENERGIA_DAS_PORTAS,
@@ -248,6 +301,8 @@ def energia_das_portas(
             estado=ESTADO_CERTO,
             porque=(
                 f"As {total} portas USB ficam sempre ligadas."
+                if total
+                else "Nenhum controle ligado por cabo agora."
             ),
         )
     return Item(
@@ -445,7 +500,9 @@ def leitura_do_sistema() -> Leitura:
     )
 
     return ordens_da_mesa.Leitura(
-        censo=ler_o_barramento(), entradas=listar_entradas()
+        censo=ler_o_barramento(),
+        entradas=listar_entradas(),
+        bateria=bateria_do_computador.tem_bateria(),
     )
 
 
@@ -484,6 +541,8 @@ def exame(
     parametro_do_radio: Path | None = None,
     conf_do_radio: Path | None = None,
     raiz_usb: Path | None = None,
+    fontes_de_energia: Path | None = None,
+    bluetooth: Path | None = None,
     modulos: Path | None = None,
     diretorio_do_modulo: Path | None = None,
     executar_busctl: Callable[[Sequence[str]], str | None] | None = None,
@@ -527,6 +586,13 @@ def exame(
         argumentos_do_radio["parametro"] = parametro_do_radio
     if conf_do_radio is not None:
         argumentos_do_radio["conf"] = conf_do_radio
+    if bluetooth is not None:
+        argumentos_do_radio["bluetooth"] = bluetooth
+    argumentos_das_portas: dict[str, Path] = {}
+    if raiz_usb is not None:
+        argumentos_das_portas["raiz"] = raiz_usb
+    if fontes_de_energia is not None:
+        argumentos_das_portas["fontes_de_energia"] = fontes_de_energia
     argumentos_do_suporte: dict[str, Path] = {}
     if modulos is not None:
         argumentos_do_suporte["modulos"] = modulos  # (noqa-acento)
@@ -535,7 +601,7 @@ def exame(
 
     itens = [
         energia_do_radio(**argumentos_do_radio),
-        energia_das_portas(**({"raiz": raiz_usb} if raiz_usb is not None else {})),
+        energia_das_portas(**argumentos_das_portas),
         pareamentos(executar=executar_busctl),
         suporte_ao_controle(**argumentos_do_suporte),
         vizinhanca_das_portas(

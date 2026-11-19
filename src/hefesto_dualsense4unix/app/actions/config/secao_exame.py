@@ -154,6 +154,7 @@ def contagens_do_cabecalho(itens: Sequence[Item]) -> tuple[int, int]:
 def leitura_das_ordens(maquina: Any) -> Any:
     """O que o catálogo de ordens lê — o barramento MAIS o desenho da máquina."""
     from hefesto_dualsense4unix.integrations import (
+        bateria_do_computador,
         censo_do_barramento,
         entrada_a_entrada,
         entradas_do_gabinete,
@@ -187,6 +188,7 @@ def leitura_das_ordens(maquina: Any) -> Any:
             for numero in entradas_do_mapa(mapa)
             if (nome := entrada_a_entrada.nome_da_entrada(numero, maquina=maquina))
         },
+        bateria=bateria_do_computador.tem_bateria(),
     )
 
 

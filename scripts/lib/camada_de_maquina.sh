@@ -1221,7 +1221,12 @@ install_wifi_usb_host() {
 _DESEMPENHO_QUER=""
 
 _desempenho_tem_bateria() {
-    compgen -G "${HEFESTO_DESEMPENHO_SYS:-/sys}/class/power_supply/BAT*" >/dev/null 2>&1
+    local fonte
+    for fonte in "${HEFESTO_DESEMPENHO_SYS:-/sys}"/class/power_supply/*; do
+        [[ "$(cat "${fonte}/type" 2>/dev/null)" == "Battery" ]] || continue
+        [[ "$(cat "${fonte}/scope" 2>/dev/null)" != "Device" ]] && return 0
+    done
+    return 1
 }
 
 _desempenho_decidir() {

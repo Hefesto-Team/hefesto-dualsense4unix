@@ -479,13 +479,17 @@ def _sys_do_doctor(tmp_path: Path, *, bateria: bool) -> Path:
     (host / "power").mkdir(parents=True)
     (host / "class").write_text("0x0c0330\n", encoding="utf-8")
     (host / "power" / "control").write_text("auto\n", encoding="utf-8")
-    for nome, vid, ctl in (("1-1", "046d", "auto"), ("1-2", "8087", "auto"), ("1-3", "054c", "on")):
+    for nome, vid, classe, ctl in (("1-1", "046d", "00", "auto"), ("1-2", "8087", "e0", "auto"),
+                                   ("1-3", "054c", "00", "on")):
         dev = sysfs / "bus" / "usb" / "devices" / nome
         (dev / "power").mkdir(parents=True)
         (dev / "idVendor").write_text(f"{vid}\n", encoding="utf-8")
+        (dev / "bDeviceClass").write_text(f"{classe}\n", encoding="utf-8")
         (dev / "power" / "control").write_text(f"{ctl}\n", encoding="utf-8")
     fonte = sysfs / "class" / "power_supply" / ("BAT0" if bateria else "ps-controller-battery-aa")
     fonte.mkdir(parents=True)
+    (fonte / "type").write_text("Battery\n", encoding="utf-8")
+    (fonte / "scope").write_text(("System" if bateria else "Device") + "\n", encoding="utf-8")
     return sysfs
 
 
@@ -542,9 +546,11 @@ class TestODoctorSabeDaBateria:
         esperado = "[WARN] economia de energia ATIVA em 1 device(s) USB: 1-3 (054c"
         assert esperado in r.stdout, r.stdout
 
-    def test_sem_bateria_todo_device_em_economia_e_aviso(self, tmp_path: Path) -> None:
+    def test_sem_bateria_o_adaptador_em_economia_e_aviso_e_o_teclado_nao(
+        self, tmp_path: Path
+    ) -> None:
         saida = _doctor_roda(tmp_path, "check_usb_power_devices", bateria=False)
-        assert "[WARN] economia de energia ATIVA em 2 device(s)" in saida, saida
+        assert "[WARN] economia de energia ATIVA em 1 device(s) USB: 1-2 (8087" in saida, saida
 
     def test_com_bateria_o_autosuspend_ausente_nao_e_aviso_e_os_quirks_seguem(
         self, tmp_path: Path
@@ -642,8 +648,10 @@ class TestODoctorSabeDaBateria:
         assert defeito in com_o_bootloader, com_o_bootloader
 
     def test_a_pergunta_do_doctor_e_a_do_install(self) -> None:
-        """O mesmo glob nos dois: um BAT2 contaria num e não no outro."""
+        """A mesma pergunta nos dois: uma bateria fora do nome contaria num e não no outro."""
         doctor = DOCTOR.read_text(encoding="utf-8")
         lib = LIB.read_text(encoding="utf-8")
-        assert "/class/power_supply/BAT*" in doctor
-        assert "/class/power_supply/BAT*" in lib
+        for pergunta in ('"$(cat "${fonte}/type" 2>/dev/null)" == "Battery"',
+                         '"$(cat "${fonte}/scope" 2>/dev/null)" != "Device"'):
+            assert pergunta in doctor and pergunta in lib
+        assert "/class/power_supply/BAT*" not in doctor + lib

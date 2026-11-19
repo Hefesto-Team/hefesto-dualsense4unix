@@ -2532,35 +2532,49 @@ check_perfis_inalcancaveis() {
 }
 
 _doctor_tem_bateria() {
-    compgen -G "${HEFESTO_DOCTOR_SYS:-/sys}/class/power_supply/BAT*" >/dev/null 2>&1
+    local fonte
+    for fonte in "${HEFESTO_DOCTOR_SYS:-/sys}"/class/power_supply/*; do
+        [[ "$(cat "${fonte}/type" 2>/dev/null)" == "Battery" ]] || continue
+        [[ "$(cat "${fonte}/scope" 2>/dev/null)" != "Device" ]] && return 0
+    done
+    return 1
 }
 
 _USB_VENDORES_DE_CONTROLE=" 054c 057e 2dc8 045e "
 
+_doctor_a_casa_acorda() {
+    local vid
+    vid="$(cat "$1/idVendor" 2>/dev/null)"
+    [[ "${_USB_VENDORES_DE_CONTROLE}" == *" ${vid} "* ]] && return 0
+    [[ "$2" -eq 0 && "$(cat "$1/bDeviceClass" 2>/dev/null)" == "e0" ]]
+}
+
 check_usb_power_devices() {
-    local dev ctl vid nome bad=0 total=0 exemplos="" bateria=0 poupados=0
+    local dev ctl vid nome bad=0 total=0 lidos=0 exemplos="" bateria=0 poupados=0 quem="o controle"
     _doctor_tem_bateria && bateria=1
+    [[ "${bateria}" -eq 0 ]] && quem="o controle e o adaptador Bluetooth"
     for dev in "${HEFESTO_DOCTOR_SYS:-/sys}"/bus/usb/devices/*; do
         [[ -r "${dev}/power/control" && -r "${dev}/idVendor" ]] || continue
-        total=$((total + 1))
+        lidos=$((lidos + 1))
         ctl="$(cat "${dev}/power/control" 2>/dev/null)"
+        if ! _doctor_a_casa_acorda "${dev}" "${bateria}"; then
+            [[ "${ctl}" == "auto" ]] && poupados=$((poupados + 1))
+            continue
+        fi
+        total=$((total + 1))
         if [[ "${ctl}" == "auto" ]]; then
             vid="$(cat "${dev}/idVendor" 2>/dev/null)"
-            if [[ "${bateria}" -eq 1 && "${_USB_VENDORES_DE_CONTROLE}" != *" ${vid} "* ]]; then
-                poupados=$((poupados + 1))
-                continue
-            fi
             bad=$((bad + 1))
             nome="$(cat "${dev}/product" 2>/dev/null || true)"
             exemplos+=" $(basename "${dev}") (${vid} ${nome:-?})"
         fi
     done
-    if [[ "${total}" -eq 0 ]]; then
+    if [[ "${lidos}" -eq 0 ]]; then
         info "sem devices USB legíveis no sysfs — pulo o check de energia dos devices"
     elif [[ "${bad}" -eq 0 && "${poupados}" -gt 0 ]]; then
-        pass "nenhum controle USB em economia de energia; ${poupados} outro(s) device(s) em 'auto', de propósito: o computador tem bateria, e o install só mantém acordado o controle"
+        pass "nenhum controle USB em economia de energia; ${poupados} outro(s) device(s) em 'auto', de propósito: o install só mantém acordado ${quem}"
     elif [[ "${bad}" -eq 0 ]]; then
-        pass "nenhum device USB em economia de energia (power/control=on em ${total}/${total})"
+        pass "nenhum device USB em economia de energia (power/control=on em ${lidos}/${lidos})"
     else
         warn "economia de energia ATIVA em ${bad} device(s) USB:${exemplos} — a regra 81 deveria mantê-los 'on': sudo bash scripts/install_udev.sh (e replugue)"
     fi
@@ -2633,12 +2647,34 @@ check_power_saboteurs() {
     fi
 }
 
+_doctor_no_usb() {
+    local no
+    no="$(readlink -f "$1")"
+    while [[ -n "${no}" && "${no}" != "/" ]]; do
+        [[ "$(readlink -f "${no}/subsystem" 2>/dev/null)" == */usb ]] && return 0
+        no="${no%/*}"
+    done
+    return 1
+}
+
+_doctor_radio_fora_do_usb() {
+    local hci achou=0
+    for hci in "${HEFESTO_DOCTOR_SYS:-/sys}"/class/bluetooth/hci*; do
+        [[ -e "${hci}" ]] || continue
+        achou=1
+        _doctor_no_usb "${hci}" && return 1
+    done
+    [[ "${achou}" -eq 1 ]]
+}
+
 check_btusb_autosuspend() {
     local conf="${HEFESTO_DOCTOR_BTUSB_CONF:-}"
     local param="${HEFESTO_DOCTOR_BTUSB_PARAM:-/sys/module/btusb/parameters/enable_autosuspend}" val=""
     [[ -r "${param}" ]] && val="$(cat "${param}" 2>/dev/null)"
     if [[ "${val}" == "N" || "${val}" == "0" ]]; then
         pass "btusb sem autosuspend (enable_autosuspend=N) — o rádio dos controles não dorme"
+    elif _doctor_radio_fora_do_usb; then
+        pass "o adaptador Bluetooth não é USB (UART, SDIO ou PCIe): a economia do btusb não se aplica"
     elif [[ -z "${conf}" ]] && ! conf="$(_regra_que_o_kmod_le hefesto-btusb-no-autosuspend.conf)"; then
         info "não consegui perguntar ao Hefesto onde o kmod lê o modprobe.d do btusb (enable_autosuspend=${val:-sem o módulo})"
     elif [[ -f "${conf}" && -z "${val}" ]]; then
