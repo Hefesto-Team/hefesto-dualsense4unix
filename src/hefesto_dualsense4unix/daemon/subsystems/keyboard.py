@@ -33,7 +33,6 @@ import os
 import shutil
 import signal
 import subprocess
-import tempfile
 import threading
 import time
 from pathlib import Path
@@ -45,6 +44,7 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     TOKEN_TOGGLE_OSK,
 )
 from hefesto_dualsense4unix.integrations import fora_do_servico
+from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -130,13 +130,7 @@ def _gravar_sessao(pid: int, binario: str, unidade: str | None = None) -> None:
         registro: dict[str, object] = {"pid": int(pid), "comm": binario}
         if unidade:
             registro["unidade"] = unidade
-        dados = json.dumps(registro, ensure_ascii=False)
-        fd, tmp = tempfile.mkstemp(dir=caminho.parent, prefix=".teclado_")
-        try:
-            os.write(fd, dados.encode())
-        finally:
-            os.close(fd)
-        os.replace(tmp, caminho)
+        escrever_inteiro(caminho, json.dumps(registro, ensure_ascii=False))
         logger.debug("osk_sessao_gravada", pid=pid, comm=binario)
     except Exception as exc:
         logger.debug("osk_sessao_gravar_falhou", err=str(exc))

@@ -24,7 +24,6 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-import tempfile
 from collections.abc import Callable, Iterator, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -32,6 +31,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.nomes_gravados import MARCA_DA_ESCOLHA, MARCA_DA_ESCOLHA_ANTIGA
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -62,7 +62,7 @@ def _escrever_no_disco(nome: str, texto: str | None) -> None:
     if texto is None:
         caminho.unlink(missing_ok=True)
     else:
-        caminho.write_text(texto, encoding="utf-8")
+        escrever_inteiro(caminho, texto)
 
 
 def _escrever_sem_levantar(nome: str, texto: str | None) -> None:
@@ -124,13 +124,7 @@ def save_last_profile(name: str) -> None:
     """Persiste o nome do último perfil ativado em session.json."""
     path = _session_path()
     try:
-        data = json.dumps({_PROFILE_KEY: name}, ensure_ascii=False)
-        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".session_")
-        try:
-            os.write(fd, data.encode())
-        finally:
-            os.close(fd)
-        os.replace(tmp, path)
+        escrever_inteiro(path, json.dumps({_PROFILE_KEY: name}, ensure_ascii=False))
         logger.debug("session_saved", last_profile=name)
     except Exception as exc:
         logger.debug("session_save_failed", err=str(exc))
@@ -159,7 +153,7 @@ def save_active_marker(name: str) -> None:
 
     try:
         marker = _config_dir(ensure=True) / _ACTIVE_MARKER_FILE
-        marker.write_text(name + "\n", encoding="utf-8")
+        escrever_inteiro(marker, name + "\n")
         logger.debug("active_marker_saved", profile=name)
     except Exception as exc:
         logger.warning("active_marker_write_failed", profile=name, err=str(exc))
@@ -269,13 +263,7 @@ def lembrar_o_ultimo_jogo(nome: str) -> None:
         return
     path = _ultimo_jogo_path()
     try:
-        data = json.dumps({_ULTIMO_JOGO_KEY: nome.strip()}, ensure_ascii=False)
-        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".ultimo_jogo_")
-        try:
-            os.write(fd, data.encode())
-        finally:
-            os.close(fd)
-        os.replace(tmp, path)
+        escrever_inteiro(path, json.dumps({_ULTIMO_JOGO_KEY: nome.strip()}, ensure_ascii=False))
         logger.info("o_ultimo_jogo_lembrado", perfil=nome.strip())
     except Exception as exc:
         logger.debug("ultimo_jogo_save_failed", err=str(exc))
@@ -325,12 +313,7 @@ def esquecer_a_escolha(nome: str | None = None) -> None:
         return
     path = _session_path()
     try:
-        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".session_")
-        try:
-            os.write(fd, b"{}")
-        finally:
-            os.close(fd)
-        os.replace(tmp, path)
+        escrever_inteiro(path, b"{}")
         logger.info("a_escolha_do_usuario_esquecida", nome=atual)
     except Exception as exc:
         logger.debug("session_save_failed", err=str(exc))
@@ -390,7 +373,7 @@ def migrar_a_escolha_do_usuario() -> str | None:
             else:
                 desfecho = "nada_a_mudar"
             espelhar_a_escolha()
-            marca.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marca, "done\n")
     except Exception as exc:
         logger.warning("a_escolha_do_usuario_nao_migrou", err=str(exc))
         return None
@@ -406,7 +389,7 @@ def save_paused_state(paused: bool) -> None:
     try:
         flag = config_dir(ensure=True) / _PAUSED_FLAG_FILE
         if paused:
-            flag.write_text("1\n", encoding="utf-8")
+            escrever_inteiro(flag, "1\n")
         else:
             flag.unlink(missing_ok=True)
         logger.debug("paused_state_saved", paused=paused)
@@ -431,7 +414,7 @@ def save_freestyle_ligado(ligado: bool) -> None:
     try:
         flag = config_dir(ensure=True) / _FREESTYLE_LIGADO_FLAG_FILE
         if ligado:
-            flag.write_text("1\n", encoding="utf-8")
+            escrever_inteiro(flag, "1\n")
         else:
             flag.unlink(missing_ok=True)
         logger.debug("freestyle_ligado_salvo", ligado=ligado)
@@ -446,7 +429,7 @@ def _o_cadeado_antigo_vira_freestyle(base: Path) -> None:
         return
     novo = base / _FREESTYLE_LIGADO_FLAG_FILE
     if not novo.exists():
-        novo.write_text("1\n", encoding="utf-8")
+        escrever_inteiro(novo, "1\n")
     antigo.unlink(missing_ok=True)
     logger.info("cadeado_antigo_virou_freestyle_ligado")
 
@@ -581,7 +564,7 @@ def save_keyboard_emulation(enabled: bool) -> None:
     """
     try:
         flag = config_dir(ensure=True) / _KEYBOARD_EMULATION_FLAG_FILE
-        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+        escrever_inteiro(flag, json.dumps({"enabled": bool(enabled)}) + "\n")
         logger.debug("keyboard_emulation_state_saved", enabled=enabled)
     except Exception as exc:
         logger.debug("keyboard_emulation_state_save_failed", err=str(exc))
@@ -637,10 +620,7 @@ def save_navegacao_interna(ligada: bool, tipo: str) -> None:
     try:
         tipo_valido = tipo if tipo in TIPOS_DE_NAVEGACAO else TIPOS_DE_NAVEGACAO[0]
         flag = config_dir(ensure=True) / _NAVEGACAO_INTERNA_FLAG_FILE
-        flag.write_text(
-            json.dumps({"ligada": bool(ligada), "tipo": tipo_valido}) + "\n",
-            encoding="utf-8",
-        )
+        escrever_inteiro(flag, json.dumps({"ligada": bool(ligada), "tipo": tipo_valido}) + "\n")
         logger.debug("navegacao_interna_salva", ligada=ligada, tipo=tipo_valido)
     except Exception as exc:
         logger.debug("navegacao_interna_nao_salvou", err=str(exc))
@@ -682,7 +662,7 @@ def save_big_picture(ligado: bool) -> None:
     """
     try:
         flag = config_dir(ensure=True) / _BIG_PICTURE_FLAG_FILE
-        flag.write_text(json.dumps({"ligado": bool(ligado)}) + "\n", encoding="utf-8")
+        escrever_inteiro(flag, json.dumps({"ligado": bool(ligado)}) + "\n")
         logger.debug("big_picture_salvo", ligado=ligado)
     except Exception as exc:
         logger.debug("big_picture_nao_salvou", err=str(exc))
@@ -712,7 +692,7 @@ def save_plugins_enabled(enabled: bool) -> bool:
     """
     try:
         flag = config_dir(ensure=True) / _PLUGINS_FLAG_FILE
-        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+        escrever_inteiro(flag, json.dumps({"enabled": bool(enabled)}) + "\n")
     except Exception as exc:
         logger.debug("plugins_flag_save_failed", err=str(exc))
         return False
@@ -743,7 +723,7 @@ def save_metrics_enabled(enabled: bool) -> bool:
     """
     try:
         flag = config_dir(ensure=True) / _METRICS_FLAG_FILE
-        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+        escrever_inteiro(flag, json.dumps({"enabled": bool(enabled)}) + "\n")
     except Exception as exc:
         logger.debug("metrics_flag_save_failed", err=str(exc))
         return False
@@ -813,7 +793,7 @@ def save_gamepad_caminho(caminho: str | None, *, origem: str | None = None) -> N
                 "origem": origem,
                 "quando": datetime.now().astimezone().isoformat(timespec="seconds"),
             }
-            alvo.write_text(json.dumps(dado, ensure_ascii=False) + "\n", encoding="utf-8")
+            escrever_inteiro(alvo, json.dumps(dado, ensure_ascii=False) + "\n")
         else:
             alvo.unlink(missing_ok=True)
         logger.debug("gamepad_caminho_salvo", caminho=caminho, origem=origem)
@@ -882,7 +862,7 @@ def migracao_ainda_nao_feita(marca: str) -> bool:
         alvo = config_dir(ensure=True) / marca
         if alvo.exists():
             return False
-        alvo.write_text("1\n", encoding="utf-8")
+        escrever_inteiro(alvo, "1\n")
         return True
     except Exception as exc:
         logger.debug("migracao_marca_falhou", marca=marca, err=str(exc))
@@ -899,7 +879,7 @@ def migrate_coop_optout() -> bool:
         flag = cfg / _COOP_DISABLED_FLAG_FILE
         migrou = flag.exists()
         flag.unlink(missing_ok=True)
-        marker.write_text("1\n", encoding="utf-8")
+        escrever_inteiro(marker, "1\n")
         if migrou:
             logger.info("coop_optout_migrado", motivo="o checkbox saiu da UI (LEIGO-01)")
         return migrou
@@ -928,12 +908,7 @@ def gravar_os_zeros(dados: dict[str, Any]) -> bool:
     try:
         path = config_dir(ensure=True) / _ZEROS_DOS_SENSORES_FILE
         texto = json.dumps(dados, ensure_ascii=False, indent=1, sort_keys=True)
-        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".zeros_")
-        try:
-            os.write(fd, texto.encode())
-        finally:
-            os.close(fd)
-        os.replace(tmp, path)
+        escrever_inteiro(path, texto)
         return True
     except Exception as exc:
         logger.warning("zeros_save_failed", err=str(exc))
@@ -953,7 +928,7 @@ def save_arranjo_do_desktop(arranjo: str) -> None:
         return
     try:
         flag = config_dir(ensure=True) / _ARRANJO_DO_DESKTOP_FILE
-        flag.write_text(json.dumps({"arranjo": arranjo}) + "\n", encoding="utf-8")
+        escrever_inteiro(flag, json.dumps({"arranjo": arranjo}) + "\n")
     except Exception as exc:
         logger.debug("arranjo_do_desktop_nao_salvou", err=str(exc))
 

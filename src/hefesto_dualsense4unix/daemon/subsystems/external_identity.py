@@ -74,9 +74,7 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 import re
-import tempfile
 import threading
 import time
 from pathlib import Path
@@ -96,6 +94,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     merged_order_payload,
     order_entries,
 )
+from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -756,15 +755,7 @@ class ExternalIdentityRegistry:
                         if key not in self._volatile
                     },
                 )
-                payload = json.dumps(data, ensure_ascii=False)
-                fd, tmp = tempfile.mkstemp(
-                    dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
-                )
-                try:
-                    os.write(fd, payload.encode())
-                finally:
-                    os.close(fd)
-                os.replace(tmp, path)
+                escrever_inteiro(path, json.dumps(data, ensure_ascii=False))
                 logger.debug("external_fila_salva", ordem=data[ORDER_FIELD])
         except Exception as exc:
             logger.debug("external_identity_save_falhou", err=str(exc))

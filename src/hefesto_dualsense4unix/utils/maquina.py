@@ -5,7 +5,6 @@ import contextlib
 import json
 import os
 import re
-import tempfile
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -37,6 +36,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     RumbleConfig,
 )
 from hefesto_dualsense4unix.profiles.slug import slugify
+from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.lugar import (
     FORMA_DO_CAMINHO,
@@ -2409,7 +2409,7 @@ def _guardar_a_copia_de_antes_da_migracao() -> None:
     alvo = origem.parent / (origem.name + _ANTES_DA_MIGRACAO_SUFIXO)
     with contextlib.suppress(OSError):
         if not alvo.exists():
-            alvo.write_bytes(origem.read_bytes())
+            escrever_inteiro(alvo, origem.read_bytes())
 
 
 def _guardar_os_bytes_recusados() -> None:
@@ -2417,7 +2417,7 @@ def _guardar_os_bytes_recusados() -> None:
     origem = caminho_da_maquina()
     with contextlib.suppress(OSError):
         alvo = origem.parent / (origem.name + _MAQUINA_INVALIDO_SUFIXO)
-        alvo.write_bytes(origem.read_bytes())
+        escrever_inteiro(alvo, origem.read_bytes())
 
 
 def _podar(no: Any) -> Any:
@@ -2509,17 +2509,8 @@ def _guardar_o_ilegivel(caminho: Path) -> Path:
 
 
 def _escrever(documento: dict[str, Any]) -> None:
-    """``os.replace`` de um temporário no MESMO diretório (troca atômica)."""
-    path = caminho_da_maquina()
-    payload = json.dumps(documento, ensure_ascii=False, indent=2, sort_keys=True)
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.fspath(path)), prefix=".maquina_")
-    try:
-        try:
-            os.write(fd, payload.encode())
-        finally:
-            os.close(fd)
-        os.replace(tmp, path)
-    except Exception:
-        with contextlib.suppress(OSError):
-            os.unlink(tmp)
-        raise
+    """O documento inteiro no disco, ou o de antes intacto (:func:`escrever_inteiro`)."""
+    escrever_inteiro(
+        caminho_da_maquina(),
+        json.dumps(documento, ensure_ascii=False, indent=2, sort_keys=True),
+    )

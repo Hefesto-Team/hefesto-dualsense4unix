@@ -50,6 +50,7 @@ from hefesto_dualsense4unix.profiles.steam_app import (
     e_janela_do_cliente_steam,
     steam_appid_from_wm_class,
 )
+from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
 from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssinatura
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import bases_de_instalacao
@@ -314,27 +315,16 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
                 if dados.get("name") == NOME_ANTIGO_DO_PADRAO:
                     dados["name"] = NOME_DO_PADRAO
                     _o_freestyle_vale_fora_do_jogo(dados)
-                    fd, tmp = tempfile.mkstemp(
-                        dir=str(directory), prefix=".personalizado_"
+                    escrever_inteiro(
+                        novo, json.dumps(dados, ensure_ascii=False, indent=2) + "\n"
                     )
-                    try:
-                        os.write(
-                            fd,
-                            (
-                                json.dumps(dados, ensure_ascii=False, indent=2)
-                                + "\n"
-                            ).encode("utf-8"),
-                        )
-                    finally:
-                        os.close(fd)
-                    os.replace(tmp, novo)
                     antigo.replace(directory / BACKUP_DO_PADRAO)
                     renomeado = NOME_DO_PADRAO
                     desfecho = "renomeado"
                 else:
                     desfecho = "nome_mudado_pela_usuaria"
         with contextlib.suppress(Exception):
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
     if renomeado:
         _repontar_a_sessao_para_o_padrao_novo()
     logger.info(
@@ -508,7 +498,7 @@ def o_personalizado_vira_freestyle(dest_dir: Path | None = None) -> Path | None:
                 _lock_path(antigo).unlink(missing_ok=True)
         if desfecho != "sem_copia":
             with contextlib.suppress(Exception):
-                marker.write_text("done\n", encoding="utf-8")
+                escrever_inteiro(marker, "done\n")
     if copia is not None:
         _repontar_a_sessao_do_personalizado()
     logger.info(
@@ -582,7 +572,7 @@ def _levar_a_fabrica_nova(
     copia = _arquivar_versao(SLUG_DO_PADRAO, bruto, raiz=directory)
     if copia is None:
         return "sem_copia", None
-    _atomic_write_bytes(alvo, asset.read_bytes())
+    escrever_inteiro(alvo, asset.read_bytes())
     return "fabrica_nova", copia
 
 
@@ -608,7 +598,7 @@ def o_freestyle_de_fabrica_nasce_ligado(dest_dir: Path | None = None) -> Path | 
                 desfecho, copia = _levar_a_fabrica_nova(alvo, asset, directory, anterior)
         if desfecho != "sem_copia":
             with contextlib.suppress(Exception):
-                marker.write_text(f"{impressao}\n", encoding="utf-8")
+                escrever_inteiro(marker, f"{impressao}\n")
     logger.info(
         "freestyle_de_fabrica_nasce_ligado",
         desfecho=desfecho,
@@ -655,13 +645,12 @@ def migrate_coop_local_match(dest_dir: Path | None = None) -> list[str]:
                 data["match"] = asset_data.get("match", data.get("match"))
                 data["priority"] = asset_data.get("priority", data.get("priority"))
                 with contextlib.suppress(Exception):
-                    path.write_text(
-                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-                        encoding="utf-8",
+                    escrever_inteiro(
+                        path, json.dumps(data, ensure_ascii=False, indent=2) + "\n"
                     )
                     migrated.append("coop_local.json")
         with contextlib.suppress(Exception):
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
     if migrated:
         logger.info("coop_local_match_migrated", files=migrated)
     return migrated
@@ -725,13 +714,12 @@ def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:
                 mudou = True
             if mudou:
                 with contextlib.suppress(Exception):
-                    path.write_text(
-                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-                        encoding="utf-8",
+                    escrever_inteiro(
+                        path, json.dumps(data, ensure_ascii=False, indent=2) + "\n"
                     )
                     migrated.append(arquivo)
         with contextlib.suppress(Exception):
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
     if migrated:
         logger.info("modo_jogo_nos_presets_migrated", files=migrated)
     return migrated
@@ -805,7 +793,7 @@ def migrar_generos_para_estilos_de_jogo(
                 continue
             movidos.append(arquivo)
         with contextlib.suppress(Exception):
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
     resultado = ResultadoDosEstilos(
         movidos=tuple(movidos),
         do_usuario=tuple(do_usuario),
@@ -914,7 +902,7 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
                 continue
             enxutos.append(path.name)
         with contextlib.suppress(Exception):
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
     if enxutos:
         logger.info(
             "perfis_de_jogo_so_nome_e_id",
@@ -1044,7 +1032,7 @@ def o_mudo_do_microfone_vai_para_o_controle(
                 continue
             tirados.append(path.name)
         with contextlib.suppress(Exception):
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
     logger.info(
         "mic_mudo_saiu_dos_perfis",
         perfil_ativo=ativo,
@@ -1117,7 +1105,7 @@ def migrar_os_comandos_dos_eventos(dest_dir: Path | None = None) -> dict[str, st
                 continue
             regravados.append(path.name)
         try:
-            marker.write_text("done\n", encoding="utf-8")
+            escrever_inteiro(marker, "done\n")
         except OSError as exc:
             logger.warning("comandos_dos_eventos_marca_nao_gravou", err=str(exc)[:200])
     logger.info("comandos_dos_eventos_foram_ao_computador", levados=len(levados),
@@ -1668,19 +1656,7 @@ def _esquecer_os_jogos_que_sairam(marca: Path, fontes: _FontesLidas) -> None:
 
 def _gravar_a_marca(marca: Path, linhas: Sequence[str]) -> None:
     """Regrava a marca inteira de uma vez: quem lê vê a velha ou a nova, nunca a metade."""
-    bruto = "".join(f"{linha}\n" for linha in linhas)
-    fd, tmp_nome = tempfile.mkstemp(
-        prefix=f".{marca.name}.", suffix=".tmp", dir=str(marca.parent)
-    )
-    tmp = Path(tmp_nome)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(bruto)
-            fh.flush()
-            os.fsync(fh.fileno())
-        os.replace(tmp, marca)
-    finally:
-        tmp.unlink(missing_ok=True)
+    escrever_inteiro(marca, "".join(f"{linha}\n" for linha in linhas))
 
 
 def _declarar_as_classes_de_jogo(
@@ -1959,7 +1935,7 @@ def _read_profile(path: Path) -> Profile:
 def _trava_da_leitura(path: Path) -> contextlib.AbstractContextManager[object]:
     """A trava de quem LÊ o perfil: no laço asyncio, nenhuma.
 
-    A gravação é atômica (``_atomic_write_bytes``), então a leitura sem trava vê o arquivo
+    A gravação é atômica (``escrever_inteiro``), então a leitura sem trava vê o arquivo
     inteiro, o velho ou o novo. O laço que espera o ``FileLock`` de outro processo para
     a entrada, a saída, a luz e o IPC de todos os controles.
     """
@@ -2318,7 +2294,7 @@ def _arquivar_versao(
         while alvo.exists():
             alvo = destino / f"{_carimbo_de_versao()}-{sufixo}.json"
             sufixo += 1
-        alvo.write_bytes(bruto)
+        escrever_inteiro(alvo, bruto)
         _podar_historico(destino, HISTORICO_MAX_VERSOES)
         return alvo
     except OSError as exc:
@@ -2606,7 +2582,7 @@ def restaurar_do_historico(
         atual = _bytes_se_existe(alvo)
         if atual is not None:
             _arquivar_versao(slug, atual)
-        _atomic_write_bytes(alvo, bruto)
+        escrever_inteiro(alvo, bruto)
     with contextlib.suppress(Exception):
         logger.info(
             "profile_restaurado",
@@ -2663,27 +2639,8 @@ def delete_profile(identifier: str) -> None:
 
 
 def _atomic_write_json(target: Path, payload: object) -> None:
-    _atomic_write_bytes(target, _bytes_do_payload(payload))
+    escrever_inteiro(target, _bytes_do_payload(payload))
 
-
-def _atomic_write_bytes(target: Path, bruto: bytes) -> None:
-    """Escrita atômica de bytes crus (tmpfile + fsync + rename)."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(
-        prefix=f".{target.name}.",
-        suffix=".tmp",
-        dir=str(target.parent),
-    )
-    try:
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(bruto)
-            fh.flush()
-            os.fsync(fh.fileno())
-        os.replace(tmp_name, target)
-    except Exception:
-        if Path(tmp_name).exists():
-            Path(tmp_name).unlink(missing_ok=True)
-        raise
 
 
 _EVENTO_DA_ESCRITA_DO_SERVICO = "escrita_do_servico"

@@ -432,7 +432,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED": (
         "Pula a semeadura dos perfis de fábrica "
-        "(`SEED_SKIP_ENV_VAR` em `src/hefesto_dualsense4unix/profiles/loader.py:106`). Existe "
+        "(`SEED_SKIP_ENV_VAR` em `src/hefesto_dualsense4unix/profiles/loader.py:107`). Existe "
         "para o teste começar de um diretório de perfis vazio; em produção a "
         "semeadura é justamente o que se quer. MEDIDO em 12/08/2026."
     ),
