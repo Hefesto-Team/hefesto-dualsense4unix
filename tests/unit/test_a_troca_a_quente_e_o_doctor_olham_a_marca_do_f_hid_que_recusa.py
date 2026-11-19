@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.dkms_de_mentira import ko_do_dkms
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 CAMADA = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
@@ -103,8 +105,9 @@ def _doctor(
 ) -> str:
     bin_ = tmp_path / "bin-doctor"
     bin_.mkdir()
+    arvore = tmp_path / "arvore-do-dkms"
     arquivo = (
-        "/lib/modules/k/updates/dkms/usb_f_hid.ko.zst" if staged
+        ko_do_dkms(tmp_path, arvore, "hefesto-usb-f-hid", "usb_f_hid.ko.zst") if staged
         else "/lib/modules/k/kernel/drivers/usb/gadget/function/usb_f_hid.ko.zst"
     )
     (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{arquivo}"\n', encoding="utf-8")
@@ -121,7 +124,7 @@ def _doctor(
             "HEFESTO_DOCTOR_KERNEL": "7.1.5-76070105-generic",
             "HEFESTO_DOCTOR_SYS_MODULE": str(_sys_module(tmp_path, marcas)),
             "HEFESTO_EFIVARS_ROOT": str(efivars),
-            "HEFESTO_DKMS_TREE": str(tmp_path / "arvore-do-dkms"),
+            "HEFESTO_DKMS_TREE": str(arvore),
         },
         capture_output=True, text=True, timeout=30, check=False,
     )

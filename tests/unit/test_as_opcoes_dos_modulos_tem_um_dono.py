@@ -304,7 +304,7 @@ def test_a_lib_escreve_a_quente_o_valor_da_conf(rotina: str, tmp_path: Path) -> 
             "dkms_warn_secureboot_once() { :; }",
             "dkms_pkg_version() { echo 0; }",
             "dkms_install_patched_module() { :; }",
-            "dkms_module_from_updates() { return 0; }",
+            "dkms_modulo_da_casa() { return 0; }",
             LEITORES["lib (install.sh)"],
             corpo,
             rotina,

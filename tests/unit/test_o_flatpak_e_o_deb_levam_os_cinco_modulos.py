@@ -96,7 +96,7 @@ def _instala_pelo_host_udev(
             f"export HEFESTO_UHID_CONF='{tmp_path}/nao-existe.conf'",
             "sudo() { :; }",
             f'dkms_install_patched_module() {{ echo "$1 $2 $4" >> "{registro}"; }}',
-            "dkms_module_from_updates() { return 0; }",
+            "dkms_modulo_da_casa() { return 0; }",
             "dkms_usb_f_hid_marcas_que_faltam() { :; }",
             _funcoes_do_host_udev(),
             f"DKMS_DIR='{dkms_dir}'",

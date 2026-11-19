@@ -8,6 +8,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LIB_PATH = REPO_ROOT / "scripts" / "dkms_lib.sh"
@@ -59,7 +61,7 @@ class TestContratoDeTexto:
         for funcao in (
             "dkms_install_patched_module",
             "dkms_remove_patched_module",
-            "dkms_module_from_updates",
+            "dkms_modulo_da_casa",
             "dkms_module_loaded",
         ):
             assert re.search(rf"^{funcao}\(\) \{{", LIB, re.MULTILINE), (
@@ -87,9 +89,9 @@ class TestContratoDeTexto:
             "leia para variável (_dkms_status_texto) e pergunte à variável"
         )
 
-    def test_validacao_por_caminho_updates_nunca_srcversion(self) -> None:
+    def test_validacao_pela_copia_do_dkms_nunca_srcversion(self) -> None:
         assert "modinfo -F filename" in LIB
-        assert "*/updates/dkms/*" in LIB
+        assert 'cmp -s "${_link}/module/${_ko##*/}"' in LIB
         assert "srcversion" not in LIB, (
             "srcversion não distingue in-tree de DKMS (armadilha do estudo)"
         )
@@ -188,40 +190,36 @@ class TestRemocao:
 
 
 class TestConsultas:
-    def test_module_from_updates_reconhece_o_caminho_dkms(self, tmp_path: Path) -> None:
+    def test_modulo_da_casa_e_a_copia_que_o_dkms_guarda(self, tmp_path: Path) -> None:
+        arvore = tmp_path / "dkms" / "hefesto-hid-nintendo" / "kernel-x-x86_64" / "module"
+        arvore.mkdir(parents=True)
+        (arvore / "hid-nintendo.ko").write_bytes(b"o do Hefesto")
+        ko = tmp_path / "updates" / "dkms" / "hid-nintendo.ko"
+        ko.parent.mkdir(parents=True)
+        ko.write_bytes(b"o do Hefesto")
         stubs = tmp_path / "bin"
         stubs.mkdir()
-        _stub(
-            stubs,
-            "modinfo",
-            'echo "/lib/modules/x/updates/dkms/hid-nintendo.ko"',
-        )
+        _stub(stubs, "modinfo", f'echo "{ko}"')
         resultado = _roda(
-            'dkms_module_from_updates hid_nintendo; printf "RC=%s\\n" "$?"',
-            path=str(stubs),
+            'dkms_modulo_da_casa hid_nintendo; printf "RC=%s\\n" "$?"',
+            path=f"{stubs}:/usr/bin:/bin",
+            env_extra={"HEFESTO_DKMS_TREE": str(tmp_path / "dkms")},
         )
         assert "RC=0" in resultado.stdout, resultado.stderr
-
-    def test_module_from_updates_rejeita_o_in_tree(self, tmp_path: Path) -> None:
-        stubs = tmp_path / "bin"
-        stubs.mkdir()
-        _stub(
-            stubs,
-            "modinfo",
-            'echo "/lib/modules/x/kernel/drivers/hid/hid-nintendo.ko.zst"',
-        )
+        ko.write_bytes(b"o de fabrica")
         resultado = _roda(
-            'dkms_module_from_updates hid_nintendo; printf "RC=%s\\n" "$?"',
-            path=str(stubs),
+            'dkms_modulo_da_casa hid_nintendo; printf "RC=%s\\n" "$?"',
+            path=f"{stubs}:/usr/bin:/bin",
+            env_extra={"HEFESTO_DKMS_TREE": str(tmp_path / "dkms")},
         )
         assert "RC=1" in resultado.stdout, resultado.stderr
 
-    def test_module_from_updates_falha_se_modinfo_falha(self, tmp_path: Path) -> None:
+    def test_modulo_da_casa_falha_se_modinfo_falha(self, tmp_path: Path) -> None:
         stubs = tmp_path / "bin"
         stubs.mkdir()
         _stub(stubs, "modinfo", "exit 1")
         resultado = _roda(
-            'dkms_module_from_updates hid_nintendo; printf "RC=%s\\n" "$?"',
+            'dkms_modulo_da_casa hid_nintendo; printf "RC=%s\\n" "$?"',
             path=str(stubs),
         )
         assert "RC=0" not in resultado.stdout
@@ -240,7 +238,9 @@ class TestConsultas:
         assert "${1//-/_}" in LIB
 
 
-def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | str]:
+def _prepara_e2e(
+    tmp_path: Path, build_falha: bool = False, destino: str = "updates/dkms"
+) -> dict[str, Path | str]:
     """Ambiente de execução real da lib SEM root: raízes em tmp (costura"""
     stubs = tmp_path / "bin"
     stubs.mkdir(exist_ok=True)
@@ -262,7 +262,9 @@ def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | 
     _stub(stubs, "sudo", f'echo "sudo $@" >> "{log}"\nexec "$@"')
     for dono in ("chown", "chmod"):
         _stub(stubs, dono, "exit 0")
-    _stub(stubs, "modinfo", 'echo "/lib/modules/x/updates/dkms/hid-teste.ko"')
+    ko = tmp_path / "modules" / kver / destino / "hid-teste.ko"
+    guardado = tmp_path / "dkms" / "hefesto-teste" / f"kernel-{kver}-x86_64" / "module"
+    _stub(stubs, "modinfo", f'echo "{ko}"')
     build_acao = "exit 1" if build_falha else f'touch "{estado}/built"'
     _stub(
         stubs,
@@ -276,7 +278,8 @@ def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | 
         '    else echo "hefesto-teste/9.9.9: added"; fi ;;\n'
         f'  add) touch "{estado}/added" ;;\n'
         f"  build) {build_acao} ;;\n"
-        f'  install) touch "{estado}/installed" ;;\n'
+        f'  install) touch "{estado}/installed"; mkdir -p "{guardado}" "{ko.parent}"\n'
+        f'    echo ko > "{guardado}/hid-teste.ko"; cp "{guardado}/hid-teste.ko" "{ko}" ;;\n'
         f'  remove) rm -f "{estado}/added" "{estado}/built" "{estado}/installed" ;;\n'
         "esac\nexit 0",
     )
@@ -288,16 +291,17 @@ def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | 
     }
 
 
-def _roda_e2e(tmp_path: Path, script: str, build_falha: bool = False) -> tuple[
-    subprocess.CompletedProcess[str], str, Path
-]:
-    cena = _prepara_e2e(tmp_path, build_falha=build_falha)
+def _roda_e2e(
+    tmp_path: Path, script: str, build_falha: bool = False, destino: str = "updates/dkms"
+) -> tuple[subprocess.CompletedProcess[str], str, Path]:
+    cena = _prepara_e2e(tmp_path, build_falha=build_falha, destino=destino)
     resultado = _roda(
         script,
         path=str(cena["path"]),
         env_extra={
             "HEFESTO_DKMS_SRC_ROOT": str(cena["src_root"]),
             "HEFESTO_DKMS_MODULES_ROOT": str(tmp_path / "modules"),
+            "HEFESTO_DKMS_TREE": str(tmp_path / "dkms"),
         },
     )
     log = Path(str(cena["log"]))
@@ -315,14 +319,18 @@ class TestExecucaoDePontaAPonta:
         'printf "RC2=%s\\n" "$?"\n'
     )
 
-    def test_primeira_chamada_faz_add_build_install_e_valida(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize("destino", ["updates/dkms", "extra", "updates"])
+    def test_primeira_chamada_faz_add_build_install_e_valida(
+        self, tmp_path: Path, destino: str
+    ) -> None:
+        """O destino é o que o dkms dá a cada distro; o initramfs se marca em todos."""
         script = (
             "dkms_install_patched_module hefesto-teste 9.9.9 "
             f"{tmp_path / 'assets-dkms'} hid-teste\n"
-            'printf "RC=%s\\n" "$?"\n'
+            'printf "RC=%s STALE=%s\\n" "$?" "${_DKMS_INITRAMFS_STALE}"\n'
         )
-        resultado, registro, src_root = _roda_e2e(tmp_path, script)
-        assert "RC=0" in resultado.stdout, resultado.stderr
+        resultado, registro, src_root = _roda_e2e(tmp_path, script, destino=destino)
+        assert "RC=0 STALE=1" in resultado.stdout, resultado.stdout + resultado.stderr
         assert registro.count("sudo dkms add hefesto-teste/9.9.9") == 1
         assert registro.count("sudo dkms build hefesto-teste/9.9.9") == 1
         assert registro.count("sudo dkms install hefesto-teste/9.9.9") == 1

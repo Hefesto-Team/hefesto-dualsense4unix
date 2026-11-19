@@ -21,6 +21,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import curas_da_casa as cc
 from hefesto_dualsense4unix.integrations import exame_da_mesa, storm_doctor
+from tests.unit.dkms_de_mentira import ko_do_dkms
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
@@ -63,8 +64,8 @@ class Lar:
         for pacote, nome, _rotulo in cc.MODULOS:
             (self.dkms / pacote / "1.0.0").mkdir(parents=True)
             (self.dkms / pacote / "1.0.0" / f"fonte-{KERNEL}.txt").write_text("cache\nok\n")
-            self.modinfo[nome] = (f"/lib/modules/{KERNEL}/updates/dkms/{nome}.ko.zst",
-                                  f"SRC{nome.upper()}")
+            ko = ko_do_dkms(base, self.dkms, pacote, f"{nome}.ko.zst", kernel=KERNEL)
+            self.modinfo[nome] = (str(ko), f"SRC{nome.upper()}")
         self.carregar("hid_playstation", "SRCHID_PLAYSTATION")
 
     def carregar(self, nome: str, srcversion: str) -> None:
@@ -118,7 +119,8 @@ def test_o_modulo_de_fabrica_e_o_reinicio_pendente(lar: Lar) -> None:
     lar.modinfo["rtw88_usb"] = (f"/lib/modules/{KERNEL}/kernel/drivers/rtw88_usb.ko.zst", "X")
     fabrica = cc.modulos_da_casa(lar.maquina()).frase
     assert fabrica == f"O driver do Wi-Fi USB é o de fábrica no kernel {KERNEL}"
-    lar.modinfo["rtw88_usb"] = (f"/lib/modules/{KERNEL}/updates/dkms/rtw88_usb.ko.zst", "NOVO")
+    lar.modinfo["rtw88_usb"] = (f"{lar.base}/lib/modules/{KERNEL}/updates/dkms/rtw88_usb.ko.zst",
+                                "NOVO")
     lar.carregar("rtw88_usb", "VELHO")
     cura = cc.modulos_da_casa(lar.maquina())
     assert (cura.frase, cura.dica) == ("O driver do Wi-Fi USB em uso não é o do Hefesto",

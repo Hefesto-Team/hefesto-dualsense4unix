@@ -33,6 +33,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.dkms_de_mentira import ko_do_dkms
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 LIB = RAIZ / "scripts" / "dkms_lib.sh"
@@ -277,15 +279,14 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
 def _doctor(tmp_path: Path, script: str, *, ligado: bool, inscrita: bool) -> str:
-    modulos = tmp_path / "lib-modules"
-    (modulos / "k" / "updates" / "dkms").mkdir(parents=True)
-    (modulos / "k" / "updates" / "dkms" / "hid-playstation.ko.zst").write_bytes(b"")
+    arvore = tmp_path / "arvore-do-dkms"
+    ko_do_dkms(tmp_path, arvore, "hefesto-hid-playstation", "hid-playstation.ko.zst")
     env = {
         "PATH": f"{_bin(tmp_path)}:/usr/bin:/bin",
         "HOME": str(tmp_path),
         "LC_ALL": "C.UTF-8",
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
-        "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
+        "HEFESTO_DKMS_TREE": str(arvore),
         **_mok(tmp_path, gerada=True, inscrita=inscrita),
     }
     r = subprocess.run(

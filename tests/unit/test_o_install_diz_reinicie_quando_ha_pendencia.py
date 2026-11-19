@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.dkms_de_mentira import ko_do_dkms
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 CAMADA = (RAIZ / "scripts" / "lib" / "camada_de_maquina.sh").read_text(encoding="utf-8")
@@ -47,31 +49,40 @@ def _sys_module(tmp_path: Path, carregado: str | None) -> Path:
 
 
 _CASOS = [
-    (VELHO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, True),
-    (NOVO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
-    (None, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
-    (VELHO, "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst", NOVO, False),
-    ("", "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
-    (VELHO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", "", False),
+    (VELHO, "updates/dkms", NOVO, True),
+    (VELHO, "extra", NOVO, True),
+    (NOVO, "updates/dkms", NOVO, False),
+    (None, "updates/dkms", NOVO, False),
+    (VELHO, None, NOVO, False),
+    ("", "updates/dkms", NOVO, False),
+    (VELHO, "updates/dkms", "", False),
 ]
 
 
-@pytest.mark.parametrize(("carregado", "arquivo", "novo", "pede"), _CASOS)
+@pytest.mark.parametrize(("carregado", "destino", "novo", "pede"), _CASOS)
 def test_o_install_e_o_doctor_respondem_a_mesma_pergunta(
-    tmp_path: Path, carregado: str | None, arquivo: str, novo: str, pede: bool
+    tmp_path: Path, carregado: str | None, destino: str | None, novo: str, pede: bool
 ) -> None:
     raiz = _sys_module(tmp_path, carregado)
-    _modinfo(tmp_path / "bin", arquivo=arquivo, srcversion=novo)
+    arvore = tmp_path / "arvore-do-dkms"
+    arquivo = (
+        ko_do_dkms(tmp_path, arvore, "hefesto-hid-playstation", "hid-playstation.ko.zst",
+                   destino=destino)
+        if destino
+        else "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst"
+    )
+    _modinfo(tmp_path / "bin", arquivo=str(arquivo), srcversion=novo)
     env = {
         "PATH": f"{tmp_path / 'bin'}:/usr/bin:/bin",
         "HOME": str(tmp_path),
         "HEFESTO_SYS_MODULE": str(raiz),
         "HEFESTO_DOCTOR_SYS_MODULE": str(raiz),
+        "HEFESTO_DKMS_TREE": str(arvore),
     }
     pergunta = 'if {f} hid-playstation; then echo pede; else echo nao-pede; fi'
     install = subprocess.run(
-        [BASH, "-c", f"ROOT_DIR='{RAIZ}'\nsource /dev/stdin\n"
-         + pergunta.format(f="modulo_pede_reinicio")],
+        [BASH, "-c", f"ROOT_DIR='{RAIZ}'\nsource '{RAIZ}/scripts/dkms_lib.sh'\n"
+         "source /dev/stdin\n" + pergunta.format(f="modulo_pede_reinicio")],
         input=CAMADA, capture_output=True, text=True, timeout=60, check=False, env=env,
     )
     doctor = subprocess.run(
@@ -101,7 +112,8 @@ def _rodar_o_passo_e_o_fecho(tmp_path: Path, carregado: str | None) -> str:
         "dkms_warn_secureboot_once() { :; }\n"
         "dkms_pkg_version() { echo 1.0.0; }\n"
         "dkms_install_patched_module() { :; }\n"
-        "dkms_module_from_updates() { return 0; }\n",
+        "dkms_modulo_da_casa() { return 0; }\n"
+        "dkms_ko_da_casa() { return 0; }\n",
         encoding="utf-8",
     )
     sys_module = _sys_module(tmp_path, carregado)

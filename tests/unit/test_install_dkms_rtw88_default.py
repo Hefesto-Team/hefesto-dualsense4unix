@@ -162,8 +162,8 @@ class TestFuncaoContrato:
         assert "descarregado" in FN, "descarregado: o patchado entra no próximo plug do dongle"
 
     def test_ativacao_gateada_pelo_staging_real(self) -> None:
-        assert "dkms_module_from_updates rtw88_usb" in FN
-        assert FN.index("dkms_module_from_updates rtw88_usb") < FN.index(
+        assert "dkms_modulo_da_casa rtw88_usb" in FN
+        assert FN.index("dkms_modulo_da_casa rtw88_usb") < FN.index(
             "/sys/module/rtw88_usb/parameters/hang_reset"
         ), "o gate vem ANTES de qualquer mensagem de ativação"
         assert "NÃO ficou staged" in FN, "warn honesto quando o DKMS não pegou"
@@ -341,7 +341,7 @@ class TestParidadePackaging:
 
     def test_install_host_udev_roda_o_dkms_dos_pacotes(self) -> None:
         assert 'dkms_install_patched_module "${pacote}"' in HOST_UDEV
-        assert 'dkms_module_from_updates "${ko}"' in HOST_UDEV, (
+        assert 'dkms_modulo_da_casa "${ko}"' in HOST_UDEV, (
             "mensagem de staging honesta exige a prova por modinfo"
         )
 

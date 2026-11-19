@@ -79,7 +79,7 @@ modulo_pede_reinicio() {
     carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
     [[ -n "${carregado}" ]] || return 1
     arquivo="$(modinfo -F filename "${nome}" 2>/dev/null || true)"
-    [[ "${arquivo}" == */updates/dkms/* ]] || return 1
+    dkms_ko_da_casa "${arquivo}" || return 1
     novo="$(modinfo -F srcversion "${nome}" 2>/dev/null || true)"
     [[ -n "${novo}" && "${novo}" != "${carregado}" ]]
 }
@@ -752,7 +752,7 @@ install_dkms_hid_nintendo_host() {
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-nintendo.conf"
     fi
-    if ! dkms_module_from_updates hid-nintendo; then
+    if ! dkms_modulo_da_casa hid-nintendo; then
         warn "patch DKMS do hid-nintendo NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); a conf do modprobe.d é inerte com o in-tree ('unknown parameter ignored')"
         return 0
     fi
@@ -813,7 +813,7 @@ install_dkms_uhid_host() {
     local _uhid_src="${ROOT_DIR}/assets/dkms/uhid"
     dkms_install_patched_module hefesto-uhid \
         "$(dkms_pkg_version "${_uhid_src}")" "${_uhid_src}" uhid
-    if ! dkms_module_from_updates uhid; then
+    if ! dkms_modulo_da_casa uhid; then
         warn "uhid patchado NÃO ficou staged (veja avisos acima) — o de fábrica continua (fail-safe), e a conf do modprobe.d seria inerte nele"
         return 0
     fi
@@ -868,7 +868,7 @@ install_dkms_hid_playstation_host() {
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-playstation.conf"
     fi
-    if ! dkms_module_from_updates hid-playstation; then
+    if ! dkms_modulo_da_casa hid-playstation; then
         warn "patch DKMS do hid-playstation NÃO ficou staged (veja avisos acima) — o driver de fábrica continua (fail-safe): o microfone do DualSense pelo rádio fica desligado, porque o de fábrica leria o áudio como botão e mexeria o cursor, e o 2º DualSense segue podendo se perder na probe; a conf do modprobe.d é inerte com ele ('unknown parameter ignored')"
         return 0
     fi
@@ -930,7 +930,7 @@ install_dkms_usb_f_hid_host() {
     local _fhid_src="${ROOT_DIR}/assets/dkms/usb-f-hid"
     dkms_install_patched_module hefesto-usb-f-hid \
         "$(dkms_pkg_version "${_fhid_src}")" "${_fhid_src}" usb_f_hid
-    if ! dkms_module_from_updates usb_f_hid; then
+    if ! dkms_modulo_da_casa usb_f_hid; then
         warn "usb_f_hid patchado NÃO ficou staged (o motivo está no aviso acima e no hefesto-dualsense4unix doctor) — o de fábrica continua, e o jogo no Proton espera 5 s por pedido de feature"
         return 0
     fi
@@ -1148,7 +1148,7 @@ install_dkms_rtw88_usb_host() {
     local _rtw_src="${ROOT_DIR}/assets/dkms/rtw88-usb"
     dkms_install_patched_module hefesto-rtw88-usb \
         "$(dkms_pkg_version "${_rtw_src}")" "${_rtw_src}" rtw88_usb
-    if ! dkms_module_from_updates rtw88_usb; then
+    if ! dkms_modulo_da_casa rtw88_usb; then
         warn "patch DKMS do rtw88_usb NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); sem device-gone/port-reset, o fantasma USB do dongle (device retido após disconnect perdido) segue possível"
         return 0
     fi

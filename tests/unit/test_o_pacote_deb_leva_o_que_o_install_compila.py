@@ -28,6 +28,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.dkms_de_mentira import ko_do_dkms
+
 RAIZ = Path(__file__).resolve().parents[2]
 DKMS = RAIZ / "assets" / "dkms"
 BUILD_DEB = RAIZ / "scripts" / "build_deb.sh"
@@ -135,9 +137,9 @@ def test_sem_argumento_o_kernel_e_o_que_roda(tmp_path: Path) -> None:
 
 def _com_initramfs(tmp_path: Path, ambiente: dict[str, str], *, ko_novo: bool) -> dict[str, str]:
     """O `.ko` do kernel novo e o initramfs dele, um mais novo que o outro."""
-    ko, initrd = tmp_path / "updates" / "dkms" / "uhid.ko", tmp_path / "initrd"
-    ko.parent.mkdir(parents=True)
-    ko.write_bytes(b"")
+    ko = ko_do_dkms(tmp_path, Path(ambiente["HEFESTO_DKMS_TREE"]), "hefesto-uhid", "uhid.ko",
+                    kernel=KERNEL_NOVO)
+    initrd = tmp_path / "initrd"
     initrd.write_bytes(b"")
     os.utime(ko if ko_novo else initrd, (2_000_000_000, 2_000_000_000))
     os.utime(initrd if ko_novo else ko, (1_000_000_000, 1_000_000_000))

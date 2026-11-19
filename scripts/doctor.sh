@@ -547,7 +547,7 @@ check_uhid_contrapressao() {
         return
     fi
     instalado="$(modinfo -k "${kernel}" -F filename uhid 2>/dev/null || true)"
-    if [[ "${instalado}" == */updates/dkms/* ]]; then
+    if _ko_da_casa "${instalado}"; then
         info "a contrapressão do uhid foi pedida e entra no PRÓXIMO BOOT (o uhid de fábrica está carregado; recarregá-lo derrubaria todo HID por Bluetooth)"
         return
     fi
@@ -5309,6 +5309,11 @@ _dkms_veredito() {
     esac
 }
 
+_ko_da_casa() {
+    [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] || return 1
+    ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_ko_da_casa "$1" )
+}
+
 check_cmdline_pad_virtual() {
     local cmdline="${HEFESTO_DOCTOR_CMDLINE:-/proc/cmdline}"
     local kstub="${HEFESTO_DOCTOR_KERNELSTUB:-/etc/kernelstub/configuration}"
@@ -5336,9 +5341,9 @@ _check_dkms_secureboot() {
     ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ) \
         || return
     local kver; kver="$(uname -r)"
-    if compgen -G "${HEFESTO_DKMS_MODULES_ROOT:-/lib/modules}/${kver}/updates/dkms/*.ko*" >/dev/null 2>&1; then
+    if compgen -G "${HEFESTO_DKMS_TREE:-/var/lib/dkms}/hefesto-*/kernel-${kver}-*" >/dev/null 2>&1; then
         _DKMS_SB_WARNED=1
-        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto em updates/dkms — o kernel os RECUSA no boot e NÃO volta ao driver de fábrica (o DualSense, o controle Nintendo ou o Wi-Fi USB ficam sem driver): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto instalados neste kernel — o kernel os RECUSA no boot e NÃO volta ao driver de fábrica (o DualSense, o controle Nintendo ou o Wi-Fi USB ficam sem driver): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
     fi
 }
 
@@ -5411,7 +5416,7 @@ check_hefesto_hid_nintendo_dkms() {
 
     local modpath
     modpath="$(modinfo -F filename hid_nintendo 2>/dev/null)"
-    if [[ "${modpath}" == */updates/dkms/* ]]; then
+    if _ko_da_casa "${modpath}"; then
         info "próximo carregamento resolve para o módulo patchado (${modpath})"
     elif [[ -n "${modpath}" ]]; then
         info "próximo carregamento ainda resolve para o in-tree (${modpath}) — confira /etc/depmod.d ou rode: sudo depmod -a"
@@ -5457,7 +5462,7 @@ check_hefesto_rtw88_usb_dkms() {
 
     local modpath
     modpath="$(modinfo -F filename rtw88_usb 2>/dev/null)"
-    if [[ "${modpath}" == */updates/dkms/* ]]; then
+    if _ko_da_casa "${modpath}"; then
         info "próximo carregamento resolve para o módulo patchado (${modpath})"
     elif [[ -n "${modpath}" ]]; then
         info "próximo carregamento ainda resolve para o in-tree (${modpath}) — confira /etc/depmod.d ou rode: sudo depmod -a"
@@ -5501,7 +5506,7 @@ check_hefesto_hid_playstation_dkms() {
     baseline="$(_hid_playstation_baseline || true)"
     pulo="$(_dkms_veredito hefesto-hid-playstation 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename hid_playstation 2>/dev/null || true)"
-    [[ "${modpath}" == */updates/dkms/* ]] && staged=1
+    _ko_da_casa "${modpath}" && staged=1
 
     if [[ -d "${modulo}" ]] && _hid_playstation_carregado_guarda_o_audio "${modulo}" "${baseline}"; then
         pass "o driver do DualSense carregado descarta o áudio do microfone (o hid-playstation do Hefesto): o microfone pelo rádio pode subir"
@@ -5536,7 +5541,7 @@ check_hefesto_usb_f_hid_dkms() {
     local modpath staged=0 faltam pulo
     pulo="$(_dkms_veredito hefesto-usb-f-hid 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename usb_f_hid 2>/dev/null || true)"
-    [[ "${modpath}" == */updates/dkms/* ]] && staged=1
+    _ko_da_casa "${modpath}" && staged=1
 
     if [[ ! -d "${modulo}" ]]; then
         if [[ "${staged}" -eq 1 ]]; then
@@ -5576,7 +5581,7 @@ _modulo_pede_reinicio() {
     carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
     [[ -n "${carregado}" ]] || return 1
     arquivo="$(modinfo -F filename "${nome}" 2>/dev/null || true)"
-    [[ "${arquivo}" == */updates/dkms/* ]] || return 1
+    _ko_da_casa "${arquivo}" || return 1
     novo="$(modinfo -F srcversion "${nome}" 2>/dev/null || true)"
     [[ -n "${novo}" && "${novo}" != "${carregado}" ]]
 }

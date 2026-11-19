@@ -25,6 +25,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit.dkms_de_mentira import ko_do_dkms
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 CAMADA = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
@@ -205,7 +207,7 @@ def test_o_install_chama_a_troca_depois_do_dkms(tmp_path: Path) -> None:
         "dkms_warn_secureboot_once() { :; }\n"
         "dkms_pkg_version() { echo 1.0.0; }\n"
         f'dkms_install_patched_module() {{ echo "dkms $*" >> "{tmp_path}/chamadas.log"; }}\n'
-        "dkms_module_from_updates() { return 0; }\n",
+        "dkms_modulo_da_casa() { return 0; }\n",
         encoding="utf-8",
     )
     sys_module = _sys_module(tmp_path, carregado=True, marca=False, refcnt=0)
@@ -254,7 +256,7 @@ def _passo_do_install(
         "dkms_warn_secureboot_once() { :; }\n"
         "dkms_pkg_version() { echo 1.0.0; }\n"
         f'dkms_install_patched_module() {{ echo "dkms $*" >> "{tmp_path}/chamadas.log"; }}\n'
-        f"dkms_module_from_updates() {{ return {0 if staged else 1}; }}\n",
+        f"dkms_modulo_da_casa() {{ return {0 if staged else 1}; }}\n",
         encoding="utf-8",
     )
     sys_module = _sys_module(tmp_path, carregado=True, marca=False, refcnt=0)
@@ -295,7 +297,7 @@ def test_no_dkms_nao_constroi_nem_troca(tmp_path: Path) -> None:
 def test_fora_do_baseline_nao_troca_o_de_fabrica(tmp_path: Path) -> None:
     """O fonte de fábrica não se achou: o DKMS pula (rc 77), nada fica staged e o carregado fica.
 
-    A MORDIDA: tire a volta cedo do `dkms_module_from_updates` e a troca recarrega o
+    A MORDIDA: tire a volta cedo do `dkms_modulo_da_casa` e a troca recarrega o
     de fábrica à toa, sem cura nenhuma em `updates/dkms`.
     """
     r, chamadas = _passo_do_install(tmp_path, staged=False)
@@ -309,8 +311,9 @@ def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
             kernel: str = KERNEL_CONFERIDO, veredito: tuple[str, str] | None = None) -> str:
     bin_ = tmp_path / "bin-doctor"
     bin_.mkdir()
+    arvore = tmp_path / "arvore-do-dkms"
     arquivo = (
-        "/lib/modules/k/updates/dkms/usb_f_hid.ko.zst" if staged
+        ko_do_dkms(tmp_path, arvore, "hefesto-usb-f-hid", "usb_f_hid.ko.zst") if staged
         else "/lib/modules/k/kernel/drivers/usb/gadget/function/usb_f_hid.ko.zst"
     )
     (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{arquivo}"\n', encoding="utf-8")
@@ -320,10 +323,9 @@ def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
     sys_module = _sys_module(tmp_path, carregado=carregado, marca=marca, refcnt=0)
     efivars = tmp_path / "efivars-vazia"
     efivars.mkdir()
-    arvore = tmp_path / "arvore-do-dkms"
     if veredito is not None:
         pasta = arvore / "hefesto-usb-f-hid" / "1.0.0"
-        pasta.mkdir(parents=True)
+        pasta.mkdir(parents=True, exist_ok=True)
         (pasta / f"fonte-{kernel}.txt").write_text("\n".join(veredito) + "\n", encoding="utf-8")
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; check_hefesto_usb_f_hid_dkms'],

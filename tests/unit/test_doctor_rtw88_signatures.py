@@ -164,7 +164,7 @@ class TestCheckDkmsRtw88:
     def test_proximo_carregamento_por_modinfo_filename(self) -> None:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_rtw88_usb_dkms")
         assert "modinfo -F filename rtw88_usb" in corpo
-        assert "*/updates/dkms/*" in corpo
+        assert '_ko_da_casa "${modpath}"' in corpo
 
     def test_in_tree_carregado_avisa_so_proximo_boot(self) -> None:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_rtw88_usb_dkms")

@@ -256,10 +256,19 @@ _dkms_arquivo_do_modulo() {
     fi
 }
 
-dkms_module_from_updates() {
+dkms_ko_da_casa() {
+    local _ko="$1" _link
+    [[ -f "${_ko}" ]] || return 1
+    for _link in "$(_dkms_tree_root)"/hefesto-*/kernel-*; do
+        cmp -s "${_link}/module/${_ko##*/}" "${_ko}" && return 0
+    done
+    return 1
+}
+
+dkms_modulo_da_casa() {
     local _path
     _path="$(_dkms_arquivo_do_modulo "$1")" || return 1
-    [[ "${_path}" == */updates/dkms/* ]]
+    dkms_ko_da_casa "${_path}"
 }
 
 DKMS_MARCAS_DO_USB_F_HID=(get_report_sized get_report_refuses)
@@ -390,17 +399,17 @@ dkms_install_patched_module() {
         fi
     fi
 
-    if dkms_module_from_updates "${_built}"; then
-        _dkms_log "ok: modinfo resolve ${_built} p/ updates/dkms (vence o in-tree no próximo carregamento)"
+    if dkms_modulo_da_casa "${_built}"; then
+        _dkms_log "ok: modinfo resolve ${_built} p/ o que o DKMS instalou (vence o in-tree no próximo carregamento)"
         if [[ -n "${HEFESTO_DKMS_KERNEL:-}" && ! -f "$(_dkms_initramfs_path)" ]]; then
             _dkms_log "o initramfs de ${_kver} ainda não nasceu: ele já nasce com o ${_built}"
         elif _dkms_initramfs_desatualizado "${_built}"; then
             dkms_mark_initramfs_stale "${_built}"
         else
-            _dkms_log "initramfs já mais novo que o ${_built} de updates/dkms — sem regeneração"
+            _dkms_log "initramfs já mais novo que o ${_built} do DKMS — sem regeneração"
         fi
     else
-        _dkms_warn "modinfo NÃO aponta ${_built} p/ updates/dkms — confira /etc/depmod.d e rode: sudo depmod -a"
+        _dkms_warn "modinfo NÃO aponta ${_built} p/ o que o DKMS instalou — confira /etc/depmod.d e rode: sudo depmod -a"
     fi
     return 0
 }

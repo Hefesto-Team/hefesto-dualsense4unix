@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from tests.unit.dkms_de_mentira import ko_do_dkms
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
@@ -28,17 +30,17 @@ def _doctor(
         parametro.write_text(param + "\n", encoding="utf-8")
     bin_ = tmp_path / "bin"
     bin_.mkdir()
+    arvore = tmp_path / "arvore-do-dkms"
     arquivo = (
-        "/lib/modules/k/updates/dkms/uhid.ko.zst"
+        ko_do_dkms(tmp_path, arvore, "hefesto-uhid", "uhid.ko.zst")
         if instalado
         else "/lib/modules/k/kernel/drivers/hid/uhid.ko.zst"
     )
     (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{arquivo}"\n', encoding="utf-8")
     (bin_ / "modinfo").chmod(0o755)
-    arvore = tmp_path / "arvore-do-dkms"
     if veredito is not None:
         pasta = arvore / "hefesto-uhid" / "1.0.0"
-        pasta.mkdir(parents=True)
+        pasta.mkdir(parents=True, exist_ok=True)
         (pasta / f"fonte-{KERNEL}.txt").write_text("\n".join(veredito) + "\n", encoding="utf-8")
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; check_uhid_contrapressao'],

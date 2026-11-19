@@ -8,6 +8,7 @@ e responde «não se aplica» onde a cura não vale (outra distribuição, peça
 from __future__ import annotations
 
 import contextlib
+import filecmp
 import json
 import mmap
 import os
@@ -147,6 +148,17 @@ def _versao_do_dkms(pasta: Path) -> str | None:
     return max(versoes, key=_ordem) if versoes else None
 
 
+def ko_da_casa(dkms: Path, arquivo: Path) -> bool:
+    """O ``.ko`` é um que o DKMS da casa instalou? Igual byte a byte à cópia que ele guarda em
+    ``<dkms>/hefesto-*/kernel-*/module/``, como o ``find_module_from_ko`` do próprio ``dkms``:
+    vale em ``/updates/dkms``, ``/extra`` ou ``/updates``, o destino que cada distro dá."""
+    for ligacao in dkms.glob("hefesto-*/kernel-*"):
+        with contextlib.suppress(OSError):
+            if filecmp.cmp(ligacao / "module" / arquivo.name, arquivo, shallow=False):
+                return True
+    return False
+
+
 def modulo(maquina: Maquina, pacote: str, nome: str, rotulo: str) -> Cura:
     """O módulo da casa vale no kernel que roda? Sem o pacote no DKMS, não se aplica."""
     kernel = maquina.o_kernel()
@@ -164,7 +176,7 @@ def modulo(maquina: Maquina, pacote: str, nome: str, rotulo: str) -> Cura:
     arquivo = info.get("filename", "")
     if not arquivo:
         return Cura(nome, rotulo, NAO_SE_APLICA)
-    if "/updates/dkms/" not in arquivo:
+    if not ko_da_casa(maquina.dkms, Path(arquivo)):
         return Cura(nome, rotulo, CAIU, f"{rotulo} é o de fábrica no kernel {kernel}",
                     RODE_O_INSTALADOR)
     carregado = ""

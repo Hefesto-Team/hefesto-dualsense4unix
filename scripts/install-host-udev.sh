@@ -476,7 +476,7 @@ for candidate in \
 done
 
 _depois_do_usb_f_hid() {
-    if ! dkms_module_from_updates usb_f_hid; then
+    if ! dkms_modulo_da_casa usb_f_hid; then
         echo "  módulo patchado NÃO staged (avisos acima) — o de fábrica continua: o jogo no Proton espera 5 s por pedido de feature"
     elif [[ ! -d /sys/module/usb_f_hid || -z "$(dkms_usb_f_hid_marcas_que_faltam /sys/module)" ]]; then
         echo "  módulo patchado staged (o curado já está carregado, ou entra no próximo carregamento)"
@@ -494,7 +494,7 @@ _depois_do_modulo() {
         printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
         echo "  hang_reset rearmado a quente (vale já; sem reload, sem reboot)"
     fi
-    if dkms_module_from_updates "${ko}"; then
+    if dkms_modulo_da_casa "${ko}"; then
         echo "  módulo patchado staged (vence o in-tree no próximo boot/carregamento — NUNCA recarregamos com o aparelho em uso)"
     else
         echo "  módulo patchado NÃO staged (avisos acima) — o driver de fábrica continua (fail-safe)"

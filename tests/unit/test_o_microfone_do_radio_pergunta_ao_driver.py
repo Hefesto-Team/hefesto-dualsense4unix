@@ -12,6 +12,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
+from tests.unit.dkms_de_mentira import ko_do_dkms
 
 _RUN_DE_VERDADE = subprocess.run
 _POPEN_DE_VERDADE = subprocess.Popen
@@ -239,7 +240,8 @@ def _doctor_hidp(
     if veredito:
         (pasta_do_veredito / f"fonte-{kernel}.txt").write_text(veredito, encoding="utf-8")
     arquivo = (
-        "/lib/modules/k/updates/dkms/hid-playstation.ko.zst" if staged
+        ko_do_dkms(tmp_path, arvore_dkms, "hefesto-hid-playstation", "hid-playstation.ko.zst")
+        if staged
         else "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst"
     )
     (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{arquivo}"\n', encoding="utf-8")

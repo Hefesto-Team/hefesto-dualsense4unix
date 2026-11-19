@@ -179,10 +179,10 @@ class TestFuncaoContrato:
         assert "descarregado" in FN, "descarregado: o patchado entra no próximo plug"
 
     def test_ativacao_gateada_pelo_staging_real(self) -> None:
-        assert "dkms_module_from_updates hid-nintendo" in FN, (
-            "a mensagem de ativação exige prova de staging (modinfo -> updates/dkms)"
+        assert "dkms_modulo_da_casa hid-nintendo" in FN, (
+            "a ativação exige prova de staging (o .ko resolvido é o que o DKMS instalou)"
         )
-        assert FN.index("dkms_module_from_updates hid-nintendo") < FN.index(
+        assert FN.index("dkms_modulo_da_casa hid-nintendo") < FN.index(
             "/sys/module/hid_nintendo/parameters"
         ), "o gate vem ANTES de qualquer mensagem de ativação"
         assert "NÃO ficou staged" in FN, "warn honesto quando o DKMS não pegou"
@@ -300,7 +300,7 @@ class TestParidadePackaging:
 
     def test_install_host_udev_roda_o_dkms_dos_pacotes(self) -> None:
         assert 'dkms_install_patched_module "${pacote}"' in HOST_UDEV
-        assert 'dkms_module_from_updates "${ko}"' in HOST_UDEV, (
+        assert 'dkms_modulo_da_casa "${ko}"' in HOST_UDEV, (
             "mensagem de staging honesta exige a prova por modinfo"
         )
         assert "skip_tx_on_rate_exceeded" in HOST_UDEV, (

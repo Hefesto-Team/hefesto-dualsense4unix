@@ -105,7 +105,7 @@ class TestCheckReadOnlyEDeteccao:
     def test_proximo_carregamento_por_modinfo_filename_nunca_srcversion(self) -> None:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_hid_nintendo_dkms")
         assert "modinfo -F filename hid_nintendo" in corpo
-        assert "*/updates/dkms/*" in corpo
+        assert '_ko_da_casa "${modpath}"' in corpo
         fora_das_duas = DOCTOR
         for nome in ("_modulo_pede_reinicio", "_hid_playstation_carregado_guarda_o_audio"):
             fora_das_duas = fora_das_duas.replace(_extrai_funcao_bash(DOCTOR, nome), "")
