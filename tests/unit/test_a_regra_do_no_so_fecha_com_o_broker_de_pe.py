@@ -142,8 +142,9 @@ def test_no_reinstall_com_o_broker_de_pe_a_fechada_fica_desde_o_udev(tmp_path: P
     assert _gravacoes_da_73(diario) == 1
 
 
-def test_o_opt_out_grava_a_aberta_e_o_broker_sabe(tmp_path: Path) -> None:
-    raiz, _ = _install(tmp_path, abrir_o_no=1, broker_ja_de_pe=True)
+@pytest.mark.parametrize("broker_ja_de_pe", [False, True])
+def test_o_opt_out_grava_a_aberta_e_o_broker_sabe(tmp_path: Path, broker_ja_de_pe: bool) -> None:
+    raiz, _ = _install(tmp_path, abrir_o_no=1, broker_ja_de_pe=broker_ja_de_pe)
     assert not _fechada(raiz / REGRA_73)
     assert "HEFESTO_BROKER_NO_NASCE_FECHADO=0" in (raiz / UNIT_DO_BROKER).read_text("utf-8")
 
