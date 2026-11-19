@@ -2,7 +2,7 @@
 
 E o dono da própria bandeja (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, S3 e S4): a escolha de ter o
 ícone mora no autostart da sessão (`X-GNOME-Autostart-enabled`), a bandeja viva é a que segura a vez
-da sessão (um `flock` no runtime), e `garantir_a_bandeja` a sobe quando a escolha está ligada e
+da sessão (uma trava no runtime), e `garantir_a_bandeja` a sobe quando a escolha está ligada e
 ninguém segura a vez.
 """
 from __future__ import annotations
@@ -13,6 +13,7 @@ import os
 import re
 import shlex
 import signal
+import struct
 import subprocess
 import sys
 import time
@@ -91,26 +92,34 @@ def caminho_da_vez() -> Path:
 
 
 _VEZ: list[int] = []
+_TRAVA = struct.Struct("hhqqi4x")
 
 
-def tomar_a_vez(tentativas: int = 5) -> bool:
-    """A bandeja que vai subir segura a vez da sessão; com outra de pé, diz que não."""
+def _abrir_a_vez() -> int:
     alvo = caminho_da_vez()
     alvo.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(alvo, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
-    for tentativa in range(tentativas):
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            if tentativa + 1 < tentativas:
-                time.sleep(0.05)
-            continue
-        os.ftruncate(fd, 0)
-        os.write(fd, f"{os.getpid()}\n".encode("ascii"))
-        _VEZ.append(fd)
-        return True
-    os.close(fd)
-    return False
+    return os.open(alvo, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+
+
+def _a_trava(tipo: int) -> bytes:
+    return _TRAVA.pack(tipo, os.SEEK_SET, 0, 0, 0)
+
+
+def tomar_a_vez() -> bool:
+    """A bandeja que vai subir segura a vez da sessão; com outra de pé, diz que não.
+
+    A vez é uma trava de descrição de arquivo aberto (`F_OFD_SETLK`): a pergunta
+    (`bandeja_viva`) usa o `F_OFD_GETLK`, que não segura nada, e a tomada vale de primeira."""
+    fd = _abrir_a_vez()
+    try:
+        fcntl.fcntl(fd, fcntl.F_OFD_SETLK, _a_trava(fcntl.F_WRLCK))
+    except BlockingIOError:
+        os.close(fd)
+        return False
+    os.ftruncate(fd, 0)
+    os.write(fd, f"{os.getpid()}\n".encode("ascii"))
+    _VEZ.append(fd)
+    return True
 
 
 def soltar_a_vez() -> None:
@@ -131,16 +140,16 @@ def bandeja_ligada() -> bool:
 def bandeja_viva() -> int | None:
     """O PID da bandeja que segura a vez da sessão, ou `None` se ninguém segura."""
     try:
-        fd = os.open(caminho_da_vez(), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
-    except OSError:
+        fd = _abrir_a_vez()
+    except OSError as erro:
+        console.print(f"[yellow]não consegui perguntar pela vez da bandeja:[/] {erro}")
         return None
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
-        except BlockingIOError:
-            texto = os.read(fd, 32).decode("ascii", "replace").strip()
-            return int(texto) if texto.isdigit() else 0
-        return None
+        tipo = _TRAVA.unpack(fcntl.fcntl(fd, fcntl.F_OFD_GETLK, _a_trava(fcntl.F_RDLCK)))[0]
+        if tipo == fcntl.F_UNLCK:
+            return None
+        texto = os.read(fd, 32).decode("ascii", "replace").strip()
+        return int(texto) if texto.isdigit() else 0
     finally:
         os.close(fd)
 

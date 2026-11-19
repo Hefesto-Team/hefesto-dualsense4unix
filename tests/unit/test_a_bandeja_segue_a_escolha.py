@@ -180,6 +180,41 @@ def test_duas_subidas_juntas_deixam_uma_bandeja_de_pe(lar: pathlib.Path, subidas
     assert ab.bandejas_da_sessao() == [f.pid for f in filhos if f.poll() is None]
 
 
+TOMAR = """
+import sys
+from hefesto_dualsense4unix.app.actions import atos_da_bandeja as a
+sys.exit(0 if a.tomar_a_vez() else 3)
+"""
+
+
+def test_perguntar_pela_vez_nao_tira_a_vez_de_quem_sobe(
+        lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bandeja que sobe no meio de uma pergunta toma a vez de primeira, sem esperar relógio."""
+    ab.caminho_da_vez().parent.mkdir(parents=True)
+    ab.caminho_da_vez().touch()
+    fechar = os.close
+    tomou: list[int] = []
+
+    def _fechar(fd: int) -> None:
+        if not tomou and sys._getframe(1).f_code.co_name == "bandeja_viva":
+            tomou.append(subprocess.run([sys.executable, "-c", TOMAR], timeout=30).returncode)
+        fechar(fd)
+
+    monkeypatch.setattr(os, "close", _fechar)
+    assert ab.bandeja_viva() is None
+    assert tomou == [0], "a pergunta pela vez tirou a vez da bandeja que subia"
+
+
+def test_a_vez_que_nao_abre_aparece_e_ninguem_segura(
+        lar: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    alvo = ab.caminho_da_vez()
+    alvo.parent.mkdir(parents=True)
+    alvo.symlink_to(lar / "outro")
+    assert ab.bandeja_viva() is None
+    assert "não consegui perguntar pela vez da bandeja" in capsys.readouterr().out
+    assert not (lar / "outro").exists()
+
+
 def test_o_sigterm_sai_pelo_finally_e_solta_a_vez(lar: pathlib.Path, subidas: Any) -> None:
     _feitas, filhos = subidas
     bandeja = _POPEN(LINHA)
