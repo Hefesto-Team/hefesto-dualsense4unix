@@ -420,7 +420,6 @@ verbo_descobrir() {
     BUSCA_JAVISTOS="$(mktemp)" || { _erro "não consegui criar a lista de já-vistos"; exit 1; }
     chmod 600 "${BUSCA_ROTEIRO}" "${BUSCA_JAVISTOS}"
     trap _fechar_a_busca EXIT
-    trap '' PIPE
     printf 'select %s\npower on\npairable on\nscan on\n' "${adaptador}" >"${BUSCA_ROTEIRO}"
     _registrar "janela de busca de ${segundos}s aberta no adaptador ${hci}"
     timeout "$((segundos + 10))" bluetoothctl --timeout "${segundos}" \
