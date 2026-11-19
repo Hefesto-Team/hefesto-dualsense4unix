@@ -15,6 +15,7 @@ from array import array
 import numpy as np
 
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+from hefesto_dualsense4unix.integrations.alto_falante_bt import CANAIS_DA_HAPTICA
 
 Q = eh.QUADROS_POR_BLOCO
 ESQUERDO, DIREITO = eh.CANAIS_DO_LADO["esquerdo"][0], eh.CANAIS_DO_LADO["direito"][0]
@@ -32,7 +33,7 @@ def _tocar(fontes: dict[tuple[str, str], tuple[float, int]]) -> np.ndarray:
         blocos.append(tocador.proximo_bloco((0, 0), (0, 0), 0))
     while tocador.tocando_o_corpo:
         blocos.append(tocador.proximo_bloco((0, 0), (0, 0), 0))
-    return np.frombuffer(b"".join(blocos), "<f4").reshape(-1, eh.CANAIS_DA_HAPTICA)
+    return np.frombuffer(b"".join(blocos), "<f4").reshape(-1, CANAIS_DA_HAPTICA)
 
 
 def _quantas(saida: np.ndarray, canal: int, valor: float) -> int:
