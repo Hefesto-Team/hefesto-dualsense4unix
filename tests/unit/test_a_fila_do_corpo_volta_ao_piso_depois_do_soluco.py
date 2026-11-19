@@ -7,7 +7,9 @@ distância entre a última levada e a que toca: ele volta ao piso, e o mudo não
 e um bloco. Cada fila por fonte segue a mesma regra, no cabo e no rádio.
 
 A MORDIDA (executada, com o md5 conferido na volta): sem o alvo de enchimento, a fila fica com
-4.320 amostras depois do soluço → ``test_o_soluco_nao_deixa_o_corpo_atrasado``.
+4.320 amostras depois do soluço → ``test_o_soluco_nao_deixa_o_corpo_atrasado``; o padrão de
+fora 50 ms adiante perde os 800 primeiros quadros →
+``test_o_padrao_de_fora_toca_desde_o_primeiro_golpe``.
 """
 from __future__ import annotations
 
@@ -74,6 +76,31 @@ def test_o_soluco_nao_deixa_o_corpo_atrasado() -> None:
 def test_o_alvo_e_o_de_dois_tiques_do_laco() -> None:
     """D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES: o alvo do tocador e o tique do laço."""
     assert eh.ALVO_DO_CORPO_NA_FILA == 2 * POR_TIQUE
+
+
+def test_o_padrao_de_fora_toca_desde_o_primeiro_golpe() -> None:
+    """D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES: a fila nova não corta o começo do padrão."""
+    tocador = eh.TocadorDoRumble("APARELHOTESTEX", argv_de=lambda *_a: [])
+    origem, uniq = tv.PREFIXO_DA_EXTENSAO + "a", "aa:bb:cc:00:00:71"
+
+    def levar(_uniq: str, amostras: array[float], lado: str) -> bool:
+        tocador.levar_o_corpo(amostras, lado, sink="s", dono="d", fonte=tv.FONTE_DE_FORA)
+        return True
+
+    fonte = tv.FonteDeFora(tv.Teto(), modo_de=lambda _u: tv.MODO_DUALSENSE, tocar_haptica=levar)
+    padrao = tv.padrao_de({"golpes": [[0, 200, 60, 1.0]], "repete": False})
+    fonte.registrar(origem, "golpe", padrao)
+    assert fonte.tocar(origem, uniq, "esquerdo", "golpe", 1.0, None, 0.0, None).vale
+    tocado, proximo_tique = [], tv.INTERVALO_S
+    for passo in range(round(0.3 / PASSO_S)):
+        agora = passo * PASSO_S
+        if agora >= proximo_tique:
+            fonte.andar(agora)
+            proximo_tique += tv.INTERVALO_S
+        tocado.append(np.frombuffer(tocador.proximo_bloco((0, 0), (0, 0), 0), "<f4")[2::4])
+    esperado = np.asarray(tv.amostras_de(padrao, 0.0, round(0.2 * TAXA), 1.0, None))
+    saida = np.concatenate(tocado)[: len(esperado)]
+    assert np.allclose(saida, esperado, atol=1e-6), "o ataque do padrão ficou fora do corpo"
 
 
 def test_a_continua_nao_repoe_o_tempo_do_soluco() -> None:
