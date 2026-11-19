@@ -47,6 +47,10 @@ def _venv(tmp_path: Path, caso: str) -> Path:
         cfg.write_text(f"home = /usr/bin\nversion = {VERSAO_DE_ANTES}\n", encoding="utf-8")
         (venv / "lib" / f"python{SISTEMA[0]}.{SISTEMA[1] - 1}").mkdir(parents=True)
         python.symlink_to(sys.executable)
+    elif caso == "python-de-fora":
+        cfg.write_text(f"home = /opt/python/bin\nversion = {SISTEMA[0]}.{SISTEMA[1]}.0\n",
+                       encoding="utf-8")
+        python.symlink_to(sys.executable)
     elif caso == "saudavel":
         python.symlink_to(sys.executable)
     return venv
@@ -67,7 +71,7 @@ def _rodar_o_passo_2(tmp_path: Path, venv: Path) -> subprocess.CompletedProcess[
 
 
 @pytest.mark.parametrize(
-    "caso", ["sem-pyvenv-cfg", "sem-python", "link-quebrado", "python-de-antes"],
+    "caso", ["sem-pyvenv-cfg", "sem-python", "link-quebrado", "python-de-antes", "python-de-fora"],
 )
 def test_a_venv_doente_se_recria_com_o_motivo(tmp_path: Path, caso: str) -> None:
     """D-1911-A-VENV-DOENTE-SE-RECRIA-COM-O-MOTIVO: recria e diz por quê, nunca rc mudo."""
@@ -110,6 +114,25 @@ def test_o_run_diz_rode_o_install_em_vez_de_cair_no_import(tmp_path: Path) -> No
                            text=True, check=False, timeout=30)
     assert feito.returncode != 0
     assert "./install.sh" in feito.stdout + feito.stderr
+
+
+def test_a_venv_de_outro_python_que_roda_abre_pelo_run(tmp_path: Path) -> None:
+    """MORDIDA: o `home` de fora do sistema dentro do `venv_doente` fecha o run.sh e o doctor."""
+    arvore = tmp_path / "arvore"
+    (arvore / "scripts/lib").mkdir(parents=True)
+    (arvore / "run.sh").write_text(RUN.read_text(encoding="utf-8"), encoding="utf-8")
+    (arvore / "scripts/lib/saude_da_venv.sh").write_text(SAUDE.read_text(encoding="utf-8"),
+                                                         encoding="utf-8")
+    venv = _venv(arvore, "python-de-fora")
+    falso = tmp_path / "falso"
+    falso.mkdir()
+    (falso / "python3").write_text("#!/bin/bash\necho abriu\n", encoding="utf-8")
+    (falso / "python3").chmod(0o755)
+    (venv / "bin/activate").write_text(f'PATH="{falso}:$PATH"\n', encoding="utf-8")
+    feito = subprocess.run(["bash", str(arvore / "run.sh"), "--tray"], capture_output=True,
+                           text=True, check=False, timeout=30)
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    assert feito.stdout.strip() == "abriu"
 
 
 def test_o_doctor_reprova_a_venv_doente_da_arvore(tmp_path: Path) -> None:

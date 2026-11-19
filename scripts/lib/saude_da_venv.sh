@@ -21,6 +21,14 @@ _versao_da_venv() {
     printf '%s\n' "${achado}"
 }
 
+venv_fora_do_sistema() {
+    local venv="$1" sistema="$2" casa
+    [[ "${sistema}" == /usr/bin/python3 && -r "${venv}/pyvenv.cfg" ]] || return 1
+    casa="$(sed -n 's/^home[[:space:]]*=[[:space:]]*//p' "${venv}/pyvenv.cfg" | head -n 1)"
+    [[ -n "${casa}" && "${casa}" != /usr/bin ]] || return 1
+    printf 'a .venv foi criada com um Python que não é o do sistema (%s)\n' "${casa}"
+}
+
 venv_doente() {
     local venv="$1" sistema="$2" casa versao_do_sistema
     [[ -d "${venv}" ]] || return 1
@@ -30,11 +38,6 @@ venv_doente() {
     fi
     if ! "${venv}/bin/python" -c '' >/dev/null 2>&1; then
         printf 'o python da .venv não roda (o link sumiu ou ficou pela metade)\n'
-        return 0
-    fi
-    casa="$(sed -n 's/^home[[:space:]]*=[[:space:]]*//p' "${venv}/pyvenv.cfg" | head -n 1)"
-    if [[ "${sistema}" == /usr/bin/python3 && -n "${casa}" && "${casa}" != /usr/bin ]]; then
-        printf 'a .venv foi criada com um Python que não é o do sistema (%s)\n' "${casa}"
         return 0
     fi
     versao_do_sistema="$("${sistema}" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null || true)"

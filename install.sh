@@ -1626,7 +1626,7 @@ step "2/11" "preparando ambiente Python"
 
 _VENV_PYTHON="$(python_do_sistema)"
 
-if _motivo_da_venv="$(venv_doente "${VENV_DIR}" "${_VENV_PYTHON}")"; then
+if _motivo_da_venv="$(venv_doente "${VENV_DIR}" "${_VENV_PYTHON}" || venv_fora_do_sistema "${VENV_DIR}" "${_VENV_PYTHON}")"; then
     printf '      %s — recriando...\n' "${_motivo_da_venv}"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria "APAGAR e recriar ${VENV_DIR} (${_motivo_da_venv})"
