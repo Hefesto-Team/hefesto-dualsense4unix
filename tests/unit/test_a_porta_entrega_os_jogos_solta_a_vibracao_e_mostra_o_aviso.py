@@ -183,7 +183,7 @@ def test_o_filho_de_lancador_entrega_os_jogos_pelo_supervisor(lar: Any, curto: P
         "lancador": {"rotulo": "Lanc", "comandos": ["lutris"]},
     }), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
-    ligar("lanc", permissoes_vistas=["lancador"], lugares=lar)
+    ligar("lanc", permissoes_vistas=["lancador", "comando:lutris"], lugares=lar)
 
     async def corrida() -> None:
         sup = _supervisor(lar, procurar_bwrap=False)

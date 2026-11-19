@@ -272,10 +272,32 @@ def o_que_a_permissao_deixa(palavra: str) -> str:
     if palavra.startswith(PREFIXO_DO_APARELHO):
         classe, _, vid_pid = palavra.removeprefix(PREFIXO_DO_APARELHO).partition(":")
         return f"Abrir o aparelho {classe} {vid_pid}."
+    prefixo, _, valor = palavra.partition(":")
+    if f"{prefixo}:" in _FRASE_DO_ALCANCE:
+        porta, udp, _ = valor.partition("/udp")
+        return _FRASE_DO_ALCANCE[f"{prefixo}:"].format(valor, f"UDP {porta}" if udp else porta)
     return _O_QUE_DEIXA.get(palavra, palavra)
 
 
 PREFIXO_DO_APARELHO = "aparelho:"
+
+PREFIXO_DO_COMANDO = "comando:"
+
+PREFIXO_DA_PORTA_DA_CASA = "porta-da-casa:"
+
+PREFIXO_DA_PORTA_PARA_A_CASA = "porta-para-a-casa:"
+
+PREFIXO_DO_FIXADOR = "fixador:"
+
+PREFIXO_DA_FONTE = "fonte:"
+
+_FRASE_DO_ALCANCE = {
+    PREFIXO_DO_COMANDO: "Abrir fora da caixa: {0}.",
+    PREFIXO_DA_PORTA_DA_CASA: "Alcançar a porta {1} deste computador.",
+    PREFIXO_DA_PORTA_PARA_A_CASA: "Abrir a porta {1} aos programas deste computador.",
+    PREFIXO_DO_FIXADOR: "Fixar o Proton dos jogos com: {0}.",
+    PREFIXO_DA_FONTE: "Alcançar ~/{0}.",
+}
 
 
 def aparelhos_do_sim(manifesto: Manifesto) -> list[str]:
@@ -285,14 +307,46 @@ def aparelhos_do_sim(manifesto: Manifesto) -> list[str]:
     return [f"{a.classe}:{a.vid}:{a.pid}" for a in manifesto.aparelhos]
 
 
+def _textos(bruto: object) -> list[str]:
+    if not isinstance(bruto, list):
+        return []
+    return list(dict.fromkeys(x.strip() for x in bruto if isinstance(x, str) and x.strip()))
+
+
+def _porta(porta: PortaDeclarada) -> str:
+    return f"{porta.porta}/udp" if porta.udp else str(porta.porta)
+
+
+def alcances_do_sim(manifesto: Manifesto) -> list[str]:
+    """O que alarga o alcance da extensão sem ser permissão: cada comando aberto fora da
+    caixa, cada porta de cada lado, o fixador e cada fonte do leitor e do fixador."""
+    lancador = manifesto.lancador or {}
+    fixador = lancador.get("fixador")
+    blocos = [b for b in (lancador.get("leitor"), fixador) if isinstance(b, dict)]
+    portas = manifesto.portas or Portas()
+    executar = fixador.get("executar") if isinstance(fixador, dict) else None
+    return [
+        *(PREFIXO_DO_COMANDO + c for c in _textos(lancador.get("comandos"))),
+        *(PREFIXO_DA_PORTA_DA_CASA + _porta(p) for p in portas.da_casa),
+        *(PREFIXO_DA_PORTA_PARA_A_CASA + _porta(p) for p in portas.para_a_casa),
+        *([PREFIXO_DO_FIXADOR + " ".join(x for x in executar if isinstance(x, str))]
+          if isinstance(executar, list) else []),
+        *dict.fromkeys(PREFIXO_DA_FONTE + f for b in blocos for f in _textos(b.get("fontes"))),
+    ]
+
+
 def pedidos_do_sim(manifesto: Manifesto) -> list[str]:
-    """O que o «sim» cobre: as permissões e, com ``aparelhos``, cada aparelho declarado."""
-    return [*manifesto.permissoes, *(PREFIXO_DO_APARELHO + a for a in aparelhos_do_sim(manifesto))]
+    """O que o «sim» cobre: as permissões, com ``aparelhos`` cada aparelho declarado, e os
+    alcances (:func:`alcances_do_sim`)."""
+    return [*manifesto.permissoes, *(PREFIXO_DO_APARELHO + a for a in aparelhos_do_sim(manifesto)),
+            *alcances_do_sim(manifesto)]
 
 
-def aceitos_do_sim(permissoes_aceitas: list[str], aparelhos_aceitos: list[str] | None) -> list[str]:
+def aceitos_do_sim(permissoes_aceitas: list[str], aparelhos_aceitos: list[str] | None,
+                   alcances_aceitos: list[str] | None = None) -> list[str]:
     """O que o «sim» gravado cobre, na mesma forma de :func:`pedidos_do_sim`."""
-    return [*permissoes_aceitas, *(PREFIXO_DO_APARELHO + a for a in aparelhos_aceitos or [])]
+    return [*permissoes_aceitas, *(PREFIXO_DO_APARELHO + a for a in aparelhos_aceitos or []),
+            *(alcances_aceitos or [])]
 
 
 def permissoes_novas(aceitas: list[str] | tuple[str, ...], pedidas: list[str]) -> list[str]:
@@ -1161,7 +1215,12 @@ __all__ = [
     "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
     "PORTAS_POR_LADO",
+    "PREFIXO_DA_FONTE",
+    "PREFIXO_DA_PORTA_DA_CASA",
+    "PREFIXO_DA_PORTA_PARA_A_CASA",
     "PREFIXO_DO_APARELHO",
+    "PREFIXO_DO_COMANDO",
+    "PREFIXO_DO_FIXADOR",
     "PREFIXO_DO_MODO_DE_EXTENSAO",
     "PRESENTE_NO_ESTADO",
     "PRIMEIRA_PORTA_DA_PONTE",
@@ -1181,6 +1240,7 @@ __all__ = [
     "Processo",
     "aceita_a_api",
     "aceitos_do_sim",
+    "alcances_do_sim",
     "aparelhos_do_sim",
     "arquivo_da_pagina",
     "endereco_valido",

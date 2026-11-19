@@ -160,13 +160,14 @@ def _manifesto_de_lancador() -> dict[str, object]:
 
 def test_a_chave_do_registro_chega_ao_leitor_do_censo(lar: Lugares, curto: Path) -> None:
     from hefesto_dualsense4unix.mods.instalador import ligar, manifesto_instalado
+    from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim
 
     pasta = curto / "fonte-emu"
     pasta.mkdir()
     (pasta / "hefesto-mod.json").write_text(json.dumps(_manifesto_de_lancador()))
     (pasta / "ler.py").write_text("print('[]')\n")
     instalar(str(pasta), lugares=lar)
-    ligar("emu", permissoes_vistas=manifesto_instalado("emu", lugares=lar).permissoes,
+    ligar("emu", permissoes_vistas=pedidos_do_sim(manifesto_instalado("emu", lugares=lar)),
           lugares=lar)
     antes = censo.lancadores_das_extensoes(lar)
     assert [e.bloco.leitor.sem_caixa for e in antes if e.bloco.leitor] == [False]

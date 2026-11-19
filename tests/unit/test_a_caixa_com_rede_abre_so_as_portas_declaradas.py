@@ -25,7 +25,7 @@ import pytest
 from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.mods import supervisor as sup
 from hefesto_dualsense4unix.mods.instalador import Lugares, instalar, ligar, manifesto_instalado
-from hefesto_dualsense4unix.mods.manifesto import Manifesto
+from hefesto_dualsense4unix.mods.manifesto import Manifesto, pedidos_do_sim
 from hefesto_dualsense4unix.mods.supervisor import Supervisor
 from hefesto_dualsense4unix.utils import xdg_paths
 from tests.conftest import exigir_caixa_do_bwrap
@@ -409,7 +409,7 @@ def _instalar_a_ponte(lar: Lugares, curto: Path, ponte: int, modo: str = "atende
     (fonte / "porta").write_text(str(ponte), encoding="utf-8")
     (fonte / "modo").write_text(modo, encoding="utf-8")
     instalar(str(fonte), lugares=lar)
-    ligar("ponte", permissoes_vistas=manifesto_instalado("ponte", lugares=lar).permissoes,
+    ligar("ponte", permissoes_vistas=pedidos_do_sim(manifesto_instalado("ponte", lugares=lar)),
           lugares=lar)
     return sup.diario_da_extensao(lar, "ponte")
 

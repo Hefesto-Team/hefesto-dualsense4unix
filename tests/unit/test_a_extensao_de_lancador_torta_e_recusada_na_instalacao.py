@@ -74,7 +74,7 @@ def test_o_manifesto_de_lancador_torto_e_recusado_com_a_frase(
 
 def test_o_bloco_certo_instala_e_aparece_no_censo(lar: Lugares, curto: Path) -> None:
     instalar(str(_pasta(curto, "meu")), lugares=lar)
-    ligar("meu", permissoes_vistas=["lancador"], lugares=lar)
+    ligar("meu", permissoes_vistas=["lancador", "comando:meulancador"], lugares=lar)
     (item,) = censo.lancadores_das_extensoes(lar)
     assert item.bloco.rotulo == "Meu lançador"
 

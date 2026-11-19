@@ -45,6 +45,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     gravar_registro,
     ler_registro,
     manifesto_instalado,
+    migrar_os_alcances,
     migrar_os_aparelhos,
     troca_viva,
 )
@@ -1392,13 +1393,14 @@ class Supervisor:
             logger.warning("mods_registro_ilegivel", err=exc.frase)
             self._registro_lido = {}
             return
-        if migradas := migrar_os_aparelhos(self.lugares, registro):
+        if migradas := list(dict.fromkeys([*migrar_os_aparelhos(self.lugares, registro),
+                                            *migrar_os_alcances(self.lugares, registro)])):
             try:
                 gravar_registro(self.lugares.registro, registro)
                 self._marca_do_registro = self._marca()
-                logger.info("mods_aparelhos_aceitos_migrados", mods=migradas)
+                logger.info("mods_sim_aceito_migrado", mods=migradas)
             except OSError as exc:
-                logger.warning("mods_aparelhos_aceitos_sem_gravar", err=str(exc))
+                logger.warning("mods_sim_aceito_sem_gravar", err=str(exc))
         self._registro_lido = registro
         em_troca = {k for k, v in registro.items() if v.ligada and troca_viva(v)}
         ligadas = {k: v for k, v in registro.items() if v.ligada and k not in em_troca}

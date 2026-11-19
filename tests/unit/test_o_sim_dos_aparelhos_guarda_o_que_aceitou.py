@@ -240,6 +240,28 @@ def test_o_sim_antigo_migra_uma_vez_com_os_aparelhos_instalados(
     assert registro["exemplo"].aparelhos_aceitos == ["hidraw:1a86:e429"]
 
 
+def test_a_ligada_antes_dos_alcances_segue_ligada_sem_pedir_o_sim(
+        lar: Lugares, curto: Path) -> None:
+    pasta = curto / "fonte"
+    pasta.mkdir()
+    (pasta / "hefesto-mod.json").write_text(json.dumps({
+        **_manifesto([]), "tipos": ["tema"], "tema": {}, "processo": None,
+        "permissoes": ["rede:local"],  # (noqa-acento)
+        "portas": {"da_casa": [{"porta": 12345, "nome": "Serviço"}]}}), encoding="utf-8")
+    instalar(str(pasta), lugares=lar)
+    ligar("exemplo", permissoes_vistas=pedidos_do_sim(manifesto_instalado("exemplo", lugares=lar)),
+          lugares=lar)
+    bruto = json.loads(lar.registro.read_text(encoding="utf-8"))
+    for linha in bruto["mods"]:
+        linha.pop("alcances_aceitos", None)
+    lar.registro.write_text(json.dumps(bruto), encoding="utf-8")
+    supervisor = _supervisor(lar)
+    asyncio.run(supervisor.reconciliar())
+    entrada = ler_registro(lar.registro)["exemplo"]
+    assert entrada.ligada and entrada.alcances_aceitos == ["porta-da-casa:12345"]
+    assert supervisor._o_que_impede(entrada)[0] == ""
+
+
 def test_sem_o_sim_de_aparelhos_a_migracao_nao_aceita_nenhum(lar: Lugares, curto: Path) -> None:
     _instalar(lar, curto, [E429])
     registro = ler_registro(lar.registro)

@@ -107,3 +107,17 @@ def test_a_janela_da_extensao_diz_a_espera_com_a_permissao_nova(
     a07.REGISTRO.esquecer()
     carga = a07.configurar_modificacao(ctx, {"v": "toque"}, None)
     assert "ja-espera-sim" not in exp.janela_pintada(carga["blocos"])
+
+
+def test_os_comandos_do_lancador_aparecem_no_sim_da_linha_de_comando_e_da_tela(
+        lar: Any, tmp_path: pathlib.Path, ctx: Any, capsys: Any) -> None:  # noqa: F811
+    from hefesto_dualsense4unix.cli.cmd_mod import _mostrar_permissoes
+
+    pasta = _fonte(tmp_path, permissoes=("lancador",), extra={
+        "tipos": ["lancador"], "lancador": {"rotulo": "Toque", "comandos": ["lutris"]}})
+    feito = instalar(str(pasta), lugares=lar)
+    frase = "Abrir fora da caixa: lutris."
+    _mostrar_permissoes(pedidos_do_sim(feito.manifesto), feito.manifesto)
+    assert frase in capsys.readouterr().out
+    carga = _o_pacote().mais_da_modificacao(ctx, {"v": "toque:permissoes"}, None)  # (noqa-acento)
+    assert frase in carga["blocos"][".ext-lista"].split('class="ext-perm"')[1]

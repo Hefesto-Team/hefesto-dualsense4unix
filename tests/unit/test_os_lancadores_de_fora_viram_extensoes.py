@@ -155,7 +155,7 @@ def _extensao_de_lancador(pasta: Path, lugares: Lugares) -> None:
         "lancador": {"rotulo": "Meu lançador", "comandos": ["meulancador"]},
     }), encoding="utf-8")
     instalar(str(pasta), lugares=lugares)
-    ligar("meu", permissoes_vistas=["lancador"], lugares=lugares)
+    ligar("meu", permissoes_vistas=["lancador", "comando:meulancador"], lugares=lugares)
 
 
 async def _nada(_metodo: str, _pedido: dict[str, Any]) -> Any:

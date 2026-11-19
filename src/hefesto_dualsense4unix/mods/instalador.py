@@ -40,9 +40,15 @@ from hefesto_dualsense4unix.mods.leitura_da_caixa import (
     ler_ou_vazio,
 )
 from hefesto_dualsense4unix.mods.manifesto import (
+    PREFIXO_DA_FONTE,
+    PREFIXO_DA_PORTA_DA_CASA,
+    PREFIXO_DA_PORTA_PARA_A_CASA,
+    PREFIXO_DO_COMANDO,
+    PREFIXO_DO_FIXADOR,
     Manifesto,
     ManifestoRecusadoError,
     aceitos_do_sim,
+    alcances_do_sim,
     aparelhos_do_sim,
     ler_manifesto,
     o_que_a_permissao_deixa,
@@ -207,6 +213,7 @@ class Entrada(BaseModel):
     commit: str = ""
     permissoes_aceitas: list[str] = []
     aparelhos_aceitos: list[str] | None = None
+    alcances_aceitos: list[str] | None = None
     ligada: bool = False
     instalada_em: str = ""
     ligada_em: str = ""
@@ -242,8 +249,10 @@ def _conferir_id(mod_id: str) -> str:
 
 
 def aceitos_de(entrada: Entrada) -> list[str]:
-    """O «sim» gravado na forma de :func:`pedidos_do_sim`: as permissões e os aparelhos."""
-    return aceitos_do_sim(entrada.permissoes_aceitas, entrada.aparelhos_aceitos)
+    """O «sim» gravado na forma de :func:`pedidos_do_sim`: as permissões, os aparelhos e os
+    alcances."""
+    return aceitos_do_sim(entrada.permissoes_aceitas, entrada.aparelhos_aceitos,
+                          entrada.alcances_aceitos)
 
 
 def migrar_os_aparelhos(lg: Lugares, registro: dict[str, Entrada]) -> list[str]:
@@ -261,6 +270,22 @@ def migrar_os_aparelhos(lg: Lugares, registro: dict[str, Entrada]) -> list[str]:
             with contextlib.suppress(ManifestoRecusadoError):
                 aceitos = aparelhos_do_sim(ler_manifesto(lg.codigo / mod_id, exigir_api=False))
         entrada.aparelhos_aceitos = aceitos
+        migradas.append(mod_id)
+    return migradas
+
+
+def migrar_os_alcances(lg: Lugares, registro: dict[str, Entrada]) -> list[str]:
+    """O «sim» gravado antes dos alcances aceitos ganha, uma vez só, os alcances do manifesto
+    instalado agora (:func:`alcances_do_sim`); devolve os ids que migraram (gravar é de quem
+    chama). O manifesto que não se lê não dá nenhum."""
+    migradas: list[str] = []
+    for mod_id, entrada in registro.items():
+        if entrada.alcances_aceitos is not None:
+            continue
+        aceitos: list[str] = []
+        with contextlib.suppress(ManifestoRecusadoError):
+            aceitos = alcances_do_sim(ler_manifesto(lg.codigo / mod_id, exigir_api=False))
+        entrada.alcances_aceitos = aceitos
         migradas.append(mod_id)
     return migradas
 
@@ -703,9 +728,11 @@ def instalar(
             )
         if anterior is not None:
             migrar_os_aparelhos(lg, {anterior.id: anterior})
+            migrar_os_alcances(lg, {anterior.id: anterior})
         aceitas = anterior.permissoes_aceitas if anterior is not None else []
         aparelhos_aceitos = anterior.aparelhos_aceitos if anterior is not None else []
-        novas = permissoes_novas(aceitos_do_sim(aceitas, aparelhos_aceitos),
+        alcances_aceitos = anterior.alcances_aceitos if anterior is not None else []
+        novas = permissoes_novas(aceitos_do_sim(aceitas, aparelhos_aceitos, alcances_aceitos),
                                  pedidos_do_sim(manifesto))
         aviso_aceito = anterior.aviso_aceito if anterior is not None else ""
         if aviso_visto is not None and manifesto.aviso:
@@ -748,6 +775,7 @@ def instalar(
             commit=commit,
             permissoes_aceitas=list(aceitas),
             aparelhos_aceitos=list(aparelhos_aceitos or []),
+            alcances_aceitos=list(alcances_aceitos or []),
             ligada=(seguia_ligada or bool(antigas_ligadas)) and pronta
             and (prepara_agora or not manifesto.preparar),
             aviso_aceito=aviso_aceito,
@@ -844,7 +872,7 @@ def _o_que_segura_a_atualizacao(
         ja_pedidas += pedidos_do_sim(ler_manifesto(lg.codigo / anterior.id, exigir_api=False))
     novas = permissoes_novas(ja_pedidas, pedidos_do_sim(manifesto))
     if novas:
-        return f"A versão {manifesto.versao} pede {', '.join(novas)}."
+        return f"A versão {manifesto.versao} {'; '.join(_o_que_entrou(novas))}."
     if aviso_por_ver(anterior, manifesto):
         return f"A versão {manifesto.versao} traz outro aviso."
     if _preparo_novo(lg, anterior, manifesto):
@@ -858,6 +886,27 @@ def _o_que_segura_a_atualizacao(
         nomes = ", ".join(f"«{registro[i].nome if i in registro else i}»" for i in a_substituir)
         return f"A versão {manifesto.versao} toma o lugar de {nomes}."
     return ""
+
+
+_O_QUE_ENTROU = (
+    (PREFIXO_DO_COMANDO, "abre fora da caixa: {}"),
+    (PREFIXO_DA_PORTA_DA_CASA, "alcança deste computador a porta {}"),
+    (PREFIXO_DA_PORTA_PARA_A_CASA, "abre aos programas deste computador a porta {}"),
+    (PREFIXO_DO_FIXADOR, "fixa o Proton dos jogos com: {}"),
+    (PREFIXO_DA_FONTE, "alcança na pasta pessoal: {}"),
+)
+
+
+def _o_que_entrou(novas: Sequence[str]) -> list[str]:
+    """Os pedidos novos da versão, um trecho de frase por tipo: o resto vai como «pede …»."""
+    trechos: list[str] = []
+    restam = list(novas)
+    for prefixo, molde in _O_QUE_ENTROU:
+        deste = [n.removeprefix(prefixo) for n in restam if n.startswith(prefixo)]
+        restam = [n for n in restam if not n.startswith(prefixo)]
+        if deste:
+            trechos.append(molde.format(", ".join(deste)))
+    return ([f"pede {', '.join(restam)}"] if restam else []) + trechos
 
 
 def _marcar_a_espera(lg: Lugares, manifesto: Manifesto, commit: str, motivo: str) -> Entrada:
@@ -1021,6 +1070,7 @@ def ligar(
     anotar_o_gesto(lg, "ligar", [mod_id])
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.aparelhos_aceitos = aparelhos_do_sim(manifesto)
+    entrada.alcances_aceitos = alcances_do_sim(manifesto)
     entrada.aviso_aceito = manifesto.aviso
     if manifesto.preparar and entrada.preparada_em != entrada.instalada_em:
         _rodar_o_preparo(lg, manifesto, entrada)
@@ -1232,6 +1282,7 @@ __all__ = [
     "ler_registro",
     "ligar",
     "manifesto_instalado",
+    "migrar_os_alcances",
     "migrar_os_aparelhos",
     "o_css_que_fica",
     "origem_da_tag",

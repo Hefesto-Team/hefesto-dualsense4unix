@@ -770,7 +770,7 @@ def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_do_usuario(lar, ctx, mo
     a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "kytyps5", "toque"
     item = a07._Instalada(manifesto=None, entrada=SimpleNamespace(
         id="toque", nome="Toque", versao="1.0", origem="oficial", ligada=True,
-        permissoes_aceitas=[], aparelhos_aceitos=None))
+        permissoes_aceitas=[], aparelhos_aceitos=None, alcances_aceitos=None))
     monkeypatch.setattr(a07, "_a_instalada", lambda mod_id: item)
     a07.mais_da_modificacao(ctx, {"v": "toque", "onde": exp.ONDE_DA_CONF}, _Ponte())
     assert a07._MEXIDA.menu == "toque" and a07._MEXIDA.menu_na_conf

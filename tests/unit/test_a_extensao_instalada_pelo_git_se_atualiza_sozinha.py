@@ -35,6 +35,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     ligar,
     manifesto_instalado,
 )
+from hefesto_dualsense4unix.mods.manifesto import alcances_do_sim, pedidos_do_sim
 from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
 
 _ate, _chave, _git, _supervisor = _base._ate, _base._chave, _base._git, _base._supervisor
@@ -43,12 +44,14 @@ curto, lar = _base.curto, _base.lar
 _O_FILHO = "import time\nwhile True:\n    time.sleep(1)\n"
 
 
-def _manifesto(versao: str = "0.1.0", permissoes: tuple[str, ...] = ("ler:estado",)) -> str:
+def _manifesto(versao: str = "0.1.0", permissoes: tuple[str, ...] = ("ler:estado",),
+               **mais: Any) -> str:
     return json.dumps({
         "id": "exemplo", "nome": "Exemplo", "versao": versao,  # (noqa-acento)
         "api": ">=1,<3", "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
         "permissoes": list(permissoes),  # (noqa-acento)
+        **mais,
     })
 
 
@@ -168,6 +171,58 @@ def test_a_versao_que_pede_permissao_nova_fica_esperando_o_atualizar(
     assert feito.trocou and feito.permissoes_novas == ["rede:internet"]
     entrada = ler_registro(lar.registro)["exemplo"]
     assert entrada.versao == "0.2.0" and not entrada.ligada and entrada.versao_esperando == ""
+
+
+def _alcance(comandos: list[str], da_casa: int, para_a_casa: int, fixador: list[str],
+             fonte: str) -> dict[str, Any]:
+    return {
+        "tipos": ["processo", "lancador"],
+        "permissoes": ["ler:estado", "lancador", "rede:local"],  # (noqa-acento)
+        "lancador": {"rotulo": "Exemplo", "comandos": comandos,
+                     "fixador": {"executar": fixador, "fontes": [".config/lutris", fonte]}},
+        "portas": {"da_casa": [{"porta": da_casa, "nome": "Serviço"}],
+                   "para_a_casa": [{"porta": para_a_casa, "nome": "Ponte"}]},
+    }
+
+
+_DE_ANTES = (["lutris"], 12345, 40000, ["python3", "fixar.py"], ".local/share/lutris")
+
+
+@pytest.mark.parametrize(("mudanca", "frase"), [
+    ({0: ["lutris", "wget", "tar"]}, "abre fora da caixa: wget, tar"),
+    ({1: 12346}, "alcança deste computador a porta 12346"),
+    ({2: 40001}, "abre aos programas deste computador a porta 40001"),
+    ({3: ["python3", "outro.py"]}, "fixa o Proton dos jogos com: python3 outro.py"),
+    ({4: ".local/share/heroic"}, "alcança na pasta pessoal: .local/share/heroic"),
+    ({}, ""),
+])
+def test_o_que_alarga_o_alcance_espera_o_atualizar_e_so_a_versao_passa(
+    lar: Lugares, remoto: Path, mudanca: dict[int, Any], frase: str
+) -> None:
+    """MORDIDA: sem os alcances no «sim», o comando novo troca sem pergunta."""
+    (remoto / "fixar.py").write_text("", encoding="utf-8")
+    (remoto / "outro.py").write_text("", encoding="utf-8")
+    antes = _alcance(*_DE_ANTES)
+    _publicar(remoto, "0.1.0", **antes)
+    instalar(f"file://{remoto}", lugares=lar)
+    ligar("exemplo", permissoes_vistas=pedidos_do_sim(manifesto_instalado("exemplo", lugares=lar)),
+          lugares=lar)
+    depois = [mudanca.get(i, v) for i, v in enumerate(_DE_ANTES)]
+    _publicar(remoto, "0.2.0", **_alcance(*depois))
+    feito = atualizar("exemplo", lugares=lar, sozinha=True)
+    entrada = ler_registro(lar.registro)["exemplo"]
+    if not frase:
+        assert feito.trocou and entrada.versao == "0.2.0" and entrada.ligada
+        return
+    assert not feito.trocou and entrada.ligada
+    assert (entrada.versao, entrada.versao_esperando) == ("0.1.0", "0.2.0")
+    assert entrada.motivo_da_espera == f"A versão 0.2.0 {frase}."
+    assert manifesto_instalado("exemplo", lugares=lar).lancador == antes["lancador"]
+    assert atualizar("exemplo", lugares=lar).trocou
+    novo = manifesto_instalado("exemplo", lugares=lar)
+    assert not ler_registro(lar.registro)["exemplo"].ligada
+    entrada = ligar("exemplo", permissoes_vistas=pedidos_do_sim(novo), lugares=lar)
+    assert entrada.alcances_aceitos == alcances_do_sim(novo)
 
 
 def test_a_tag_oficial_que_deixa_de_conferir_com_a_chave_fica_esperando(
