@@ -295,6 +295,8 @@ def test_o_prazo_do_start_cobre_o_da_unit(monkeypatch: Any) -> None:
     assert prazos["restart"] > sd_notify.PRAZO_DA_PARTIDA_S
     assert prazos["is-active"] == da.PRAZO_DA_CONSULTA_S == 5.0
     assert prazos["stop"] == da.PRAZO_DA_CONSULTA_S
+    for verbo in ("reboot", "poweroff"):
+        assert da.prazo_do_systemctl([verbo]) == da.PRAZO_DE_DESLIGAR_A_MAQUINA_S == 30.0
 
 
 LER_A_TELA = r"""

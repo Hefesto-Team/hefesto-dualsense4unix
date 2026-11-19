@@ -29,14 +29,20 @@ MIGRAR_NAO_DEU = (
     "técnicos' aqui embaixo."
 )
 PRAZO_DA_CONSULTA_S = 5.0
+PRAZO_DE_DESLIGAR_A_MAQUINA_S = 30.0
+VERBOS_QUE_DESLIGAM_A_MAQUINA = frozenset({"reboot", "poweroff"})
 
 FOLGA_DO_START_S = 5.0
 
 
 def prazo_do_systemctl(args: Sequence[str]) -> float:
-    """O prazo do `systemctl --user <args>`: o da unit mais a folga se liga; o curto se consulta."""
+    """O prazo do `systemctl <args>`: o da unit mais a folga se liga; o curto se consulta.
+
+    O verbo que desliga a máquina pode esperar a senha pedida pelo polkit."""
     if args and args[0] in ("start", "restart"):
         return PRAZO_DA_PARTIDA_S + FOLGA_DO_START_S
+    if args and args[0] in VERBOS_QUE_DESLIGAM_A_MAQUINA:
+        return PRAZO_DE_DESLIGAR_A_MAQUINA_S
     return PRAZO_DA_CONSULTA_S
 
 
