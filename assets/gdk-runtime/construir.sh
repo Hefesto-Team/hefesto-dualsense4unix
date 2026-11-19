@@ -28,6 +28,13 @@ fi
 
 saida="${1:?uso: construir.sh <saída> [--conferir]}"
 conferir="${2:-}"
+if [ "$conferir" = "--conferir" ]; then
+    tem=""
+    for pacote in $(pino mingw); do
+        tem="$tem ${pacote%%=*}=$(dpkg-query -W -f='${Version}' "${pacote%%=*}" 2>/dev/null)"
+    done
+    [ "${tem# }" = "$(pino mingw)" ] || { echo "construir: o compilador mudou: o pino pede «$(pino mingw)» e a máquina tem «${tem# }»" >&2; exit 1; }
+fi
 mkdir -p "$saida"
 saida="$(cd "$saida" && pwd)"
 

@@ -26,76 +26,24 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       version: ${{ steps.info.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
-          # Quando disparado via workflow_dispatch, faz checkout da tag
-          # indicada no input em vez de main HEAD.
           ref: ${{ github.event.inputs.tag || github.ref }}
-          # A história inteira, como o lint-test do ci.yml: há réguas que a leem
-          # (RELEASE-NO-CLONE-LIMPO-01).
-          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-          # CI-CACHE-PIP-01 (v3.4.0): pip cache para release pipeline.
           cache: 'pip'
           cache-dependency-path: 'pyproject.toml'
-      - name: Instalar build deps
-        run: |
-          sudo apt-get update
-          # CI-TYPELIB-PARCIAL-01: o runner traz um `gi` PELA METADE — `import
-          # gi` e `from gi.repository import Gtk` funcionam, mas GdkPixbuf e
-          # Pango estouram `ImportError: unknown location`. Isso acontece na
-          # COLETA do pytest, então NÃO vira skip: derrubava a suíte inteira.
-          # A cura ficou do lado dos testes (checar a typelib que cada módulo
-          # puxa); instalar PyGObject pelo pip aqui foi tentado e revertido —
-          # matava o interpretador no meio da suíte.
-          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
-            bubblewrap librsvg2-common libopus0
-          # Os mesmos pacotes e a mesma chave do lint-test do ci.yml
-          # (RELEASE-NO-CLONE-LIMPO-01): o teste do doctor no bwrap pula sem a chave.
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      # PORTÃO-VIVO-01 bloco D: "o workflow que produz o artefato é o que
-      # verifica menos". Até aqui a release rodava TRÊS gates —
-      # check_anonymity.sh, ruff e pytest tests/unit — enquanto o ci.yml rodava
-      # o dobro. E como o ci.yml não disparava em tag, o push da tag não
-      # chamava nem os que existiam lá: o pacote publicado nunca passou pelos
-      # gates de acentuação, tipo, dados de teste e consistência de versão.
-      #
-      # A v0.2.0 saiu exatamente por esse caminho. Os quatro passos abaixo são
-      # os mesmos do ci.yml (:23, :34, :43, :140), na mesma ordem de custo:
-      # primeiro o que só precisa de python3, depois o que precisa do venv.
-      - name: Verificar anonimato
-        run: bash scripts/check_anonymity.sh
-      - name: Verificar dados de teste neutros
-        run: bash scripts/check_test_data.sh
-      - name: Acentuação PT-BR estrita
-        run: python3 scripts/validar-acentuacao.py --all
-      # A prova de mordida do bloco D é este passo: dessincronizar de propósito
-      # o fallback __version__ do src/hefesto_dualsense4unix/__init__.py contra
-      # o pyproject.toml e tentar publicar tem de REPROVAR aqui.
       - name: Consistência de versão entre os alvos versionados
         run: python3 scripts/check_version_consistency.py
-      # A tag é a que dispara a release: se a tag não diz a versão que o pacote tem, o que sai é um arquivo
-      # com um número e uma tag com outro. O dono da versão é `scripts/release/versao.py`.
       - name: A tag diz a versão do pacote
         env:
           REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
         run: python3 scripts/release/versao.py conferir-tag "${REF_NAME}"
-      - name: Instalar e testar
-        env:
-          SAIDA: /tmp/suite-release
-          SUITE_PYTEST_ARGS: --continue-on-collection-errors
-        run: |
-          pip install -c constraints.txt -e ".[dev]" "numpy<2.5"
-          ruff check src/ tests/
-          bash scripts/rodar-a-suite.sh
-          pytest tests/core -v
-      - name: Mypy (gate rígido, o mesmo do ci.yml)
-        run: mypy src/hefesto_dualsense4unix
       - name: Build wheel + sdist
         run: |
           pip install build twine
@@ -331,57 +279,16 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          # A SHA do que está sendo empacotado, não a do ref do run: em
-          # workflow_dispatch o `github.sha` é o da branch do dispatch, e a tag
-          # a republicar veio pelo input (mesma armadilha que o passo "Ler
-          # versão" já trata).
           SHA="$(git rev-parse HEAD)"
           echo "SHA sob julgamento: ${SHA}"
-
-          LIMITE_SEG=2700   # 45 min: o ci.yml roda em paralelo a este release
-          INTERVALO=30
-          GASTO=0
-          while :; do
-            # `|| true`: erro transitório da API não pode derrubar o guarda —
-            # cai no ramo "ausente" e tenta de novo até o limite.
-            LINHA="$(gh api \
-              "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=100" \
-              --jq '.workflow_runs | sort_by(.created_at) | reverse
-                    | ((map(select(.conclusion == "success")) | .[0]) // .[0]) // empty
-                    | "\(.status)|\(.conclusion)|\(.html_url)"' || true)"
-            if [ -z "${LINHA}" ]; then
-              STATUS="ausente"; CONCLUSAO=""; URL=""
-            else
-              STATUS="${LINHA%%|*}"
-              RESTO="${LINHA#*|}"
-              CONCLUSAO="${RESTO%%|*}"
-              URL="${RESTO##*|}"
-            fi
-            echo "ci.yml: status=${STATUS} conclusao=${CONCLUSAO} ${URL}"
-
-            if [ "${STATUS}" = "completed" ]; then
-              if [ "${CONCLUSAO}" = "success" ]; then
-                echo "CI verde nesta SHA — a release pode publicar."
-                exit 0
-              fi
-              echo "::error::O ci.yml desta SHA concluiu como '${CONCLUSAO}'."
-              echo "::error::Publicar agora entregaria pacote que os portões do ci.yml reprovaram: ${URL}"
-              exit 1
-            fi
-
-            if [ "${GASTO}" -ge "${LIMITE_SEG}" ]; then
-              if [ "${STATUS}" = "ausente" ]; then
-                echo "::error::Nenhum run do ci.yml para a SHA ${SHA} em ${LIMITE_SEG}s."
-                echo "::error::Rode o ci.yml nesta ref (workflow_dispatch) antes de republicar a tag."
-              else
-                echo "::error::O ci.yml desta SHA ainda está '${STATUS}' depois de ${LIMITE_SEG}s: ${URL}"
-              fi
-              exit 1
-            fi
-
-            sleep "${INTERVALO}"
-            GASTO=$((GASTO + INTERVALO))
-          done
+          ID="$(gh api "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=100" \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse
+                  | ((map(select(.conclusion == "success")) | .[0]) // .[0]) // empty | .id')"
+          if [ -z "${ID}" ]; then
+            echo "::error::Nenhum run do ci.yml para a SHA ${SHA}: rode o ci.yml nesta ref (workflow_dispatch) antes de republicar a tag."
+            exit 1
+          fi
+          gh run watch "${ID}" --repo "${REPO}" --exit-status --interval 60
 
   # O que se baixa se confere: o `SHA256SUMS` de todo arquivo da release e o atestado de procedência (de que
   # commit e de que fluxo cada um saiu). O atestado só existe no servidor (precisa do token OIDC); no `act`,
@@ -402,7 +309,7 @@ jobs:
       - name: Compilador mingw-w64
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64-posix
+          sudo apt-get install -y $(sed -n 's/^mingw=//p' assets/gdk-runtime/pino.txt)
       - name: Compilar, marcar como builtin do Wine e conferir com o pino
         run: bash assets/gdk-runtime/construir.sh dist/peca-gdk --conferir
       - name: Upload da peça GDK
