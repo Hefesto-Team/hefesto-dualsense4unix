@@ -4911,10 +4911,10 @@ class _TarefasVigiadas(list["asyncio.Task[Any]"]):
     """As tarefas do serviço: a que morre com exceção fora da parada vai ao diário com a pilha.
 
     Todo ``append`` vigia a tarefa (os subsistemas acrescentam as deles aqui). O laço nascido por
-    :meth:`nascer` tem dono: morto, renasce com o recuo dobrando de ``RECUO_DO_LACO_S`` até
-    ``TETO_DO_RECUO_DO_LACO_S``; a morte além de ``TETO_DE_MORTES_SEGUIDAS`` para o serviço com
-    ``CODIGO_DO_LACO_QUE_NAO_VOLTA``, e o systemd o reinicia. Uma vida de
-    ``VIDA_QUE_ZERA_AS_MORTES_S`` zera a conta.
+    :meth:`nascer` tem dono: morto, sai da lista e renasce com o recuo dobrando de
+    ``RECUO_DO_LACO_S`` até ``TETO_DO_RECUO_DO_LACO_S``; a morte além de
+    ``TETO_DE_MORTES_SEGUIDAS`` para o serviço com ``CODIGO_DO_LACO_QUE_NAO_VOLTA``, e o systemd o
+    reinicia. Uma vida de ``VIDA_QUE_ZERA_AS_MORTES_S`` zera a conta.
     """
 
     def __init__(self, daemon: Any) -> None:
@@ -4958,6 +4958,7 @@ class _TarefasVigiadas(list["asyncio.Task[Any]"]):
         if dono is None:
             logger.error("tarefa_morreu", tarefa=nome, err=str(exc), exc_info=exc)
             return
+        self.remove(tarefa)
         laco = tarefa.get_loop()
         if laco.time() - dono.nasceu_em >= VIDA_QUE_ZERA_AS_MORTES_S:
             dono.mortes = 0

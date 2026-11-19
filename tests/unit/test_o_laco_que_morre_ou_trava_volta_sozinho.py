@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import configparser
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -23,7 +24,8 @@ from hefesto_dualsense4unix.daemon import connection as conn
 from hefesto_dualsense4unix.daemon import lifecycle as lc
 from hefesto_dualsense4unix.daemon.subsystems import vigia_do_laco as vl
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
-from hefesto_dualsense4unix.utils import sd_notify
+from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.utils import sd_notify, session
 from tests.unit import test_steam_no_fisico_01_o_jogo_ve_p1_a_p4 as mesa
 from tests.unit.test_o_laco_mede_o_atraso import JANELA, _Laco
 from tests.unit.test_steam_no_fisico_01_o_jogo_ve_p1_a_p4 import nascimentos
@@ -177,21 +179,44 @@ def test_o_laco_que_morre_volta_e_alem_do_teto_sai_com_falha(
         nascidos.append(time.monotonic())
         raise TypeError("o laço levantou")
 
-    async def _ensaio() -> _DaemonDeMentira:
+    async def _ensaio() -> tuple[_DaemonDeMentira, list[Any]]:
         daemon = _DaemonDeMentira()
         tarefas = lc._TarefasVigiadas(daemon)
         tarefas.nascer("poll_loop", laco_que_morre, "laco_morreu")
         await asyncio.wait_for(daemon._stop_event.wait(), 3.0)
-        return daemon
+        return daemon, tarefas
 
     with capture_logs() as linhas:
-        daemon = asyncio.run(_ensaio())
+        daemon, tarefas = asyncio.run(_ensaio())
     mortes = [linha for linha in linhas if linha["event"] == "laco_morreu"]
     assert len(nascidos) == lc.TETO_DE_MORTES_SEGUIDAS + 1, nascidos
     assert len(mortes) == len(nascidos) and mortes[0]["exc_info"] is not None
+    assert not tarefas, f"o laço morto ficou na lista com a pilha: {len(tarefas)}"
     assert daemon._codigo_de_saida == lc.CODIGO_DO_LACO_QUE_NAO_VOLTA != 0
     with pytest.raises(SystemExit) as saida:
         lc._sair_se_o_laco_nao_volta(daemon)
+    assert saida.value.code == lc.CODIGO_DO_LACO_QUE_NAO_VOLTA
+
+
+def test_o_servico_cujo_laco_nao_volta_sai_com_o_codigo_de_falha(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(lc, "RECUO_DO_LACO_S", 0.001)
+    monkeypatch.setattr(lc, "TETO_DO_RECUO_DO_LACO_S", 0.004)
+    monkeypatch.setattr(session, "load_paused_state", lambda: False)
+
+    async def laco_que_morre(_self: Any) -> None:
+        raise TypeError("o laço levantou")
+
+    monkeypatch.setattr(lc.Daemon, "_poll_loop", laco_que_morre)
+    config = lc.DaemonConfig(
+        poll_hz=200, ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        mouse_emulation_enabled=False, keyboard_emulation_enabled=False,
+        ps_button_action="none", mic_button_toggles_system=False,
+    )
+    daemon = lc.Daemon(controller=FakeController(transport="usb"), config=config)
+    with pytest.raises(SystemExit) as saida:
+        asyncio.run(asyncio.wait_for(daemon.run(), 10.0))
     assert saida.value.code == lc.CODIGO_DO_LACO_QUE_NAO_VOLTA
 
 
@@ -239,6 +264,34 @@ def test_o_watchdog_so_bate_com_o_laco_e_o_tique_andando(
     vigia._ultimo_tique = relogio.agora - tique_ha_s
     vigia.alimentar_o_watchdog(relogio.agora)
     assert (enviados == ["WATCHDOG=1"]) is bate, enviados
+
+
+@pytest.mark.usefixtures("laco_sem_a_maquina")
+def test_cada_tique_avisa_o_vigia_e_grava_a_hora(monkeypatch: pytest.MonkeyPatch) -> None:
+    relogio = _Relogio()
+    vigia = vl.VigiaDoLaco(relogio=relogio, avisar=lambda *_a, **_k: None)
+    relogio.agora += 40.0
+    monkeypatch.setattr(vl, "_ativo", vigia)
+    daemon = _LacoQueLevanta("nenhum")
+    antes_ms = time.time() * 1000
+    asyncio.run(daemon.rodar())
+    assert vigia._ultimo_tique == relogio.agora, "o tique não avisou o vigia"
+    ultimo_ms = daemon.contadores().get("poll.tique.ultimo_ms", 0)
+    assert antes_ms - 1 <= ultimo_ms <= time.time() * 1000 + 1, daemon.contadores()
+
+
+def test_o_prazo_do_watchdog_sobrevive_a_limpeza_do_ambiente(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sd_notify, "_guardadas", {})
+    monkeypatch.setenv("NOTIFY_SOCKET", "/nao-existe/notify")
+    monkeypatch.setenv("WATCHDOG_USEC", "30000000")
+    monkeypatch.setenv("WATCHDOG_PID", str(os.getpid()))
+    sd_notify.guardar_o_soquete()
+    assert "WATCHDOG_USEC" not in os.environ
+    assert sd_notify.prazo_do_watchdog() == 30.0
+    monkeypatch.setitem(sd_notify._guardadas, "WATCHDOG_PID", str(os.getpid() + 1))
+    assert sd_notify.prazo_do_watchdog() is None
 
 
 def test_a_unit_tem_watchdog_acima_do_pior_laco_parado() -> None:
