@@ -20,6 +20,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
     ESP=/boot/efi
     BOOT=/boot
     ESTADO=/var/lib/hefesto-dualsense4unix/atualizador
+    LEGIVEL=/var/lib/hefesto-dualsense4unix
     SUFIXOS="${SUFIXOS_INSTALADOS}"
     RECEITAS="${RECEITAS_INSTALADAS}"
     CASA_DA_USUARIA=""
@@ -33,6 +34,7 @@ else
     ESP="${HEFESTO_ATUALIZADOR_ESP:-/boot/efi}"
     BOOT="${HEFESTO_ATUALIZADOR_BOOT:-/boot}"
     ESTADO="${HEFESTO_ATUALIZADOR_ESTADO:-}"
+    LEGIVEL="${HEFESTO_ATUALIZADOR_LEGIVEL:-}"
     SUFIXOS="${HEFESTO_ATUALIZADOR_SUFIXOS:-${SUFIXOS_INSTALADOS}}"
     RECEITAS="${HEFESTO_ATUALIZADOR_RECEITAS:-}"
     CASA_DA_USUARIA="${HEFESTO_ATUALIZADOR_CASA:-}"
@@ -120,6 +122,7 @@ _soltar_os_da_casa() {
 }
 
 _segurar_os_da_casa() {
+    local -a exceto=("$@")
     _e_so_do_dono "${SUFIXOS}" || _recusar "sem a lista dos sufixos da casa só do root (${SUFIXOS}): rode o install"
     _tomar_a_vez_do_hold
     local -a sufixos da_casa ja
@@ -135,7 +138,7 @@ _segurar_os_da_casa() {
     mapfile -t ja <<<"${segurados_antes}"
     local p j
     for p in "${da_casa[@]}"; do
-        for j in "${ja[@]}"; do
+        for j in "${ja[@]}" "${exceto[@]}"; do
             [[ "${p}" == "${j}" ]] && continue 2
         done
         SEGURADOS+=("${p}")
@@ -149,11 +152,33 @@ _segurar_os_da_casa() {
     printf 'fora da subida (da casa): %s\n' "${SEGURADOS[*]}"
 }
 
+_metas_do_kernel() {
+    local linhas
+    linhas="$(dpkg-query -W -f='${Package}\t${db:Status-Abbrev}\t${Depends}\n' 'linux-*' 2>/dev/null)" || true
+    printf '%s\n' "${linhas}" | awk -F'\t' '
+        $2 ~ /^ii/ && $1 ~ /^linux-[a-z]/ { dep[$1] = $3 }
+        END {
+            for (p in dep) if (dep[p] ~ /(^|[ ,|])linux-(image|headers|modules)(-unsigned)?-[0-9]/) meta[p] = 1
+            do {
+                novo = 0
+                for (p in dep) {
+                    if (p in meta) continue
+                    for (m in meta) if (index(" " dep[p] ",", " " m " ") || index(" " dep[p] ",", " " m ",")) { meta[p] = 1; novo = 1; break }
+                }
+            } while (novo)
+            for (m in meta) if (m !~ /^linux-(image|headers|modules)(-unsigned)?-[0-9]/) print m
+        }' | sort
+}
+
 _pacotes_do_grupo() {
     case "$1" in
         nvidia) _instalados_que_casam '^(nvidia-|libnvidia-|xserver-xorg-video-nvidia)' ;;
-        kernel) _instalados_que_casam '^(linux-system76|linux-generic|linux-image-generic|linux-headers-generic)$' ;;
+        kernel) _metas_do_kernel ;;
     esac
+}
+
+verbo_kernel_metas() {
+    _metas_do_kernel
 }
 
 _grupo_valido() {
@@ -182,7 +207,7 @@ _apt_do_grupo() {
     mapfile -t pacotes < <(_pacotes_do_grupo "${grupo}")
     if [[ "${#pacotes[@]}" -eq 0 ]]; then
         printf 'nada instalado no grupo %s\n' "${grupo}"
-        return 0
+        exit 9
     fi
     _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" install --only-upgrade "${pacotes[@]}"
 }
@@ -684,6 +709,14 @@ verbo_backport_construir() {
     fi
     obra="$(_obra_da_caixa "${peca}")"
     _construir_na_caixa "${peca}" "${ver}" || rc=$?
+    rm -f -- "${base}/da-origem"
+    if [[ "${rc}" -eq 9 && "${peca}" == "portal" ]]; then
+        _limpar_a_caixa "${peca}"
+        rm -rf -- "${base}/novo"
+        printf '%s\n' "${ver}" > "${base}/da-origem" || _recusar "não registrei a versão de cima"
+        printf 'pronto para instalar: %s %s (a versão de cima já traz a cura)\n' "${peca}" "${ver}"
+        return 0
+    fi
     if [[ "${rc}" -ne 0 ]]; then
         _limpar_a_caixa "${peca}"
         exit "${rc}"
@@ -712,11 +745,36 @@ verbo_backport_construir() {
     printf 'pronto para instalar: %s\n' "${peca}"
 }
 
+_instalar_o_portal_de_cima() {
+    local base="$1" ver lista
+    ver="$(head -n 1 "${base}/da-origem")"
+    [[ "${ver}" =~ ^[0-9A-Za-z.+:~-]+$ && "${ver}" != *~hefesto* ]] \
+        || _recusar "a versão de cima registrada do portal está estragada"
+    [[ "${ver}" == "$(_versao_do_portal_no_apt)" ]] \
+        || _recusar "o apt não oferece mais o portal ${ver}: a construção vem de novo"
+    _segurar_os_da_casa xdg-desktop-portal-cosmic
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" install --no-install-recommends \
+        "xdg-desktop-portal-cosmic=${ver}" || exit 1
+    if [[ -n "${LEGIVEL}" ]]; then
+        install -d -m 755 "${LEGIVEL}" || _recusar "não criei ${LEGIVEL}"
+        lista="${LEGIVEL}/portal-a-origem-ja-cura.txt"
+        { [[ -f "${lista}" ]] && grep -v -x -F -- "${ver}" "${lista}"; printf '%s\n' "${ver}"; } \
+            > "${lista}.novo" && chmod 644 "${lista}.novo" && mv -f -- "${lista}.novo" "${lista}" \
+            || _recusar "não registrei que o portal ${ver} já traz a cura"
+    fi
+    rm -f -- "${base}/da-origem"
+    printf 'instalado: portal %s, da distribuição, que já traz a cura\n' "${ver}"
+}
+
 verbo_backport_instalar() {
     _exige_raiz backport-instalar
     local peca="$1" base
     _backport_valido "${peca}"
     base="${CACHE}/backports/${peca}"
+    if [[ "${peca}" == "portal" && ! -e "${base}/novo" ]] && _e_so_do_dono "${base}/da-origem"; then
+        _instalar_o_portal_de_cima "${base}"
+        return
+    fi
     _e_so_do_dono "${base}/novo" || _recusar "nada construído para ${peca}: a construção vem antes"
     _instalar_da_pasta "${base}/novo" "${peca}" || exit 1
     rm -rf -- "${base}/anterior"
@@ -808,6 +866,7 @@ verbo_regra_sudo() {
         printf '    %s backport-reinstalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
         printf '    %s backport-voltar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
     done
+    printf '    %s kernel-metas, \\\n' "${ALVO_INSTALADO}"
     printf '    %s kernel-anterior\n' "${ALVO_INSTALADO}"
     printf '%s ALL=(root) NOPASSWD: HEFESTO_ATUALIZADOR\n' "${usuaria}"
 }
@@ -829,6 +888,7 @@ case "${1:-}" in
     mangohud-reinstalavel) [[ $# -eq 1 ]] || _recusar "mangohud-reinstalavel não leva argumento"; verbo_mangohud_reinstalavel ;;
     mangohud-reinstalar) [[ $# -eq 1 ]] || _recusar "mangohud-reinstalar não leva argumento"; verbo_mangohud_reinstalar ;;
     mangohud-voltar) [[ $# -eq 1 ]] || _recusar "mangohud-voltar não leva argumento"; verbo_mangohud_voltar ;;
+    kernel-metas) [[ $# -eq 1 ]] || _recusar "kernel-metas não leva argumento"; verbo_kernel_metas ;;
     kernel-anterior) [[ $# -eq 1 ]] || _recusar "kernel-anterior não leva argumento"; verbo_kernel_anterior ;;
     backport-construir) [[ $# -eq 2 ]] || _recusar "backport-construir <peça>"; verbo_backport_construir "$2" ;;
     backport-instalar) [[ $# -eq 2 ]] || _recusar "backport-instalar <peça>"; verbo_backport_instalar "$2" ;;
@@ -836,5 +896,5 @@ case "${1:-}" in
     backport-reinstalar) [[ $# -eq 2 ]] || _recusar "backport-reinstalar <peça>"; verbo_backport_reinstalar "$2" ;;
     backport-voltar) [[ $# -eq 2 ]] || _recusar "backport-voltar <peça>"; verbo_backport_voltar "$2" ;;
     regra-sudo) verbo_regra_sudo "${2:-}" ;;
-    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-baixar-de-novo|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalavel | mangohud-reinstalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
+    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-baixar-de-novo|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalavel | mangohud-reinstalar | mangohud-voltar | kernel-metas | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
 esac

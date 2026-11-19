@@ -262,7 +262,9 @@ class Lar:
                                f' || echo "$p" >> "{seg}"; done ;;'
                                f' unhold) for p; do grep -vx "$p" "{seg}" > "{seg}.t";'
                                f' mv "{seg}.t" "{seg}"; done ;; esac; exit 0')
-        self.duble("dpkg-query", f'cat "{self.instalados}"')
+        self.duble("dpkg-query", 'case "$*" in *Depends*) printf "linux-system76\\tii \\t'
+                                 'linux-image-7.2.15-76070215-generic\\n"; exit 0 ;; esac\n'
+                                 f'cat "{self.instalados}"')
         self.duble("dpkg-deb", 'n="${2##*/}"; [ "$3" = Package ] && echo "${n%%_*}";'
                                ' v="${n#*_}"; [ "$3" = Version ] && echo "${v%_*}";'
                                ' [ "$3" = Source ] && sed -n "s/^Source: //p" "$2"; exit 0')

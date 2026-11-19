@@ -406,12 +406,12 @@ class Lar:
         for caminho in (self.receitas, self.receitas / "scripts", script):
             caminho.chmod(0o755 if caminho.is_dir() else 0o644)
 
-    def rodar(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def rodar(self, *args: str, **env: str) -> subprocess.CompletedProcess[str]:
         ambiente = {"PATH": f"{self.bin}:{os.environ['PATH']}", "HOME": str(self.base),
                     "HEFESTO_ATUALIZADOR_CACHE": str(self.cache),
                     "HEFESTO_ATUALIZADOR_RECEITAS": str(self.receitas),
                     "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
-                    "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name}
+                    "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name, **env}
         return subprocess.run(["bash", str(AJUDANTE), *args], env=ambiente, capture_output=True,
                               text=True, timeout=60, check=False)
 
@@ -465,6 +465,30 @@ def test_a_subida_do_bluez_leva_o_dev_instalado_e_nao_remove_nada(lar: Lar) -> N
         "-o APT::Get::allow-change-held-packages=false",
         "-o APT::Get::AllowUnauthenticated=false")), apt[0]
 
+
+
+def test_o_portal_que_a_origem_ja_cura_sobe_na_versao_julgada_e_o_bluez_segue_segurado(
+        lar: Lar) -> None:
+    de_cima = "1.12.0~1794000000~24.04~aaaaaaa"
+    with lar.instalados.open("a") as instalados:
+        instalados.write("xdg-desktop-portal-cosmic\tii \t1.10.0~1780000000+0~hefesto1\n")
+    lar.duble("apt-cache", f'echo " xdg-desktop-portal-cosmic | {de_cima} | http://x noble/main"')
+    lar.duble("apt-mark", "exit 0")
+    lar.receita("", rc=9)
+    feito = lar.rodar("backport-construir", "portal")
+    assert feito.returncode == 0, feito.stderr
+    legivel = lar.base / "legivel"
+    feito = lar.rodar("backport-instalar", "portal", HEFESTO_ATUALIZADOR_LEGIVEL=str(legivel))
+    assert feito.returncode == 0, feito.stderr
+    apt = [x for x in lar.lidas() if x.startswith("apt-get")]
+    assert len(apt) == 1 and apt[0].endswith(f" xdg-desktop-portal-cosmic={de_cima}"), apt
+    assert " --no-remove " in apt[0] and "allow-change-held-packages=false" in apt[0]
+    hold = [x for x in lar.lidas() if x.startswith("apt-mark hold")]
+    assert hold and "bluez" in hold[0] and "xdg-desktop-portal-cosmic" not in hold[0], hold
+    lista = legivel / "portal-a-origem-ja-cura.txt"
+    assert lista.read_text().splitlines() == [de_cima]
+    assert oct(lista.stat().st_mode)[-3:] == "644"
+    assert lar.rodar("backport-instalar", "portal").returncode == 2, "o registro se consome"
 
 def test_a_segunda_subida_guarda_a_anterior_que_volta_uma_vez(lar: Lar) -> None:
     lar.receita(ENTREGA_BOA)

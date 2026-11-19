@@ -275,13 +275,14 @@ def _atualizar_a_lista_do_apt(rede: bool) -> None:
 
 
 def _atualizaveis() -> dict[str, tuple[str, str]]:
-    """``apt list --upgradable``: pacote -> (instalada, candidata). Sem root."""
+    """``apt list --upgradable``, fora o segurado e o da casa: pacote -> (instalada, candidata)."""
     texto = _saida(["apt", "list", "--upgradable"])
+    segurados = set((_saida(["apt-mark", "showhold"]) or "").split())
     saida: dict[str, tuple[str, str]] = {}
     for linha in (texto or "").splitlines():
         achado = re.match(r"^(?P<p>[^/\s]+)/\S+\s+(?P<nova>\S+)\s+\S+\s+"
                           r"\[[^:\]]*:\s*(?P<velha>[^\]\s]+)\]", linha)
-        if achado:
+        if achado and achado.group("p") not in segurados and not _da_casa(achado.group("velha")):
             saida[achado.group("p")] = (achado.group("velha"), achado.group("nova"))
     return saida
 
@@ -304,12 +305,21 @@ def _a_montante(versao: str) -> str:
 
 def _do_apt(grupo: str, nome: str) -> Callable[[Passo, dict[str, Any]], None]:
     def baixar(passo: Passo, _dados_: dict[str, Any]) -> None:
-        _raiz("apt-baixar", grupo, passo=passo)
+        _raiz_do_grupo("apt-baixar", grupo, passo)
 
     def instalar(passo: Passo, _dados_: dict[str, Any]) -> None:
-        _raiz("apt-instalar", grupo, passo=passo)
+        _raiz_do_grupo("apt-instalar", grupo, passo)
 
     return baixar if nome == "baixar" else instalar
+
+
+def _raiz_do_grupo(verbo: str, grupo: str, passo: Passo) -> None:
+    try:
+        _raiz(verbo, grupo, passo=passo)
+    except RaizSaiuError as erro:
+        if erro.codigo == RC_NADA_A_CONSTRUIR:
+            raise NadaAFazerError(str(erro)) from None
+        raise
 
 
 def _limpar(passo: Passo, _dados_: dict[str, Any]) -> None:
@@ -327,7 +337,8 @@ def versoes_da_nvidia(rede: bool) -> Versoes:
     novas = {p: n for p, (_v, n) in _atualizaveis().items() if GRUPO_NVIDIA.match(p)}
     candidata = novas.get(pacote, versao)
     return Versoes(_a_montante(versao), _a_montante(candidata) if rede or novas else None,
-                   dica=pacote, nova=bool(novas))
+                   dica=pacote, nova=bool(novas),
+                   completa=f"{versao} → {candidata}" if novas else versao)
 
 
 def _kernel_do_pacote(versao: str) -> str:
@@ -342,12 +353,23 @@ def versoes_do_kernel(rede: bool) -> Versoes:
     rodando = os.uname().release
     agora = _kernel_do_pacote(rodando) or rodando
     novas = {p: n for p, (_v, n) in _atualizaveis().items() if GRUPO_KERNEL.match(p)}
-    meta = next((novas[m] for m in METAS_DO_KERNEL if m in novas), "")
+    metas = _metas_do_kernel()
+    meta = next((novas[m] for m in metas if m in novas), "")
     candidata = _kernel_do_pacote(meta) if meta else agora
-    metas = _instalados(*METAS_DO_KERNEL)
     dica = next(iter(metas), "") or rodando
     return Versoes(agora.split("-", 1)[0], candidata.split("-", 1)[0], dica=dica,
-                   nova=bool(novas))
+                   nova=bool(meta), completa=f"{agora} → {candidata}" if meta else agora)
+
+
+def _metas_do_kernel() -> list[str]:
+    """As metas instaladas do kernel, pelo ajudante: as do Pop, do Ubuntu e do Debian."""
+    try:
+        texto = subprocess.run([str(AJUDANTE), "kernel-metas"], check=False, text=True,
+                               capture_output=True, timeout=TETO_DA_PERGUNTA_S).stdout
+    except (OSError, subprocess.SubprocessError):
+        texto = ""
+    return [m for m in texto.split() if GRUPO_KERNEL.match(m)] \
+        or list(_instalados(*METAS_DO_KERNEL))
 
 
 def _pacotes(n: int) -> str:
@@ -701,7 +723,7 @@ def versoes_do_umu(rede: bool) -> Versoes:
         instalada = achada.group(1) if achada else ""
     publicada = _sem_v(str(_release(REPO_DO_UMU).get("tag_name", ""))) if rede else None
     if caminho is None or not nosso:
-        return Versoes(instalada, publicada or (instalada if caminho else None), nova=False,
+        return Versoes(instalada, publicada, nova=publicada is not None and bool(publicada),
                        dica="" if caminho is None else str(caminho))
     return Versoes(instalada, publicada or None)
 
@@ -881,7 +903,9 @@ def versoes_do_python(rede: bool) -> Versoes:
         return Versoes("", None, rotulo="")
     atrasadas = _atrasadas()
     dica = " · ".join(f"{n} {v} → {u}" for n, (v, u) in sorted(atrasadas.items()))
-    rotulo = _pacotes(len(atrasadas)) if atrasadas else ""
+    conferidas = len(set(_dependencias_do_produto()))
+    rotulo = _pacotes(len(atrasadas)) if atrasadas else \
+        f"{conferidas} biblioteca{'s' if conferidas != 1 else ''} em dia"
     alvo = " · ".join(f"{n} {u}" for n, (_v, u) in sorted(atrasadas.items()))
     return Versoes("", alvo, rotulo=rotulo, dica=dica, nova=bool(atrasadas))
 

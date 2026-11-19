@@ -350,6 +350,14 @@ def _sem_reinstalar(peca: Peca, versoes: Versoes, estado: str) -> str:
         return str(erro) or type(erro).__name__
 
 
+def _sem_a_rede(peca: Peca, porque: str) -> Versoes:
+    try:
+        local = peca.versoes(False)
+    except Exception:
+        return Versoes(dica=porque)
+    return dataclasses.replace(local, publicada=None, nova=None, dica=porque)
+
+
 def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
              agora: Callable[[], float] = time.time) -> dict[str, Any]:
     """O vigia: a versão instalada e a publicada de cada peça. Sem rede, «não consultado».
@@ -363,7 +371,7 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
         try:
             versoes = peca.versoes(rede)
         except Exception as erro:
-            versoes = Versoes(dica=str(erro) or type(erro).__name__)
+            versoes = _sem_a_rede(peca, str(erro) or type(erro).__name__)
         estado = _estado_da_peca(peca, versoes, escolha, ja)
         motivo = _sem_reinstalar(peca, versoes, estado)
         itens.append({
@@ -624,6 +632,8 @@ def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
 
 def _guardar_a_anterior(peca: Peca, versoes: Versoes, dados: dict[str, Any],
                         agora: float) -> None:
+    if versoes.instalada and versoes.instalada == (versoes.publicada or ""):
+        return
     anteriores = ler_as_anteriores()
     anteriores[peca.id] = {"nome": peca.nome, "agora": versoes.publicada or "",
                            "anterior": versoes.instalada, "rotulo": versoes.rotulo,

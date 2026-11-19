@@ -38,6 +38,24 @@ INSTALADOS = (("nvidia-driver-595", "595.104.02-0ubuntu1"),
               ("xdg-desktop-portal-cosmic", "1.0.0~1780000000+0~hefesto1"))
 
 
+DEPENDE_POP = ("linux-system76\tii \tlinux-image-7.2.15-76070215-generic, "
+               "linux-headers-7.2.15-76070215-generic\n"
+               "linux-image-7.2.15-76070215-generic\tii \tlinux-modules-7.2.15-76070215-generic\n"
+               "linux-firmware\tii \t\n")
+DEPENDE_UBUNTU_HWE = (
+    "linux-generic-hwe-24.04\tii \tlinux-image-generic-hwe-24.04 (= 6.14.0-37.37~24.04.1), "
+    "linux-headers-generic-hwe-24.04 (= 6.14.0-37.37~24.04.1)\n"
+    "linux-image-generic-hwe-24.04\tii \tlinux-image-6.14.0-37-generic | "
+    "linux-image-unsigned-6.14.0-37-generic, linux-firmware\n"
+    "linux-headers-generic-hwe-24.04\tii \tlinux-headers-6.14.0-37-generic\n"
+    "linux-image-6.14.0-37-generic\tii \tlinux-modules-6.14.0-37-generic\n"
+    "linux-libc-dev\tii \tlibc6\n")
+DEPENDE_DEBIAN = ("linux-image-amd64\tii \tlinux-image-6.12.57+deb13-amd64 (= 6.12.57-1)\n"
+                  "linux-headers-amd64\tii \tlinux-headers-6.12.57+deb13-amd64 (= 6.12.57-1)\n"
+                  "linux-image-6.12.57+deb13-amd64\tii \tkmod, linux-base\n"
+                  "linux-base\tii \tdebconf\n")
+
+
 def sufixos_dos_backports() -> list[str]:
     """Os ``SUFIXO=`` de cada ``assets/*-backport/BASELINE``, como o install os grava."""
     achados = []
@@ -76,13 +94,19 @@ class Lar:
         self.sufixos.write_text("".join(f"{x}\n" for x in sufixos_dos_backports()),
                                 encoding="utf-8")
         self.sufixos.chmod(0o644)
+        self.depende = base / "depende"
         self.api = ""
         for nome in ("apt-get", "dkms", "bootctl", "update-initramfs"):
             self.duble(nome)
         self.duble("uname", 'echo 7.2.15-generic')
         self.duble("apt-mark", f'[ "$1" = showhold ] && cat "{self.segurados}"; exit 0')
         linhas = "".join(f"{p}\\tii \\t{v}\\n" for p, v in INSTALADOS)
-        self.duble("dpkg-query", f'printf "{linhas}"')
+        self.duble("dpkg-query", f'case "$*" in *Depends*) cat "{self.depende}"; exit 0;; esac\n'
+                                 f'printf "{linhas}"')
+        self.dependencias(DEPENDE_POP)
+
+    def dependencias(self, linhas: str) -> None:
+        self.depende.write_text(linhas, encoding="utf-8")
 
     def duble(self, nome: str, corpo: str = "") -> None:
         arq = self.bin / nome
@@ -138,7 +162,7 @@ def test_a_regra_lista_cada_verbo_sem_curinga(lar: Lar) -> None:
         "mangohud-voltar",
         *(f"backport-{v} {p}" for p in ("bluez", "pipewire", "portal")
           for v in ("construir", "instalar", "reinstalavel", "reinstalar", "voltar")),
-        "kernel-anterior")]
+        "kernel-metas", "kernel-anterior")]
     visudo = shutil.which("visudo") or "/usr/sbin/visudo"
     if Path(visudo).exists():
         arq = lar.base / "regra"
@@ -595,3 +619,26 @@ def test_o_uninstall_leva_tudo_que_o_install_e_o_ajudante_gravam_como_root() -> 
     assert {"/usr/local/lib/hefesto-dualsense4unix/receitas",
             "/var/cache/hefesto-dualsense4unix/backports"} <= gravados
     assert not gravados - removidos, sorted(gravados - removidos)
+
+
+@pytest.mark.parametrize(("depende", "metas"), [
+    (DEPENDE_POP, ["linux-system76"]),
+    (DEPENDE_UBUNTU_HWE, ["linux-generic-hwe-24.04", "linux-headers-generic-hwe-24.04",
+                          "linux-image-generic-hwe-24.04"]),
+    (DEPENDE_DEBIAN, ["linux-headers-amd64", "linux-image-amd64"]),
+    (DEPENDE_DEBIAN.replace("6.12.57", "6.12.63"), ["linux-headers-amd64", "linux-image-amd64"]),
+])
+def test_o_ajudante_acha_as_metas_do_kernel_de_cada_distro(lar: Lar, depende: str,
+                                                           metas: list[str]) -> None:
+    lar.dependencias(depende)
+    lido = lar.rodar("kernel-metas", root=False)
+    assert lido.returncode == 0 and lido.stdout.split() == metas, lido
+    assert lar.rodar("apt-instalar", "kernel").returncode == 0
+    subida = [x for x in lar.lidas() if x.startswith("apt-get") and "--only-upgrade" in x]
+    assert subida[-1].endswith("install --only-upgrade " + " ".join(metas))
+
+
+def test_o_grupo_sem_nada_instalado_sai_com_nove(lar: Lar) -> None:
+    lar.dependencias("linux-firmware\tii \t\n")
+    feito = lar.rodar("apt-instalar", "kernel")
+    assert feito.returncode == 9 and "nada instalado no grupo kernel" in feito.stdout

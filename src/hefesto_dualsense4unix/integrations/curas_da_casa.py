@@ -61,6 +61,7 @@ class Maquina:
     sys_module: Path = Path("/sys/module")
     dkms: Path = Path("/var/lib/dkms")
     preferencias_do_apt: Path = Path("/etc/apt/preferences.d")
+    legivel: Path | None = None
     assets: Path = Path(__file__).resolve().parents[3] / "assets"
     cache: Path | None = None
     kernel: str = ""
@@ -71,6 +72,11 @@ class Maquina:
 
     def o_cache(self) -> Path:
         return self.cache or Path.home() / ".cache" / "hefesto-dualsense4unix"
+
+    def o_legivel(self) -> Path:
+        if self.legivel is not None:
+            return self.legivel
+        return self.cache / "legivel" if self.cache else Path("/var/lib/hefesto-dualsense4unix")
 
 
 MAQUINA = Maquina()
@@ -242,9 +248,10 @@ def portal(maquina: Maquina | None = None) -> Cura:
         return Cura("portal", "Portal de captura", NAO_SE_APLICA)
     de_cima = re.sub(r"\+0~hefesto.*$", "", versao)
     curadas = ""
-    with contextlib.suppress(OSError):
-        curadas = (maquina.o_cache() / "portal-cosmic-backport" / "A-ORIGEM-JA-CURA.txt") \
-            .read_text(encoding="utf-8")
+    for lista in (maquina.o_legivel() / "portal-a-origem-ja-cura.txt",
+                  maquina.o_cache() / "portal-cosmic-backport" / "A-ORIGEM-JA-CURA.txt"):
+        with contextlib.suppress(OSError):
+            curadas += lista.read_text(encoding="utf-8") + "\n"
     if tem or de_cima in curadas.splitlines():
         return Cura("portal", "Portal de captura", VALE)
     if "~hefesto" not in versao and not (maquina.preferencias_do_apt / PREF_DO_PORTAL).exists():

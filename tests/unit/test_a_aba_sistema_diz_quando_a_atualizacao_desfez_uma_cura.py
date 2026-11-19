@@ -148,6 +148,17 @@ def test_o_portal_sem_a_marca_cai_e_o_que_ja_cura_de_cima_vale(lar: Lar) -> None
     assert cc.portal(lar.maquina()).estado == cc.VALE
 
 
+def test_o_portal_de_cima_que_o_ajudante_instalou_vale_pela_lista_legivel(lar: Lar) -> None:
+    lar.portal.write_bytes(b"\x7fELF portal do pop")
+    lar.dpkg["xdg-desktop-portal-cosmic"] = "1.12.0~1794000000~24.04~aaaaaaa"
+    assert cc.portal(lar.maquina()).estado == cc.CAIU
+    legivel = lar.base / "legivel"
+    legivel.mkdir()
+    (legivel / "portal-a-origem-ja-cura.txt").write_text("1.12.0~1794000000~24.04~aaaaaaa\n")
+    maquina = lar.maquina()
+    assert cc.portal(cc.Maquina(**{**maquina.__dict__, "legivel": legivel})).estado == cc.VALE
+
+
 def test_o_portal_da_distro_sem_o_com_tela_nao_se_aplica_e_nao_vira_aviso(lar: Lar) -> None:
     lar.portal.write_bytes(b"\x7fELF portal do pop")
     lar.dpkg["xdg-desktop-portal-cosmic"] = "1.12.0~1794000000~24.04~aaaaaaa"

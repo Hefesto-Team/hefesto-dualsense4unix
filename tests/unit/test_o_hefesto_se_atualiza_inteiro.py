@@ -325,6 +325,76 @@ def test_o_apt_diz_o_que_sobe_por_grupo(monkeypatch: pytest.MonkeyPatch) -> None
     sistema = pa.versoes_do_sistema(True)
     assert sistema.tem_nova() and sistema.rotulo == "1 pacote"
     assert "curl" in sistema.dica and "nvidia" not in sistema.dica
+    assert nvidia.completa == "595.104.02-1pop1 → 595.110.01-1pop1"
+    assert kernel.completa == "7.2.15-76070215 → 7.2.18-76070218"
+
+
+def test_o_segurado_e_o_da_casa_nao_contam_como_atualizacao(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pa, "_atualizar_a_lista_do_apt", lambda rede: None)
+    lista = APT_LIST + ("bluez/noble 5.72-0ubuntu5.4 amd64 "
+                        "[upgradable from: 5.88-0ubuntu0.1~hefesto24.04.6]\n")
+
+    def saida(argv: list[str]) -> str | None:
+        if argv[:2] == ["apt", "list"]:
+            return lista
+        if argv[:2] == ["apt-mark", "showhold"]:
+            return "curl\n"
+        return None
+
+    monkeypatch.setattr(pa, "_saida", saida)
+    assert not pa.versoes_do_sistema(True).tem_nova()
+
+
+def test_o_kernel_reconstruido_no_mesmo_numero_difere_na_completa_e_nao_vira_anterior(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pa, "_atualizar_a_lista_do_apt", lambda rede: None)
+    monkeypatch.setattr(pa, "_metas_do_kernel", lambda: ["linux-generic-hwe-24.04"])
+    monkeypatch.setattr(pa, "_saida", lambda argv: (
+        "linux-generic-hwe-24.04/noble 7.2.15-77.77 amd64 [upgradable from: 7.2.15-76.76]\n"
+        if argv[:2] == ["apt", "list"] else None))
+    monkeypatch.setattr(pa.os, "uname",
+                        lambda: type("U", (), {"release": "7.2.15-76-generic"})())
+    kernel = pa.versoes_do_kernel(True)
+    assert kernel.tem_nova() and kernel.instalada == kernel.publicada == "7.2.15"
+    assert kernel.completa == "7.2.15-76 → 7.2.15-77"
+    peca = next(p for p in pa.registro() if p.id == "kernel")
+    at._guardar_a_anterior(peca, kernel, {}, 0.0)
+    assert "kernel" not in at.ler_as_anteriores()
+
+
+def test_a_python_em_dia_diz_quantas_bibliotecas_conferiu(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pa, "_no_venv", lambda: True)
+    monkeypatch.setattr(pa, "_dependencias_do_produto", lambda: ["evdev", "pydantic", "evdev"])
+    monkeypatch.setattr(pa, "_saida", lambda argv: "[]")
+    assert pa.versoes_do_python(True).rotulo == "2 bibliotecas em dia"
+
+
+def test_sem_o_umu_do_hefesto_a_peca_se_oferece(monkeypatch: pytest.MonkeyPatch,
+                                                tmp_path: Path) -> None:
+    monkeypatch.setattr(pa, "_release", lambda _repo: {"tag_name": "v1.4.4"})
+    monkeypatch.setattr(pa.shutil, "which", lambda _nome: None)
+    assert pa.versoes_do_umu(True).tem_nova()
+    de_fora = tmp_path / "umu-run"
+    de_fora.write_text("#!/bin/sh\necho umu-launcher version 1.2.0\n")
+    de_fora.chmod(0o755)
+    monkeypatch.setattr(pa.shutil, "which", lambda _nome: str(de_fora))
+    monkeypatch.setattr(pa, "_saida", lambda argv: "umu-launcher version 1.2.0")
+    assert pa.versoes_do_umu(True).tem_nova()
+    assert pa.versoes_do_umu(False).publicada is None
+
+
+def test_a_rede_que_levanta_deixa_a_instalada_na_conferencia() -> None:
+    def versoes(rede: bool) -> at.Versoes:
+        if rede:
+            raise OSError("o GitHub não respondeu")
+        return at.Versoes("1.4.4", None)
+
+    peca = at.Peca("x", "X", "dica", "todos", versoes, lambda *_: None, lambda *_: None,
+                   lambda *_: None)
+    item = at.conferir(rede=True, lista=[peca])["pecas"][0]
+    assert item["de"] == "1.4.4" and "GitHub" in item["dica"]
 
 
 def test_os_modulos_pedem_o_rebuild_quando_falta_o_kernel_novo(
