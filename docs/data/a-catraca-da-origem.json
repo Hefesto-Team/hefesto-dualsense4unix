@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1268064,
+      "piso": 1268590,
       "por_item": {
-        "docs": 107102,
+        "docs": 107114,
         "scripts": 114623,
-        "src": 321845,
-        "tests": 724494
+        "src": 322088,
+        "tests": 724765
       },
-      "razao": "tamanho: +1588 linhas (1266476 -> 1268064), pagas por Origem: D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-1911-A-LINHA-QUE-REINSTALA-TEM-GLIFO-PROPRIO, D-1911-O-REGISTRO-ABRE-NA-JANELA, D-1911-O-UMU-AUSENTE-SE-OFERECE; registrado no fecho, topo 992f50471fd2",
+      "razao": "tamanho: +526 linhas (1268064 -> 1268590), pagas por Origem: D-1911-A-EXTENSAO-PARA-PELO-SIGTERM-DENTRO-DA-CAIXA, D-1911-O-ABRIR-DO-LANCADOR-SO-RODA-LANCADOR-CONHECIDO, D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE; registrado no fecho, topo 279c9e666465",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2025,6 +2025,12 @@
           "de": 1266476,
           "para": 1268064,
           "razao": "tamanho: +1588 linhas (1266476 -> 1268064), pagas por Origem: D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-1911-A-LINHA-QUE-REINSTALA-TEM-GLIFO-PROPRIO, D-1911-O-REGISTRO-ABRE-NA-JANELA, D-1911-O-UMU-AUSENTE-SE-OFERECE; registrado no fecho, topo 992f50471fd2"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1268064,
+          "para": 1268590,
+          "razao": "tamanho: +526 linhas (1268064 -> 1268590), pagas por Origem: D-1911-A-EXTENSAO-PARA-PELO-SIGTERM-DENTRO-DA-CAIXA, D-1911-O-ABRIR-DO-LANCADOR-SO-RODA-LANCADOR-CONHECIDO, D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE; registrado no fecho, topo 279c9e666465"
         }
       ],
       "unidade": "linhas",
