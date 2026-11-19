@@ -21,6 +21,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
@@ -693,13 +694,24 @@ def _a_trava() -> int | None:
     return fd
 
 
-def em_curso() -> bool:
-    """Há uma fila rodando agora? A trava cai com o processo que a tomou."""
-    fd = _a_trava()
-    if fd is None:
-        return True
-    os.close(fd)
-    return False
+def em_curso(locks: Path = Path("/proc/locks")) -> bool:
+    """Há uma fila rodando agora? Pergunta sem tomar a trava (o ``/proc/locks`` diz se alguém a
+    segura), e a fila que a toma nesse instante não tropeça na pergunta. A trava que não se lê é
+    erro dito no registro, não fila rodando."""
+    try:
+        caminho = _runtime() / TRAVA
+        dado = os.stat(caminho)
+        if not os.access(caminho, os.R_OK | os.W_OK):
+            raise PermissionError(f"sem permissão em {caminho}")
+        linhas = locks.read_text(encoding="ascii", errors="replace").splitlines()
+    except FileNotFoundError:
+        return False
+    except OSError as erro:
+        _anotar(f"a trava não abre: {erro}")
+        return False
+    alvo = f"{os.major(dado.st_dev):02x}:{os.minor(dado.st_dev):02x}:{dado.st_ino}"
+    return any(len(partes) > 5 and partes[1] == "FLOCK" and partes[5] == alvo
+               for partes in (linha.split() for linha in linhas))
 
 
 def _jogo_aberto() -> bool:
@@ -1178,6 +1190,23 @@ def rodar(
         os.close(trava)
 
 
+def _a_fila_caiu(erro: BaseException) -> None:
+    """A fila que levanta fora das etapas: o traceback vai ao registro, e o andamento fecha
+    «parado», com «a fila caiu: <motivo>» na linha e em cada peça que estava em curso."""
+    motivo = f"a fila caiu: {str(erro) or type(erro).__name__}"
+    _anotar(f"{motivo}\n{''.join(traceback.format_exception(erro)).rstrip()}")
+    andamento = _ler_json(_estado() / ARQUIVO_DO_ANDAMENTO)
+    if andamento.get("fase") not in VIVAS or andamento.get("pid") != os.getpid():
+        return
+    for linha in andamento.get("pecas") or []:
+        if isinstance(linha, dict) and linha.get("selo") in EM_CURSO:
+            linha["selo"], linha["motivo"] = FILA, motivo
+    caido = {**andamento, "fase": PARADO, "motivo": motivo, "fim_em": time.time()}
+    caido["total"] = total(caido)
+    with contextlib.suppress(OSError):
+        _gravar_json(_estado() / ARQUIVO_DO_ANDAMENTO, caido)
+
+
 def voltar(ident: str, *, lista: Sequence[Peca] | None = None,
            jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str:
     """Volta a peça à versão anterior e segura a que saiu, fora da fila e sem jogo aberto. Devolve
@@ -1220,7 +1249,7 @@ def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None) -> bo
     try:
         (abrir or fora_do_servico.abrir)(
             [sys.executable, "-m", MODULO, "--rodar", *ids],
-            env=ambiente_limpo(os.environ), aplicativo="atualizador")
+            env=ambiente_limpo(os.environ), aplicativo="atualizador", diario=True)
     except OSError:
         return False
     return True
@@ -1267,7 +1296,11 @@ def hora_da_pergunta(agora: float | None = None) -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["--rodar"]:
-        return rodar(args[1:], maquina=conferir_a_maquina, inibidor=segurar_o_desligar)
+        try:
+            return rodar(args[1:], maquina=conferir_a_maquina, inibidor=segurar_o_desligar)
+        except Exception as erro:
+            _a_fila_caiu(erro)
+            raise
     if args[:1] == ["--conferir"]:
         conferencia = conferir(rede="--sem-rede" not in args)
         for item in conferencia["pecas"]:

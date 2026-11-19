@@ -237,9 +237,10 @@ def argv_da_unidade(
     oom: int | None,
     teto_s: int | None = None,
     pasta_de_trabalho: Path | None = None,
+    diario: bool = False,
 ) -> list[str]:
     """A linha do ``systemd-run`` que abre ``argv`` numa unidade própria; sem
-    ``pasta_de_trabalho``, a unidade nasce na ``HOME``."""
+    ``pasta_de_trabalho``, a unidade nasce na ``HOME``; com ``diario``, o stderr vai ao diário."""
     cmd = [
         "systemd-run",
         "--user",
@@ -255,7 +256,7 @@ def argv_da_unidade(
         "--property=Type=exec",
         f"--property={forma}",
         "--property=StandardOutput=null",
-        "--property=StandardError=null",
+        f"--property=StandardError={'journal' if diario else 'null'}",
     ]
     if oom is not None:
         cmd.append(f"--property=OOMScoreAdjust={oom}")
@@ -301,9 +302,10 @@ def abrir(
     executar: Executar | None = None,
     popen: Callable[..., Any] | None = None,
     pasta_de_trabalho: Path | None = None,
+    diario: bool = False,
 ) -> Abertura:
     """Abre ``argv`` com o ambiente ``env``, fora do serviço quando é preciso, na
-    ``pasta_de_trabalho``, se vier."""
+    ``pasta_de_trabalho``, se vier; com ``diario``, o stderr da unidade vai ao diário."""
     argv = [argv] if isinstance(argv, str) else list(argv)
     ctx = contexto if contexto is not None else contexto_atual()
     abrir_direto = popen if popen is not None else subprocess.Popen
@@ -334,7 +336,7 @@ def abrir(
         unidade = nome_da_unidade(aplicativo or argv[0])
         cmd = argv_da_unidade(
             argv, do_setenv, unidade=unidade, forma=forma, oom=ctx.oom_do_gerenciador,
-            pasta_de_trabalho=pasta_de_trabalho,
+            pasta_de_trabalho=pasta_de_trabalho, diario=diario,
         )
         try:
             feito = run(cmd, env)
