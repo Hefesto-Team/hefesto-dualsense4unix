@@ -3077,7 +3077,10 @@ def _selo_do_que_vale(nome: str | None) -> Any:
 PROCURAR_O_ACIONADOR_A_CADA_S = 3.0
 REPEDIR_O_RECUSADO_ATE_S = 300.0
 OLHAR_O_FOCO_A_CADA_S = 1.0
+_EV_SYN = 0
 _EV_KEY = 1
+_SYN_REPORT = 0
+_SYN_DROPPED = 3
 
 
 @dataclass
@@ -3086,6 +3089,7 @@ class _AcionadorAberto:
     dispositivo: Any
     preso: bool = False
     apertadas: set[int] = field(default_factory=set)
+    no_buraco: bool = False
 
 
 class PonteDosAcionadores:
@@ -3193,10 +3197,17 @@ class PonteDosAcionadores:
             logger.info("acionador_aberto", evento=aparelho.evento, nome=aparelho.nome)
 
     def _ler(self, chave: str) -> None:
+        """Lê a fila; no ``SYN_DROPPED``, descarta até o ``SYN_REPORT`` e relê o kernel."""
         aberto = self._abertos[chave]
         try:
             while (ev := aberto.dispositivo.read_one()) is not None:
-                if getattr(ev, "type", None) != _EV_KEY:
+                tipo = getattr(ev, "type", None)
+                if tipo == _EV_SYN and ev.code == _SYN_DROPPED:
+                    aberto.no_buraco = True
+                elif tipo == _EV_SYN and ev.code == _SYN_REPORT and aberto.no_buraco:
+                    aberto.no_buraco = False
+                    aberto.apertadas = {int(c) for c in aberto.dispositivo.active_keys()}
+                if tipo != _EV_KEY or aberto.no_buraco:
                     continue
                 if ev.value == 0:
                     aberto.apertadas.discard(int(ev.code))
