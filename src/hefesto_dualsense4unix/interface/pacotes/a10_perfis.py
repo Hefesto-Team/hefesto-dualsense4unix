@@ -2196,7 +2196,7 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     disco e o `_ESCOLHIDO` passa a ser a cópia, que o editor pinta no tique seguinte. "Inteiro" é
     literal (BUG-DUPLICATE-NO-CONFIG-COPY-01, já pago pela estável: a cópia tinha só o nome trocado
     e o resto virava default): o `model_copy` leva gatilhos, luz, vibração, alto-falante, máscara e
-    os overrides por controle, tudo menos o nome.
+    os overrides por controle e o «Meu comando» do computador, tudo menos o nome.
 
     A cópia NÃO é ativada (a coluna tem o "Ativar"), por isso `_gravar` não reaplica: o nome novo
     nunca é o ativo. O número no fim ("(cópia) 2") evita que duplicar duas vezes grave a segunda POR
@@ -2220,6 +2220,10 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     )
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles, load_profile
     from hefesto_dualsense4unix.profiles.slug import find_by_slug
+    from hefesto_dualsense4unix.utils.maquina import (
+        comando_do_evento,
+        gravar_os_comandos_dos_eventos,
+    )
 
     era = _perfil_do_editor(ctx)
     todos = list(load_all_profiles())
@@ -2227,6 +2231,9 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     copia = _nome_livre(f"{prof.name} (cópia)", todos)
     carimbo = carimbo_que_o_save_leva(find_by_slug(copia, todos), None)
     _gravar(prof.model_copy(update={"name": copia, "ponte": carimbo}), ctx, p)
+    comando = comando_do_evento(prof.name)
+    if comando and not gravar_os_comandos_dos_eventos({copia: comando}):
+        raise RuntimeError(f"“{copia}” nasceu sem o comando de “{prof.name}”.")
     _ESCOLHIDO = copia
     return _dizer(f"Cópia criada: {copia}")
 
