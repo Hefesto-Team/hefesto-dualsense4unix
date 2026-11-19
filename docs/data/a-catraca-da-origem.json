@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1268590,
+      "piso": 1269146,
       "por_item": {
-        "docs": 107114,
-        "scripts": 114623,
-        "src": 322088,
-        "tests": 724765
+        "docs": 107115,
+        "scripts": 114638,
+        "src": 322099,
+        "tests": 725294
       },
-      "razao": "tamanho: +526 linhas (1268064 -> 1268590), pagas por Origem: D-1911-A-EXTENSAO-PARA-PELO-SIGTERM-DENTRO-DA-CAIXA, D-1911-O-ABRIR-DO-LANCADOR-SO-RODA-LANCADOR-CONHECIDO, D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE; registrado no fecho, topo 279c9e666465",
+      "razao": "tamanho: +556 linhas (1268590 -> 1269146), pagas por Origem: D-1911-A-BANDEJA-SAI-PELO-NUCLEO-E-A-RECARGA-ESPERA-O-ULTIMO-FIO; registrado no fecho, topo 013ebbbbd407",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2031,10 +2031,16 @@
           "de": 1268064,
           "para": 1268590,
           "razao": "tamanho: +526 linhas (1268064 -> 1268590), pagas por Origem: D-1911-A-EXTENSAO-PARA-PELO-SIGTERM-DENTRO-DA-CAIXA, D-1911-O-ABRIR-DO-LANCADOR-SO-RODA-LANCADOR-CONHECIDO, D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE; registrado no fecho, topo 279c9e666465"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1268590,
+          "para": 1269146,
+          "razao": "tamanho: +556 linhas (1268590 -> 1269146), pagas por Origem: D-1911-A-BANDEJA-SAI-PELO-NUCLEO-E-A-RECARGA-ESPERA-O-ULTIMO-FIO; registrado no fecho, topo 013ebbbbd407"
         }
       ],
       "unidade": "linhas",
-      "universo": 3515
+      "universo": 3518
     }
   }
 }
