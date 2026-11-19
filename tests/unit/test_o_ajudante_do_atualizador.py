@@ -100,6 +100,9 @@ class Lar:
         for nome in ("apt-get", "dkms", "bootctl", "update-initramfs"):
             self.duble(nome)
         self.duble("uname", 'echo 7.2.15-generic')
+        self.duble("ldconfig")
+        self.destino = base / "raiz"
+        self.destino.mkdir()
         self.duble("apt-mark", f'[ "$1" = showhold ] && cat "{self.segurados}"; exit 0')
         linhas = "".join(f"{p}\\tii \\t{v}\\n" for p, v in INSTALADOS)
         self.duble("dpkg-query", f'case "$*" in *Depends*) cat "{self.depende}"; exit 0;; esac\n'
@@ -126,7 +129,8 @@ class Lar:
                     "HEFESTO_ATUALIZADOR_ESTADO": str(self.estado),
                     "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
                     "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name,
-                    "HEFESTO_ATUALIZADOR_API": self.api, **env}
+                    "HEFESTO_ATUALIZADOR_API": self.api,
+                    "HEFESTO_ATUALIZADOR_DESTINO": str(self.destino), **env}
         if root:
             ambiente["HEFESTO_ATUALIZADOR_CACHE"] = str(self.cache)
         return subprocess.run(["bash", str(SCRIPT), *args], env=ambiente, capture_output=True,
@@ -279,15 +283,42 @@ def test_o_dkms_recusa_o_fonte_de_outro_dono(lar: Lar) -> None:
     assert not [linha for linha in lar.lidas() if linha.startswith("dkms install")]
 
 
-def _tar_do_mangohud(lar: Lar, nome: str = "MangoHud-0.8.5.r0.tar.gz") -> Path:
+PACOTE_DO_MANGOHUD = (
+    ("usr/bin/mangohud", 0o755, b"#!/bin/sh\n", ""),
+    ("usr/lib/mangohud/lib64/libMangoHud.so", 0o644, b"ELF64", ""),
+    ("usr/lib/mangohud/lib32/libMangoHud.so", 0o644, b"ELF32", ""),
+    ("usr/lib/mangohud/x86_64", 0o777, b"", "lib64"),
+    ("usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json", 0o644, b"{}", ""),
+    ("usr/share/doc/mangohud/MangoHud.conf.example", 0o644, b"fps\n", ""),
+)
+
+
+def _tar_do_mangohud(lar: Lar, nome: str = "MangoHud-0.8.5.r0.tar.gz",
+                     membros: tuple[tuple[str, int, bytes, str], ...] = PACOTE_DO_MANGOHUD,
+                     ) -> Path:
+    """O tarball como a release o publica: o ``mangohud-setup.sh`` e o ``MangoHud-package.tar``
+    com os destinos; o setup de mentira anota quando roda."""
     pasta = lar.casa / ".cache" / "hefesto-dualsense4unix" / "atualizador" / "mangohud"
-    pasta.mkdir(parents=True)
+    pasta.mkdir(parents=True, exist_ok=True)
+    interno = io.BytesIO()
+    with tarfile.open(fileobj=interno, mode="w") as pacote:
+        for caminho, modo, dado, alvo in membros:
+            info = tarfile.TarInfo(f"./{caminho}")
+            info.mode = modo
+            if alvo:
+                info.type, info.linkname = tarfile.SYMTYPE, alvo
+                pacote.addfile(info)
+            else:
+                info.size = len(dado)
+                pacote.addfile(info, io.BytesIO(dado))
     setup = f'#!/bin/sh\necho "setup $*" >> "{lar.chamadas}"\n'.encode()
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        info = tarfile.TarInfo("MangoHud/mangohud-setup.sh")
-        info.size, info.mode = len(setup), 0o755
-        tar.addfile(info, io.BytesIO(setup))
+        for caminho, dado, modo in (("MangoHud/mangohud-setup.sh", setup, 0o755),
+                                    ("MangoHud/MangoHud-package.tar", interno.getvalue(), 0o644)):
+            info = tarfile.TarInfo(caminho)
+            info.size, info.mode = len(dado), modo
+            tar.addfile(info, io.BytesIO(dado))
     arq = pasta / nome
     arq.write_bytes(buf.getvalue())
     return arq
@@ -310,7 +341,8 @@ def test_o_mangohud_so_entra_com_a_soma_publicada(lar: Lar) -> None:
     _api(lar, arq.name, hashlib.sha256(arq.read_bytes()).hexdigest())
     feito = lar.rodar("mangohud-instalar")
     assert feito.returncode == 0, feito.stderr
-    assert "setup install" in lar.lidas()
+    assert "ldconfig " in lar.lidas()
+    assert (lar.destino / "usr/lib/mangohud/lib64/libMangoHud.so").read_bytes() == b"ELF64"
     assert (lar.cache / "mangohud" / "atual.tar.gz").read_bytes() == arq.read_bytes()
 
 
@@ -333,10 +365,10 @@ def test_o_mangohud_volta_uma_vez_so_ao_que_o_ajudante_trocou(lar: Lar) -> None:
     assert (pasta / "atual.tar.gz").read_bytes() == novo
     assert lar.rodar("mangohud-voltar").returncode == 0
     assert (pasta / "atual.tar.gz").read_bytes() == velho
-    assert lar.lidas().count("setup install") == 3
+    assert lar.lidas().count("ldconfig ") == 3
     segunda = lar.rodar("mangohud-voltar")
     assert segunda.returncode == 2 and "sem versão anterior" in segunda.stderr
-    assert lar.lidas().count("setup install") == 3
+    assert lar.lidas().count("ldconfig ") == 3
 
 
 def test_o_mangohud_nao_volta_de_pasta_que_outro_escreve(lar: Lar) -> None:
@@ -345,7 +377,7 @@ def test_o_mangohud_nao_volta_de_pasta_que_outro_escreve(lar: Lar) -> None:
     (lar.cache / "mangohud").chmod(0o777)
     feito = lar.rodar("mangohud-voltar")
     assert feito.returncode == 2 and "não é só do root" in feito.stderr
-    assert lar.lidas().count("setup install") == 2
+    assert lar.lidas().count("ldconfig ") == 2
 
 
 def _kernels(lar: Lar, *versoes: str, velho: str = "") -> None:

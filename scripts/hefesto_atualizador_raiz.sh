@@ -28,6 +28,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
     DONO=root
     API="https://api.github.com/repos/${REPO_DO_MANGOHUD}/releases/latest"
     UNIDADE_PROPRIA=1
+    DESTINO_DO_MANGOHUD=/
 else
     CACHE="${HEFESTO_ATUALIZADOR_CACHE:-}"
     SRC="${HEFESTO_ATUALIZADOR_SRC:-/usr/src}"
@@ -43,6 +44,7 @@ else
     DONO="${HEFESTO_ATUALIZADOR_DONO:-root}"
     API="${HEFESTO_ATUALIZADOR_API:-}"
     UNIDADE_PROPRIA="${HEFESTO_ATUALIZADOR_UNIDADE:-}"
+    DESTINO_DO_MANGOHUD="${HEFESTO_ATUALIZADOR_DESTINO:-}"
 fi
 
 umask 077
@@ -472,23 +474,88 @@ for ativo in json.load(sys.stdin).get("assets", []):
 }
 
 _instalar_o_tar_do_mangohud() {
-    local tar="$1" pasta setup
-    pasta="$(mktemp -d "${CACHE}/mangohud/.instalar.XXXXXX")" || return 1
-    if ! tar -C "${pasta}" --no-same-owner -xzf "${tar}"; then
-        rm -rf "${pasta}"
-        _erro "o pacote do MangoHud não abriu"
-        return 1
+    [[ -n "${DESTINO_DO_MANGOHUD}" && -d "${DESTINO_DO_MANGOHUD}" ]] \
+        || { _erro "sem o destino do MangoHud"; return 1; }
+    python3 -I - "$1" "${DESTINO_DO_MANGOHUD}" <<'MANGOHUD' || return 1
+import os, posixpath, stat, sys, tarfile
+origem, destino = sys.argv[1], os.path.realpath(sys.argv[2])
+PASTAS = ("usr/bin", "usr/lib/mangohud", "usr/share/vulkan/implicit_layer.d",
+          "usr/share/doc/mangohud", "usr/share/man/man1")
+ARQUIVOS = ("usr/bin/mangohud", "usr/bin/mangoplot", "usr/share/man/man1/mangohud.1")
+CAMADA = "usr/share/vulkan/implicit_layer.d/MangoHud."
+
+def recusa(porque):
+    sys.exit(f"o pacote do MangoHud fica de fora: {porque}")
+
+def dentro(nome, pasta):
+    return nome == pasta or nome.startswith(pasta + "/")
+
+def nome_limpo(bruto):
+    nome = bruto[2:] if bruto.startswith("./") else bruto
+    nome = nome.rstrip("/")
+    if not nome or nome.startswith("/") or ".." in nome.split("/") or posixpath.normpath(nome) != nome:
+        recusa(f"caminho fora da lista: {bruto}")
+    return nome
+
+def na_lista(nome):
+    if nome in ARQUIVOS or dentro(nome, "usr/lib/mangohud") or dentro(nome, "usr/share/doc/mangohud"):
+        return True
+    return nome.startswith(CAMADA) and nome.endswith(".json") and "/" not in nome[len(CAMADA):]
+
+def pasta_de_caminho(nome):
+    return any(dentro(p, nome) or dentro(nome, p) for p in PASTAS)
+
+try:
+    with tarfile.open(origem, "r:gz") as fora:
+        internos = [m for m in fora.getmembers() if posixpath.basename(m.name) == "MangoHud-package.tar"]
+        if len(internos) != 1 or not internos[0].isfile():
+            recusa("sem o MangoHud-package.tar")
+        with fora.extractfile(internos[0]) as bruto, tarfile.open(fileobj=bruto, mode="r:") as pacote:
+            itens = []
+            for membro in pacote.getmembers():
+                nome = nome_limpo(membro.name)
+                if membro.mode & (stat.S_ISUID | stat.S_ISGID | stat.S_ISVTX):
+                    recusa(f"bit especial em {nome}")
+                if membro.isdir():
+                    if not pasta_de_caminho(nome):
+                        recusa(f"pasta fora da lista: {nome}")
+                    continue
+                if not na_lista(nome):
+                    recusa(f"entrada fora da lista: {nome}")
+                if membro.issym():
+                    alvo = posixpath.normpath(posixpath.join(posixpath.dirname(nome), membro.linkname))
+                    if membro.linkname.startswith("/") or not dentro(alvo, "usr/lib/mangohud"):
+                        recusa(f"link para fora: {nome}")
+                elif not membro.isfile():
+                    recusa(f"tipo de entrada recusado: {nome}")
+                itens.append((nome, membro))
+            raiz = os.geteuid() == 0
+            permitidas = [os.path.join(destino, p) for p in PASTAS]
+            for nome, membro in sorted(itens, key=lambda item: item[1].issym()):
+                final = os.path.join(destino, nome)
+                os.makedirs(os.path.dirname(final), mode=0o755, exist_ok=True)
+                pai = os.path.realpath(os.path.dirname(final))
+                if not any(pai == p or pai.startswith(p + "/") for p in permitidas):
+                    recusa(f"a pasta de {nome} sai da lista")
+                novo = final + ".hefesto-novo"
+                if os.path.lexists(novo):
+                    os.unlink(novo)
+                if membro.issym():
+                    os.symlink(membro.linkname, novo)
+                else:
+                    with pacote.extractfile(membro) as dado, open(novo, "xb") as saida:
+                        while bloco := dado.read(1024 * 1024):
+                            saida.write(bloco)
+                    os.chmod(novo, 0o755 if membro.mode & 0o111 else 0o644)
+                if raiz:
+                    os.lchown(novo, 0, 0)
+                os.replace(novo, final)
+except (OSError, tarfile.TarError) as erro:
+    recusa(str(erro))
+MANGOHUD
+    if command -v ldconfig >/dev/null 2>&1; then
+        ldconfig || _erro "o cache do carregador não se refez"
     fi
-    setup="$(find "${pasta}" -maxdepth 2 -name mangohud-setup.sh -type f -print -quit)"
-    if [[ -z "${setup}" ]]; then
-        rm -rf "${pasta}"
-        _erro "o pacote do MangoHud não traz o mangohud-setup.sh"
-        return 1
-    fi
-    (cd "${setup%/*}" && bash ./mangohud-setup.sh install) </dev/null
-    local rc=$?
-    rm -rf "${pasta}"
-    return "${rc}"
 }
 
 verbo_mangohud_instalar() {
