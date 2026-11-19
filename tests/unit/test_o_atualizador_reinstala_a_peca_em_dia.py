@@ -253,8 +253,10 @@ class Lar:
             ("libbluetooth3", "5.88-0ubuntu0.1~hefesto24.04.6"))
         self.api = ""
         self.estado = ""
-        for nome in ("apt-get", "dpkg", "dkms", "update-initramfs"):
+        for nome in ("apt-get", "dpkg", "dkms", "update-initramfs", "ldconfig"):
             self.duble(nome)
+        self.destino = base / "raiz"
+        self.destino.mkdir()
         self.duble("uname", "echo 7.2.15-76070215-generic")
         seg = self.segurados
         self.duble("apt-mark", f'acao="$1"; shift; case "$acao" in showhold) cat "{seg}" ;;'
@@ -286,6 +288,7 @@ class Lar:
                     "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
                     "HEFESTO_ATUALIZADOR_API": self.api,
                     "HEFESTO_ATUALIZADOR_ESTADO": self.estado,
+                    "HEFESTO_ATUALIZADOR_DESTINO": str(self.destino),
                     "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name}
         return subprocess.run(["bash", str(AJUDANTE), *args], env=ambiente, capture_output=True,
                               text=True, timeout=60, check=False)
@@ -388,11 +391,19 @@ def _tar_do_mangohud(raiz: Lar, nome: str) -> Path:
     for velho in pasta.iterdir():
         velho.unlink()
     setup = f'#!/bin/sh\necho "setup $*" >> "{raiz.chamadas}"\necho {nome}\n'.encode()
+    lib = nome.encode()
+    interno = io.BytesIO()
+    with tarfile.open(fileobj=interno, mode="w") as pacote:
+        info = tarfile.TarInfo("./usr/lib/mangohud/lib64/libMangoHud.so")
+        info.size, info.mode = len(lib), 0o644
+        pacote.addfile(info, io.BytesIO(lib))
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        info = tarfile.TarInfo("MangoHud/mangohud-setup.sh")
-        info.size, info.mode = len(setup), 0o755
-        tar.addfile(info, io.BytesIO(setup))
+        for caminho, dado, modo in (("MangoHud/mangohud-setup.sh", setup, 0o755),
+                                    ("MangoHud/MangoHud-package.tar", interno.getvalue(), 0o644)):
+            info = tarfile.TarInfo(caminho)
+            info.size, info.mode = len(dado), modo
+            tar.addfile(info, io.BytesIO(dado))
     arq = pasta / nome
     arq.write_bytes(buf.getvalue())
     resposta = raiz.base / "release.json"
@@ -421,14 +432,16 @@ def test_o_mangohud_reinstala_so_o_que_o_ajudante_instalou_sem_perder_a_anterior
     assert "MangoHud-0.8.5.tar.gz" in feito.stdout
     assert (pasta / "atual.tar.gz").read_bytes() == novo, "o baixado de quem chama não entra"
     assert (pasta / "anterior.tar.gz").read_bytes() == velho, "a reinstalação não gira a anterior"
-    assert raiz.lidas("setup").count("setup install") == 3
+    assert len(raiz.lidas("ldconfig")) == 3 and not raiz.lidas("setup")
+    assert (raiz.destino / "usr/lib/mangohud/lib64/libMangoHud.so").read_text() \
+        == "MangoHud-0.8.5.tar.gz"
     assert len(raiz.lidas("curl")) == 2, "a reinstalação não vai à rede"
     assert raiz.rodar("mangohud-voltar").returncode == 0
     assert (pasta / "atual.nome").read_text().strip() == "MangoHud-0.8.4.tar.gz"
     (pasta / "atual.nome").write_text("MangoHud-0.8.4;rm.tar.gz\n")
     feito = raiz.rodar("mangohud-reinstalar")
     assert feito.returncode == 2 and "estragado" in feito.stderr
-    assert raiz.lidas("setup").count("setup install") == 4
+    assert len(raiz.lidas("ldconfig")) == 4 and not raiz.lidas("setup")
 
 
 DEBS_DA_CASA = ("bluez_5.88-0ubuntu0.1~hefesto24.04.6_amd64.deb",
