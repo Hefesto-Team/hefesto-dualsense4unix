@@ -3266,13 +3266,14 @@ PY
 
 check_cmdline_platform() {
     local owners="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
-    local tok ativo agendado bateria=0 lido backend seguintes
+    local tok ativo agendado bateria=0 lido backend seguintes recusa
     local cmdline="${HEFESTO_DOCTOR_CMDLINE:-/proc/cmdline}" kcmd="${HEFESTO_DOCTOR_KERNEL_CMDLINE:-/etc/kernel/cmdline}"
     local kstub="${HEFESTO_DOCTOR_KERNELSTUB:-/etc/kernelstub/configuration}" grub="${HEFESTO_DOCTOR_GRUB:-/etc/default/grub}"
     _doctor_tem_bateria && bateria=1
     lido="$(python3 -I "${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/kernel_cmdline.py" ler --kernelstub-conf "${kstub}" --grub-conf "${grub}" --kernel-cmdline "${kcmd}" 2>/dev/null || true)"
     backend="$(sed -n 's/^backend=//p' <<<"${lido}")"; seguintes="$(sed -n 's/^tokens=//p' <<<"${lido}")"
-    if [[ -z "${lido}" ]]; then seguintes="$(cat "${kstub}" "${grub}" "${kcmd}" 2>/dev/null || true)"; fi
+    recusa="$(sed -n 's/^falhou\t//p' <<<"${lido}")"
+    if [[ -z "${lido}" || -n "${recusa}" ]]; then seguintes="$(cat "${kstub}" "${grub}" "${kcmd}" 2>/dev/null || true)"; fi
     for tok in "usbcore.autosuspend=-1" "054c:0ce6:gn"; do
         ativo=0; agendado=0; [[ "${seguintes}" == *"${tok}"* ]] && agendado=1
         grep -qF "${tok}" "${cmdline}" 2>/dev/null && ativo=1
@@ -3283,6 +3284,8 @@ check_cmdline_platform() {
         elif [[ "${agendado}" -eq 1 ]]; then
             warn "cmdline: ${tok} agendado mas NÃO ativo — pendente de reboot"
         elif [[ "${backend}" == "none" ]]; then info "cmdline: ${tok} ausente, e o carregador de boot daqui não é kernelstub, grub nem /etc/kernel/cmdline: ponha à mão no cmdline do kernel ${tok/#054c/usbcore.quirks=054c}"
+        elif [[ -n "${recusa}" ]]; then
+            warn "cmdline: ${tok} ausente, e o install não mexe no grub (${recusa}): ponha à mão no cmdline do kernel ${tok/#054c/usbcore.quirks=054c}"
         else
             warn "cmdline: ${tok} ausente — $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e aplica com MERGE no token único e registro de dono)")"
         fi

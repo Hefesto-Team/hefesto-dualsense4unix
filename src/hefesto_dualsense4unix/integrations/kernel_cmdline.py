@@ -276,6 +276,7 @@ BACKEND_NENHUM = "none"
 _LINHA_DO_GRUB = "GRUB_CMDLINE_LINUX_DEFAULT="
 _ATRIBUICAO_DO_GRUB = re.compile(r"(\s*(?:export\s+)?)GRUB_CMDLINE_LINUX_DEFAULT=(.*)")
 _ESCAPAR_NAS_ASPAS = re.compile(r'([\\"$`])')
+_METACARACTERES = ";&|<>()"
 
 
 class GrubNaoEntendidoError(ValueError):
@@ -344,7 +345,8 @@ class _LinhaDoGrub:
 def _linha_do_grub(linha: str) -> _LinhaDoGrub | None:
     """A ``GRUB_CMDLINE_LINUX_DEFAULT=`` desta linha lida como o shell lê; ``None`` em outra linha.
 
-    Expansão (``$``, crase), aspas sem par ou um segundo valor depois do primeiro levantam
+    Expansão (``$``, crase), aspas sem par, operador do shell fora das aspas (``;``, ``|``, ``&``,
+    ``<``, ``>``, parênteses) ou um segundo valor depois do primeiro levantam
     :class:`GrubNaoEntendidoError` com a linha: reescrever essas formas mudaria o que o shell lê.
     """
     achado = _ATRIBUICAO_DO_GRUB.fullmatch(linha.rstrip("\r\n"))
@@ -366,7 +368,10 @@ def _linha_do_grub(linha: str) -> _LinhaDoGrub | None:
         if cru[fim - 1].isspace():
             fim -= 1
     resto = cru[fim:]
-    expande = "$" in cru[:fim] or "`" in cru[:fim]
+    palavra = shlex.shlex(cru[:fim], posix=True, punctuation_chars=_METACARACTERES)
+    palavra.whitespace_split = True
+    palavra.commenters = ""
+    expande = "$" in cru[:fim] or "`" in cru[:fim] or len(list(palavra)) > 1
     if expande or (resto.strip() and not resto.lstrip().startswith("#")):
         frase = f"forma que eu não sei reescrever na linha do grub: {linha.strip()}"
         raise GrubNaoEntendidoError(frase)

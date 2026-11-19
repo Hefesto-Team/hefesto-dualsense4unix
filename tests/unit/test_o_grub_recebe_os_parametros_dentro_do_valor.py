@@ -18,6 +18,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
 
 BASH = shutil.which("bash") or "/bin/bash"
+DOCTOR = Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
 CASA = ["usbcore.autosuspend=-1", "usbcore.quirks=054c:0ce6:gn"]
 FORMAS = {
     "simples": ('GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"\n', "quiet splash"),
@@ -66,6 +67,7 @@ def test_os_dois_da_casa_entram_no_valor_de_quem_usa(tmp_path: Path, forma: str)
     'GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT quiet"\n',
     'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash\n',
     "GRUB_CMDLINE_LINUX_DEFAULT=quiet splash\n",
+    'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash";\n',
 ])
 def test_a_forma_que_nao_se_entende_e_recusa_sem_gravar(
     tmp_path: Path, linha: str, capsys: pytest.CaptureFixture[str]
@@ -82,3 +84,13 @@ def test_a_forma_que_nao_se_entende_e_recusa_sem_gravar(
                   "--kernel-cmdline", str(lugares.kernel_cmdline)])
     saida = capsys.readouterr().out
     assert rc == 2 and saida.startswith("falhou\t") and linha.strip() in saida, saida
+    nada = str(tmp_path / "nao-ha")
+    doctor = subprocess.run(
+        [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; check_cmdline_platform'],
+        capture_output=True, text=True, timeout=60, check=False,
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "HEFESTO_DOCTOR_SYS": nada,
+             "HEFESTO_DOCTOR_CMDLINE": nada, "HEFESTO_DOCTOR_KERNELSTUB": nada,
+             "HEFESTO_DOCTOR_GRUB": str(lugares.grub), "HEFESTO_DOCTOR_KERNEL_CMDLINE": nada},
+    ).stdout
+    assert "install.sh" not in doctor and doctor.count(linha.strip()) == 2, doctor
+    assert "ponha à mão no cmdline do kernel usbcore.quirks=054c:0ce6:gn" in doctor, doctor
