@@ -206,6 +206,7 @@ class _FilaDoDiario(io.RawIOBase):
         self._resto = b""
         self._no_disco = False
         self._parar = False
+        self._erro_do_giro = ""
         threading.Thread(target=self._rodar, name="diario-da-janela", daemon=True).start()
 
     def writable(self) -> bool:
@@ -261,15 +262,23 @@ class _FilaDoDiario(io.RawIOBase):
             self._girar_se_passou_do_teto()
 
     def _girar_se_passou_do_teto(self) -> None:
-        if self.caminho is None:
+        """O arquivo aberto passou do teto: o caminho vira ``.1`` e um novo nasce no caminho.
+
+        O tamanho é o do arquivo aberto, não o do caminho: o diário apagado por fora cresce no
+        arquivo aberto, e no teto nasce de novo. O giro que falha deixa uma linha por erro."""
+        if self.caminho is None or os.fstat(self.arquivo.fileno()).st_size <= TETO_DO_DIARIO:
             return
         try:
-            if self.caminho.stat().st_size <= TETO_DO_DIARIO:
-                return
-            self.caminho.replace(self.caminho.with_name(self.caminho.name + ".1"))
+            with contextlib.suppress(FileNotFoundError):
+                self.caminho.replace(self.caminho.with_name(self.caminho.name + ".1"))
             novo = self.caminho.open("ab", buffering=0)
-        except OSError:
+        except OSError as erro:
+            if str(erro) != self._erro_do_giro:
+                self._erro_do_giro = str(erro)
+                with contextlib.suppress(OSError):
+                    self.arquivo.write(_a_hora() + f" (o diário não girou: {erro})\n".encode())
             return
+        self._erro_do_giro = ""
         with self._vez:
             velho, self.arquivo = self.arquivo, novo
         with contextlib.suppress(OSError):

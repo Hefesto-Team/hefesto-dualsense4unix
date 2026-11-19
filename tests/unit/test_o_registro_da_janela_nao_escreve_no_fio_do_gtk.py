@@ -316,3 +316,37 @@ def test_o_fio_do_disco_gira_o_diario_no_teto(estado: Path, fluxo: Any) -> None:
     assert (estado / "interface.log.1").exists()
     assert log.stat().st_size <= ab.TETO_DO_DIARIO + ab.TETO_DA_FILA_DO_DIARIO + 4096
     assert _ler(estado)[-1].endswith("depois do giro")
+
+
+def _passar_do_teto(fluxo: Any, vezes: int = 1) -> None:
+    for _ in range(vezes):
+        for _linha in range(8):
+            print("x" * 1023, file=fluxo)
+        _escoar(fluxo)
+
+
+def test_o_diario_apagado_por_fora_nasce_de_novo_no_teto(
+    estado: Path, fluxo: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ab, "TETO_DO_DIARIO", 4096)
+    print("antes", file=fluxo)
+    _escoar(fluxo)
+    (estado / "interface.log").unlink()
+    _passar_do_teto(fluxo)
+    print("depois do giro", file=fluxo)
+    _escoar(fluxo)
+    assert _ler(estado)[-1].endswith("depois do giro")
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="a raiz escreve na pasta sem permissão")
+def test_o_giro_que_falha_deixa_uma_linha_por_erro(
+    estado: Path, fluxo: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ab, "TETO_DO_DIARIO", 4096)
+    estado.chmod(0o500)
+    try:
+        _passar_do_teto(fluxo, vezes=5)
+    finally:
+        estado.chmod(0o700)
+    avisos = [x for x in _ler(estado) if "o diário não girou" in x]
+    assert len(avisos) == 1 and "[Errno 13]" in avisos[0], avisos
