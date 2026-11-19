@@ -215,6 +215,14 @@ def _e_do_wine(nome: str) -> bool:
 _DONOS_DOS_SOQUETES: dict[str, tuple[int, int]] = {}
 
 
+def _modo_e_inode(caminho: str) -> tuple[int, int]:
+    try:
+        estado = os.stat(caminho)
+    except OSError:
+        return 0, 0
+    return estado.st_mode, estado.st_ino
+
+
 def _dono_do_soquete(caminho: str) -> int:
     """O pid do processo que escuta no soquete, pelo ``SO_PEERCRED``; ``0`` sem resposta."""
     try:
@@ -237,15 +245,12 @@ def pids_dos_compositores(raiz_runtime: str | None = None) -> set[int]:
     pids: set[int] = set()
     for nome in nomes - {""}:
         caminho = os.path.join(raiz, nome)
-        try:
-            estado = os.stat(caminho)
-        except OSError:
-            continue
-        if not stat.S_ISSOCK(estado.st_mode):
+        modo, ino = _modo_e_inode(caminho)
+        if not stat.S_ISSOCK(modo):
             continue
         guardado = _DONOS_DOS_SOQUETES.get(caminho)
-        if guardado is None or guardado[0] != estado.st_ino:
-            guardado = (estado.st_ino, _dono_do_soquete(caminho))
+        if guardado is None or guardado[0] != ino:
+            guardado = (ino, _dono_do_soquete(caminho))
             _DONOS_DOS_SOQUETES[caminho] = guardado
         if guardado[1]:
             pids.add(guardado[1])
