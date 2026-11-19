@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1272667,
+      "piso": 1272843,
       "por_item": {
-        "docs": 107171,
+        "docs": 107173,
         "scripts": 114765,
-        "src": 323066,
-        "tests": 727665
+        "src": 323094,
+        "tests": 727811
       },
-      "razao": "tamanho: +503 linhas (1272164 -> 1272667), pagas por Origem: D-1911-A-PORTA-DSX-TEM-FAIXA-E-TETO, D-1911-O-ACIONADOR-RELE-O-KERNEL-NO-BURACO, D-1911-O-ARME-CONTA-O-PAD-QUE-NASCE; registrado no fecho, topo 0f24316e1e42",
+      "razao": "tamanho: +176 linhas (1272667 -> 1272843), pagas por Origem: D-1911-O-PEDIDO-TORTO-VIRA-RECUSA, D-1911-O-VIGIA-SO-APAGA-O-PROTON-DO-HEFESTO; registrado no fecho, topo c09efb7cf5e6",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2085,10 +2085,16 @@
           "de": 1272164,
           "para": 1272667,
           "razao": "tamanho: +503 linhas (1272164 -> 1272667), pagas por Origem: D-1911-A-PORTA-DSX-TEM-FAIXA-E-TETO, D-1911-O-ACIONADOR-RELE-O-KERNEL-NO-BURACO, D-1911-O-ARME-CONTA-O-PAD-QUE-NASCE; registrado no fecho, topo 0f24316e1e42"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1272667,
+          "para": 1272843,
+          "razao": "tamanho: +176 linhas (1272667 -> 1272843), pagas por Origem: D-1911-O-PEDIDO-TORTO-VIRA-RECUSA, D-1911-O-VIGIA-SO-APAGA-O-PROTON-DO-HEFESTO; registrado no fecho, topo c09efb7cf5e6"
         }
       ],
       "unidade": "linhas",
-      "universo": 3536
+      "universo": 3538
     }
   }
 }
