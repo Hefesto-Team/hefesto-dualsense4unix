@@ -73,13 +73,11 @@ def prazo_do_watchdog() -> float | None:
     """O ``WatchdogSec`` da unit em segundos, se for deste processo; ``None`` sem watchdog."""
     pid = _guardadas.get("WATCHDOG_PID") or os.environ.get("WATCHDOG_PID")
     micros = _guardadas.get("WATCHDOG_USEC") or os.environ.get("WATCHDOG_USEC")
-    if not micros or (pid and pid != str(os.getpid())):
+    if not micros or not micros.isdigit() or int(micros) == 0:
         return None
-    try:
-        prazo = int(micros) / 1e6
-    except ValueError:
+    if pid and pid != str(os.getpid()):
         return None
-    return prazo if prazo > 0 else None
+    return int(micros) / 1e6
 
 
 __all__ = [
