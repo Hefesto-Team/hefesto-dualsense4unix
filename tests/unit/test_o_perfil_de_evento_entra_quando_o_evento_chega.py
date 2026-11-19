@@ -297,13 +297,17 @@ def test_a_migracao_leva_ao_computador_o_comando_que_ja_existia() -> None:
     pasta = loader.profiles_dir(ensure=True)
     antigo = {"name": "Antigo", "match": {"type": "any"}, "alvo": "eventos",
               "evento": "meu_comando", "evento_comando": "true"}
+    repetido = {**antigo, "name": "Repetido"}
     (pasta / "antigo.json").write_text(json.dumps(antigo), encoding="utf-8")
-    (pasta / "antigo-2.json").write_text(json.dumps({**antigo, "evento_comando": DE_FORA}),
-                                         encoding="utf-8")
+    (pasta / "repetido.json").write_text(
+        json.dumps({k: v for k, v in repetido.items() if k != "evento_comando"}), encoding="utf-8")
+    (pasta / "repetido-2.json").write_text(json.dumps({**repetido, "evento_comando": DE_FORA}),
+                                           encoding="utf-8")
 
-    assert loader.migrar_os_comandos_dos_eventos() == {"Antigo": "true"}
+    assert loader.migrar_os_comandos_dos_eventos() == {"Antigo": "true"}, (
+        "o importado de nome repetido levou o comando dele ao computador")
     assert maquina.comando_do_evento("Antigo") == "true"
-    for arquivo in ("antigo.json", "antigo-2.json"):
+    for arquivo in ("antigo.json", "repetido-2.json"):
         assert "evento_comando" not in json.loads((pasta / arquivo).read_text(encoding="utf-8"))
     assert loader.migrar_os_comandos_dos_eventos() is None, "a migração rodou duas vezes"
     assert _o_motor_roda() == (["true"], ["Antigo"])
