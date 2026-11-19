@@ -141,8 +141,7 @@ def o_ps_aceita(token: str) -> bool:
     teclado_na_tela = {TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK}
     return all(p.startswith("KEY_") or p in teclado_na_tela for p in token.split("+"))
 
-SEM_ATENDENTE: frozenset[str] = frozenset(
-    {TOKEN_STEAM, TOKEN_SAIR_DO_JOGO, TOKEN_PROGRAMA})
+SEM_ATENDENTE: frozenset[str] = frozenset({TOKEN_PROGRAMA})
 
 
 ORDEM_DOS_GRUPOS: tuple[str, ...] = (
@@ -154,9 +153,12 @@ def por_grupo(botao: str | None = None) -> list[tuple[str, list[str]]]:
 
     Com ``botao=BOTAO_PS``, só o que ele digita (:func:`o_ps_aceita`); as outras linhas não
     oferecem o «— Sem tecla —». Cada ação de eixo (:data:`LINHAS_DA_ACAO_DE_EIXO`) só aparece
-    na linha que a atende, e a linha de botão não oferece nenhuma. Sem ``botao``, a geral.
+    na linha que a atende, e a linha de botão não oferece nenhuma. O que está em
+    :data:`SEM_ATENDENTE` não se oferece. Sem ``botao``, a geral.
     """
     def cabe(token: str) -> bool:
+        if token in SEM_ATENDENTE:
+            return False
         if botao == BOTAO_PS:
             return o_ps_aceita(token)
         if token == TOKEN_SEM_TECLA:
@@ -351,12 +353,9 @@ def botoes_calados(
     sacolas, e devolver quatro viraria `ValueError: too many values to unpack`
     na aba que se abre hoje.
 
-    `__NADA__` E SÓ ELE. Um botão do d-pad posto em "Abrir a Steam" cai em
-    `SEM_ATENDENTE`, vai para a terceira sacola do `resolver()` e **continua
-    emitindo o de fábrica** — é o gêmeo deste defeito, com a mesma linha de
-    código como causa, e está RELATADO em
-    `ONDA3-MOTOR-01`. Curá-lo aqui de
-    carona seria a segunda cura escondida dentro da primeira.
+    `__NADA__` E SÓ ELE. «Abrir a Steam» e «Sair do modo jogo» vão ao teclado
+    virtual como token (TODA-ACAO-OFERECIDA-AO-BOTAO-TEM-QUEM-A-FACA-01), e o
+    que não tem quem faça (:data:`SEM_ATENDENTE`) não se oferece na tela.
     """
     tabela = tabela_efetiva(escolhas, key_bindings)
     return frozenset(b for b, token in tabela.items() if token == TOKEN_NADA)

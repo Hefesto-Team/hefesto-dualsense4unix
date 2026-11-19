@@ -38,6 +38,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from hefesto_dualsense4unix.core.acoes_de_botao import TOKEN_SAIR_DO_JOGO, TOKEN_STEAM
 from hefesto_dualsense4unix.core.keyboard_mappings import (
     TOKEN_CLOSE_OSK,
     TOKEN_OPEN_OSK,
@@ -409,17 +410,42 @@ class _OSKController:
         return self._fio.esperar(teto)
 
 
-def atendente_do_teclado_na_tela(daemon: DaemonProtocol) -> Callable[[str, str], None]:
-    """O callback do L3/R3 que acha o atendente do daemon NA HORA do toque.
+_FIO_DA_STEAM = fora_do_servico.FioDeTrabalho(
+    "hefesto-botao-abre-a-steam",
+    ao_falhar=lambda erro: logger.warning("botao_abrir_a_steam_falhou", err=str(erro)),
+)
 
-    Para o device que vive mais que o atendente de agora (o teclado privado da
-    tabela «Também no jogo»): desligar a Função do teclado fecha e esquece o
-    `_osk_controller`, e um callback preso ao antigo abriria o teclado na tela
-    por um atendente que a parada do daemon não fecha mais. Sem atendente, o
-    toque cria o do daemon, como o `start_keyboard_emulation`.
+
+def _abrir_a_steam() -> None:
+    from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
+
+    open_or_focus_steam()
+
+
+def _fazer_o_comando(daemon: DaemonProtocol, token: str) -> None:
+    """«Abrir a Steam» no fio próprio; «Sair do modo jogo» solta a supressão, como o gesto."""
+    if token == TOKEN_STEAM:
+        if not _FIO_DA_STEAM.disparar(_abrir_a_steam):
+            logger.info("botao_abrir_a_steam_em_voo")
+        return
+    daemon.set_emulation_suppressed(False)
+
+
+def atendente_do_teclado_na_tela(daemon: DaemonProtocol) -> Callable[[str, str], None]:
+    """O callback dos tokens virtuais do teclado, que acha o atendente do daemon NA HORA.
+
+    O teclado na tela vai ao `_osk_controller`; «Abrir a Steam» e «Sair do modo
+    jogo» se fazem no aperto (:func:`_fazer_o_comando`). Vale para o teclado do
+    desktop e para o privado da tabela «Também no jogo», que vive mais que o
+    atendente de agora: desligar a Função do teclado fecha e esquece o
+    `_osk_controller`, e sem atendente o toque cria o do daemon.
     """
 
     def atender(token: str, phase: str) -> None:
+        if token in (TOKEN_STEAM, TOKEN_SAIR_DO_JOGO):
+            if phase == "press":
+                _fazer_o_comando(daemon, token)
+            return
         osk = getattr(daemon, "_osk_controller", None)
         if osk is None:
             osk = _OSKController()
@@ -479,7 +505,7 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     if osk is None:
         osk = _OSKController()
         daemon._osk_controller = osk
-    device.virtual_token_callback = osk.dispatch_token
+    device.virtual_token_callback = atendente_do_teclado_na_tela(daemon)
     if not device.start():
         logger.warning("keyboard_emulation_start_failed")
         return False
