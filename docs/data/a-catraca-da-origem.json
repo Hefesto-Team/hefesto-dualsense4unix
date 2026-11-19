@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1273970,
+      "piso": 1274651,
       "por_item": {
-        "docs": 107176,
-        "scripts": 114765,
+        "docs": 107180,
+        "scripts": 114898,
         "src": 323553,
-        "tests": 728476
+        "tests": 729020
       },
-      "razao": "tamanho: +769 linhas (1273201 -> 1273970), pagas por Origem: D-1911-A-ABERTURA-QUE-FALHA-ESPERA-O-RECUO, D-1911-O-LACO-QUE-MORRE-OU-TRAVA-VOLTA-SOZINHO; registrado no fecho, topo d5112e475f38",
+      "razao": "tamanho: +681 linhas (1273970 -> 1274651), pagas por Origem: D-1911-A-REGRA-DO-NO-SO-FECHA-COM-O-BROKER-DE-PE, D-1911-A-VENV-DOENTE-SE-RECRIA-COM-O-MOTIVO, D-1911-O-INSTALL-E-O-UNINSTALL-RECUSAM-ROOT, D-1911-O-SUDO-SEM-SENHA-SE-AVISA-E-SE-RECUSA; registrado no fecho, topo 4a11a8982313",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2103,10 +2103,16 @@
           "de": 1273201,
           "para": 1273970,
           "razao": "tamanho: +769 linhas (1273201 -> 1273970), pagas por Origem: D-1911-A-ABERTURA-QUE-FALHA-ESPERA-O-RECUO, D-1911-O-LACO-QUE-MORRE-OU-TRAVA-VOLTA-SOZINHO; registrado no fecho, topo d5112e475f38"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1273970,
+          "para": 1274651,
+          "razao": "tamanho: +681 linhas (1273970 -> 1274651), pagas por Origem: D-1911-A-REGRA-DO-NO-SO-FECHA-COM-O-BROKER-DE-PE, D-1911-A-VENV-DOENTE-SE-RECRIA-COM-O-MOTIVO, D-1911-O-INSTALL-E-O-UNINSTALL-RECUSAM-ROOT, D-1911-O-SUDO-SEM-SENHA-SE-AVISA-E-SE-RECUSA; registrado no fecho, topo 4a11a8982313"
         }
       ],
       "unidade": "linhas",
-      "universo": 3540
+      "universo": 3545
     }
   }
 }
