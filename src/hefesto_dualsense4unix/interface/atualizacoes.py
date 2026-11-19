@@ -31,6 +31,8 @@ DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
 DICA_DO_JOGO = "Espera o jogo fechar"
 DICA_DA_FILA = "Espera a atualização em curso"
+PARADA, PARANDO, REINICIE = "Parada", "Parando…", "Reinicie o computador para concluir"
+GLIFO_DA_REINSTALACAO = "↻"
 ATUALIZADO, NOVA_VERSAO, ESPERANDO, APLICANDO, FALHOU, NA_FILA, A_REVISAR, SEM_REDE = (
     "Atualizado", "Nova versão", "Esperando", "Aplicando", "Falhou", "Na fila", "A revisar",
     "Sem rede")
@@ -178,6 +180,11 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
   background:var(--cyan)}
 .hef-atualiza .and-total .trilho .cheio{background:var(--green)}
 .hef-atualiza .mp-l .and-barra{width:120px;display:flex;align-items:center}
+.hef-atualiza .refaz{color:var(--cyan);margin-right:6px}
+.hef-atualiza .and-reinicio{margin-top:10px}
+.hef-atualiza .registro{min-height:240px;max-height:360px;overflow:auto;margin:0;padding:8px 10px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--fg);white-space:pre-wrap;
+  border:1px solid var(--border-sutil);border-radius:6px;background:var(--app-bg)}
 """
 
 JS_DA_CAIXA = """(function(css, corpo, id){
@@ -407,17 +414,22 @@ def _etapa_agora(etapas: object) -> str:
     return next((ETAPA_NA_DICA.get(str(k), str(k)) for k, v in etapas.items() if v == "agora"), "")
 
 
-def _linha_do_andamento(peca: dict[str, Any]) -> str:
+def _linha_do_andamento(peca: dict[str, Any], *, parada: bool = False) -> str:
     """A linha do mapa, com o estado da fila: a barra só na peça em curso, o porquê na dica."""
     selo = str(peca.get("selo") or "fila")
     classe, estado = ESTADO_DO_ANDAMENTO.get(selo, ("fila", NA_FILA))
+    if parada and classe in ("fila", "aplicando"):
+        classe, estado = "fila", PARADA
     motivo = str(peca.get("motivo") or "")
     if classe == "aplicando":
         estado = _junto(estado, _etapa_agora(peca.get("etapas")))
     elif classe in ("esperando", "falhou", "ok", "fila") and motivo:
         estado = f"{estado}: {motivo}"
     de, para = str(peca.get("de") or ""), str(peca.get("para") or "")
-    if peca.get("rotulo"):
+    if peca.get("fazer") == "reinstalar":
+        ver = (f'<span class="refaz"{_dica("Reinstala")}>{GLIFO_DA_REINSTALACAO}</span>'
+               f'<span class="nv">{_e(peca.get("rotulo") or versao_curta(de or para))}</span>')
+    elif peca.get("rotulo"):
         ver = f'<span class="nv">{_e(peca["rotulo"])}</span>'
     elif de and para and de != para:
         ver = (f'{_e(versao_curta(de))}<span class="seta">→</span>'
@@ -435,8 +447,10 @@ def _linha_do_andamento(peca: dict[str, Any]) -> str:
     return _linha(peca, classe, estado, meio, "", dica)
 
 
-def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
+def html_do_andamento(andamento: dict[str, Any], *, rodando: bool, parando: bool = False,
+                      pede_reinicio: str = "") -> str:
     """O total, uma linha por peça e o reinício do serviço; o rodapé muda com a fila."""
+    parada = not rodando and andamento.get("fase") == "parado"
     pecas = _ordenadas([p for p in andamento.get("pecas") or [] if isinstance(p, dict)])
     total = andamento.get("total") or {}
     feitas, de, pct = int(total.get("feitas", 0)), int(total.get("de", len(pecas))), \
@@ -447,24 +461,54 @@ def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
                "etapas": reinicio.get("etapas") or {}, "pct": reinicio.get("pct", 0)}
     botoes = [f'<button class="btn" data-gesto="atualizacoes-registro"{_dica(DICA_DO_REGISTRO)}>'
               'Registro</button>']
+    empurra = " empurra"
+    if rodando and andamento.get("fase") in ("espera", "espera_o_jogo"):
+        botoes.append('<button class="btn empurra" data-gesto="atualizacoes-fechar-a-steam">'
+                      'Fechar e continuar</button>')
+        empurra = ""
     if falhas:
-        botoes.append('<button class="btn empurra" data-gesto="atualizacoes-tentar">'
+        botoes.append(f'<button class="btn{empurra}" data-gesto="atualizacoes-tentar">'
                       'Tentar de novo</button>')
-    if rodando:
-        empurra = "" if falhas else " empurra"
+        empurra = ""
+    if parada:
+        botoes.append(f'<button class="btn{empurra}" data-gesto="atualizacoes-continuar">'
+                      'Continuar</button>')
+    elif pede_reinicio and not rodando:
         botoes.append(f'<button class="btn borda-vermelha{empurra}" '
-                      f'data-gesto="atualizacoes-parar">'
-                      'Parar</button>')
+                      f'data-gesto="atualizacoes-reiniciar-o-computador"{_dica(pede_reinicio)}>'
+                      'Reiniciar agora</button>')
+    if rodando:
+        botoes.append(f'<button class="btn borda-vermelha{empurra}" '
+                      f'data-gesto="atualizacoes-parar"{" disabled" if parando else ""}>'
+                      f'{PARANDO if parando else "Parar"}</button>')
+    titulo = f"Atualizações · {PARADA}" if parada else "Atualizações"
+    aviso = (f'<div class="pendente and-reinicio"{_dica(pede_reinicio)}>{REINICIE}</div>'
+             if pede_reinicio and not rodando else "")
     return (f'<div class="tn-cx larga" role="dialog" aria-modal="true" aria-label="Atualizações">'
-            f'<div class="tn-topo"><span class="tn-tit">Atualizações</span>'
-            f'<button class="tn-x" data-gesto="atualizacoes-fechar"{_dica("Esconder")}>'
-            f'&times;</button>'
+            f'<div class="tn-topo"><span class="tn-tit">{titulo}</span>'
+            f'<button class="tn-x" data-gesto="atualizacoes-fechar"'
+            f'{_dica("Esconder" if rodando else "Fechar")}>&times;</button>'
             f'</div><div class="tn-corpo"><div class="and-total">'
             f'<span class="trilho"><span class="cheio" style="width:{pct}%"></span></span>'
             f'<span class="n">{feitas} de {de}</span></div>'
-            f'<div class="mp-lista">{"".join(_linha_do_andamento(p) for p in pecas)}'
-            f'{_linha_do_andamento(servico)}</div></div>'
+            f'<div class="mp-lista">'
+            f'{"".join(_linha_do_andamento(p, parada=parada) for p in pecas)}'
+            f'{_linha_do_andamento(servico, parada=parada)}</div>{aviso}</div>'
             f'<div class="tn-rod">{"".join(botoes)}</div></div>')
+
+
+def html_do_registro(texto: str) -> str:
+    """O registro da atualização dentro da caixa, com Copiar e Salvar."""
+    return (f'<div class="tn-cx larga" role="dialog" aria-modal="true" aria-label="Registro">'
+            f'<div class="tn-topo"><span class="tn-tit">Registro</span>'
+            f'<button class="tn-x" data-gesto="atualizacoes-fechar"{_dica("Fechar")}>'
+            f'&times;</button></div><div class="tn-corpo">'
+            f'<pre class="registro">{_e(texto) or "Nada registrado ainda."}</pre></div>'
+            f'<div class="tn-rod"><button class="btn" data-gesto="atualizacoes-registro-voltar">'
+            f'← Atualizações</button>'
+            f'<button class="btn empurra" data-gesto="atualizacoes-registro-copiar">Copiar</button>'
+            f'<button class="btn" data-gesto="atualizacoes-registro-salvar">Salvar</button>'
+            f'</div></div>')
 
 
 def quantas_novas(conferencia: dict[str, Any]) -> int:

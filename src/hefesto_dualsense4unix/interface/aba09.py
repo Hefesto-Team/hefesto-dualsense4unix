@@ -753,6 +753,54 @@ def o_mapa_aberto(pagina):
         "</body>", caixa + "</body>", 1)
 
 
+DESENHO_DOS_ESTADOS = "escolha/os-estados-do-andamento.html"
+
+ANDAMENTO_DE_EXEMPLO = {
+    "inicio": 1.0, "fim_em": 2.0,
+    "pecas": [
+        {"id": "proton", "nome": "GE-Proton", "de": "11-12", "para": "11-12", "fazer": "reinstalar",
+         "selo": "pronta", "etapas": {}, "pct": 100},
+        {"id": "kernel", "nome": "Kernel", "de": "7.2.15", "para": "7.2.18", "fazer": "subir",
+         "selo": "pronta", "etapas": {}, "pct": 100},
+        {"id": "sistema", "nome": "Pacotes do sistema", "de": "24.04", "para": "98",
+         "rotulo": "98 pacotes", "fazer": "subir", "selo": "fila", "etapas": {}, "pct": 0},
+    ],
+    "total": {"feitas": 2, "de": 3, "pct": 66, "falhas": 0},
+    "reinicio": {"etapas": {}, "pct": 0, "selo": "fila"},
+}
+
+
+def os_estados_do_andamento(pagina):
+    """Os estados da caixa do andamento lado a lado, como o produto os pinta."""
+    from hefesto_dualsense4unix.interface import atualizacoes as tela
+
+    fim = {**ANDAMENTO_DE_EXEMPLO, "fase": "fim",
+           "pecas": [{**p, "selo": "pronta"} for p in ANDAMENTO_DE_EXEMPLO["pecas"]],
+           "total": {"feitas": 3, "de": 3, "pct": 100, "falhas": 0}}
+    espera = {**ANDAMENTO_DE_EXEMPLO, "fase": "espera",
+              "pecas": [*ANDAMENTO_DE_EXEMPLO["pecas"][:2],
+                        {**ANDAMENTO_DE_EXEMPLO["pecas"][2], "selo": "esperando",
+                         "motivo": "a Steam está aberta"}]}
+    estados = [
+        ("Parando", tela.html_do_andamento(ANDAMENTO_DE_EXEMPLO, rodando=True, parando=True)),
+        ("Espera a Steam", tela.html_do_andamento(espera, rodando=True)),
+        ("Parada", tela.html_do_andamento({**ANDAMENTO_DE_EXEMPLO, "fase": "parado"},
+                                          rodando=False)),
+        ("Pede reinício", tela.html_do_andamento(
+            fim, rodando=False, pede_reinicio="A atualização trocou o kernel")),
+        ("Registro", tela.html_do_registro(
+            "2026-11-19 03:45:02 fila: a Steam fechou para a fila\n"
+            "2026-11-19 03:45:40 proton: reinstalado\n2026-11-19 04:10:11 fila: a Steam reabriu\n")),
+    ]
+    caixas = "".join(f'<section class="estado"><h2>{nome}</h2><div class="hef-atualiza aberta">'
+                     f'{corpo}</div></section>' for nome, corpo in estados)
+    estilo = (f"<style>{tela.CSS}.estados{{display:flex;flex-wrap:wrap;gap:24px;padding:24px}}"
+              ".estados .hef-atualiza{position:static;inset:auto;display:block;background:none}"
+              ".estados h2{font-size:13px;color:var(--texto-mudo);margin:0 0 8px}</style>")
+    return pagina.replace("url('../assets/", "url('../../assets/").replace(
+        "</body>", f'{estilo}<div class="estados">{caixas}</div></body>', 1)
+
+
 def escrever_o_ensaio():
     """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`."""
     n = monta("09-sistema", "Sistema", MIOLO, CSS + CSS_DAS_ATUALIZACOES)
@@ -781,6 +829,7 @@ def escrever_o_ensaio():
     onde.gravar("09-sistema.html", pagina)
     onde.pagina(DESENHO_DO_MAPA).parent.mkdir(exist_ok=True)
     onde.gravar(DESENHO_DO_MAPA, o_mapa_aberto(pagina))
+    onde.gravar(DESENHO_DOS_ESTADOS, os_estados_do_andamento(pagina))
 
     print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
           + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))
@@ -800,4 +849,5 @@ if __name__ == "__main__":
     shutil.copyfile(_prova / "09-sistema.html", _real / "09-sistema.html")
     (_real / DESENHO_DO_MAPA).parent.mkdir(exist_ok=True)
     shutil.copyfile(_prova / DESENHO_DO_MAPA, _real / DESENHO_DO_MAPA)
+    shutil.copyfile(_prova / DESENHO_DOS_ESTADOS, _real / DESENHO_DOS_ESTADOS)
     shutil.rmtree(_prova)

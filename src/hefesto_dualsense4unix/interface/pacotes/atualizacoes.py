@@ -8,11 +8,14 @@ fora da janela (:func:`atualizador.soltar`).
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions import atualizador as at
+from hefesto_dualsense4unix.integrations import curas_da_casa
 from hefesto_dualsense4unix.interface import atualizacoes as tela
 
 from . import Contexto, fios, gesto
@@ -110,10 +113,16 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
     andamento = at.ler_o_andamento()
     rodando = at.em_curso()
     espera = rodando and andamento.get("fase") in (at.ESPERA, at.ESPERA_O_JOGO)
+    if TELA["vista"] == "registro":
+        return tela.html_do_registro(_o_registro())
     if _andamento_a_mostrar(andamento, rodando, momento) \
             and not (espera and TELA["vista"] in ("pergunta", "voltar")):
         TELA["vista"] = "andamento"
-        return tela.html_do_andamento(andamento, rodando=rodando)
+        reinicio = "" if rodando else curas_da_casa.pede_reinicio(
+            trocou_em=at.trocou_o_que_pede_reinicio(andamento))
+        return tela.html_do_andamento(andamento, rodando=rodando,
+                                      parando=rodando and at.parada_pedida(),
+                                      pede_reinicio=reinicio)
     if TELA["vista"] == "andamento":
         TELA["vista"] = ""
     if not TELA["vista"] and not TELA["perguntou"] and at.hora_da_pergunta(momento):
@@ -335,16 +344,73 @@ def tentar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _repintar()
 
 
+TETO_DO_REGISTRO = 64 * 1024
+
+
+def _o_registro() -> str:
+    try:
+        dado = at.caminho_do_registro().read_bytes()
+    except OSError:
+        return ""
+    return dado[-TETO_DO_REGISTRO:].decode("utf-8", "replace")
+
+
 @gesto("*", "atualizacoes-registro")
 def registro(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Registro»: o arquivo desta atualização no editor do sistema."""
-    from hefesto_dualsense4unix.integrations import fora_do_servico
+    """«Registro»: o registro desta atualização dentro da caixa."""
+    TELA["vista"] = "registro"
+    _repintar()
 
-    caminho = at.caminho_do_registro()
-    if not caminho.exists():
-        raise ValueError("registro: nada registrado ainda")
-    fora_do_servico.abrir(["xdg-open", str(caminho)], env=dict(os.environ),
-                          aplicativo="atualizador-registro")
+
+@gesto("*", "atualizacoes-registro-voltar")
+def registro_voltar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    TELA["vista"] = "andamento"
+    TELA["escondida"] = 0.0
+    _repintar()
+
+
+@gesto("*", "atualizacoes-registro-copiar")
+def registro_copiar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    from hefesto_dualsense4unix.interface.janela import por_na_area_de_transferencia
+
+    if not por_na_area_de_transferencia(_o_registro()):
+        raise RuntimeError("registro: a área de transferência não aceitou")
+
+
+@gesto("*", "atualizacoes-registro-salvar", grava="salva o registro da atualização")
+def registro_salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    destino = Path(os.environ.get("XDG_DOWNLOAD_DIR") or Path.home() / "Downloads")
+    destino.mkdir(parents=True, exist_ok=True)
+    arquivo = destino / f"hefesto-atualizacao-{time.strftime('%Y-%m-%d-%H%M%S')}.log"
+    arquivo.write_text(_o_registro(), encoding="utf-8")
+    TELA["salvo"] = str(arquivo)
+
+
+@gesto("*", "atualizacoes-continuar", grava="continua a atualização parada")
+def continuar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Continuar»: a fila parada abre de novo com as peças que não terminaram."""
+    ids = [str(x.get("id")) for x in at.ler_o_andamento().get("pecas") or []
+           if isinstance(x, dict) and x.get("selo") not in (at.PRONTA, at.ATUALIZADA)]
+    if not ids:
+        raise ValueError("continuar: nada ficou para trás")
+    if not at.soltar(ids):
+        raise RuntimeError("continuar: a fila não abriu")
+    TELA["escondida"] = 0.0
+    _repintar()
+
+
+@gesto("*", "atualizacoes-fechar-a-steam", grava="fecha a Steam para a atualização seguir")
+def fechar_a_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    at.pedir_para_fechar_a_steam()
+    _repintar()
+
+
+@gesto("*", "atualizacoes-reiniciar-o-computador", grava="reinicia o computador")
+def reiniciar_o_computador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    feito = subprocess.run(["systemctl", "reboot"], check=False, capture_output=True,
+                           text=True, timeout=30)
+    if feito.returncode != 0:
+        raise RuntimeError(f"reiniciar: {feito.stderr.strip() or feito.returncode}")
 
 
 PISO_DA_ABA = 15

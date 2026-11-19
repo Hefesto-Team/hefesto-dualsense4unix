@@ -62,6 +62,7 @@ class Maquina:
     dkms: Path = Path("/var/lib/dkms")
     preferencias_do_apt: Path = Path("/etc/apt/preferences.d")
     legivel: Path | None = None
+    raiz: Path | None = None
     assets: Path = Path(__file__).resolve().parents[3] / "assets"
     cache: Path | None = None
     kernel: str = ""
@@ -72,6 +73,11 @@ class Maquina:
 
     def o_cache(self) -> Path:
         return self.cache or Path.home() / ".cache" / "hefesto-dualsense4unix"
+
+    def no_sistema(self, caminho: str) -> Path:
+        if self.raiz is not None:
+            return self.raiz / caminho
+        return self.cache / "raiz" / caminho if self.cache else Path("/") / caminho
 
     def o_legivel(self) -> Path:
         if self.legivel is not None:
@@ -259,6 +265,41 @@ def portal(maquina: Maquina | None = None) -> Cura:
     return Cura("portal", "Portal de captura", CAIU,
                 "A captura de tela voltou à da distribuição, sem a correção do Hefesto",
                 RODE_O_INSTALADOR_COM_A_TELA)
+
+
+def _btime(maquina: Maquina) -> float:
+    with contextlib.suppress(OSError, ValueError):
+        for linha in maquina.no_sistema("proc/stat").read_text(encoding="utf-8").splitlines():
+            if linha.startswith("btime "):
+                return float(linha.split()[1])
+    return 0.0
+
+
+def _build_trocado(maquina: Maquina) -> bool:
+    try:
+        versao = maquina.no_sistema("proc/version").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    achado = re.search(r"#(\S+)", versao)
+    pacote = _instalado(maquina, f"linux-image-{maquina.o_kernel()}")
+    if achado is None or not pacote:
+        return False
+    return achado.group(1).removesuffix("-Ubuntu") not in pacote
+
+
+def pede_reinicio(maquina: Maquina | None = None, *, trocou_em: float = 0.0) -> str:
+    """O porquê de o computador pedir reinício; vazio se não pede. Some no boot seguinte."""
+    maquina = maquina or MAQUINA
+    modulos = maquina.no_sistema("lib/modules")
+    if maquina.no_sistema("run/reboot-required").exists():
+        return "O sistema pede o reinício"
+    if modulos.is_dir() and not (modulos / maquina.o_kernel()).is_dir():
+        return "O kernel em uso saiu do disco"
+    if _build_trocado(maquina):
+        return "O kernel em uso foi trocado no disco"
+    if trocou_em and trocou_em > _btime(maquina):
+        return "A atualização trocou o kernel, o driver ou o sistema"
+    return ""
 
 
 def curas(maquina: Maquina | None = None) -> list[Cura]:

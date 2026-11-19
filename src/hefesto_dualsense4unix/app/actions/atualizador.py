@@ -238,6 +238,11 @@ def caminho_do_registro() -> Path:
     return _estado() / REGISTRO
 
 
+def _girar_o_registro() -> None:
+    with contextlib.suppress(OSError):
+        caminho_do_registro().replace(caminho_do_registro().with_name(REGISTRO + ".1"))
+
+
 @dataclass
 class Escolha:
     """O que quem usa escolheu: as peças marcadas, a «Atualização automática» e o prazo."""
@@ -514,6 +519,23 @@ class _Andamento:
 
 def _pediram_parar() -> bool:
     return (_runtime() / PEDIDO_DE_PARAR).exists()
+
+
+def parada_pedida() -> bool:
+    return _pediram_parar()
+
+
+REINICIAM_O_COMPUTADOR = ("kernel", "nvidia", "dkms", "sistema")
+
+
+def trocou_o_que_pede_reinicio(andamento: dict[str, Any]) -> float:
+    """Quando a fila terminou de trocar kernel, driver, módulos ou sistema; 0 se não trocou."""
+    trocou = any(isinstance(p, dict) and p.get("id") in REINICIAM_O_COMPUTADOR
+                 and p.get("selo") == PRONTA for p in andamento.get("pecas") or [])
+    try:
+        return float(andamento.get("fim_em") or 0) if trocou else 0.0
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def pedir_para_parar() -> None:
@@ -876,6 +898,7 @@ def rodar(
     trava = _a_trava()
     if trava is None:
         return 3
+    _girar_o_registro()
     fechou: list[bool] = []
     try:
         for pedido in (PEDIDO_DE_PARAR, PEDIDO_DE_TENTAR, PEDIDO_DE_FECHAR_A_STEAM):

@@ -432,3 +432,78 @@ def test_o_jogo_de_fora_da_steam_diz_o_nome_do_perfil_de_jogo_que_entrou(
     for ativo in ("Só a janela", "Perfil que não existe", None):
         assert pendente({**sem_steam, "active_profile": ativo}) == (
             '<div class="pendente"><span>Jogo aberto</span><span>· espera</span></div>')
+
+
+def test_a_linha_que_reinstala_tem_glifo_proprio_e_a_que_sobe_diz_de_para() -> None:
+    sobe = {**_andamento("fila")["pecas"][0], "fazer": "subir"}
+    refaz = {**sobe, "fazer": "reinstalar", "de": "11-12", "para": "11-12"}
+    assert "→" in tela._linha_do_andamento(sobe) and tela.GLIFO_DA_REINSTALACAO not in \
+        tela._linha_do_andamento(sobe)
+    linha = tela._linha_do_andamento(refaz)
+    assert tela.GLIFO_DA_REINSTALACAO in linha and "→" not in linha and linha.count("11-12") == 1
+
+
+def test_a_fila_parada_diz_parada_oferece_continuar_e_o_x_fecha(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    parada = {**_andamento("fila"), "fase": at.PARADO}
+    corpo = tela.html_do_andamento(parada, rodando=False)
+    assert tela.PARADA in corpo and tela.NA_FILA not in corpo
+    assert 'data-gesto="atualizacoes-continuar"' in corpo and 'data-dica="Fechar"' in corpo
+    parando = tela.html_do_andamento(_andamento("aplicando"), rodando=True, parando=True)
+    assert tela.PARANDO in parando and "disabled" in parando
+    soltas: list[list[str]] = []
+    monkeypatch.setattr(at, "soltar", lambda ids, **_k: soltas.append(list(ids)) or True)
+    at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, parada)
+    _gesto("atualizacoes-continuar")
+    assert soltas == [["kernel", "proton"]]
+
+
+def test_a_espera_da_steam_oferece_fechar_e_continuar() -> None:
+    esperando = {**_andamento("esperando", "a Steam está aberta"), "fase": at.ESPERA}
+    corpo = tela.html_do_andamento(esperando, rodando=True)
+    assert 'data-gesto="atualizacoes-fechar-a-steam"' in corpo and "Fechar e continuar" in corpo
+    _gesto("atualizacoes-fechar-a-steam")
+    assert (at._runtime() / at.PEDIDO_DE_FECHAR_A_STEAM).exists()
+
+
+def test_o_fim_que_pede_reinicio_oferece_reiniciar_agora(monkeypatch: pytest.MonkeyPatch) -> None:
+    fim = {**_andamento("pronta"), "fase": at.FIM}
+    assert "Reiniciar agora" not in tela.html_do_andamento(fim, rodando=False)
+    corpo = tela.html_do_andamento(fim, rodando=False, pede_reinicio="O sistema pede o reinício")
+    assert tela.REINICIE in corpo and 'data-gesto="atualizacoes-reiniciar-o-computador"' in corpo
+    assert "Reiniciar agora" not in tela.html_do_andamento(
+        fim, rodando=True, pede_reinicio="O sistema pede o reinício")
+    chamadas: list[list[str]] = []
+    monkeypatch.setattr(gestos.subprocess, "run", lambda argv, **_k: chamadas.append(argv) or
+                        type("R", (), {"returncode": 0, "stderr": ""})())
+    _gesto("atualizacoes-reiniciar-o-computador")
+    assert chamadas == [["systemctl", "reboot"]]
+
+
+def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    at.caminho_do_registro().write_text("primeira <fila>\n", encoding="utf-8")
+    _gesto("atualizacoes-registro")
+    corpo = gestos.conteudo(None)
+    assert "primeira &lt;fila&gt;" in corpo and "Copiar" in corpo and "Salvar" in corpo
+    copiado: list[str] = []
+    from hefesto_dualsense4unix.interface import janela
+
+    monkeypatch.setattr(janela, "por_na_area_de_transferencia",
+                        lambda texto: copiado.append(texto) or True)
+    _gesto("atualizacoes-registro-copiar")
+    assert copiado == ["primeira <fila>\n"]
+    monkeypatch.setenv("XDG_DOWNLOAD_DIR", str(lar / "baixados"))
+    _gesto("atualizacoes-registro-salvar")
+    salvos = list((lar / "baixados").iterdir())
+    assert len(salvos) == 1 and salvos[0].read_text(encoding="utf-8") == "primeira <fila>\n"
+
+
+def test_cada_fila_comeca_um_registro_novo_e_guarda_o_anterior() -> None:
+    at.caminho_do_registro().write_text("da fila velha\n", encoding="utf-8")
+    at.rodar([], lista=[], jogo_aberto=lambda: False, reiniciar=lambda: True,
+             reabrir=lambda: True, dormir=lambda _s: None)
+    assert "da fila velha" not in at.caminho_do_registro().read_text(encoding="utf-8") \
+        if at.caminho_do_registro().exists() else True
+    anterior = at.caminho_do_registro().with_name(at.REGISTRO + ".1")
+    assert anterior.read_text(encoding="utf-8") == "da fila velha\n"
