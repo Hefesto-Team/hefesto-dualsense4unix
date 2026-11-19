@@ -1669,11 +1669,41 @@ class Supervisor:
         self._marcar(mod_id, EstadoDaModificacao(estado))
 
 
+def _nspid(pid: int) -> list[str]:
+    try:
+        status = Path(f"/proc/{pid}/status").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return next((linha.split()[1:] for linha in status.splitlines()
+                 if linha.startswith("NSpid:")), [])
+
+
+def o_grupo_da_extensao(pid: int) -> int:
+    """O grupo que recebe o ``SIGTERM`` do parar: o da extensão.
+
+    Na caixa, ``pid`` é o ``bwrap`` (ou o ``pasta``) de fora, e a extensão é o primeiro da
+    cadeia de filhos que mora num espaço de PID mais fundo sem ser o ``init`` dele; o
+    ``--new-session`` a pôs noutro grupo. Sem caixa, o grupo é o do próprio ``pid``.
+    """
+    fundo = len(_nspid(pid))
+    atual = pid
+    while filhos := _filhos(atual):
+        atual = filhos[0]
+        nspid = _nspid(atual)
+        if len(nspid) > fundo and nspid[-1] != "1":
+            try:
+                return os.getpgid(atual)
+            except ProcessLookupError:
+                return pid
+    return pid
+
+
 async def parar_o_grupo(processo: asyncio.subprocess.Process, prazo: float) -> int | None:
-    """``SIGTERM`` ao grupo do PID criado; ``SIGKILL`` no fim do prazo."""
+    """``SIGTERM`` ao grupo da extensão (:func:`o_grupo_da_extensao`); ``SIGKILL`` ao grupo do
+    PID criado no fim do prazo."""
     pid = processo.pid
     with contextlib.suppress(ProcessLookupError, PermissionError):
-        os.killpg(pid, signal.SIGTERM)
+        os.killpg(o_grupo_da_extensao(pid), signal.SIGTERM)
     espera = asyncio.ensure_future(processo.wait())
     await asyncio.wait({espera}, timeout=prazo)
     if not espera.done():

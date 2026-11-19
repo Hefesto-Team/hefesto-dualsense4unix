@@ -123,6 +123,11 @@ _O_FILHO = textwrap.dedent('''
     if modo == "neto":
         import subprocess
         subprocess.Popen([sys.executable, "-c", "import time; time.sleep(600)", sys.argv[1]])
+    if modo == "limpa":
+        def limpar(*_):
+            open(os.path.join(dados, "limpeza-feita"), "w").write("sim")
+            sys.exit(0)
+        signal.signal(signal.SIGTERM, limpar)
     s = socket.socket(socket.AF_UNIX)
     s.connect(os.environ["HEFESTO_MOD_SOCKET"])
     s.sendall((json.dumps({"jsonrpc": "2.0", "id": 1, "method": "mod.ola",
@@ -680,6 +685,37 @@ def test_na_caixa_o_que_a_modificacao_abriu_morre_com_o_usuario(
                 os.kill(pid, signal.SIGKILL)
     assert antes, "o neto nunca nasceu: a prova não prova nada"
     assert depois == [], f"o neto {depois} sobreviveu ao «parar»"
+
+
+@pytest.mark.parametrize("gesto", ["desligar", "parar curto"])
+def test_na_caixa_a_extensao_recebe_o_sigterm_e_limpa_antes_de_sair(
+    lar: Lugares, curto: Path, gesto: str
+) -> None:
+    """O ``SIGTERM`` vai ao grupo da extensão dentro da caixa, não ao ``bwrap`` de fora, cuja
+    morte vira ``SIGKILL`` na extensão. Mordida: o ``killpg`` no ``bwrap`` de volta e ver a limpeza
+    faltar."""
+    exigir_caixa_do_bwrap()
+    _instalar_e_ligar(lar, curto, "limpa")
+    limpeza = lar.dados / "exemplo" / "limpeza-feita"
+
+    async def corrida() -> None:
+        supervisor = _supervisor(lar)
+        assert supervisor.bwrap
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: _relato(lar) is not None)
+            if gesto == "parar curto":
+                ligado = {"ligado": True, "mod": "exemplo"}
+                supervisor.porta.ultimo_estado_de = lambda mod: ligado  # type: ignore[method-assign]
+                supervisor.prazo_do_parar_curto_s = 0
+                assert await supervisor.conferir_o_parar("exemplo")
+            else:
+                await supervisor._parar_uma("exemplo")
+            assert limpeza.is_file(), "a extensão morreu sem ver o SIGTERM"
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())
 
 
 def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(

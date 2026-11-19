@@ -44,6 +44,7 @@ SuccessExitStatus=143 SIGTERM
 # É também o prazo que a troca de instância espera antes do SIGKILL
 # (`utils/single_instance.PRAZO_DO_DESLIGAMENTO_S`); um teste confere os dois.
 TimeoutStopSec=45
+KillMode=mixed
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

@@ -183,6 +183,14 @@ def test_o_orcamento_e_o_join_cabem_no_prazo_da_unit() -> None:
     assert gasto < _timeout_stop_da_unit()
 
 
+def test_o_stop_da_unit_avisa_so_o_servico() -> None:
+    """O ``SIGTERM`` do stop vai só ao serviço, que para as extensões e os filhos de som na ordem
+    dele; o ``control-group`` os derrubava antes. MORDIDA: tirar o ``KillMode=mixed`` da unit."""
+    linhas = [ln for ln in UNIT_DAEMON.read_text(encoding="utf-8").splitlines()
+              if ln.startswith("KillMode=")]
+    assert linhas == ["KillMode=mixed"]
+
+
 def test_o_servidor_saudavel_derruba_tudo_na_mesma_ordem(
     monkeypatch: pytest.MonkeyPatch, relogio: Relogio
 ) -> None:
