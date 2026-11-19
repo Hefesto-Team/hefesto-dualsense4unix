@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1272164,
+      "piso": 1272667,
       "por_item": {
-        "docs": 107152,
+        "docs": 107171,
         "scripts": 114765,
-        "src": 323003,
-        "tests": 727244
+        "src": 323066,
+        "tests": 727665
       },
-      "razao": "tamanho: +753 linhas (1271411 -> 1272164), pagas por Origem: D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES, D-1911-CADA-FONTE-DO-CORPO-SOMA-NO-SEU-LADO, D-1911-O-NO-DA-MESA-ESPERA-A-PORTA-PARA-SE-ADOTAR, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO, D-1911-O-TRABALHO-DE-VAZAO-NAO-PRENDE-O-GIL; registrado no fecho, topo b2f7268cb693",
+      "razao": "tamanho: +503 linhas (1272164 -> 1272667), pagas por Origem: D-1911-A-PORTA-DSX-TEM-FAIXA-E-TETO, D-1911-O-ACIONADOR-RELE-O-KERNEL-NO-BURACO, D-1911-O-ARME-CONTA-O-PAD-QUE-NASCE; registrado no fecho, topo 0f24316e1e42",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2079,10 +2079,16 @@
           "de": 1271411,
           "para": 1272164,
           "razao": "tamanho: +753 linhas (1271411 -> 1272164), pagas por Origem: D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES, D-1911-CADA-FONTE-DO-CORPO-SOMA-NO-SEU-LADO, D-1911-O-NO-DA-MESA-ESPERA-A-PORTA-PARA-SE-ADOTAR, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO, D-1911-O-TRABALHO-DE-VAZAO-NAO-PRENDE-O-GIL; registrado no fecho, topo b2f7268cb693"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1272164,
+          "para": 1272667,
+          "razao": "tamanho: +503 linhas (1272164 -> 1272667), pagas por Origem: D-1911-A-PORTA-DSX-TEM-FAIXA-E-TETO, D-1911-O-ACIONADOR-RELE-O-KERNEL-NO-BURACO, D-1911-O-ARME-CONTA-O-PAD-QUE-NASCE; registrado no fecho, topo 0f24316e1e42"
         }
       ],
       "unidade": "linhas",
-      "universo": 3533
+      "universo": 3536
     }
   }
 }
