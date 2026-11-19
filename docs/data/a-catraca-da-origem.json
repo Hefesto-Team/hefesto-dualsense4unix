@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1270043,
+      "piso": 1270177,
       "por_item": {
-        "docs": 107121,
-        "scripts": 114638,
+        "docs": 107122,
+        "scripts": 114697,
         "src": 322582,
-        "tests": 725702
+        "tests": 725776
       },
-      "razao": "tamanho: +897 linhas (1269146 -> 1270043), pagas por Origem: D-0311-QUEM-NAO-E-JOGO-NAO-SEGURA-MOTOR, D-1911-O-ATALHO-ENTRA-NO-TRECHO-QUE-ABRE-O-JOGO, D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR; registrado no fecho, topo e42cc251ea08",
+      "razao": "tamanho: +134 linhas (1270043 -> 1270177), pagas por Origem: D-1911-A-SESSAO-NASCE-DENTRO-DE-UM-ORCAMENTO-DE-CONTEXTO; registrado no fecho, topo 160d1d7cdcd9",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2043,10 +2043,16 @@
           "de": 1269146,
           "para": 1270043,
           "razao": "tamanho: +897 linhas (1269146 -> 1270043), pagas por Origem: D-0311-QUEM-NAO-E-JOGO-NAO-SEGURA-MOTOR, D-1911-O-ATALHO-ENTRA-NO-TRECHO-QUE-ABRE-O-JOGO, D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR; registrado no fecho, topo e42cc251ea08"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1270043,
+          "para": 1270177,
+          "razao": "tamanho: +134 linhas (1270043 -> 1270177), pagas por Origem: D-1911-A-SESSAO-NASCE-DENTRO-DE-UM-ORCAMENTO-DE-CONTEXTO; registrado no fecho, topo 160d1d7cdcd9"
         }
       ],
       "unidade": "linhas",
-      "universo": 3518
+      "universo": 3520
     }
   }
 }
