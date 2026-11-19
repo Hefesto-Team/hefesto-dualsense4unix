@@ -5,7 +5,8 @@ cada fonte viva leva 480 amostras e sai um bloco. A contínua vale 0,1 no centro
 padrão vale 0,3 à esquerda por 0,5 s. O mesmo tocador serve o cabo e o rádio, nos dois modos.
 
 A MORDIDA (executada, com o md5 conferido na volta): a fila única de volta (a fonte ignorada)
-→ ``test_a_continua_e_o_padrao_somam_cada_um_no_seu_lado`` reprova com 0 amostras somadas.
+→ ``test_a_continua_e_o_padrao_somam_cada_um_no_seu_lado`` reprova com 0 amostras somadas; a
+fila só por lado (a fonte fora da chave) → ``test_duas_fontes_no_mesmo_lado_somam``.
 """
 from __future__ import annotations
 
@@ -48,6 +49,14 @@ def test_a_continua_e_o_padrao_somam_cada_um_no_seu_lado() -> None:
     assert _quantas(saida, ESQUERDO, 0.1) == 50 * Q
     assert _quantas(saida, DIREITO, 0.1) == 100 * Q, "a contínua não saiu inteira"
     assert len(saida) == 100 * Q, "uma fonte atrasou a outra"
+
+
+def test_duas_fontes_no_mesmo_lado_somam() -> None:
+    """D-1911-CADA-FONTE-DO-CORPO-SOMA-NO-SEU-LADO: o Grão e o Som no corpo no centro somam."""
+    saida = _tocar({("grao", "centro"): (0.1, 40), ("som_no_corpo", "centro"): (0.2, 40)})
+    assert _quantas(saida, ESQUERDO, 0.3) == 40 * Q, "uma fonte tomou a fila da outra"
+    assert _quantas(saida, DIREITO, 0.3) == 40 * Q
+    assert len(saida) == 40 * Q, "uma fonte atrasou a outra"
 
 
 def test_o_mesmo_padrao_nos_dois_lados_do_mesmo_controle() -> None:
