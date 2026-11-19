@@ -897,6 +897,20 @@ def misturar_o_toque(
     return soma.tobytes()
 
 
+def somar_os_corpos(
+    bloco: bytes, corpos: Sequence[tuple[array[float], tuple[int, ...]]]
+) -> bytes:
+    """Soma ao bloco o trecho de cada fila do corpo nos canais do próprio lado, sem passar de 1."""
+    quadros = np.frombuffer(bloco, dtype=_FLOAT32_LE).reshape(-1, CANAIS_DA_HAPTICA)
+    soma = quadros.astype(np.float64)
+    for trecho, canais in corpos:
+        k = min(len(quadros), len(trecho))
+        valores = np.asarray(trecho[:k], dtype=np.float64)
+        for canal in canais:
+            soma[:k, canal] += valores
+    return np.clip(soma, -1.0, 1.0).astype(_FLOAT32_LE).tobytes()
+
+
 def somar_os_lados(
     bloco: bytes, lados: tuple[int, int], antes: tuple[int, int], fase: int
 ) -> bytes:
@@ -1069,8 +1083,7 @@ class TocadorDoRumble:
         self._toque_pos = 0
         self._toque_longo = False
         self._toque_em_laco = False
-        self._corpo: array[float] = array("f")
-        self._corpo_canais: tuple[int, ...] = CANAIS_DO_LADO["centro"]
+        self._corpos: dict[tuple[str, str], array[float]] = {}
         self._lados: tuple[int, int] = (0, 0)
         self._lados_antes: tuple[int, int] = (0, 0)
         self._lados_valem_ate = 0.0
@@ -1197,17 +1210,22 @@ class TocadorDoRumble:
         return self._toque_em_laco
 
     def levar_o_corpo(
-        self, amostras: array[float], lado: str, *, sink: str, dono: str
+        self, amostras: array[float], lado: str, *, sink: str, dono: str, fonte: str = ""
     ) -> None:
-        """O pedaço do Som no corpo, atrás do que já espera. Nunca espera, nunca levanta."""
+        """O pedaço da ``fonte`` no ``lado``, atrás do que já espera na própria fila.
+
+        Cada fonte e lado tem a fila dele, com o teto dele; o bloco soma todas. Nunca espera,
+        nunca levanta.
+        """
         if not len(amostras):
             return
+        lado = lado if lado in CANAIS_DO_LADO else "centro"
         with self._trava:
-            self._corpo.extend(amostras)
-            sobra = len(self._corpo) - QUADROS_DO_CORPO_NA_FILA
+            fila = self._corpos.setdefault((str(fonte), lado), array("f"))
+            fila.extend(amostras)
+            sobra = len(fila) - QUADROS_DO_CORPO_NA_FILA
             if sobra > 0:
-                del self._corpo[:sobra]
-            self._corpo_canais = CANAIS_DO_LADO.get(lado, CANAIS_DO_LADO["centro"])
+                del fila[:sobra]
             self._sink = str(sink or "")
             self._dono = str(dono or self._dono)
             self._garantir_o_fio()
@@ -1242,7 +1260,7 @@ class TocadorDoRumble:
 
     @property
     def tocando_o_corpo(self) -> bool:
-        return len(self._corpo) > 0
+        return any(self._corpos.values())
 
     @property
     def lados(self) -> tuple[int, int]:
@@ -1263,16 +1281,19 @@ class TocadorDoRumble:
                     else:
                         self._toque = None
                         self._toque_longo = False
-            corpo = self._corpo[:QUADROS_POR_BLOCO]
-            del self._corpo[:QUADROS_POR_BLOCO]
-            canais_do_corpo = self._corpo_canais
+            corpos = []
+            for (fonte, lado), fila in list(self._corpos.items()):
+                corpos.append((fila[:QUADROS_POR_BLOCO], CANAIS_DO_LADO[lado]))
+                del fila[:QUADROS_POR_BLOCO]
+                if not fila:
+                    del self._corpos[(fonte, lado)]
             lados, lados_antes = self.lados, self._lados_antes
             self._lados_antes = lados
         bloco = self._bloco(nivel, antes, fase)
         if any(lados) or any(lados_antes):
             bloco = somar_os_lados(bloco, lados, lados_antes, fase)
-        if len(corpo):
-            bloco = misturar_o_toque(bloco, corpo, 0, canais_do_corpo)
+        if corpos:
+            bloco = somar_os_corpos(bloco, corpos)
         if toque is None:
             return bloco
         return misturar_o_toque(bloco, toque[0], inicio, toque[1])
@@ -1307,7 +1328,7 @@ class TocadorDoRumble:
                 return
             with self._trava:
                 nivel, sink, toque = self._nivel, self._sink, self._toque
-                corpo = len(self._corpo) > 0 or any(self.lados)
+                corpo = any(self._corpos.values()) or any(self.lados)
             if (not any(nivel) and toque is None and not corpo) or not sink or (
                 self._relogio() < self._recusado_ate
             ):
@@ -1362,7 +1383,7 @@ class TocadorDoRumble:
             if proc.poll() is not None:
                 return "morreu"
             agora = self._relogio()
-            if any(nivel) or self._toque is not None or self._corpo or any(self.lados):
+            if any(nivel) or self._toque is not None or self.tocando_o_corpo or any(self.lados):
                 silencio_desde = None
             elif silencio_desde is None:
                 silencio_desde = agora

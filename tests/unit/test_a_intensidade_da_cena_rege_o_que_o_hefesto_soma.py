@@ -177,7 +177,9 @@ class _AltoFalante:
         self.toques.append((uniq, energia))
         return True
 
-    def tocar_o_corpo(self, uniq: str, amostras: Any, lado: str = "centro") -> bool:
+    def tocar_o_corpo(
+        self, uniq: str, amostras: Any, lado: str = "centro", *, fonte: str = ""
+    ) -> bool:
         self.corpos.append((uniq, max((abs(x) for x in amostras), default=0.0)))
         return True
 

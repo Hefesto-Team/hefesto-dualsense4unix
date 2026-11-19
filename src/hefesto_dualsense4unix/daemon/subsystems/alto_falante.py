@@ -1367,11 +1367,13 @@ class AltoFalanteSubsystem:
         tocador.levar_os_lados(esquerdo, direito, sink=sink, dono=chave)
         return True
 
-    def tocar_o_corpo(self, uniq: str, amostras: Any, lado: str = "centro") -> DesfechoDoCorpo:
-        """Um pedaço do Som no corpo no tocador do aparelho de ``uniq``.
+    def tocar_o_corpo(
+        self, uniq: str, amostras: Any, lado: str = "centro", *, fonte: str = ""
+    ) -> DesfechoDoCorpo:
+        """Um pedaço da ``fonte`` do corpo no tocador do aparelho de ``uniq``, no ``lado``.
 
-        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva. O desfecho é
-        verdadeiro quando tocou e traz o motivo quando recusou: é o dono desse motivo.
+        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva. Cada fonte soma
+        na própria fila. O desfecho é verdadeiro quando tocou e traz o motivo quando recusou.
         """
         chave = self._chave_do_rumble(uniq)
         if chave is None:
@@ -1385,7 +1387,7 @@ class AltoFalanteSubsystem:
         if alvo is None:
             return DesfechoDoCorpo(RECUSA_SEM_ENDPOINT)
         tocador, sink = alvo
-        tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave)
+        tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave, fonte=fonte)
         return TOCOU
 
     def _carimbar_a_haptica(self) -> None:

@@ -395,7 +395,9 @@ class _TocadorComToque(_Tocador):
         self.toques.append((forma, energia, lado, duracao_ms, sink, dono))
         self._de_pe(sink, dono)
 
-    def levar_o_corpo(self, amostras: Any, lado: str, *, sink: str, dono: str) -> None:
+    def levar_o_corpo(
+        self, amostras: Any, lado: str, *, sink: str, dono: str, fonte: str = ""
+    ) -> None:
         self.corpos.append(list(amostras))
         self._de_pe(sink, dono)
 

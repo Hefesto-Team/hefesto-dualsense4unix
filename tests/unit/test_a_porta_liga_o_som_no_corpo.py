@@ -68,7 +68,9 @@ class _Alto:
     def __init__(self) -> None:
         self.saida: dict[str, list[float]] = {}
 
-    def tocar_o_corpo(self, uniq: str, amostras: Any, _lado: str = "centro") -> Any:
+    def tocar_o_corpo(
+        self, uniq: str, amostras: Any, _lado: str = "centro", *, fonte: str = ""
+    ) -> Any:
         self.saida.setdefault(uniq, []).extend(amostras)
         return dc.DesfechoDoCorpo(None)
 

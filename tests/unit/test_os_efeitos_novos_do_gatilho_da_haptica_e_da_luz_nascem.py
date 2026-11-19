@@ -107,7 +107,7 @@ class _AltoFalante:
     def __init__(self) -> None:
         self.corpo: list[tuple[str, Any]] = []
 
-    def tocar_o_corpo(self, uniq: str, amostras: Any) -> bool:
+    def tocar_o_corpo(self, uniq: str, amostras: Any, *, fonte: str = "") -> bool:
         self.corpo.append((uniq, amostras))
         return True
 

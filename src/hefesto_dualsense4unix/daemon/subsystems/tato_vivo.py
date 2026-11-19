@@ -3301,6 +3301,8 @@ ESTALOS_GUARDADOS = 16
 SOM_DO_RECORTE = "recorte"
 JANELA_DO_ESTALO_S = 0.05
 TAXA_DE_FORA = 48000
+FONTE_DE_FORA = "de_fora"
+FONTE_DO_SOM_NO_CORPO = "som_no_corpo"
 ADIANTE_S = 0.05
 GOLPES_POR_PADRAO = 16
 DURACAO_MAXIMA_MS = 4000.0
@@ -3968,7 +3970,8 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
 
     def tocar_haptica(uniq: str, amostras: Any, lado: str) -> bool:
         quem = falante()
-        return bool(quem is not None and quem.tocar_o_corpo(uniq, amostras, lado))
+        return bool(quem is not None and quem.tocar_o_corpo(
+            uniq, amostras, lado, fonte=FONTE_DE_FORA))
 
     def motores(uniq: str, fraco: int, forte: int) -> bool:
         quem = falante()
@@ -4178,12 +4181,12 @@ class Passo:
         fator = fator_da_cena(self.daemon)
         for uniq in donos:
             meu = self._sob_o_teto(uniq, amostras, fator)
-            self._cair_pelo_motor(
-                uniq, meu, self._entregar(levar, uniq, meu, com_sinal), com_sinal)
+            self._cair_pelo_motor(uniq, meu, self._entregar(
+                levar, uniq, meu, com_sinal, FONTE_DO_SOM_NO_CORPO), com_sinal)
         for uniq, forca in parciais.items():
             parte = self._sob_o_teto(uniq, amostras, fator * forca)
-            self._cair_pelo_motor(
-                uniq, parte, self._entregar(levar, uniq, parte, com_sinal), com_sinal)
+            self._cair_pelo_motor(uniq, parte, self._entregar(
+                levar, uniq, parte, com_sinal, FONTE_DO_SOM_NO_CORPO), com_sinal)
 
     def _corpo_pedido(
         self, uniqs: Sequence[str], estado_de: Callable[[str], EstadoDoCanal | None],
@@ -4231,9 +4234,9 @@ class Passo:
             self.diario_do_corpo.recusado(uniq, motivo)
 
     def _entregar(
-        self, levar: Callable[..., Any], uniq: str, amostras: Any, com_sinal: bool
+        self, levar: Callable[..., Any], uniq: str, amostras: Any, com_sinal: bool, fonte: str
     ) -> Any:
-        desfecho = levar(uniq, amostras)
+        desfecho = levar(uniq, amostras, fonte=fonte)
         if not desfecho:
             self._recusar(uniq, getattr(desfecho, "motivo", None) or RECUSA_SEM_APARELHO)
         elif com_sinal:
@@ -4303,11 +4306,11 @@ class Passo:
         decorrido = INTERVALO_S if antes is None else max(0.0, min(0.1, agora - antes))
         return round(formas_de_haptica.TAXA * decorrido)
 
-    def _levar_a_continua(self, uniq: str, amostras: Any) -> None:
+    def _levar_a_continua(self, uniq: str, amostras: Any, fonte: str) -> None:
         alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
         levar = getattr(alto_falante, "tocar_o_corpo", None)
         if callable(levar) and len(amostras):
-            self._entregar(levar, uniq, amostras, True)
+            self._entregar(levar, uniq, amostras, True, fonte)
 
     def _levar_o_grao(
         self, receita: Receita, uniqs: Sequence[str],
@@ -4324,7 +4327,7 @@ class Passo:
         n = self._amostras_devidas(formas_de_haptica.GRAO, self._agora_da_continua)
         for uniq in donos:
             gerador = self._graos.setdefault(uniq, formas_de_haptica.GeradorDoGrao())
-            self._levar_a_continua(uniq, gerador.gerar(n))
+            self._levar_a_continua(uniq, gerador.gerar(n), formas_de_haptica.GRAO)
 
     def _levar_o_motor_de_epoca(
         self, receita: Receita, uniqs: Sequence[str],
@@ -4350,7 +4353,8 @@ class Passo:
             elif nivel <= 0.0 and gerador.calado:
                 del self._motores_de_epoca[uniq]
                 continue
-            self._levar_a_continua(uniq, gerador.gerar(n, nivel))
+            self._levar_a_continua(
+                uniq, gerador.gerar(n, nivel), formas_de_haptica.MOTOR_DE_EPOCA)
 
     def __call__(self, agora: float) -> int:
         """A volta dos acessórios e os meus toques andam a cada tique; o resto é da receita."""

@@ -49,7 +49,9 @@ class _Alto:
         self.recusas = recusas or {}
         self.tocados: list[str] = []
 
-    def tocar_o_corpo(self, uniq: str, _amostras: Any, _lado: str = "centro") -> dc.DesfechoDoCorpo:
+    def tocar_o_corpo(
+        self, uniq: str, _amostras: Any, _lado: str = "centro", *, fonte: str = ""
+    ) -> dc.DesfechoDoCorpo:
         self.tocados.append(uniq)
         return dc.DesfechoDoCorpo(self.recusas.get(uniq))
 
@@ -184,7 +186,7 @@ def test_o_controle_externo_vem_marcado_do_coop() -> None:
 
 def test_a_continua_tambem_conta_a_recusa() -> None:
     passo = _passo(_Alto({P[0]: dc.RECUSA_FORCA_ZERO}))
-    passo._levar_a_continua(P[0], array("f", [0.5]))
+    passo._levar_a_continua(P[0], array("f", [0.5]), fh.GRAO)
     [linha] = _fechar(passo)
     assert linha["controles"]["Cosmic Red"]["recusas"] == {dc.RECUSA_FORCA_ZERO: 1}
 

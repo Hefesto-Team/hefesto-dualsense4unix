@@ -218,7 +218,9 @@ class _Tocador:
     def __init__(self) -> None:
         self.corpo: list[int] = []
 
-    def levar_o_corpo(self, amostras: Any, _lado: str, *, sink: str, dono: str) -> None:
+    def levar_o_corpo(
+        self, amostras: Any, _lado: str, *, sink: str, dono: str, fonte: str = ""
+    ) -> None:
         self.corpo.append(len(amostras))
 
 
