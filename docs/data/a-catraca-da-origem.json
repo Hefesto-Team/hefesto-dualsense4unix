@@ -48,10 +48,10 @@
       "universo": 416
     },
     "remendos-de-sintoma": {
-      "data": "2026-11-07",
+      "data": "2026-11-19",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 957,
+      "piso": 956,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -137,7 +137,7 @@
         "integrations/filho_de_som.py": 7,
         "integrations/fora_do_servico.py": 7,
         "integrations/ganho_do_microfone.py": 2,
-        "integrations/gesto_de_pareamento.py": 3,
+        "integrations/gesto_de_pareamento.py": 2,
         "integrations/hidraw_broker_client.py": 9,
         "integrations/hotkey_daemon.py": 3,
         "integrations/jogos_locais.py": 9,
@@ -253,7 +253,7 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 424
+      "universo": 436
     },
     "tamanho": {
       "data": "2026-11-19",
