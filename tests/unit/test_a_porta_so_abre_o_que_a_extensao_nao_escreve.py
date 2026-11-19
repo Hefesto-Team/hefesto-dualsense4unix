@@ -195,7 +195,7 @@ def test_o_comando_e_conferido_na_hora_de_abrir_e_nao_so_na_lista(lar: SimpleNam
 @pytest.mark.parametrize("nome", ["wget", "curl", "tar", "cp", "mv", "rm", "tee", "crontab",
                                   "gsettings", "systemctl"])
 def test_o_programa_que_nao_e_lancador_nao_sai_da_caixa(lar: SimpleNamespace, nome: str) -> None:
-    """MORDIDA: a lista de recusa sozinha deixa o ``wget`` passar."""
+    """D-1911-O-ABRIR-DO-LANCADOR-SO-RODA-LANCADOR-CONHECIDO."""
     _executavel(lar.bin / nome)
     with pytest.raises(ValueError, match="lançador"):
         porta_mod.comando_fora_da_caixa(nome, os.environ["PATH"],

@@ -521,6 +521,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "radio.lock": ("install", "a trava do rádio (pasta de execução)"),
     "cosmic_tray_warned.flag": ("install", "o aviso da bandeja (pasta de execução)"),
     "bandeja.vez": ("install", "a vez da bandeja da sessão (pasta de execução)"),
+    "abrir-do-lancador": ("install", "a pasta vazia do jogo que a extensão abre (execução)"),
     "runtime": ("install", "a pasta de execução de reserva"),
     "51-hefesto-dualsense-no-default-source.conf": ("install", "drop-in do WirePlumber"),
     "54-hefesto-dualsense-alto-falante-nunca-dorme.conf": ("install", "drop-in do WirePlumber"),

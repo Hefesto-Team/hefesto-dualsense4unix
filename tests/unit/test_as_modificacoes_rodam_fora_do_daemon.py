@@ -691,9 +691,9 @@ def test_na_caixa_o_que_a_modificacao_abriu_morre_com_o_usuario(
 def test_na_caixa_a_extensao_recebe_o_sigterm_e_limpa_antes_de_sair(
     lar: Lugares, curto: Path, gesto: str
 ) -> None:
-    """O ``SIGTERM`` vai ao grupo da extensão dentro da caixa, não ao ``bwrap`` de fora, cuja
-    morte vira ``SIGKILL`` na extensão. Mordida: o ``killpg`` no ``bwrap`` de volta e ver a limpeza
-    faltar."""
+    """D-1911-A-EXTENSAO-PARA-PELO-SIGTERM-DENTRO-DA-CAIXA: o ``SIGTERM`` vai ao grupo da extensão
+    dentro da caixa, não ao ``bwrap`` de fora, cuja morte vira ``SIGKILL`` na extensão.
+    Mordida: o ``killpg`` no ``bwrap`` de volta e ver a limpeza faltar."""
     exigir_caixa_do_bwrap()
     _instalar_e_ligar(lar, curto, "limpa")
     limpeza = lar.dados / "exemplo" / "limpeza-feita"

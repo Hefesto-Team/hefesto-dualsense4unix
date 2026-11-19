@@ -199,7 +199,7 @@ _DE_ANTES = (["lutris"], 12345, 40000, ["python3", "fixar.py"], ".local/share/lu
 def test_o_que_alarga_o_alcance_espera_o_atualizar_e_so_a_versao_passa(
     lar: Lugares, remoto: Path, mudanca: dict[int, Any], frase: str
 ) -> None:
-    """MORDIDA: sem os alcances no «sim», o comando novo troca sem pergunta."""
+    """D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE."""
     (remoto / "fixar.py").write_text("", encoding="utf-8")
     (remoto / "outro.py").write_text("", encoding="utf-8")
     antes = _alcance(*_DE_ANTES)

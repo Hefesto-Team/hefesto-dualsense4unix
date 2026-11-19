@@ -242,6 +242,7 @@ def test_o_sim_antigo_migra_uma_vez_com_os_aparelhos_instalados(
 
 def test_a_ligada_antes_dos_alcances_segue_ligada_sem_pedir_o_sim(
         lar: Lugares, curto: Path) -> None:
+    """D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE."""
     pasta = curto / "fonte"
     pasta.mkdir()
     (pasta / "hefesto-mod.json").write_text(json.dumps({
