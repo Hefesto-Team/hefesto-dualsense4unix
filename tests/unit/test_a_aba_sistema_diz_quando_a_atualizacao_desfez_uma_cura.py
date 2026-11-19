@@ -294,15 +294,15 @@ def test_o_reinicio_se_pede_por_cada_um_dos_quatro_sinais(lar: Lar, tmp_path: Pa
     (raiz / "lib/modules" / KERNEL).mkdir(parents=True)
     (raiz / "proc").mkdir()
     (raiz / "proc/stat").write_text("cpu 1 2 3\nbtime 1000\n")
-    (raiz / "proc/version").write_text(f"Linux version {KERNEL} (x) #202611011234~1 SMP\n")
-    lar.dpkg[f"linux-image-{KERNEL}"] = "7.2.15-76070215.202611011234~1~24.04"
+    (raiz / "proc/version").write_text(f"Linux version {KERNEL} (x) #1762794000~1 SMP\n")
+    lar.dpkg[f"linux-image-{KERNEL}"] = "7.2.15-76070215.1762794000~1~24.04"
     maquina = cc.Maquina(**{**lar.maquina().__dict__, "raiz": raiz})
     assert cc.pede_reinicio(maquina) == ""
     assert cc.pede_reinicio(maquina, trocou_em=900.0) == ""
     assert cc.pede_reinicio(maquina, trocou_em=1100.0)
-    lar.dpkg[f"linux-image-{KERNEL}"] = "7.2.15-76070215.202611151200~2~24.04"
+    lar.dpkg[f"linux-image-{KERNEL}"] = "7.2.15-76070215.1762790000~2~24.04"
     assert cc.pede_reinicio(maquina) == "O kernel em uso foi trocado no disco"
-    lar.dpkg[f"linux-image-{KERNEL}"] = "7.2.15-76070215.202611011234~1~24.04"
+    lar.dpkg[f"linux-image-{KERNEL}"] = "7.2.15-76070215.1762794000~1~24.04"
     (raiz / "lib/modules" / KERNEL).rmdir()
     assert cc.pede_reinicio(maquina) == "O kernel em uso saiu do disco"
     (raiz / "lib/modules" / KERNEL).mkdir()
