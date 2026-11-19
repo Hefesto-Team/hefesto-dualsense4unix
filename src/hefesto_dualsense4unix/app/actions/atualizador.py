@@ -685,7 +685,8 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
                   agora: Callable[[], float], jogo_aberto: Callable[[], bool],
                   vez: _Vez | None = None) -> EsperaError | None:
     """Baixar, instalar e aplicar, da etapa em que a peça parou. Devolve a espera, se esperou: o
-    jogo que abriu depois do baixar segura o instalar e o aplicar até fechar."""
+    jogo que abriu depois do baixar segura o instalar e o aplicar, e a peça volta pela espera do
+    jogo da fila, que só passa com ele fechado de vez."""
     linha = andamento.peca(peca.id)
     vez = _Vez(antes=ler_as_anteriores().get(peca.id)) if vez is None else vez
     dados = vez.dados
@@ -715,7 +716,7 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
         guardou = False
         try:
             if indice and jogo_aberto():
-                raise EsperaError(O_JOGO_ABERTO, lambda: not jogo_aberto())
+                raise EsperaError(O_JOGO_ABERTO, lambda: True)
             if etapa == "instalar" and not reinstala:
                 guardou = True
                 _guardar_a_anterior(peca, versoes, dados, agora())

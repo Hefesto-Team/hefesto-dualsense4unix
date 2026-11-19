@@ -12,7 +12,8 @@ morto; a fila sem a conferência na vez da peça reprova o caso das duas rodadas
 sem entregar ao módulo de nome reprova o caso da classe da falha; o Python sem a roda por pacote
 reprova o caso do pacote que não monta; a volta da espera sem conferir de novo reprova o
 caso da peça que subiu por fora, e a conferência também em quem já começou reprova o do aplicar;
-a etapa sem a pergunta do jogo reprova o caso do jogo que abre no meio da peça.
+a etapa sem a pergunta do jogo reprova o caso do jogo que abre no meio da peça, e a volta sem
+esperar o jogo fechar de vez reprova o mesmo caso no intervalo entre dois.
 """
 from __future__ import annotations
 
@@ -325,27 +326,42 @@ def test_o_jogo_que_abre_no_meio_da_peca_segura_a_etapa_seguinte(abre_no: str) -
     """D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1: nada se instala com jogo aberto.
 
     O jogo que abre durante o «baixar» (o backport do BlueZ leva horas) ou o «instalar» segura a
-    etapa seguinte: a linha espera «o jogo aberto» e, fechado, segue dali, sem refazer nada."""
+    etapa seguinte: a linha espera «o jogo aberto» e, com ele fechado de vez (o intervalo entre
+    dois não conta), segue dali, sem refazer nada."""
+    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import ESPERA_SEM_JOGO_S
+
     d = _Diario()
-    jogo = {"aberto": False}
+    tempo = [0.0]
+    abriu: list[float] = []
+    quando: dict[str, float] = {}
+    esperas: set[tuple[str, str]] = set()
+
+    def jogo_aberto() -> bool:
+        return bool(abriu) and (tempo[0] - abriu[0] < 4 or 6 <= tempo[0] - abriu[0] < 30)
 
     def etapa(nome: str) -> Any:
         def fazer(_passo: at.Passo, _dados: dict[str, Any]) -> None:
-            d.feito.append(f"{nome}:{'com jogo' if jogo['aberto'] else 'sem jogo'}")
-            jogo["aberto"] = jogo["aberto"] or nome == abre_no
+            d.feito.append(nome)
+            quando[nome] = tempo[0]
+            if nome == abre_no:
+                abriu.append(tempo[0])
         return fazer
 
-    def dormir(_s: float) -> None:
-        assert (_linha("bt")["selo"], _linha("bt")["motivo"]) == (at.ESPERANDO, at.O_JOGO_ABERTO)
-        jogo["aberto"] = False
+    def dormir(s: float) -> None:
+        esperas.add((_linha("bt")["selo"], _linha("bt")["motivo"]))
+        tempo[0] += s
 
     lista = [at.Peca("bt", "BT", "dica", "todos",
                      lambda rede: at.Versoes("1.0", "1.1" if rede else None),
                      etapa("baixar"), etapa("instalar"), etapa("aplicar"))]
     at.conferir(rede=True, lista=lista)
-    rc, _servico = _rodar(lista, ["bt"], dormir=dormir, jogo_aberto=lambda: jogo["aberto"])
+    rc, _servico = _rodar(lista, ["bt"], dormir=dormir, relogio=lambda: tempo[0],
+                          jogo_aberto=jogo_aberto)
     assert rc == 0
-    assert d.feito == ["baixar:sem jogo", "instalar:sem jogo", "aplicar:sem jogo"]
+    assert d.feito == ["baixar", "instalar", "aplicar"]
+    seguinte = at.ETAPAS[at.ETAPAS.index(abre_no) + 1]
+    assert quando[seguinte] >= abriu[0] + 30 + ESPERA_SEM_JOGO_S, quando
+    assert esperas == {(at.ESPERANDO, at.O_JOGO_ABERTO)}
     assert _linha("bt")["selo"] == at.PRONTA
 
 
