@@ -7,7 +7,8 @@ fora do repositório. A saída nunca imprime o termo nem a linha que casou: o lo
 
 Modos:
   historia [REV...]       tudo o que as REVs alcançam (padrão: dev, main, HEAD e as tags)
-  pre-push REMOTO URL     o que o push leva (lê o stdin do gancho)
+  pre-push REMOTO URL     o que o push leva (lê o stdin do gancho); no dev e no main, também o
+                          recibo do completo da árvore do topo
   arvore [REV]            nome e conteúdo dos arquivos (padrão: a árvore de trabalho)
   diff BASE TOPO          as linhas acrescentadas e as mensagens do intervalo
   remoto REMOTO           as referências que o servidor guarda
@@ -23,6 +24,7 @@ from __future__ import annotations
 import fnmatch
 import os
 import re
+import shutil
 import subprocess
 import sys
 import unicodedata
@@ -50,6 +52,9 @@ ATRIBUICAO = re.compile(
     r"^[ \t]*[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-(?:by|with|session)[ \t]*:(.*)$",
     re.I | re.M,
 )
+RAMOS_COM_RECIBO = ("refs/heads/dev", "refs/heads/main")
+GIT_DE_OUTRA_ARVORE = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_PREFIX", "GIT_COMMON_DIR",
+                       "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES")
 GITHUB_NOME = "GitHub"
 GITHUB_ENDERECO = "noreply@github.com"
 ESPACO_DO_TOKEN = re.compile(r"[A-Za-z0-9]+")
@@ -300,12 +305,63 @@ def _rotulo(ref: str, lista: Lista | None) -> str:
     return ref
 
 
+def _existe(objeto: str) -> bool:
+    return subprocess.run(["git", "cat-file", "-e", objeto], capture_output=True,
+                          env=ambiente_do_git()).returncode == 0
+
+
+def _arvore_no_topo(sha: str) -> Path | None:
+    aqui = git("rev-parse", "--show-toplevel", ok=True).strip()
+    arvores, atual = [], ""
+    for linha in git("worktree", "list", "--porcelain").splitlines():
+        if linha.startswith("worktree "):
+            atual = linha[9:]
+        elif linha == f"HEAD {sha}":
+            arvores.append(atual)
+    if aqui in arvores:
+        return Path(aqui)
+    return Path(arvores[0]) if arvores else None
+
+
+def _recibo_do_completo(raiz: Path, arvore: str) -> Path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import recibo_da_medida
+    return recibo_da_medida.pasta_dos_recibos(raiz) / f"{arvore}.portoes-completo"
+
+
+def _o_completo(sha: str) -> list[str]:
+    """O topo que vai ao dev ou ao main tem o recibo do completo; sem ele, o completo roda na árvore do topo."""
+    if not _existe(f"{sha}:scripts/portoes.sh"):
+        return []
+    raiz = _arvore_no_topo(sha)
+    if raiz is None:
+        return [f"{sha[:9]}: sem o recibo do completo, e nenhuma árvore desta máquina está nesse topo"]
+    recibo = _recibo_do_completo(raiz, git("rev-parse", f"{sha}^{{tree}}").strip())
+    if recibo.is_file():
+        return []
+    env = {k: v for k, v in os.environ.items() if k not in GIT_DE_OUTRA_ARVORE}
+    falta = [] if shutil.which("shellcheck", path=env.get("PATH")) else ["bin:shellcheck"]
+    cabeca = subprocess.run(["bash", "scripts/portoes.sh", "--interpretador"], cwd=raiz, env=env,
+                            capture_output=True, text=True)
+    if cabeca.returncode != 0:
+        falta += re.findall(r"falta: (.*)", cabeca.stdout) or ["o interpretador dos portões"]
+    if falta:
+        return [f"{sha[:9]}: sem o recibo do completo, e o completo não roda aqui: falta {' '.join(falta)}"]
+    print(f"autoria: {sha[:9]} sem o recibo do completo; rodando `bash scripts/portoes.sh` em {raiz}",
+          flush=True)
+    subprocess.run(["bash", "scripts/portoes.sh"], cwd=raiz, env=env)
+    if recibo.is_file():
+        return []
+    return [f"{sha[:9]}: o completo não deixou recibo (vermelho, ou mudança fora do índice)"]
+
+
 def modo_pre_push(remoto: str, lista: Lista | None) -> int:
     casa = pessoas()
     ruins: list[str] = []
     revs: list[str] = []
     tags_: list[str] = []
     novos_de: list[str] = []
+    com_recibo: list[str] = []
     for linha in sys.stdin.read().splitlines():
         partes = linha.split()
         if len(partes) != 4:
@@ -323,6 +379,8 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
             ruins.append("destino com termo da lista no nome (nível 1)")
             continue
         revs.append(lsha)
+        if rref in RAMOS_COM_RECIBO:
+            com_recibo.append(lsha)
         if rref.startswith("refs/tags/"):
             tags_.append(lsha)
         if rsha != ZERO and subprocess.run(["git", "cat-file", "-e", rsha],
@@ -334,6 +392,9 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
     if revs:
         ruins += auditar(revs, novos_de, casa, lista)
         ruins += auditar_tags(tags_, casa, lista)
+    if not ruins and lista is not None:
+        for sha in dict.fromkeys(com_recibo):
+            ruins += _o_completo(sha)
     return _veredito(ruins, f"push para {remoto}", lista)
 
 
