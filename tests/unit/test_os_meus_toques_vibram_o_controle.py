@@ -12,7 +12,11 @@ AS MORDIDAS (executadas na implementação, uma a uma, com o md5 conferido na vo
 * o «so_meus_toques» que mantém o jogo → ``test_so_meus_toques_tira_o_jogo``;
 * o lado do botão invertido → ``test_cada_botao_toca_no_motor_do_seu_lado``;
 * a guarda do Modo Nativo → ``test_no_modo_nativo_nada_se_escreve``;
-* o gatilho com efeito do jogo que toca → ``test_o_gatilho_com_efeito_do_jogo_cala_o_toque``.
+* o gatilho com efeito do jogo que toca → ``test_o_gatilho_com_efeito_do_jogo_cala_o_toque``;
+* a háptica do jogo que começa sem o zero →
+  ``test_a_haptica_do_jogo_que_comeca_solta_o_motor_que_o_toque_segurava`` (fica (0, 76));
+* o ``soltar_tudo`` pelo ``ativo`` →
+  ``test_parar_o_servico_zera_o_par_escrito_mesmo_sem_toque`` (fica (90, 90)).
 """
 from __future__ import annotations
 
@@ -372,6 +376,33 @@ def test_a_haptica_que_volta_a_calar_devolve_os_toques() -> None:
     mesa.haptica = False
     _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
     assert mesa.de(P1)[-1][1:] == (0, BASE)
+
+
+def test_a_haptica_do_jogo_que_comeca_solta_o_motor_que_o_toque_segurava() -> None:
+    """D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO: um zero, e nada volta sozinho."""
+    mesa = Mesa()
+    meus = _meus(mesa)
+    _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.2)
+    assert mesa.de(P1)[-1][1:] == (0, BASE)
+    mesa.haptica = True
+    _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
+    assert mesa.de(P1)[-1][1:] == (0, 0), "o motor seguraria o toque sob a háptica do jogo"
+    mesa.haptica = False
+    _andar(meus, mesa, _parado(), mesa.agora + 10.0)
+    assert mesa.de(P1)[-1][1:] == (0, 0), "a háptica calou e o motor voltaria a vibrar sozinho"
+    meus.soltar_tudo(mesa.agora)
+    assert mesa.de(P1)[-1][1:] == (0, 0)
+
+
+def test_parar_o_servico_zera_o_par_escrito_mesmo_sem_toque() -> None:
+    """D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO: parar zera todo par escrito."""
+    mesa = Mesa()
+    meus = _meus(mesa)
+    mistura = meus.misturar_o_jogo(P1, (90, 90))
+    assert mistura is not None
+    mesa.motores.append((mesa.agora, P1, *mistura.motores))
+    meus.soltar_tudo(mesa.agora)
+    assert mesa.de(P1)[-1][1:] == (0, 0), "o par do jogo escrito seguiria no motor"
 
 
 def test_no_modo_nativo_nada_se_escreve() -> None:

@@ -300,6 +300,9 @@ class MeusToques:
                 self._escrever(uniq, estado, agora)
             return
         if self._l.haptica_do_jogo(uniq):
+            if estado.escrito not in (None, (0, 0)):
+                self._l.motores(uniq, *estado.jogo)
+                self.escritas += 1
             estado.botoes = entrada.botoes
             estado.toques_de_botao.clear()
             estado.acentos.clear()
@@ -512,7 +515,7 @@ class MeusToques:
         """O serviço parou: o que os toques seguravam nos motores volta a zero."""
         with self._trava:
             for uniq, estado in list(self._por_uniq.items()):
-                if estado.ativo and self._l.pode_falar(uniq):
+                if estado.escrito not in (None, (0, 0)) and self._l.pode_falar(uniq):
                     self._l.motores(uniq, 0, 0)
                     self.escritas += 1
             self._por_uniq.clear()
