@@ -25,7 +25,8 @@ O que entra na seção do CHANGELOG, sem repetir linha:
 
 ## O que o `release.yml` faz com a tag
 
-1. `build`: a tag tem de dizer a versão do pacote (`versao.py conferir-tag`), e os portões rodam como no CI.
+1. `guarda-ci`: espera até o fim o CI da própria tag (`ci.yml`), que é quem roda os portões e a suíte.
+   `build`: a tag tem de dizer a versão do pacote (`versao.py conferir-tag`), e o pacote se monta.
 2. `appimage`, `deb`, `flatpak`: cada artefato, e o smoke de instalação do `.deb`.
 3. `integridade`: o `SHA256SUMS` de todo arquivo e o atestado de procedência de cada um.
 4. `github-release` (ambiente `release`, com a aprovação de quem mantém): a release nasce como **rascunho**, recebe os
