@@ -1204,7 +1204,7 @@ def voltar(ident: str, *, lista: Sequence[Peca] | None = None,
         _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
         _anotar(f"{ident}: voltou a {anterior.get('anterior')}")
         return ""
-    except EtapaFalhouError as erro:
+    except (EtapaFalhouError, EsperaError) as erro:
         return str(erro)
     finally:
         os.close(trava)

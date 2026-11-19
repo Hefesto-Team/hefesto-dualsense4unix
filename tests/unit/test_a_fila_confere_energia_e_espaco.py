@@ -209,6 +209,7 @@ def test_o_apt_do_ajudante_roda_numa_unidade_de_sistema_propria(tmp_path: Path) 
             '"$@" >>"$out" 2>>"$err"'),
         "apt-get": 'echo "pmstatus:x:42:instalando"; echo "aviso do apt" >&2; exit 7',
         "apt-mark": "exit 0",
+        "dpkg": "exit 0",
         "dpkg-query": 'printf "curl\\tii \\t8.5\\n"',
     }
     for nome, corpo in dubles.items():

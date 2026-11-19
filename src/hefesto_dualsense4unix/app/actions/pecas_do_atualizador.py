@@ -54,6 +54,8 @@ PRAZO_DO_ENCERRAMENTO_S = 5.0
 VALIDADE_DA_LISTA_DO_APT_S = 600.0
 PACOTE_DO_PRODUTO = "hefesto-dualsense4unix"
 RC_NADA_A_CONSTRUIR = 9
+RC_TRAVA_OCUPADA = 11
+OUTRO_INSTALADOR = "outro instalador está usando o sistema de pacotes"
 GRUPO_NVIDIA = re.compile(r"^(?:nvidia-|libnvidia-|xserver-xorg-video-nvidia)")
 GRUPO_KERNEL = re.compile(r"^linux-(?:system76|generic|image-|headers-|modules-|signed-)")
 METAS_DO_KERNEL = ("linux-system76", "linux-generic", "linux-image-generic")
@@ -218,7 +220,8 @@ class RaizSaiuError(EtapaFalhouError):
 
 def _raiz(acao: str, *args: str, passo: Passo | None = None,
           teto_s: float = TETO_DO_COMANDO_S) -> str:
-    """O ajudante root, sem senha: falha com o porquê se a regra do install não está lá."""
+    """O ajudante root, sem senha: falha com o porquê se a regra do install não está lá. A trava
+    do dpkg que outro instalador segura além do prazo do apt é espera, não falha."""
     if not AJUDANTE.is_file():
         raise EtapaFalhouError("o ajudante do install não está instalado: rode o install")
 
@@ -231,6 +234,8 @@ def _raiz(acao: str, *args: str, passo: Passo | None = None,
                 passo.fracao(float(achado.group("pct")) / 100.0)
 
     rc, ultima = _comando(["sudo", "-n", str(AJUDANTE), acao, *args], linha=linha, teto_s=teto_s)
+    if rc == RC_TRAVA_OCUPADA:
+        raise EsperaError(OUTRO_INSTALADOR, lambda: True)
     if rc != 0:
         raise RaizSaiuError(ultima or f"{acao} saiu com {rc}", rc)
     return ultima

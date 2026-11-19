@@ -10,6 +10,10 @@ GRUPOS_DA_REINSTALACAO="nvidia kernel"
 BACKPORTS="bluez pipewire portal"
 TETO_DO_BAIXADO=$((512 * 1024 * 1024))
 VALE_O_REGISTRO_DOS_ORFAOS_MIN=60
+PRAZO_DA_TRAVA_DO_DPKG_S=300
+RC_APT_FALHOU=100
+RC_TRAVA_OCUPADA=11
+RC_CONSERTO_FALHOU=12
 
 if [[ "$(id -u)" -eq 0 ]]; then
     export PATH=/usr/sbin:/usr/bin:/sbin:/bin
@@ -29,6 +33,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
     API="https://api.github.com/repos/${REPO_DO_MANGOHUD}/releases/latest"
     UNIDADE_PROPRIA=1
     DESTINO_DO_MANGOHUD=/
+    DPKG_ADMIN=/var/lib/dpkg
 else
     CACHE="${HEFESTO_ATUALIZADOR_CACHE:-}"
     SRC="${HEFESTO_ATUALIZADOR_SRC:-/usr/src}"
@@ -45,6 +50,7 @@ else
     API="${HEFESTO_ATUALIZADOR_API:-}"
     UNIDADE_PROPRIA="${HEFESTO_ATUALIZADOR_UNIDADE:-}"
     DESTINO_DO_MANGOHUD="${HEFESTO_ATUALIZADOR_DESTINO:-}"
+    DPKG_ADMIN="${HEFESTO_ATUALIZADOR_DPKG:-}"
 fi
 
 umask 077
@@ -74,9 +80,61 @@ _na_unidade() {
     return "${rc}"
 }
 
+_trava_ocupada() {
+    [[ -n "${DPKG_ADMIN}" ]] || return 1
+    python3 -I - "${DPKG_ADMIN}" <<'TRAVA'
+import fcntl, os, struct, sys
+for nome in ("lock-frontend", "lock"):
+    try:
+        fd = os.open(os.path.join(sys.argv[1], nome), os.O_RDONLY)
+    except OSError:
+        continue
+    try:
+        pedido = struct.pack("@hhqqi", fcntl.F_WRLCK, os.SEEK_SET, 0, 0, 0)
+        tipo = struct.unpack("@hhqqi", fcntl.fcntl(fd, fcntl.F_GETLK, pedido))[0]
+    finally:
+        os.close(fd)
+    if tipo != fcntl.F_UNLCK:
+        sys.exit(0)
+sys.exit(1)
+TRAVA
+}
+
+DPKG_CONFERIDO=""
+
+_dpkg_interrompido() {
+    [[ -n "$(dpkg --audit 2>/dev/null)" ]] && return 0
+    [[ -n "${DPKG_ADMIN}" ]] && compgen -G "${DPKG_ADMIN}/updates/*" >/dev/null
+}
+
+_consertar_o_dpkg() {
+    local rc=0
+    DPKG_CONFERIDO=1
+    _na_unidade dpkg --force-confdef --force-confold --configure -a || rc=1
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" --no-install-recommends -f install || rc=1
+    return "${rc}"
+}
+
+_dpkg_inteiro() {
+    [[ -z "${DPKG_CONFERIDO}" ]] || return 0
+    DPKG_CONFERIDO=1
+    _dpkg_interrompido || return 0
+    printf 'uma subida anterior parou no meio: os pacotes se consertam antes\n'
+    _consertar_o_dpkg && return 0
+    _erro "o conserto dos pacotes interrompidos falhou: nada sobe por cima"
+    exit "${RC_CONSERTO_FALHOU}"
+}
+
 _apt() {
-    _na_unidade apt-get -y -o APT::Status-Fd=1 \
+    _dpkg_inteiro
+    _na_unidade apt-get -y -o APT::Status-Fd=1 -o "DPkg::Lock::Timeout=${PRAZO_DA_TRAVA_DO_DPKG_S}" \
         -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
+    local rc=$?
+    if [[ "${rc}" -eq "${RC_APT_FALHOU}" ]] && _trava_ocupada; then
+        _erro "outro instalador está usando o sistema de pacotes"
+        exit "${RC_TRAVA_OCUPADA}"
+    fi
+    return "${rc}"
 }
 
 APT_SO_ASSINADO=(-o APT::Get::AllowUnauthenticated=false -o Acquire::AllowInsecureRepositories=false
@@ -221,6 +279,7 @@ _apt_do_grupo() {
     local grupo="$1"; shift
     _grupo_valido "${grupo}"
     _segurar_os_da_casa
+    _dpkg_inteiro
     [[ $# -gt 0 ]] || _gravar_os_orfaos_de_antes
     if [[ "${grupo}" == "sistema" ]]; then
         _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" full-upgrade
@@ -278,11 +337,8 @@ verbo_apt_reinstalar() { _exige_raiz apt-reinstalar; _apt_reinstalar_do_grupo "$
 
 verbo_apt_consertar() {
     _exige_raiz apt-consertar
-    local rc=0
     _segurar_os_da_casa
-    _na_unidade dpkg --force-confdef --force-confold --configure -a || rc=1
-    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" --no-install-recommends -f install || rc=1
-    return "${rc}"
+    _consertar_o_dpkg
 }
 _kernels_instalados() {
     local k
@@ -339,6 +395,7 @@ verbo_apt_limpar() {
         return 0
     fi
     _segurar_os_da_casa
+    _dpkg_inteiro
     local p
     local -a novos sairiam
     mapfile -t novos < <(_orfaos autoremove | grep -vxF -f "$(_registro_dos_orfaos)")

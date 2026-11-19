@@ -101,6 +101,12 @@ class Lar:
             self.duble(nome)
         self.duble("uname", 'echo 7.2.15-generic')
         self.duble("ldconfig")
+        self.dpkg = base / "dpkg"
+        (self.dpkg / "updates").mkdir(parents=True)
+        self.auditoria = base / "auditoria"
+        real = shutil.which("dpkg") or "/usr/bin/dpkg"
+        self.duble("dpkg", f'case "$1" in --audit) cat "{self.auditoria}" 2>/dev/null; exit 0;;'
+                           f' --force-confdef) exit 0;; esac\nexec "{real}" "$@"')
         self.destino = base / "raiz"
         self.destino.mkdir()
         self.duble("apt-mark", f'[ "$1" = showhold ] && cat "{self.segurados}"; exit 0')
@@ -130,7 +136,8 @@ class Lar:
                     "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
                     "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name,
                     "HEFESTO_ATUALIZADOR_API": self.api,
-                    "HEFESTO_ATUALIZADOR_DESTINO": str(self.destino), **env}
+                    "HEFESTO_ATUALIZADOR_DESTINO": str(self.destino),
+                    "HEFESTO_ATUALIZADOR_DPKG": str(self.dpkg), **env}
         if root:
             ambiente["HEFESTO_ATUALIZADOR_CACHE"] = str(self.cache)
         return subprocess.run(["bash", str(SCRIPT), *args], env=ambiente, capture_output=True,
@@ -689,3 +696,84 @@ def test_o_grupo_sem_nada_instalado_sai_com_nove(lar: Lar) -> None:
     lar.dependencias("linux-firmware\tii \t\n")
     feito = lar.rodar("apt-instalar", "kernel")
     assert feito.returncode == 9 and "nada instalado no grupo kernel" in feito.stdout
+
+
+def _apt_que_sobe(lar: Lar) -> list[str]:
+    return [linha for linha in lar.lidas()
+            if linha.startswith("apt-get") and " -s " not in linha and " -f install" not in linha]
+
+
+@pytest.mark.parametrize("marca", ["auditoria", "updates"])
+def test_o_dpkg_interrompido_se_conserta_antes_da_subida(lar: Lar, marca: str) -> None:
+    """D-1911-O-APT-CONSERTA-O-DPKG-E-ESPERA-A-TRAVA: o dpkg a meio se conserta antes de subir."""
+    if marca == "auditoria":
+        lar.auditoria.write_text("O pacote a seguir está apenas meio configurado:\n bluez\n",
+                                 encoding="utf-8")
+    else:
+        (lar.dpkg / "updates" / "0001").write_text("x", encoding="utf-8")
+    feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode == 0, feito.stderr
+    lidas = lar.lidas()
+    conserto = lidas.index("dpkg --force-confdef --force-confold --configure -a")
+    reparo = next(i for i, x in enumerate(lidas) if x.startswith("apt-get") and "-f install" in x)
+    simulacao = next(i for i, x in enumerate(lidas) if x.startswith("apt-get -s"))
+    subida = next(i for i, x in enumerate(lidas) if x.endswith("full-upgrade"))
+    assert lidas.index("apt-mark hold bluez xdg-desktop-portal-cosmic") < conserto \
+        < reparo < simulacao < subida, lidas
+    assert "parou no meio" in feito.stdout
+
+
+def test_o_dpkg_inteiro_nao_chama_o_conserto(lar: Lar) -> None:
+    assert lar.rodar("apt-instalar", "sistema").returncode == 0
+    assert not [x for x in lar.lidas() if "--configure" in x or "-f install" in x]
+
+
+def test_o_conserto_que_falha_tem_frase_propria_e_nada_sobe(lar: Lar) -> None:
+    lar.auditoria.write_text("meio configurado\n", encoding="utf-8")
+    lar.duble("apt-get", 'case "$*" in *"-f install"*) exit 100;; esac; exit 0')
+    feito = lar.rodar("apt-instalar", "nvidia")
+    assert feito.returncode == 12
+    assert "o conserto dos pacotes interrompidos falhou" in feito.stderr
+    assert not [x for x in lar.lidas() if "--only-upgrade" in x]
+    assert "apt-mark unhold bluez xdg-desktop-portal-cosmic" in lar.lidas()
+
+
+def test_todo_apt_que_troca_leva_o_prazo_da_trava(lar: Lar) -> None:
+    """D-1911-O-APT-CONSERTA-O-DPKG-E-ESPERA-A-TRAVA: todo apt que troca espera a trava."""
+    lar.auditoria.write_text("meio configurado\n", encoding="utf-8")
+    for verbo in (("apt-baixar", "nvidia"), ("apt-instalar", "kernel"),
+                  ("apt-instalar", "sistema"), ("apt-reinstalar", "nvidia"), ("apt-consertar",)):
+        assert lar.rodar(*verbo).returncode == 0, verbo
+    trocam = [x for x in lar.lidas() if x.startswith("apt-get") and " -s " not in x]
+    assert len(trocam) >= 6
+    assert all("DPkg::Lock::Timeout=300" in x for x in trocam), trocam
+
+
+def test_a_trava_ocupada_sai_com_codigo_proprio_e_vira_espera(
+        lar: Lar, monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-1911-O-APT-CONSERTA-O-DPKG-E-ESPERA-A-TRAVA: a trava ocupada é espera, não falha."""
+    import fcntl
+
+    from hefesto_dualsense4unix.app.actions import atualizador as at
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    lar.duble("apt-get",
+              'case "$*" in *full-upgrade*) echo "E: trava" >&2; exit 100;; esac; exit 0')
+    trava = lar.dpkg / "lock-frontend"
+    trava.write_text("", encoding="utf-8")
+    livre = lar.rodar("apt-instalar", "sistema")
+    assert livre.returncode == 100, "sem trava ocupada, a falha do apt fica falha"
+    with trava.open("r+") as f:
+        fcntl.lockf(f, fcntl.LOCK_EX)
+        feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode == pa.RC_TRAVA_OCUPADA
+    assert pa.OUTRO_INSTALADOR in feito.stderr
+    assert "apt-mark unhold bluez xdg-desktop-portal-cosmic" in lar.lidas()
+
+    monkeypatch.setattr(pa, "AJUDANTE", lar.base / "chamadas.log")
+    monkeypatch.setattr(pa, "_comando", lambda *_a, **_k: (feito.returncode, feito.stderr))
+    with pytest.raises(at.EsperaError, match="outro instalador"):
+        pa._raiz("apt-instalar", "sistema", passo=at.Passo())
+    monkeypatch.setattr(pa, "_comando", lambda *_a, **_k: (100, "E: trava"))
+    with pytest.raises(pa.RaizSaiuError):
+        pa._raiz("apt-instalar", "sistema", passo=at.Passo())
