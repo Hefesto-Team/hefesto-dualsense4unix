@@ -2545,7 +2545,10 @@ def _o_leitor_e_jogo(raiz: str, pid: str, eu: str) -> tuple[bool, str]:
         return bruto.replace(b"\0", b" ").decode("utf-8", "replace").strip()
 
     nome = _ler("comm")
-    return conta_como_jogo(nome, _ler("cmdline"), pid=int(pid), meu_pid=int(eu)), nome
+    return (
+        conta_como_jogo(nome, _ler("cmdline"), pid=int(pid), meu_pid=int(eu), raiz_proc=raiz),
+        nome,
+    )
 
 
 def o_jogo_le_os_nos(

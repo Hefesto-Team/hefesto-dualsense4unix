@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import builtins
 import os
+import socket
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -54,8 +55,13 @@ NAO_JOGOS = {
     "reaper-install": "/x/reaper SteamLaunch AppId=99 Install=1 -- /x/evaluator",
     "hefesto-dualsen": "/venv/bin/python /home/u/.local/bin/hefesto-dualsense4unix daemon",
     "python3": "python3 -m hefesto_dualsense4unix.cli.app tray",
+    "heroic": "/opt/Heroic/heroic --no-sandbox",
+    "cosmic-osk": "/usr/bin/cosmic-osk",
+    "input-remapper-": "/usr/bin/python3 /usr/bin/input-remapper-gtk",
 }
 COMM_DE = {"reaper-install": "reaper"}
+UNIDADE_DE_SERVICO = "0::/user.slice/user-1000.slice/user@1000.service/session.slice/{}.service\n"
+UNIDADE_DE_APP = "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-{}-77.scope\n"
 
 
 @dataclass
@@ -68,13 +74,28 @@ class Mesa:
     def proc(self) -> Path:
         return self.raiz / "proc"
 
-    def processo(self, comm: str, cmdline: str, *nos: Path, pid: int | None = None) -> int:
+    def processo(
+        self,
+        comm: str,
+        cmdline: str,
+        *nos: Path,
+        pid: int | None = None,
+        ambiente: dict[str, str] | None = None,
+        cgroup: str | None = None,
+        pai: int = 1,
+    ) -> int:
         pid = pid if pid is not None else self.proximo_pid
         self.proximo_pid += 1
         pasta = self.proc / str(pid)
         (pasta / "fd").mkdir(parents=True)
         (pasta / "comm").write_text(comm + "\n")
         (pasta / "cmdline").write_bytes(cmdline.replace(" ", "\0").encode() + b"\0")
+        (pasta / "stat").write_text(f"{pid} ({comm}) S {pai} {pid} {pid} 0\n")
+        (pasta / "environ").write_bytes(
+            b"".join(f"{k}={v}".encode() + b"\0" for k, v in (ambiente or {}).items())
+        )
+        if cgroup is not None:
+            (pasta / "cgroup").write_text(cgroup)
         (pasta / "fd" / "0").symlink_to("/dev/null")
         for n, no in enumerate(nos, start=3):
             (pasta / "fd" / str(n)).symlink_to(no)
@@ -127,8 +148,10 @@ def _pad(
 
 @pytest.fixture
 def raizes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    for parte in ("proc", "dev/input", "sys/class/input"):
+    for parte in ("proc", "dev/input", "sys/class/input", "run"):
         (tmp_path / parte).mkdir(parents=True)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.setattr(qsp, "RAIZ_RUNTIME", str(tmp_path / "run"))
     monkeypatch.setattr(no_do_vpad, "RAIZ_CLASS_INPUT", str(tmp_path / "sys/class/input"))
     monkeypatch.setattr(no_do_vpad, "RAIZ_DEV_INPUT", str(tmp_path / "dev/input"))
     monkeypatch.setattr(no_do_vpad, "RAIZ_DEV", str(tmp_path / "dev"))
@@ -215,7 +238,7 @@ def test_o_jogo_de_fora_no_no_do_pad_e_jogo(
 
 
 @pytest.mark.parametrize(("player", "modo", "caminho", "via"), COMBINACOES)
-@pytest.mark.parametrize("quem", sorted([*NAO_JOGOS, *qsp.LEITORES_SEM_JOGO, "meu-pid"]))
+@pytest.mark.parametrize("quem", sorted([*NAO_JOGOS, "meu-pid"]))
 def test_a_steam_a_mesa_e_o_hefesto_no_no_nao_sao_jogo(
     raizes: Path,
     nunca_abre_o_no: None,
@@ -259,6 +282,65 @@ def test_o_reaper_do_jogo_conta_e_o_avaliador_nao() -> None:
     assert qsp.conta_como_jogo("reaper", reaper_jogo, pid=1, meu_pid=2)
     assert not qsp.conta_como_jogo("reaper", NAO_JOGOS["reaper-install"], pid=1, meu_pid=2)
     assert not qsp.conta_como_jogo("reaper", NAO_JOGOS["reaper"], pid=1, meu_pid=2)
+
+
+def test_o_lancador_o_compositor_e_o_remapeador_nao_sao_jogo(
+    raizes: Path, nunca_abre_o_no: None
+) -> None:
+    """D-0311-QUEM-NAO-E-JOGO-NAO-SEGURA-MOTOR: só o jogo conta, por propriedade, em toda sessão."""
+    mesa, pads = _mesa(raizes, 4, "dualsense", "uhid", "radio")
+    no = mesa.nos[4][1]
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as compositor:
+        compositor.bind(str(raizes / "run" / "wayland-0"))
+        compositor.listen()
+        nao_jogos = [
+            mesa.processo("heroic", NAO_JOGOS["heroic"], no),
+            mesa.processo("kwin_wayland", "/usr/bin/kwin_wayland", no, pid=os.getpid()),
+            mesa.processo("Xwayland", "/usr/bin/Xwayland :1", no),
+            mesa.processo("input-remapper-", NAO_JOGOS["input-remapper-"], no),
+            mesa.processo(
+                "antimicrox", "/usr/bin/antimicrox", no, cgroup=UNIDADE_DE_APP.format("a")
+            ),
+            mesa.processo("Discord", "/opt/discord/Discord --type=utility", no),
+            mesa.processo(
+                "sunshine", "/usr/bin/sunshine", no, cgroup=UNIDADE_DE_SERVICO.format("s")
+            ),
+        ]
+        assert _o_jogo(pads) is None
+        assert _veredito(pads) == "daemon"
+        heroic = nao_jogos[0]
+        jogos = [
+            mesa.processo("Jogo", "/home/u/Games/jogo/Jogo.x86_64", no, pai=heroic,
+                          ambiente={"UMU_ID": "umu-0"}),
+            mesa.processo("forja", JOGOS["forja"], no),
+            mesa.processo("retroarch", JOGOS["retroarch"], no, cgroup=UNIDADE_DE_APP.format("r")),
+            mesa.processo("winedevice.exe", "C:\\windows\\system32\\winedevice.exe", no,
+                          cgroup=UNIDADE_DE_SERVICO.format("w")),
+            mesa.processo("heroic", NAO_JOGOS["heroic"], no, ambiente={"SteamGameId": "9"}),
+        ]
+        vereditos = {
+            s.pid: jogo for s, jogo, _ in qsp.quem_segura({str(no): None}, meu_pid=MEU_PID)
+        }
+    assert vereditos == {**dict.fromkeys(nao_jogos, False), **dict.fromkeys(jogos, True)}
+
+
+def test_o_doctor_diz_por_controle_quem_segura_o_pad_e_por_que(raizes: Path) -> None:
+    from hefesto_dualsense4unix.cli.cmd_doctor import _linhas_de_quem_segura_o_pad
+
+    mesa, _pads = _mesa(raizes, 2, "dualsense", "uhid", "cabo")
+    heroic = mesa.processo("heroic", NAO_JOGOS["heroic"], mesa.nos[1][1])
+    forja = mesa.processo("forja", JOGOS["forja"], mesa.nos[2][0])
+    por_vpad: list[dict[str, Any]] = [
+        {"player": p, "evdev": str(mesa.nos[p][0]), "hidraw": str(mesa.nos[p][1])} for p in (1, 2)
+    ]
+    por_vpad.append({"player": 3, "evdev": None, "hidraw": None})
+    assert _linhas_de_quem_segura_o_pad({"rumble_ff": {"per_vpad": por_vpad}}) == [
+        ("[INFO]", f"controle 1: heroic (pid {heroic}) segura o pad; não conta como jogo: "
+                   "lançador"),
+        ("[INFO]", f"controle 2: forja (pid {forja}) segura o pad; conta como jogo: "
+                   "aplicativo aberto que lê o controle"),
+        ("[INFO]", "controle 3: o nó do pad virtual não se achou"),
+    ]
 
 
 @pytest.mark.parametrize(

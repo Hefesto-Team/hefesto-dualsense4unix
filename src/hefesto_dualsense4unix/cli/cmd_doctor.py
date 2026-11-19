@@ -268,6 +268,41 @@ def _linhas_do_firmware(controles: Any) -> list[tuple[str, str]]:
     return linhas
 
 
+def _linhas_de_quem_segura_o_pad(
+    estado: Any, *, raiz_proc: str | None = None
+) -> list[tuple[str, str]]:
+    """Por controle, quem segura o pad virtual e por que conta ou não como jogo."""
+    from hefesto_dualsense4unix.integrations.quem_segura_o_pad import quem_segura
+
+    rumble = estado.get("rumble_ff") if isinstance(estado, dict) else None
+    pads = rumble.get("per_vpad") if isinstance(rumble, dict) else None
+    if not isinstance(pads, list):
+        return []
+    linhas: list[tuple[str, str]] = []
+    for pad in pads:
+        if not isinstance(pad, dict):
+            continue
+        nome = f"controle {pad.get('player')}"
+        nos: dict[str, int | None] = {}
+        for chave_no, chave_ino in (("evdev", "ino"), ("hidraw", "hidraw_ino")):
+            caminho, ino = pad.get(chave_no), pad.get(chave_ino)
+            if isinstance(caminho, str) and caminho:
+                nos[caminho] = ino if isinstance(ino, int) else None
+        if not nos:
+            linhas.append(("[INFO]", f"{nome}: o nó do pad virtual não se achou"))
+            continue
+        vereditos = quem_segura(nos, raiz_proc=raiz_proc)
+        if not vereditos:
+            linhas.append(("[INFO]", f"{nome}: ninguém segura o pad virtual"))
+        for segurador, jogo, motivo in vereditos:
+            conta = "conta como jogo" if jogo else "não conta como jogo"
+            linhas.append((
+                "[INFO]",
+                f"{nome}: {segurador.nome} (pid {segurador.pid}) segura o pad; {conta}: {motivo}",
+            ))
+    return linhas
+
+
 async def _daemon_checks() -> list[tuple[str, str]]:
     """Checks que só o daemon conhece (via IPC). Retorna [(tag, mensagem)]."""
     rows: list[tuple[str, str]] = []
@@ -310,6 +345,7 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             linha_da_pro = _linha_da_mascara_pro(estado)
             if linha_da_pro is not None:
                 rows.append(linha_da_pro)
+            rows.extend(_linhas_de_quem_segura_o_pad(estado))
             try:
                 controles = await client.call("controller.list")
             except IpcError:
