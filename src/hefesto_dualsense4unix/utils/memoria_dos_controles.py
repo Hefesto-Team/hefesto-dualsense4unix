@@ -520,6 +520,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "daemon.pid": ("install", "o pid do daemon (pasta de execução)"),
     "radio.lock": ("install", "a trava do rádio (pasta de execução)"),
     "cosmic_tray_warned.flag": ("install", "o aviso da bandeja (pasta de execução)"),
+    "bandeja.vez": ("install", "a vez da bandeja da sessão (pasta de execução)"),
     "runtime": ("install", "a pasta de execução de reserva"),
     "51-hefesto-dualsense-no-default-source.conf": ("install", "drop-in do WirePlumber"),
     "54-hefesto-dualsense-alto-falante-nunca-dorme.conf": ("install", "drop-in do WirePlumber"),
