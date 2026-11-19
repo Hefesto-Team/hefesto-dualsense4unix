@@ -21,7 +21,8 @@ import re
 import sys
 import threading
 import time
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -44,7 +45,17 @@ DIA_S = 86400.0
 ESPERA_DO_DEV_S = 30.0
 
 ETAPAS = ("baixar", "instalar", "aplicar")
+ETAPAS_QUE_TROCAM = ("instalar", "aplicar")
 FAIXA_DA_ETAPA = {"baixar": (0.0, 40.0), "instalar": (40.0, 80.0), "aplicar": (80.0, 100.0)}
+
+ENERGIA = Path("/sys/class/power_supply")
+CARGA_MINIMA_PCT = 50
+GB = 1024 ** 3
+PISO_DA_RAIZ = 2 * GB
+PISO_DO_CACHE = 2 * GB
+PISO_DO_BOOT = 300 * 1024 ** 2
+PISO_DO_EFI = 200 * 1024 ** 2
+PRAZO_DO_INIBIDOR_S = 5.0
 ETAPAS_DO_SERVICO = ("reiniciar", "reabrir")
 
 NOVA = "nova"
@@ -538,6 +549,106 @@ def trocou_o_que_pede_reinicio(andamento: dict[str, Any]) -> float:
         return 0.0
 
 
+def _ler(caminho: Path) -> str:
+    try:
+        return caminho.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def falta_energia(raiz: Path | None = None) -> str:
+    """O porquê de esperar a tomada, ou vazio. Conta só a bateria do computador (a do controle e
+    a do mouse dizem ``scope`` ``Device``); sem bateria, ou com a fonte ligada, não falta."""
+    cargas: list[int] = []
+    for fonte in sorted((ENERGIA if raiz is None else raiz).glob("*")):
+        tipo = _ler(fonte / "type")
+        if tipo != "Battery":
+            if _ler(fonte / "online") == "1":
+                return ""
+            continue
+        if _ler(fonte / "scope") == "Device":
+            continue
+        if _ler(fonte / "status") in ("Charging", "Full"):
+            return ""
+        with contextlib.suppress(ValueError):
+            cargas.append(int(_ler(fonte / "capacity")))
+    if not cargas:
+        return ""
+    carga = round(sum(cargas) / len(cargas))
+    return f"ligue na tomada: a bateria está em {carga}%" if carga < CARGA_MINIMA_PCT else ""
+
+
+def _livre_em(caminho: Path) -> int | None:
+    try:
+        dado = os.statvfs(caminho)
+    except OSError:
+        return None
+    return dado.f_bavail * dado.f_frsize
+
+
+def _pisos(peca: Peca) -> list[tuple[Path, int]]:
+    from hefesto_dualsense4unix.utils.xdg_paths import cache_dir
+
+    pisos = [(Path("/"), PISO_DA_RAIZ), (cache_dir(), PISO_DO_CACHE)]
+    if peca.id in REINICIAM_O_COMPUTADOR:
+        pisos += [(Path("/boot"), PISO_DO_BOOT), (Path("/boot/efi"), PISO_DO_EFI)]
+    return pisos
+
+
+def falta_espaco(peca: Peca) -> str:
+    """O primeiro disco abaixo do piso, com quanto falta; o ``/boot`` e a partição EFI contam só
+    para quem troca kernel, driver, módulos ou sistema."""
+    for caminho, piso in _pisos(peca):
+        livre = _livre_em(caminho)
+        if livre is not None and livre < piso:
+            falta = f"{(piso - livre) / GB:.1f}".replace(".", ",")
+            return f"faltam {falta} GB em {caminho}"
+    return ""
+
+
+def conferir_a_maquina(peca: Peca) -> None:
+    """Antes de instalar ou aplicar: a bateria baixa sem tomada espera, o disco cheio falha."""
+    porque = falta_energia()
+    if porque:
+        raise EsperaError(porque, lambda: not falta_energia())
+    porque = falta_espaco(peca)
+    if porque:
+        raise EtapaFalhouError(porque)
+
+
+def _tomar_o_inibidor(por_que: str) -> int | None:
+    from jeepney import DBusAddress, DBusErrorResponse, new_method_call
+    from jeepney.io.blocking import open_dbus_connection
+    from jeepney.wrappers import unwrap_msg
+
+    from hefesto_dualsense4unix.integrations.barramento_do_sistema import sem_ativar
+
+    logind = DBusAddress("/org/freedesktop/login1", bus_name="org.freedesktop.login1",
+                         interface="org.freedesktop.login1.Manager")
+    pedido = new_method_call(logind, "Inhibit", "ssss",
+                             ("shutdown:sleep", "Hefesto", por_que, "block"))
+    try:
+        with open_dbus_connection(bus="SYSTEM", enable_fds=True) as conexao:
+            resposta = conexao.send_and_get_reply(sem_ativar(pedido),
+                                                  timeout=PRAZO_DO_INIBIDOR_S)
+            return int(unwrap_msg(resposta)[0].to_raw_fd())
+    except (OSError, TimeoutError, ValueError, DBusErrorResponse) as erro:
+        _anotar(f"o desligar não se segurou: {erro}")
+        return None
+
+
+@contextlib.contextmanager
+def segurar_o_desligar(por_que: str) -> Iterator[None]:
+    """O inibidor do logind (desligar e suspender) enquanto a etapa troca; solta ao sair, também
+    na falha e no «Parar», e cai sozinho com o processo."""
+    fd = _tomar_o_inibidor(por_que)
+    try:
+        yield
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def pedir_para_parar() -> None:
     with contextlib.suppress(OSError):
         (_runtime() / PEDIDO_DE_PARAR).write_text(str(time.time()), encoding="utf-8")
@@ -683,10 +794,13 @@ class _Vez:
 
 def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
                   agora: Callable[[], float], jogo_aberto: Callable[[], bool],
-                  vez: _Vez | None = None) -> EsperaError | None:
+                  vez: _Vez | None = None, *, maquina: Callable[[Peca], None] | None = None,
+                  inibidor: Callable[[str], AbstractContextManager[None]] | None = None,
+                  ) -> EsperaError | None:
     """Baixar, instalar e aplicar, da etapa em que a peça parou. Devolve a espera, se esperou: o
     jogo que abriu depois do baixar segura o instalar e o aplicar, e a peça volta pela espera do
-    jogo da fila, que só passa com ele fechado de vez."""
+    jogo da fila, que só passa com ele fechado de vez. Antes de instalar e de aplicar, ``maquina``
+    confere a tomada e o disco; a etapa que troca roda sob o ``inibidor`` do desligar."""
     linha = andamento.peca(peca.id)
     vez = _Vez(antes=ler_as_anteriores().get(peca.id)) if vez is None else vez
     dados = vez.dados
@@ -717,11 +831,16 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
         try:
             if indice and jogo_aberto():
                 raise EsperaError(O_JOGO_ABERTO, lambda: True)
+            troca = etapa in ETAPAS_QUE_TROCAM and fazer is not None
+            if troca and maquina is not None:
+                maquina(peca)
             if etapa == "instalar" and not reinstala:
                 guardou = True
                 _guardar_a_anterior(peca, versoes, dados, agora())
             if fazer is not None:
-                volta = fazer(passo, dados)
+                with (inibidor(f"{peca.nome}: {etapa}") if troca and inibidor is not None
+                      else contextlib.nullcontext()):
+                    volta = fazer(passo, dados)
                 if volta:
                     dados.update(volta)
         except FilaParadaError:
@@ -886,15 +1005,17 @@ def rodar(
     steam_aberta: Callable[[], bool] = _steam_aberta,
     fechar_a_steam: Callable[[], bool] = _fechar_a_steam,
     reabrir_a_steam: Callable[[], bool] = _reabrir_a_steam,
+    maquina: Callable[[Peca], None] | None = None,
+    inibidor: Callable[[str], AbstractContextManager[None]] | None = None,
 ) -> int:
     """A fila: uma peça por vez, em baixar, instalar e aplicar em todos; um processo por vez (o
     segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez (e ao fim
     da espera, se ainda não começou) e, já em dia, fica «Atualizado» sem baixar. A que espera (a
     Steam, o voo, o jogo que abriu depois do baixar) vai para o fim e volta da mesma etapa quando
     passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma falha não para as
-    outras. Se alguma peça mudou, reinicia o serviço e reabre a janela: antes de esperar a que
-    ficou para trás (o código novo não roda horas sob o serviço velho) e de novo se a peça mudar.
-    Devolve 0 pronto, 1 com falha, 2 parada ou com peça ainda esperando.
+    outras. Se alguma peça mudou, reinicia o serviço e reabre a janela, antes de esperar a que
+    ficou para trás e de novo se a peça mudar. A tomada, o disco e o inibidor do desligar vêm de
+    quem chama (o ``--rodar`` liga os reais). Devolve 0 pronto, 1 com falha, 2 parada ou esperando.
     """
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
@@ -945,7 +1066,8 @@ def rodar(
         def _rodar(peca: Peca, vez: _Vez) -> EsperaError | None:
             if peca.steam_fechada and not jogo_aberto():
                 _fechar_a_steam_da_fila()
-            espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, jogo_aberto, vez)
+            espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, jogo_aberto, vez,
+                                   maquina=maquina, inibidor=inibidor)
             if vez.dados.get("reiniciou") and andamento.peca(peca.id).get("selo") == PRONTA:
                 reiniciadas.update(_prontas(andamento))
                 reinicio = andamento.dado["reinicio"]
@@ -1145,7 +1267,7 @@ def hora_da_pergunta(agora: float | None = None) -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["--rodar"]:
-        return rodar(args[1:])
+        return rodar(args[1:], maquina=conferir_a_maquina, inibidor=segurar_o_desligar)
     if args[:1] == ["--conferir"]:
         conferencia = conferir(rede="--sem-rede" not in args)
         for item in conferencia["pecas"]:

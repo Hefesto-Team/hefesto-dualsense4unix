@@ -27,6 +27,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
     CASA_DA_USUARIA=""
     DONO=root
     API="https://api.github.com/repos/${REPO_DO_MANGOHUD}/releases/latest"
+    UNIDADE_PROPRIA=1
 else
     CACHE="${HEFESTO_ATUALIZADOR_CACHE:-}"
     SRC="${HEFESTO_ATUALIZADOR_SRC:-/usr/src}"
@@ -41,6 +42,7 @@ else
     CASA_DA_USUARIA="${HEFESTO_ATUALIZADOR_CASA:-}"
     DONO="${HEFESTO_ATUALIZADOR_DONO:-root}"
     API="${HEFESTO_ATUALIZADOR_API:-}"
+    UNIDADE_PROPRIA="${HEFESTO_ATUALIZADOR_UNIDADE:-}"
 fi
 
 umask 077
@@ -52,8 +54,26 @@ _exige_raiz() {
     [[ -n "${CACHE}" ]] || { _erro "'$1' requer root"; exit 1; }
 }
 
+_na_unidade() {
+    [[ -n "${UNIDADE_PROPRIA}" ]] || { "$@"; return; }
+    command -v systemd-run >/dev/null 2>&1 || _recusar "systemd-run ausente: o apt não roda fora da sessão"
+    local saida erros pid rc
+    saida="$(mktemp)" && erros="$(mktemp)" || _recusar "não criei a saída da unidade do apt"
+    systemd-run --quiet --wait --collect --description="apt do atualizador do Hefesto" \
+        -p StandardInput=null -p "StandardOutput=append:${saida}" -p "StandardError=append:${erros}" \
+        -E DEBIAN_FRONTEND=noninteractive -E "PATH=${PATH}" -E "LANG=${LANG:-C.UTF-8}" \
+        -- "$@" </dev/null &
+    pid=$!
+    tail -n +1 -f --pid="${pid}" -- "${saida}"
+    wait "${pid}"
+    rc=$?
+    cat -- "${erros}" >&2
+    rm -f -- "${saida}" "${erros}"
+    return "${rc}"
+}
+
 _apt() {
-    apt-get -y -o APT::Status-Fd=1 \
+    _na_unidade apt-get -y -o APT::Status-Fd=1 \
         -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
 }
 
@@ -258,7 +278,7 @@ verbo_apt_consertar() {
     _exige_raiz apt-consertar
     local rc=0
     _segurar_os_da_casa
-    dpkg --force-confdef --force-confold --configure -a || rc=1
+    _na_unidade dpkg --force-confdef --force-confold --configure -a || rc=1
     _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" --no-install-recommends -f install || rc=1
     return "${rc}"
 }
