@@ -35,6 +35,7 @@ ARQUIVO_DO_QUE_JA_ESTA = "atualizador-ja-esta.json"
 REGISTRO = "atualizador.log"
 TRAVA = "atualizador.trava"
 PEDIDO_DE_PARAR = "atualizador.parar"
+PEDIDO_DE_TENTAR = "atualizador.tentar"
 DIAS_PADRAO = 7
 DIAS_MINIMO = 1
 DIAS_MAXIMO = 90
@@ -73,6 +74,8 @@ NAO_SE_REINSTALA = "esta peça não se reinstala pela janela"
 
 ANDANDO = "andando"
 ESPERA_O_JOGO = "espera_o_jogo"
+ESPERA = "espera"
+VIVAS = (ANDANDO, ESPERA_O_JOGO, ESPERA)
 FIM = "fim"
 PARADO = "parado"
 
@@ -414,7 +417,7 @@ def _encerrar_o_orfao(andamento: dict[str, Any]) -> dict[str, Any]:
     reinicio = andamento.get("reinicio")
     if isinstance(reinicio, dict) and reinicio.get("selo") in EM_CURSO:
         reinicio["selo"] = FILA
-    encerrado = {**andamento, "pecas": pecas, "fase": PARADO, "visto": True}
+    encerrado = {**andamento, "pecas": pecas, "fase": PARADO, "visto": True, "fim_em": time.time()}
     encerrado["total"] = total(encerrado)
     with contextlib.suppress(OSError):
         _gravar_json(_estado() / ARQUIVO_DO_ANDAMENTO, encerrado)
@@ -424,7 +427,7 @@ def _encerrar_o_orfao(andamento: dict[str, Any]) -> dict[str, Any]:
 
 def ler_o_andamento() -> dict[str, Any]:
     andamento = _ler_json(_estado() / ARQUIVO_DO_ANDAMENTO)
-    if andamento.get("fase") in (ANDANDO, ESPERA_O_JOGO) and not em_curso():
+    if andamento.get("fase") in VIVAS and not em_curso():
         return _encerrar_o_orfao(andamento)
     return andamento
 
@@ -489,6 +492,18 @@ def pedir_para_parar() -> None:
         (_runtime() / PEDIDO_DE_PARAR).write_text(str(time.time()), encoding="utf-8")
 
 
+def pedir_para_tentar(ids: Sequence[str]) -> None:
+    _gravar_json(_runtime() / PEDIDO_DE_TENTAR, {"ids": list(ids)})
+
+
+def _pedido_de_tentar() -> list[str]:
+    caminho = _runtime() / PEDIDO_DE_TENTAR
+    ids = _ler_json(caminho).get("ids")
+    with contextlib.suppress(OSError):
+        caminho.unlink()
+    return [str(i) for i in ids] if isinstance(ids, list) else []
+
+
 def _a_trava() -> int | None:
     try:
         fd = os.open(_runtime() / TRAVA, os.O_RDWR | os.O_CREAT, 0o600)
@@ -530,7 +545,7 @@ def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
     inicio = relogio()
     primeiro = True
     antes = (linha.get("selo"), linha.get("motivo")) if linha is not None else None
-    while relogio() - inicio < prazo_s:
+    while primeiro or relogio() - inicio < prazo_s:
         aberto = jogo_aberto()
         if primeiro and not aberto:
             return True
@@ -725,6 +740,7 @@ def _rodar_o_servico(andamento: _Andamento, reiniciar: Callable[[], bool],
             return
         andamento.gravar()
     reinicio["selo"] = PRONTA
+    andamento.gravar()
 
 
 def _o_que_fazer(peca: Peca, visto: dict[str, Any] | None) -> str:
@@ -780,8 +796,9 @@ def rodar(
     if trava is None:
         return 3
     try:
-        with contextlib.suppress(OSError):
-            (_runtime() / PEDIDO_DE_PARAR).unlink()
+        for pedido in (PEDIDO_DE_PARAR, PEDIDO_DE_TENTAR):
+            with contextlib.suppress(OSError):
+                (_runtime() / pedido).unlink()
         registro = _por_id(pecas() if lista is None else lista)
         conferencia = {str(item.get("id")): item
                        for item in ler_a_conferencia().get("pecas") or []
@@ -800,8 +817,23 @@ def rodar(
                 if visto else Versoes()
         andamento = _Andamento(escolhidas, versoes, o_que_fazer)
         _anotar(f"fila: {', '.join(p.id for p in escolhidas) or 'nada'}")
-        prazo = PRAZO_DA_VIGIA_S if prazo_do_jogo_s is None else prazo_do_jogo_s
+        limite = relogio() + (PRAZO_DA_VIGIA_S if prazo_do_jogo_s is None else prazo_do_jogo_s)
+
+        def prazo() -> float:
+            return limite - relogio()
+
         adiadas: list[tuple[Peca, EsperaError, _Vez]] = []
+
+        def _recolher_o_pedido_de_tentar() -> None:
+            for ident in _pedido_de_tentar():
+                if ident not in versoes or andamento.peca(ident).get("selo") != FALHOU:
+                    continue
+                linha = andamento.peca(ident)
+                linha["selo"], linha["motivo"] = FILA, ""
+                linha["etapas"] = dict.fromkeys(ETAPAS, "")
+                _anotar(f"{ident}: de novo, a pedido")
+                adiadas.append((registro[ident], EsperaError("", lambda: True),
+                                _Vez(antes=ler_as_anteriores().get(ident))))
 
         def _ja_subiu(peca: Peca, linha: dict[str, Any]) -> bool:
             """A peça que ia subir, conferida antes de começar: em dia, fica «Atualizado»."""
@@ -814,7 +846,7 @@ def rodar(
         try:
             for peca in escolhidas:
                 linha = andamento.peca(peca.id)
-                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo, linha):
+                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo(), linha):
                     raise FilaParadaError
                 if _ja_subiu(peca, linha):
                     continue
@@ -824,12 +856,12 @@ def rodar(
                     adiadas.append((peca, espera, vez))
             reiniciadas: set[str] = set()
             if adiadas and _prontas(andamento):
-                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo):
+                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
                     raise FilaParadaError
                 _rodar_o_servico(andamento, reiniciar, reabrir)
                 reiniciadas = _prontas(andamento)
-            inicio = relogio()
-            while adiadas and relogio() - inicio < prazo:
+            _recolher_o_pedido_de_tentar()
+            while adiadas and prazo() > 0:
                 if _pediram_parar():
                     raise FilaParadaError
                 ainda: list[tuple[Peca, EsperaError, _Vez]] = []
@@ -837,8 +869,9 @@ def rodar(
                     if not _livre(espera):
                         ainda.append((peca, espera, vez))
                         continue
+                    andamento.dado["fase"] = ANDANDO
                     linha = andamento.peca(peca.id)
-                    if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo,
+                    if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo(),
                                              linha):
                         raise FilaParadaError
                     if vez.desde == 0 and _ja_subiu(peca, linha):
@@ -847,22 +880,29 @@ def rodar(
                     if outra is not None:
                         ainda.append((peca, outra, vez))
                 adiadas = ainda
+                if adiadas and andamento.dado["fase"] != ESPERA:
+                    andamento.dado["fase"] = ESPERA
+                    andamento.dado["espera"] = {"peca": adiadas[0][0].id,
+                                                "motivo": str(adiadas[0][1]), "desde": agora(),
+                                                "ate": agora() + max(0.0, prazo())}
+                    andamento.gravar()
                 if adiadas:
                     dormir(PASSO_DA_VIGIA_S)
+                _recolher_o_pedido_de_tentar()
             for peca, espera, _vez in adiadas:
                 linha = andamento.peca(peca.id)
                 linha["selo"], linha["motivo"] = FILA, str(espera)
                 _anotar(f"{peca.id}: a espera passou do prazo ({espera}); fica para a próxima")
-            if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo):
+            if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
                 raise FilaParadaError
-            andamento.dado["fase"] = FIM
+            andamento.dado["fase"], andamento.dado["fim_em"] = FIM, agora()
             andamento.gravar()
             if _prontas(andamento) - reiniciadas:
                 _rodar_o_servico(andamento, reiniciar, reabrir)
             elif not reiniciadas:
                 andamento.dado["reinicio"]["selo"] = ATUALIZADA
         except FilaParadaError:
-            andamento.dado["fase"] = PARADO
+            andamento.dado["fase"], andamento.dado["fim_em"] = PARADO, agora()
             for linha in andamento.dado["pecas"]:
                 if linha.get("selo") in EM_CURSO:
                     linha["selo"] = FILA
@@ -870,6 +910,7 @@ def rodar(
             andamento.gravar()
             return 2
         andamento.dado["fase"] = FIM
+        andamento.dado.setdefault("fim_em", agora())
         andamento.gravar()
         with contextlib.suppress(OSError):
             conferir(rede=True, lista=lista)

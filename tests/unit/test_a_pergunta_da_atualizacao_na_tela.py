@@ -238,6 +238,60 @@ def test_o_andamento_aparece_em_qualquer_aba_e_o_fim_fechado_nao_volta(
     assert gestos.conteudo(None, agora=1020.0) == ""
 
 
+def test_o_fim_vale_uma_hora_a_contar_do_fim_e_nao_do_inicio(registro: list[at.Peca]) -> None:
+    andamento = _andamento("falhou", "o apt não instalou")
+    andamento.update({"inicio": 1000.0, "fim_em": 1000.0 + 6 * 3600, "fase": at.PARADO})
+    at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, andamento)
+    assert 'data-gesto="atualizacoes-tentar"' in gestos.conteudo(None, agora=1010.0 + 6 * 3600)
+    del andamento["fim_em"]
+    at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, andamento)
+    assert gestos.conteudo(None, agora=1000.0 + 2 * 86400) == ""
+
+
+@pytest.mark.parametrize("motivo", ["a Steam está aberta", "trabalho em voo", "jogo aberto",
+                                    "install em curso"])
+def test_com_a_fila_esperando_o_mapa_abre_e_o_atualizar_se_apaga(
+        registro: list[at.Peca], motivo: str) -> None:
+    andamento = _andamento("esperando", motivo)
+    andamento.update({"inicio": 1000.0, "fase": at.ESPERA})
+    at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, andamento)
+    trava = at._a_trava()
+    assert trava is not None
+    try:
+        corpo = gestos.conteudo(None, agora=1010.0)
+        assert f'<span class="pendente">{motivo}</span>' in corpo
+        _gesto("atualizacoes-abrir")
+        mapa = gestos.conteudo(None, agora=1010.0)
+        assert 'class="mp-lista"' in mapa and "and-total" not in mapa
+        assert re.search(r'class="btn principal apagado" data-gesto="atualizacoes-atualizar" '
+                         rf'data-dica="{tela.DICA_DA_FILA}"', mapa)
+        _gesto("atualizacoes-fechar")
+        assert "and-total" in gestos.conteudo(None, agora=1010.0)
+    finally:
+        import os
+
+        os.close(trava)
+
+
+def test_tentar_de_novo_com_a_fila_viva_vira_pedido_e_sem_fila_abre_outra(
+        registro: list[at.Peca], monkeypatch: pytest.MonkeyPatch) -> None:
+    at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, _andamento("falhou", "x"))
+    soltas: list[list[str]] = []
+    monkeypatch.setattr(at, "soltar", lambda ids, **_k: soltas.append(list(ids)) or False)
+    with pytest.raises(RuntimeError, match="não abriu"):
+        _gesto("atualizacoes-tentar")
+    assert soltas == [["kernel"]]
+    trava = at._a_trava()
+    assert trava is not None
+    try:
+        _gesto("atualizacoes-tentar")
+    finally:
+        import os
+
+        os.close(trava)
+    assert soltas == [["kernel"]] and at._pedido_de_tentar() == ["kernel"]
+
+
 def test_a_pergunta_nasce_sozinha_uma_vez_quando_o_prazo_vence(
         registro: list[at.Peca], monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(at, "hora_da_pergunta", lambda _agora=None: True)

@@ -20,8 +20,6 @@ from . import Contexto, fios, gesto
 PAGINA = "*"
 INTERVALO_DA_LEITURA_S = 0.5
 VALIDADE_DO_FIM_S = 3600.0
-PRAZO_PARA_TENTAR_S = 3600.0
-PASSO_PARA_TENTAR_S = 2.0
 IDADE_DA_CONFERENCIA_S = 600.0
 
 FORCAR = "\0"
@@ -99,7 +97,11 @@ def _andamento_a_mostrar(andamento: dict[str, Any], rodando: bool, agora: float)
         return False
     if rodando:
         return True
-    return not andamento.get("visto") and agora - inicio < VALIDADE_DO_FIM_S
+    try:
+        fim = float(andamento.get("fim_em") or inicio)
+    except (TypeError, ValueError):
+        fim = inicio
+    return not andamento.get("visto") and agora - fim < VALIDADE_DO_FIM_S
 
 
 def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
@@ -107,7 +109,9 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
     momento = time.time() if agora is None else agora
     andamento = at.ler_o_andamento()
     rodando = at.em_curso()
-    if _andamento_a_mostrar(andamento, rodando, momento):
+    espera = rodando and andamento.get("fase") in (at.ESPERA, at.ESPERA_O_JOGO)
+    if _andamento_a_mostrar(andamento, rodando, momento) \
+            and not (espera and TELA["vista"] in ("pergunta", "voltar")):
         TELA["vista"] = "andamento"
         return tela.html_do_andamento(andamento, rodando=rodando)
     if TELA["vista"] == "andamento":
@@ -121,7 +125,8 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
         return tela.html_da_pergunta(conferencia_vista(), {"sozinho": escolha.sozinho,
                                                           "dias": escolha.dias},
                                      jogo_aberto=aberto,
-                                     nome_do_jogo=_nome_do_jogo(ctx) if aberto else "")
+                                     nome_do_jogo=_nome_do_jogo(ctx) if aberto else "",
+                                     fila_espera=espera)
     if TELA["vista"] == "voltar":
         voltam = [p.id for p in at.pecas() if p.voltar is not None]
         return tela.html_das_anteriores(at.ler_as_anteriores(), voltam)
@@ -317,21 +322,17 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "atualizacoes-tentar", grava="instala de novo as peças que falharam")
 def tentar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Tentar de novo»: as que falharam voltam à fila quando a de agora terminar."""
+    """«Tentar de novo»: a fila viva roda de novo as que falharam; sem fila, abre outra."""
     ids = [str(x.get("id")) for x in at.ler_o_andamento().get("pecas") or []
            if isinstance(x, dict) and x.get("selo") == at.FALHOU]
     if not ids:
         raise ValueError("tentar: nenhuma peça falhou")
-
-    def _quando_livre() -> None:
-        inicio = time.monotonic()
-        while at.em_curso() and time.monotonic() - inicio < PRAZO_PARA_TENTAR_S:
-            time.sleep(PASSO_PARA_TENTAR_S)
-        at.soltar(ids)
-        _repintar()
-
+    if at.em_curso():
+        at.pedir_para_tentar(ids)
+    elif not at.soltar(ids):
+        raise RuntimeError("tentar: a fila não abriu")
     TELA["escondida"] = 0.0
-    fios.soltar("atualizador-tentar", _quando_livre)
+    _repintar()
 
 
 @gesto("*", "atualizacoes-registro")

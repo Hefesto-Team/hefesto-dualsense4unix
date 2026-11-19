@@ -30,6 +30,7 @@ DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
 DICA_DO_JOGO = "Espera o jogo fechar"
+DICA_DA_FILA = "Espera a atualização em curso"
 ATUALIZADO, NOVA_VERSAO, ESPERANDO, APLICANDO, FALHOU, NA_FILA, A_REVISAR, SEM_REDE = (
     "Atualizado", "Nova versão", "Esperando", "Aplicando", "Falhou", "Na fila", "A revisar",
     "Sem rede")
@@ -329,16 +330,17 @@ def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
 
 
 def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
-                     jogo_aberto: bool, nome_do_jogo: str = "") -> str:
+                     jogo_aberto: bool, nome_do_jogo: str = "", fila_espera: bool = False) -> str:
     """O mapa das atualizações: o topo, as linhas e o rodapé com o «Atualizar tudo»."""
     n = len(ids_para_atualizar(conferencia))
     jogo = (f'<span>Jogo aberto:</span><span class="jogo">{_e(nome_do_jogo)}</span>'
             if nome_do_jogo else '<span>Jogo aberto</span>')
     pendente = (f'<div class="pendente">{jogo}<span>· espera</span></div>'
                 if jogo_aberto else "")
-    apagado = "" if n else " apagado"
+    apagado = "" if n and not fila_espera else " apagado"
+    dica = DICA_DA_FILA if fila_espera else DICA_DO_JOGO if jogo_aberto else ""
     principal = (f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar"'
-                 f'{_dica(DICA_DO_JOGO if jogo_aberto else "")}>'
+                 f'{_dica(dica)}>'
                  f'{ROTULO_DO_ATUALIZAR} <span class="n">{n}</span></button>')
     auto = " auto" if escolha.get("sozinho") else ""
     return (f'<div class="tn-cx mapa{auto}" role="dialog" aria-modal="true" '
@@ -426,6 +428,8 @@ def _linha_do_andamento(peca: dict[str, Any]) -> str:
                          for c in peca.get("contagens") or [] if isinstance(c, dict)))
     barra = _barra(peca.get("pct", 0), contagens) if classe == "aplicando" else ""
     meio = f'<span class="mp-v">{barra or ver}</span>'
+    if classe == "esperando" and motivo:
+        meio = f'<span class="pendente">{_e(motivo)}</span>'
     dica = _junto(_versao_inteira({"de": de, "para": para, "estado": "nova"}),
                   str(peca.get("dica_do_aplicar") or ""))
     return _linha(peca, classe, estado, meio, "", dica)

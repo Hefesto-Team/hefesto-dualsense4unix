@@ -142,7 +142,8 @@ def test_o_voo_e_espera_do_hefesto_e_nao_falha(monkeypatch: pytest.MonkeyPatch) 
         pa._baixar_o_hefesto(at.Passo(), {})
 
 
-def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar() -> None:
+def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """Medida 2: a Steam aberta deixa a peça «Esperando», as outras andam, e ao fechar a peça
     volta da etapa em que parou (sem baixar de novo) e termina pronta. O serviço reinicia antes
     da espera (o B novo não roda sob o serviço velho) e de novo quando o GE-Proton fica pronto."""
@@ -164,6 +165,18 @@ def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar() -> None:
         assert _linha("b")["selo"] == at.PRONTA, "a fila não esperou a Steam para seguir"
         assert servico == ["reiniciar", "reabrir"], \
             "o B novo ficou sob o serviço velho enquanto a Steam segurava o GE-Proton"
+        gravado = at._ler_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO)
+        assert gravado["reinicio"]["selo"] == at.PRONTA, gravado["reinicio"]
+        assert gravado["fase"] == at.ESPERA
+        assert gravado["espera"]["peca"] == "proton"
+        assert gravado["espera"]["motivo"] == "a Steam está aberta"
+        if voltas[0] == 1:
+            with monkeypatch.context() as m:
+                m.setattr(at, "em_curso", lambda: False)
+                orfao = at.ler_o_andamento()
+            assert orfao["fase"] == at.PARADO and orfao["reinicio"]["selo"] == at.PRONTA
+            assert orfao["fim_em"] > 0
+            at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, gravado)
         if voltas[0] == 3:
             steam["aberta"] = False
 
@@ -182,6 +195,39 @@ def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar() -> None:
     assert _linha("proton")["selo"] == at.PRONTA and _linha("proton")["motivo"] == ""
     assert at.ler_o_andamento()["total"]["falhas"] == 0
     assert servico == ["reiniciar", "reabrir"] * 2
+
+
+def test_o_pedido_de_tentar_roda_de_novo_a_peca_que_falhou_com_a_fila_viva() -> None:
+    d = _Diario()
+    steam = {"aberta": True}
+    quebrada = {"a": True}
+
+    def instalar_a(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+        d.feito.append("a:instalar")
+        if quebrada["a"]:
+            raise at.EtapaFalhouError("o apt não instalou")
+
+    def instalar_proton(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+        if steam["aberta"]:
+            raise at.EsperaError("a Steam está aberta", lambda: not steam["aberta"])
+
+    voltas = [0]
+
+    def dormir(_s: float) -> None:
+        voltas[0] += 1
+        if voltas[0] == 1:
+            assert _linha("a")["selo"] == at.FALHOU
+            quebrada["a"] = False
+            at.pedir_para_tentar(["a"])
+        if voltas[0] == 2:
+            steam["aberta"] = False
+
+    lista = [_peca(d, "proton", instalar=instalar_proton), _peca(d, "a", instalar=instalar_a)]
+    at.conferir(rede=True, lista=lista)
+    rc, _servico = _rodar(lista, ["proton", "a"], dormir=dormir)
+    assert rc == 0
+    assert d.feito.count("a:instalar") == 2
+    assert _linha("a")["selo"] == at.PRONTA and _linha("proton")["selo"] == at.PRONTA
 
 
 def test_a_steam_que_nao_fecha_no_prazo_deixa_a_peca_para_a_proxima() -> None:
@@ -480,7 +526,7 @@ def test_o_python_que_nao_monta_um_pacote_sobe_os_outros(
 
 def test_a_tela_diz_o_estado_por_glifo_e_o_porque_so_na_dica() -> None:
     """A tela: uma linha por peça, o estado no glifo (Atualizado, Esperando, Aplicando, Falhou) e
-    o motivo só na dica; nenhum vermelho no selo da falha."""
+    o motivo na dica; o da espera também à vista; nenhum vermelho no selo da falha."""
     from hefesto_dualsense4unix.interface import atualizacoes as tela
 
     andamento = {"pecas": [
@@ -503,7 +549,8 @@ def test_a_tela_diz_o_estado_por_glifo_e_o_porque_so_na_dica() -> None:
     assert '<span class="mp-s falhou" data-dica="Falhou: HTTP Error 404">!</span>' in corpo
     assert '<span class="mp-s aplicando" data-dica="Aplicando · Instalar">●</span>' in corpo
     sem_dica = re.sub(r'data-dica="[^"]*"', "", corpo)
-    for texto in ("a Steam está aberta", "já traz a cura", "404", "FALHOU", "PRONTA"):
+    assert '<span class="pendente">a Steam está aberta</span>' in sem_dica
+    for texto in ("já traz a cura", "404", "FALHOU", "PRONTA"):
         assert texto not in sem_dica, texto
     regra = re.search(r"\.hef-atualiza \.mp-s\.revisar,\.hef-atualiza \.mp-s\.falhou\{[^}]*\}",
                       tela.CSS)
