@@ -253,6 +253,15 @@ class TestOAmbienteChegaAoFilho:
         assert _depois_do_traco(cmd) == ["prog", "a$$b", "$${HOME}"]
         assert not any(a.startswith("--property=OOMScoreAdjust") for a in cmd)
 
+    def test_a_pasta_de_trabalho_vem_so_de_quem_a_passa(self, tmp_path: Path) -> None:
+        """MORDIDA: tirar o ``--working-directory`` da linha."""
+        sem = fds.argv_da_unidade(["prog"], {}, unidade="u.service", forma="ExitType=cgroup",
+                                  oom=None)
+        com = fds.argv_da_unidade(["prog"], {}, unidade="u.service", forma="ExitType=cgroup",
+                                  oom=None, pasta_de_trabalho=tmp_path)
+        assert not any(a.startswith("--working-directory") for a in sem)
+        assert [a for a in com if a not in sem] == [f"--working-directory={tmp_path}"]
+
 
 class _Popen:
     def __init__(self) -> None:

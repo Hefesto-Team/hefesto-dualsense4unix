@@ -8,6 +8,7 @@ import json
 import os
 import re
 import selectors
+import shlex
 import shutil
 import signal
 import subprocess
@@ -219,6 +220,40 @@ def _agulhas_do_nativo(lancador: str) -> tuple[tuple[str, ...], tuple[str, ...]]
 
     return (tuple(a for a in item.atalhos if dele(a)),
             tuple(c for c in item.comandos if dele(c)))
+
+
+def comandos_dos_lancadores_de_fabrica() -> frozenset[str]:
+    """O comando nativo de cada lançador de fábrica."""
+    return frozenset(c for f in DE_FABRICA for c in f.bloco.comandos)
+
+
+CATEGORIAS_DE_LANCADOR = frozenset({"Game", "Emulator"})
+
+
+def _primeiro_termo(linha: str) -> str:
+    try:
+        termos = shlex.split(linha)
+    except ValueError:
+        return ""
+    return termos[0] if termos else ""
+
+
+def executaveis_dos_atalhos_de_jogo(caminho: str) -> frozenset[Path]:
+    """O arquivo real que o ``Exec`` de cada atalho ``.desktop`` de jogo ou emulador
+    (``CATEGORIAS_DE_LANCADOR``) abre, achado no ``caminho``."""
+    from hefesto_dualsense4unix.integrations import jogos_locais
+
+    reais: set[Path] = set()
+    for pasta in jogos_locais.pastas_de_atalhos():
+        for arquivo in pasta.glob("*.desktop"):
+            entrada = _entrada_do_atalho(arquivo)
+            if not CATEGORIAS_DE_LANCADOR & set(entrada.get("categories", "").split(";")):
+                continue
+            comando = _primeiro_termo(entrada.get("exec", ""))
+            achado = shutil.which(comando, path=caminho) if comando else None
+            if achado is not None:
+                reais.add(Path(os.path.realpath(achado)))
+    return frozenset(reais)
 
 
 def _e_dos_exports_do_flatpak(pasta: Path) -> bool:

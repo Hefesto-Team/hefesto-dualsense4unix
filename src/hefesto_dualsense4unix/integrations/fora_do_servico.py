@@ -236,8 +236,10 @@ def argv_da_unidade(
     forma: str,
     oom: int | None,
     teto_s: int | None = None,
+    pasta_de_trabalho: Path | None = None,
 ) -> list[str]:
-    """A linha do ``systemd-run`` que abre ``argv`` numa unidade própria."""
+    """A linha do ``systemd-run`` que abre ``argv`` numa unidade própria; sem
+    ``pasta_de_trabalho``, a unidade nasce na ``HOME``."""
     cmd = [
         "systemd-run",
         "--user",
@@ -257,6 +259,8 @@ def argv_da_unidade(
     ]
     if oom is not None:
         cmd.append(f"--property=OOMScoreAdjust={oom}")
+    if pasta_de_trabalho is not None:
+        cmd.append(f"--working-directory={pasta_de_trabalho}")
     cmd.append("--property=UnsetEnvironment=" + " ".join(VARIAVEIS_DO_INTERPRETADOR))
     cmd.extend(f"--setenv={nome}={valor}" for nome, valor in env.items())
     cmd.append("--")
@@ -296,8 +300,10 @@ def abrir(
     contexto: Contexto | None = None,
     executar: Executar | None = None,
     popen: Callable[..., Any] | None = None,
+    pasta_de_trabalho: Path | None = None,
 ) -> Abertura:
-    """Abre ``argv`` com o ambiente ``env``, fora do serviço quando é preciso."""
+    """Abre ``argv`` com o ambiente ``env``, fora do serviço quando é preciso, na
+    ``pasta_de_trabalho``, se vier."""
     argv = [argv] if isinstance(argv, str) else list(argv)
     ctx = contexto if contexto is not None else contexto_atual()
     abrir_direto = popen if popen is not None else subprocess.Popen
@@ -310,6 +316,7 @@ def abrir(
             stderr=subprocess.DEVNULL,
             start_new_session=True,
             env=dict(env),
+            cwd=pasta_de_trabalho,
         )
         return Abertura(
             caminho="popen", motivo=motivo, tentativas=tentativas, processo=processo
@@ -326,7 +333,8 @@ def abrir(
     for forma in FORMAS_DE_VIVER:
         unidade = nome_da_unidade(aplicativo or argv[0])
         cmd = argv_da_unidade(
-            argv, do_setenv, unidade=unidade, forma=forma, oom=ctx.oom_do_gerenciador
+            argv, do_setenv, unidade=unidade, forma=forma, oom=ctx.oom_do_gerenciador,
+            pasta_de_trabalho=pasta_de_trabalho,
         )
         try:
             feito = run(cmd, env)

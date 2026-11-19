@@ -150,13 +150,16 @@ def abrir_pelo_lancador(mod_id: str, argv: Sequence[str]) -> str:
     from hefesto_dualsense4unix.integrations import fora_do_servico
     from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
     from hefesto_dualsense4unix.integrations.steam_launch_options import WRAPPER_HOME_RELPATH
+    from hefesto_dualsense4unix.utils import xdg_paths
 
     if fora_do_servico._a_suite_esta_rodando():
         raise OSError("a suíte está no ar e este é o computador de verdade")
     hefesto_launch = Path.home() / WRAPPER_HOME_RELPATH
     linha = [str(hefesto_launch), *argv] if os.access(hefesto_launch, os.X_OK) else list(argv)
+    pasta = xdg_paths.runtime_dir() / "abrir-do-lancador"
+    pasta.mkdir(mode=0o700, parents=True, exist_ok=True)
     abertura = fora_do_servico.abrir(linha, env=ambiente_limpo(os.environ),
-                                     aplicativo=f"hefesto-mod-{mod_id}")
+                                     aplicativo=f"hefesto-mod-{mod_id}", pasta_de_trabalho=pasta)
     return str(abertura.caminho)
 
 
@@ -214,10 +217,19 @@ def caminho_da_sessao() -> str:
     return ambiente_limpo(os.environ).get("PATH") or os.defpath
 
 
+def _de_um_lancador_conhecido(nome: str, real: Path, caminho: str) -> bool:
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    return (nome in censo.comandos_dos_lancadores_de_fabrica()
+            or real in censo.executaveis_dos_atalhos_de_jogo(caminho))
+
+
 def comando_fora_da_caixa(nome: str, caminho: str, pastas: Sequence[Path]) -> str:
     """O arquivo que ``nome`` abre fora da caixa, ou ``ValueError`` com o motivo (que fica no
     diário). ``nome`` é nu, achado no ``caminho`` num executável de verdade que não é shell nem
-    interpretador (pelo nome e pelo alvo do link) e que não mora em nenhuma das ``pastas``."""
+    interpretador (pelo nome e pelo alvo do link), que não mora em nenhuma das ``pastas`` e que é
+    de um lançador conhecido: o comando de um lançador de fábrica, ou o mesmo arquivo do ``Exec``
+    de um atalho de jogo ou de emulador."""
     if not nome or "/" in nome or nome.startswith((".", "-")):
         raise ValueError("o comando não é um nome nu")
     if _nunca_fora_da_caixa(nome):
@@ -231,6 +243,8 @@ def comando_fora_da_caixa(nome: str, caminho: str, pastas: Sequence[Path]) -> st
         raise ValueError("o comando não é um executável")
     if _nunca_fora_da_caixa(real.name):
         raise ValueError("o link aponta para shell, interpretador ou lançador genérico")
+    if not _de_um_lancador_conhecido(nome, real, absolutas):
+        raise ValueError("o comando não é de um lançador nem de um emulador instalado")
     for pasta in pastas:
         raiz = Path(os.path.realpath(pasta))
         if real.is_relative_to(raiz) or Path(achado).is_relative_to(raiz):

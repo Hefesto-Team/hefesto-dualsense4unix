@@ -68,9 +68,19 @@ def _executavel(caminho: Path) -> Path:
     return caminho
 
 
+def _atalho(pasta: Path, nome: str, exec_: str, categorias: str = "Game;") -> None:
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / f"{nome}.desktop").write_text(
+        f"[Desktop Entry]\nType=Application\nName={nome}\nExec={exec_}\n"
+        f"Categories={categorias}\n")
+
+
 @pytest.fixture
 def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     programas, dados, bin_ = tmp_path / "programas", tmp_path / "dados", tmp_path / "bin"
+    monkeypatch.setenv("HOME", str(tmp_path / "casa"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "casa" / "share"))
+    monkeypatch.setenv("XDG_DATA_DIRS", str(tmp_path / "sistema"))
     monkeypatch.setattr(xdg_paths, "mods_codigo_dir", lambda: programas)
     monkeypatch.setattr(xdg_paths, "mods_dados_dir", lambda: dados)
     lancador = _executavel(bin_ / "hefesto-hookshot")
@@ -82,9 +92,11 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     (bin_ / "atalho-dos-dados").symlink_to(dados / "hook" / "joguinho")
     (bin_ / "sem-execucao").write_text("#!/bin/sh\n")
     _executavel(bin_ / "luanti")
+    _atalho(tmp_path / "casa" / "share" / "applications", "hookshot", str(lancador))
+    _atalho(tmp_path / "sistema" / "applications", "luanti", "luanti %U", "Emulator;")
     caminho = [str(bin_), str(dados / "hook"), "/usr/bin", "/bin"]
     monkeypatch.setenv("PATH", os.pathsep.join(caminho))
-    return SimpleNamespace(lancador=lancador, bin=bin_)
+    return SimpleNamespace(lancador=lancador, bin=bin_, sistema=tmp_path / "sistema")
 
 
 class _Abridor:
@@ -178,6 +190,50 @@ def test_o_comando_e_conferido_na_hora_de_abrir_e_nao_so_na_lista(lar: SimpleNam
     trocado, abertos = asyncio.run(corrida())
     assert trocado["error"] == {"code": CODE_NAO_ESCREVEU, "message": "o jogo não abriu"}
     assert abertos == []
+
+
+@pytest.mark.parametrize("nome", ["wget", "curl", "tar", "cp", "mv", "rm", "tee", "crontab",
+                                  "gsettings", "systemctl"])
+def test_o_programa_que_nao_e_lancador_nao_sai_da_caixa(lar: SimpleNamespace, nome: str) -> None:
+    """MORDIDA: a lista de recusa sozinha deixa o ``wget`` passar."""
+    _executavel(lar.bin / nome)
+    with pytest.raises(ValueError, match="lançador"):
+        porta_mod.comando_fora_da_caixa(nome, os.environ["PATH"],
+                                        porta_mod.pastas_que_a_caixa_escreve())
+
+
+@pytest.mark.parametrize(("categorias", "exec_", "abre"), [
+    ("Game;", "lutris %U", True),
+    ("Utility;", "lutris %U", False),
+    ("Game;", "outro-lutris", False),
+])
+def test_o_atalho_de_jogo_abre_o_proprio_arquivo(
+        lar: SimpleNamespace, categorias: str, exec_: str, abre: bool) -> None:
+    lutris = _executavel(lar.bin / "lutris")
+    _executavel(lar.bin / "outro-lutris")
+    _atalho(lar.sistema / "applications", "net.lutris.Lutris", exec_, categorias)
+    if abre:
+        assert porta_mod.comando_fora_da_caixa(
+            "lutris", os.environ["PATH"], porta_mod.pastas_que_a_caixa_escreve()) == str(lutris)
+        return
+    with pytest.raises(ValueError, match="lançador"):
+        porta_mod.comando_fora_da_caixa("lutris", os.environ["PATH"],
+                                        porta_mod.pastas_que_a_caixa_escreve())
+
+
+def test_o_jogo_abre_na_pasta_de_trabalho_vazia_e_nunca_na_casa(
+        lar: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.integrations import fora_do_servico
+
+    pedidos: list[dict[str, Any]] = []
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
+    monkeypatch.setattr(fora_do_servico, "_a_suite_esta_rodando", lambda: False)
+    monkeypatch.setattr(fora_do_servico, "abrir", lambda argv, **k: (
+        pedidos.append(k), SimpleNamespace(caminho="unidade"))[1])
+    assert porta_mod.abrir_pelo_lancador("hook", [str(lar.lancador), "ocarina_1.0"]) == "unidade"
+    pasta = pedidos[0]["pasta_de_trabalho"]
+    assert pasta == xdg_paths.runtime_dir() / "abrir-do-lancador"
+    assert pasta.is_dir() and not any(pasta.iterdir()) and pasta.stat().st_mode & 0o777 == 0o700
 
 
 def _forca(uniq: str) -> int:

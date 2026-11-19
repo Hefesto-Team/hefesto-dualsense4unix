@@ -80,6 +80,13 @@ def lancador(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     comando.parent.mkdir()
     comando.write_text("#!/bin/sh\nexit 0\n")
     comando.chmod(0o755)
+    atalhos = tmp_path / "share" / "applications"
+    atalhos.mkdir(parents=True)
+    (atalhos / "hookshot.desktop").write_text(
+        f"[Desktop Entry]\nType=Application\nName=Hookshot\nExec={comando}\nCategories=Game;\n")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "share"))
+    monkeypatch.setenv("XDG_DATA_DIRS", str(tmp_path / "sistema"))
     monkeypatch.setenv("PATH", f"{comando.parent}{os.pathsep}/usr/bin")
     return os.path.realpath(comando)
 

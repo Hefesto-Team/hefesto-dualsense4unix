@@ -396,8 +396,12 @@ pelo `hefesto-launch` (o mesmo ambiente do jogo da Steam, quando ele está insta
 jogo, como o de todo jogo da extensão. Sem a permissão volta `-32010`; a chave de outra extensão volta `-32010`;
 a chave que a extensão não entregou volta `-32003`; o jogo que não abre volta `-32013` («o jogo não abriu»; o
 motivo fica no diário do serviço). O primeiro termo do `abrir` é um dos `lancador.comandos` do manifesto, e os
-outros são o id do jogo: letras, dígitos, espaço e `_ . / + , ( ) -`, sem começar por `-`; a opção, o endereço
-(`esquema:`) e o `=` voltam `-32010`. Um Hefesto
+outros são o id do jogo: letras, dígitos e `_ . + , ( ) -`, sem começar por `-`; a opção, o endereço
+(`esquema:`) e o `=` voltam `-32010`. Fora da caixa só abre lançador conhecido: o comando de um lançador de
+fábrica, ou o mesmo arquivo (pelo `realpath`) do `Exec` de um atalho `.desktop` das pastas de aplicativos do XDG
+(`$XDG_DATA_HOME` e `$XDG_DATA_DIRS`) com `Categories` `Game` ou `Emulator`; outro programa volta `-32013`, e a
+recusa do shell, do interpretador e do lançador genérico segue como segunda trava. O jogo nasce numa pasta de
+trabalho vazia da pasta de execução do Hefesto, nunca na `HOME`. Um Hefesto
 mais velho responde `-32601` ao método e recusa o manifesto que pede a permissão nova, com a frase
 «permissão desconhecida»; a extensão mostra a frase.
 
