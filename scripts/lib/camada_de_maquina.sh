@@ -428,7 +428,7 @@ install_bt_resilience_host() {
 
 _dizer_o_sudo_sem_senha_pulado() {
     local chave=--sem-sudo-sem-senha
-    [[ "${SKIP_UDEV}" -eq 1 ]] && chave=--no-udev
+    [[ "${SKIP_UDEV:-0}" -eq 1 ]] && chave=--no-udev
     printf '      pulado (%s): %s, sem regra em /etc/sudoers.d\n' "${chave}" "$1"
 }
 
@@ -475,7 +475,7 @@ install_bt_ponte_privilegiada_host() {
     local _ponte_alvo=/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh
     local _ponte_regra=/etc/sudoers.d/49-hefesto-bt-ponte
     local _ponte_usuaria _ponte_tmp
-    if [[ "${SKIP_UDEV}" -eq 1 || "${SEM_SUDO_SEM_SENHA}" -eq 1 ]]; then
+    if [[ "${SKIP_UDEV:-0}" -eq 1 || "${SEM_SUDO_SEM_SENHA:-0}" -eq 1 ]]; then
         _dizer_o_sudo_sem_senha_pulado "a ponte privilegiada do Bluetooth"
         return 0
     fi
@@ -541,7 +541,7 @@ install_placa_acordada_host() {
     local _placa_alvo=/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh
     local _placa_regra=/etc/sudoers.d/49-hefesto-placa
     local _placa_usuaria _placa_tmp
-    if [[ "${SKIP_UDEV}" -eq 1 || "${SEM_SUDO_SEM_SENHA}" -eq 1 ]]; then
+    if [[ "${SKIP_UDEV:-0}" -eq 1 || "${SEM_SUDO_SEM_SENHA:-0}" -eq 1 ]]; then
         _dizer_o_sudo_sem_senha_pulado "a placa acordada"
         return 0
     fi
@@ -626,7 +626,7 @@ install_atualizador_raiz_host() {
     local _at_regra=/etc/sudoers.d/49-hefesto-atualizador
     local _at_sufixos=/usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa
     local _at_usuaria _at_tmp
-    if [[ "${SKIP_UDEV}" -eq 1 || "${SEM_SUDO_SEM_SENHA}" -eq 1 ]]; then
+    if [[ "${SKIP_UDEV:-0}" -eq 1 || "${SEM_SUDO_SEM_SENHA:-0}" -eq 1 ]]; then
         _dizer_o_sudo_sem_senha_pulado "o atualizador sem senha"
         return 0
     fi

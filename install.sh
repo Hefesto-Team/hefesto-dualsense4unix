@@ -373,6 +373,10 @@ ok()    { printf '      ok\n'; }
 warn()  { printf '      aviso: %s\n' "$*"; }
 die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
 
+if [[ "$(id -u)" -eq 0 && "${DRY_RUN}" -eq 0 && "${HEFESTO_INSTALL_EM_CONTEINER:-0}" != 1 ]]; then
+    die "não rode com sudo na frente: o HOME passaria a ser o do root, e nada chegaria à sessão de quem usa o computador. Rode ./install.sh sem sudo; ele pede a senha de administrador uma vez. Nada foi instalado."
+fi
+
 _sem_systemd_logind() {
     local raiz="${HEFESTO_RAIZ_DO_SISTEMA:-}"
     [[ ! -d "${raiz}/run/systemd/system" && ! -e "${raiz}/.dockerenv" && ! -e "${raiz}/run/.containerenv" ]]

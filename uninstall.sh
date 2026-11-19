@@ -104,6 +104,11 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
+if [[ "$(id -u)" -eq 0 && "${DRY_RUN}" -eq 0 && "${HEFESTO_INSTALL_EM_CONTEINER:-0}" != 1 ]]; then
+    printf '[uninstall] não rode com sudo na frente: o HOME passaria a ser o do root, e o que o install deixou na sessão de quem usa o computador ficaria. Rode ./uninstall.sh sem sudo; ele pede a senha de administrador uma vez. Nada foi removido.\n' >&2
+    exit 1
+fi
+
 # shellcheck source=scripts/lib/som_da_sessao.sh
 source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
 
