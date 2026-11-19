@@ -2477,13 +2477,17 @@ def soltar_o_que_o_controle_segurava(daemon: Any, uniq: str | None = None) -> No
     """Quem perdeu o controle solta tudo o que ele segurava. Idempotente; nunca levanta.
 
     O botão alternado, a repetição e a trava (de ``uniq``, ou de todos), toda tecla e todo
-    clique do mouse e do teclado virtuais e o pad do P1 em repouso: nada fica apertado no
-    jogo nem no computador depois da queda de leitura.
+    clique do mouse e do teclado virtuais, os do desktop e os da tabela no jogo, e o pad do
+    P1 em repouso: nada fica apertado no jogo nem no computador depois da queda de leitura.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_os_virtuais_do_desktop
+    from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+        despachar_no_jogo,
+        soltar_os_virtuais_do_desktop,
+    )
 
     soltar_a_ativacao(daemon, uniq)
     soltar_os_virtuais_do_desktop(daemon)
+    despachar_no_jogo(daemon, None, frozenset(), no_jogo=False)
     device = getattr(daemon, "_gamepad_device", None)
     if device is None:
         return

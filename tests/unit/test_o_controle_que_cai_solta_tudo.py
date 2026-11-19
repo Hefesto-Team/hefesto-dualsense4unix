@@ -1,7 +1,8 @@
 """Quem perde o controle solta tudo o que ele segurava (AS-PROMESSAS-DE-16-10-SEM-CHAMADOR-01).
 
-O botão alternado, a repetição e a trava (`soltar_a_ativacao`), o clique travado dos dois
-mouses (`mouse.soltar_o_cursor`) e o pad do P1 em repouso saem juntos pelo
+O botão alternado, a repetição e a trava (`soltar_a_ativacao`), toda tecla e todo clique do
+mouse e do teclado do desktop (`mouse.soltar_os_virtuais_do_desktop`) e da tabela no jogo, e o
+pad do P1 em repouso saem juntos pelo
 `gamepad.soltar_o_que_o_controle_segurava`, nas duas bordas do laço: o controle que some
 (`not is_connected`) e a leitura que levanta. A saída do jogo (`end_game_output_session`), a
 pausa, o Modo Nativo e a emulação suspensa soltam o clique travado. O `esquecer()` das duas
@@ -24,7 +25,9 @@ A MORDIDA, e cada uma foi rodada na entrega:
 - tire o `soltar_os_virtuais_do_desktop` do ajudante, ou a borda `alimentar_o_desktop` do
   `_poll_loop`, e :func:`test_quem_larga_o_desktop_solta_toda_tecla_e_clique` reprova;
 - volte o `prime` a zerar a conta calado e
-  :func:`test_o_prime_solta_a_tecla_que_esquece` reprova.
+  :func:`test_o_prime_solta_a_tecla_que_esquece` reprova;
+- tire o `despachar_no_jogo(..., no_jogo=False)` do ajudante e
+  :func:`test_a_queda_com_o_jogo_aberto_solta_a_tabela` reprova.
 """
 from __future__ import annotations
 
@@ -60,9 +63,9 @@ async def _esperar(condicao: Callable[[], bool], o_que: str) -> None:
         await asyncio.sleep(0.01)
 
 
-def _estados(n: int) -> list[ControllerState]:
+def _estados(n: int, transport: Any = "usb") -> list[ControllerState]:
     return [
-        ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb")
+        ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport=transport)
         for _ in range(n)
     ]
 
@@ -317,14 +320,15 @@ def _sair_do_desktop(saida: str, daemon: Daemon, fc: FakeController) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("saida", ["queda", "pausa", "nativo", "suspensa", "pad"])
 async def test_quem_larga_o_desktop_solta_toda_tecla_e_clique(
-    monkeypatch: pytest.MonkeyPatch, saida: str
+    monkeypatch: pytest.MonkeyPatch, saida: str, transporte: Any
 ) -> None:
     """D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC: com o botão ainda no fundo."""
     monkeypatch.setattr(lifecycle, "INPUT_GRACE_SEC", 0.0)
     monkeypatch.setattr(session, "load_paused_state", lambda: False)
-    fc = FakeController(transport="usb", states=_estados(60))
+    fc = FakeController(transport=transporte, states=_estados(60, transporte))
     daemon = _daemon(fc)
     teclado = UinputKeyboardDevice(bindings=dict(LIGACOES))
     do_mouse = UinputMouseDevice()
@@ -354,3 +358,33 @@ def test_o_prime_solta_a_tecla_que_esquece() -> None:
     assert no.apertados() == ["KEY_W"], "a do botão que segue no fundo fica"
     teclado.prime(frozenset())
     assert no.apertados() == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_a_queda_com_o_jogo_aberto_solta_a_tabela(
+    monkeypatch: pytest.MonkeyPatch, transporte: Any
+) -> None:
+    """D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC: o teclado e o mouse da tabela no jogo."""
+    monkeypatch.setattr(lifecycle, "INPUT_GRACE_SEC", 0.0)
+    monkeypatch.setattr(session, "load_paused_state", lambda: False)
+    fc = FakeController(transport=transporte, states=_estados(60, transporte))
+    daemon = _daemon(fc)
+    tabela = mouse.TabelaNoJogo(None, {b: list(t) for b, t in LIGACOES.items()}, ligada=True)
+    tabela._teclado = UinputKeyboardDevice(bindings=dict(LIGACOES))
+    tabela._mouse = UinputMouseDevice()
+    nos = (_com_no_de_mentira(tabela._teclado), _com_no_de_mentira(tabela._mouse))
+    daemon._tabela_no_jogo = tabela
+    daemon._gamepad_device = MagicMock()
+    monkeypatch.setattr(daemon, "_evdev_buttons_once", lambda: SEGURADOS)
+    tarefa = asyncio.create_task(daemon.run())
+    try:
+        await _esperar(lambda: all(no.apertados() for no in nos), "a tabela segurar")
+        fc.desplugar()
+        await _esperar(
+            lambda: not any(no.apertados() for no in nos),
+            f"queda no jogo: soltar {[no.apertados() for no in nos]}",
+        )
+    finally:
+        daemon.stop()
+        await tarefa

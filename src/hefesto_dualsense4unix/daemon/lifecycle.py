@@ -3322,7 +3322,7 @@ class Daemon:
         dispatch_keyboard(self, buttons_pressed)
 
     def _prime_keyboard_emulation(self, buttons_pressed: frozenset[str]) -> None:
-        """Thin wrapper — semeia o edge-tracker do teclado sem emitir."""
+        """Thin wrapper — semeia o edge-tracker do teclado sem apertar."""
         from hefesto_dualsense4unix.daemon.subsystems.keyboard import prime_keyboard
 
         prime_keyboard(self, buttons_pressed)

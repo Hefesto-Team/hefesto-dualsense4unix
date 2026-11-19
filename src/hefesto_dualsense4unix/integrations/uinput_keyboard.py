@@ -156,7 +156,7 @@ class UinputKeyboardDevice:
         self._pressed_buttons = now_mapped
 
     def prime(self, buttons_pressed: frozenset[str]) -> None:
-        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada.
+        """Semeia o edge-tracker com `buttons_pressed` SEM apertar nada.
 
         As teclas dos botões semeados entram na conta de quem segura: o soltar
         deles emite o key up, e o de outro botão não derruba a tecla que eles seguram.
