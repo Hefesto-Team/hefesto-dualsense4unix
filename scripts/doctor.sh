@@ -120,6 +120,19 @@ check_daemon_installed() {
     fi
 }
 
+check_venv_da_arvore() {
+    esta_instalacao_e_um_checkout || return 0
+    [[ -d "${ROOT_DIR}/.venv" ]] || return 0
+    # shellcheck source=scripts/lib/saude_da_venv.sh
+    source "${ROOT_DIR}/scripts/lib/saude_da_venv.sh"
+    local motivo
+    if motivo="$(venv_doente "${ROOT_DIR}/.venv" "$(python_do_sistema)")"; then
+        fail "${motivo} — o Hefesto desta árvore não abre; $(conselho_de_instalacao), que a refaz"
+    else
+        pass "a .venv da árvore roda no Python do sistema"
+    fi
+}
+
 _python_do_produto() {
     local py
     for py in "${ROOT_DIR}/.venv/bin/python" \
@@ -6427,6 +6440,7 @@ main() {
     [[ "${DO_FIX}" -eq 1 ]] && apply_fixes
     hdr "daemon"
     check_daemon_installed
+    check_venv_da_arvore
     check_service
     check_socket
     check_libhidapi

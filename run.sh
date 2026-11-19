@@ -8,6 +8,12 @@ if [[ ! -d .venv ]]; then
     echo "erro: .venv/ não encontrado. Rode ./scripts/dev_bootstrap.sh primeiro."
     exit 1
 fi
+# shellcheck source=scripts/lib/saude_da_venv.sh
+. scripts/lib/saude_da_venv.sh
+if motivo_da_venv="$(venv_doente .venv "$(python_do_sistema)")"; then
+    echo "erro: ${motivo_da_venv}. Rode ./install.sh para refazê-la."
+    exit 1
+fi
 # shellcheck disable=SC1091
 . .venv/bin/activate
 

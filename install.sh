@@ -1046,6 +1046,8 @@ acquire_sudo
 
 # shellcheck source=scripts/lib/camada_de_maquina.sh
 source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
+# shellcheck source=scripts/lib/saude_da_venv.sh
+source "${ROOT_DIR}/scripts/lib/saude_da_venv.sh"
 # shellcheck source=scripts/lib/som_da_sessao.sh
 source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
 
@@ -1593,41 +1595,14 @@ fi
 
 step "2/11" "preparando ambiente Python"
 
-_VENV_PYTHON="python3"
-if [[ -x /usr/bin/python3 ]]; then
-    _VENV_PYTHON="/usr/bin/python3"
-fi
+_VENV_PYTHON="$(python_do_sistema)"
 
-if [[ -d "${VENV_DIR}" ]]; then
-    _venv_home=$(grep "^home = " "${VENV_DIR}/pyvenv.cfg" 2>/dev/null | awk '{print $3}')
-    if [[ -n "${_venv_home}" ]] && [[ "${_venv_home}" != "/usr/bin" ]] && [[ -x /usr/bin/python3 ]]; then
-        printf '      venv criado com Python não-sistema (%s) — recriando...\n' "${_venv_home}"
-        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria "APAGAR e recriar ${VENV_DIR} (o venv de hoje foi criado com um Python que não é o do sistema)"
-        else
+if _motivo_da_venv="$(venv_doente "${VENV_DIR}" "${_VENV_PYTHON}")"; then
+    printf '      %s — recriando...\n' "${_motivo_da_venv}"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "APAGAR e recriar ${VENV_DIR} (${_motivo_da_venv})"
+    else
         rm -rf "${VENV_DIR}"
-        fi
-    fi
-fi
-
-if [[ -d "${VENV_DIR}" ]]; then
-    _sys_ver=$("${_VENV_PYTHON}" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
-    _venv_ver=$("${VENV_DIR}/bin/python" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
-    if [[ -z "${_venv_ver}" ]]; then
-        printf '      venv com Python inexecutável (provável dist upgrade) — recriando...\n'
-        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria "APAGAR e recriar ${VENV_DIR} (o Python dele não executa — provável dist upgrade)"
-        else
-        rm -rf "${VENV_DIR}"
-        fi
-    elif [[ -n "${_sys_ver}" ]] && [[ "${_venv_ver}" != "${_sys_ver}" ]]; then
-        printf '      venv em Python %s, sistema agora em %s — recriando...\n' \
-            "${_venv_ver}" "${_sys_ver}"
-        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria "APAGAR e recriar ${VENV_DIR} (Python ${_venv_ver} no venv, ${_sys_ver} no sistema)"
-        else
-        rm -rf "${VENV_DIR}"
-        fi
     fi
 fi
 
