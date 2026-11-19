@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from hefesto_dualsense4unix.app.actions import recarga_do_install as recarga
 RAIZ = Path(__file__).resolve().parents[2]
 
 ESPERA = "import time\nfor _ in range(600): time.sleep(0.1)"
+TOMA_A_VEZ = ("from hefesto_dualsense4unix.app.actions import atos_da_bandeja as a\n"
+              "assert a.tomar_a_vez()\n" + ESPERA)
 
 Filhos = list[subprocess.Popen[bytes]]
 
@@ -140,14 +143,27 @@ def test_o_pid_que_nao_e_do_hefesto_nao_se_mata(lar: Path, filhos: Filhos) -> No
     assert feito.telas == []
 
 
-def test_a_bandeja_de_pe_fecha_e_sobe_de_novo(lar: Path, filhos: Filhos) -> None:
-    velha = _subir(filhos, "hefesto", "tray")
-    bandeja.caminho_do_pid().write_text(f"{velha.pid}\n", encoding="ascii")
+def test_todas_as_bandejas_da_sessao_fecham_e_sobe_uma(
+        lar: Path, filhos: Filhos, tmp_path: Path) -> None:
+    da_vez = subprocess.Popen([sys.executable, "-c", TOMA_A_VEZ, "-m",
+                               "hefesto_dualsense4unix.cli.app", "tray"])
+    filhos.append(da_vez)
+    fim = time.monotonic() + 30
+    while bandeja.bandeja_viva() != da_vez.pid and time.monotonic() < fim:
+        time.sleep(0.1)
+    assert bandeja.bandeja_viva() == da_vez.pid
+    velhas = [_subir(filhos, "/opt/x/bin/hefesto-dualsense4unix", "tray"),
+              _subir(filhos, "/opt/x/run.sh", "--tray")]
+    outra = subprocess.Popen([sys.executable, "-c", ESPERA, "-m", "hefesto_dualsense4unix.cli.app",
+                              "tray"], env={**os.environ, "XDG_RUNTIME_DIR": str(tmp_path)})
+    filhos.append(outra)
+    time.sleep(0.5)
     feito = Registro()
 
     frases = recarga.recarregar(abrir=feito.abrir, subir_a_bandeja=feito.subir)
 
-    assert _morreu(velha)
+    assert all(_morreu(f) for f in (da_vez, *velhas))
+    assert outra.poll() is None, "a bandeja de outra sessão se fechou"
     assert feito.subidas == 1
     assert "ícone na bandeja: fechado e reaberto" in frases
 

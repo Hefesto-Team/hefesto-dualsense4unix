@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import signal
 import subprocess
 from typing import Any
 
@@ -15,11 +16,11 @@ from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
     abrir_o_painel as _abrir_o_painel,
 )
 from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
-    anotar_a_bandeja_viva,
-    esquecer_a_bandeja,
+    mexer_no_servico as _servico,
 )
 from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
-    mexer_no_servico as _servico,
+    soltar_a_vez,
+    tomar_a_vez,
 )
 
 console = Console()
@@ -106,8 +107,11 @@ def tray_cmd() -> None:
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk
+    from gi.repository import GLib, Gtk
 
+    if not tomar_a_vez():
+        console.print("já há um ícone na bandeja nesta sessão")
+        raise typer.Exit(code=0)
     bandeja = AppTray(
         on_show_window=_abrir_o_painel,
         on_quit=Gtk.main_quit,
@@ -119,20 +123,21 @@ def tray_cmd() -> None:
         on_servico=_servico,
     )
     if not bandeja.start():
+        soltar_a_vez()
         console.print(
             "[red]não consegui criar o ícone de bandeja[/] — "
             "não há quem hospede o `org.kde.StatusNotifierWatcher` nesta sessão")
         raise typer.Exit(code=3)
 
     console.print("[green]tray ativo[/] — clique no ícone para abrir o menu.")
-    anotar_a_bandeja_viva()
+    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, lambda: Gtk.main_quit() or False)
     try:
         Gtk.main()
     except KeyboardInterrupt:
         pass
     finally:
-        esquecer_a_bandeja()
         bandeja.stop()
+        soltar_a_vez()
 
 
 __all__ = ["tray_cmd"]

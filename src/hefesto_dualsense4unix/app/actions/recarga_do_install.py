@@ -117,12 +117,12 @@ def recarregar(
             continue
         frases.append("janela: fechada e reaberta" if abrir(tela, aba)
                       else "janela: fechada, mas não achei o lançador para reabrir")
-    viva = bandeja.bandeja_viva()
-    if viva is not None and not terminar(viva, PRAZO_DA_BANDEJA_S):
+    vivas = bandeja.bandejas_da_sessao()
+    if vivas and bandeja.fechar_as_bandejas(vivas, PRAZO_DA_BANDEJA_S):
         frases.append(f"ícone na bandeja: não fechou em {PRAZO_DA_BANDEJA_S:.0f} s")
         return frases
     subiu = subir_a_bandeja()
-    if viva is not None:
+    if vivas:
         frases.append("ícone na bandeja: fechado e reaberto" if subiu
                       else "ícone na bandeja: fechado, e não subiu de novo")
     else:

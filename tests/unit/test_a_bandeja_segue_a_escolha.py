@@ -8,9 +8,10 @@ desativar o uso do app na bandeja.
 O que se mede, num lar de mentira (`XDG_CONFIG_HOME` e `XDG_RUNTIME_DIR` em `tmp_path`):
 
 1. a pílula «Ícone na bandeja» grava `X-GNOME-Autostart-enabled` e faz valer agora: ligar sobe a
-   bandeja (o `Popen` é um dublê que sobe um `sleep` com «tray» na linha), desligar a encerra
-   pelo PID do serviço;
-2. `garantir_a_bandeja` não sobe uma segunda com a viva de pé, e sobe com o PID morto;
+   bandeja (o `Popen` é um dublê que sobe o `tray_cmd` de verdade com um ícone de mentira),
+   desligar encerra todas as da sessão;
+2. `garantir_a_bandeja` não sobe uma segunda com a viva de pé, e sobe com a viva morta; a vez da
+   sessão deixa uma de pé mesmo com duas subidas juntas, e o SIGTERM sai pelo `finally`;
 3. o «Retomar» e o «Ativar» da Sistema e o «start» da bandeja chamam `garantir_a_bandeja`;
 4. o bloco do autostart do `install.sh`, rodado de verdade, preserva o `false` e o ensaio diz.
 5. o bloco seguinte do `install.sh`, depois do restart do serviço, devolve a bandeja quando a
@@ -43,6 +44,32 @@ from hefesto_dualsense4unix.app.actions import atos_da_bandeja as ab
 BASH = shutil.which("bash") or "/bin/bash"
 _POPEN = subprocess.Popen
 
+FILHO = """
+import sys, typer
+from hefesto_dualsense4unix.app import tray
+class _Icone:
+    def __init__(self, **_k): pass
+    def start(self): return True
+    def stop(self): pass
+tray.AppTray = _Icone
+tray.probe_gi_availability = lambda: (True, "")
+from hefesto_dualsense4unix.cli.cmd_tray import tray_cmd
+try:
+    tray_cmd()
+except typer.Exit as fim:
+    sys.exit(fim.exit_code)
+"""
+LINHA = [sys.executable, "-c", FILHO, "-m", "hefesto_dualsense4unix.cli.app", "tray"]
+
+
+def _de_pe(pid: int) -> bool:
+    fim = time.monotonic() + 30
+    while time.monotonic() < fim:
+        if ab.bandeja_viva() == pid:
+            return True
+        time.sleep(0.1)
+    return False
+
 
 @pytest.fixture
 def lar(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> pathlib.Path:
@@ -53,13 +80,13 @@ def lar(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> pathlib.Path
 
 @pytest.fixture
 def subidas(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """O `Popen` da bandeja vira um `sleep` com «tray» na linha, morto no fim pelo PID dele."""
+    """O `Popen` da bandeja vira o `tray_cmd` com um ícone de mentira, morto no fim pelo PID."""
     feitas: list[tuple[list[str], dict[str, Any]]] = []
     filhos: list[subprocess.Popen[bytes]] = []
 
     def _popen(argv: list[str], **k: Any) -> subprocess.Popen[bytes]:
         feitas.append((list(argv), k))
-        filho = _POPEN(["sh", "-c", "sleep 30; :", "tray"])
+        filho = _POPEN(LINHA, env=k.get("env"))
         filhos.append(filho)
         return filho
 
@@ -94,7 +121,7 @@ def test_a_pilula_liga_e_desliga_a_bandeja(lar: pathlib.Path, subidas: Any) -> N
     assert "@RAIZ@" not in _autostart(), "o autostart nasceu sem o caminho da instalação"
     assert ab.bandeja_ligada()
     assert len(feitas) == 1 and feitas[0][1].get("start_new_session") is True, feitas
-    assert ab.bandeja_viva() == filhos[0].pid
+    assert _de_pe(filhos[0].pid)
     clicar()
     assert "X-GNOME-Autostart-enabled=false" in _autostart().splitlines()
     assert not ab.bandeja_ligada()
@@ -106,7 +133,7 @@ def test_garantir_nao_sobe_a_segunda_e_sobe_com_o_pid_morto(
         lar: pathlib.Path, subidas: Any) -> None:
     feitas, filhos = subidas
     ab.escolher_a_bandeja(True)
-    assert len(feitas) == 1
+    assert len(feitas) == 1 and _de_pe(filhos[0].pid)
     for _ in range(3):
         assert ab.garantir_a_bandeja() is False
     assert len(feitas) == 1, "subiu uma segunda bandeja com a primeira de pé"
@@ -115,15 +142,52 @@ def test_garantir_nao_sobe_a_segunda_e_sobe_com_o_pid_morto(
     assert ab.bandeja_viva() is None
     assert ab.garantir_a_bandeja() is True
     assert len(feitas) == 2
-    ab.caminho_do_pid().write_text(f"{os.getpid()}\n", encoding="ascii")
-    assert ab.bandeja_viva() is None
     outro = _POPEN(["sh", "-c", "sleep 30; :", "tests/unit/test_cmd_tray.py"])
     try:
-        ab.caminho_do_pid().write_text(f"{outro.pid}\n", encoding="ascii")
-        assert ab.bandeja_viva() is None, "um argumento com «tray» dentro virou bandeja"
+        assert outro.pid not in ab.bandejas_da_sessao(), "um argumento com «tray» virou bandeja"
     finally:
         outro.kill()
         outro.wait(timeout=5)
+
+
+def test_a_segunda_bandeja_sai_sem_icone_e_a_vez_passa_com_a_primeira_morta(
+        lar: pathlib.Path, subidas: Any) -> None:
+    _feitas, filhos = subidas
+    primeira = _POPEN(LINHA)
+    filhos.append(primeira)
+    assert _de_pe(primeira.pid)
+    segunda = _POPEN(LINHA)
+    filhos.append(segunda)
+    assert segunda.wait(timeout=30) == 0
+    assert ab.bandeja_viva() == primeira.pid
+    primeira.kill()
+    primeira.wait(timeout=5)
+    terceira = _POPEN(LINHA)
+    filhos.append(terceira)
+    assert _de_pe(terceira.pid)
+
+
+def test_duas_subidas_juntas_deixam_uma_bandeja_de_pe(lar: pathlib.Path, subidas: Any) -> None:
+    feitas, filhos = subidas
+    ab.escolher_a_bandeja(True)
+    assert ab.garantir_a_bandeja() is True, "a vez ainda não foi tomada: a segunda sobe"
+    assert len(feitas) == 2
+    fim = time.monotonic() + 30
+    while time.monotonic() < fim and all(f.poll() is None for f in filhos):
+        time.sleep(0.1)
+    saiu = [f for f in filhos if f.poll() is not None]
+    assert len(saiu) == 1 and saiu[0].returncode == 0, [f.poll() for f in filhos]
+    assert ab.bandejas_da_sessao() == [f.pid for f in filhos if f.poll() is None]
+
+
+def test_o_sigterm_sai_pelo_finally_e_solta_a_vez(lar: pathlib.Path, subidas: Any) -> None:
+    _feitas, filhos = subidas
+    bandeja = _POPEN(LINHA)
+    filhos.append(bandeja)
+    assert _de_pe(bandeja.pid)
+    bandeja.terminate()
+    assert bandeja.wait(timeout=10) == 0
+    assert ab.bandeja_viva() is None
 
 
 def test_com_a_escolha_desligada_nada_sobe(lar: pathlib.Path, subidas: Any) -> None:

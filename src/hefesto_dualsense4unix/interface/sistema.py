@@ -85,7 +85,8 @@ GESTOS: dict[str, str] = {
     "tamanho-da-interface": "`a09_sistema.tamanho_da_interface_gesto` — grava a escolha em "
     "`interface_escala`; quem aplica o zoom nas abas é a janela.",
     "bandeja": "`a09_sistema.bandeja` — `atos_da_bandeja.escolher_a_bandeja`: grava a escolha "
-    "no autostart e sobe a bandeja (`garantir_a_bandeja`) ou a encerra pelo PID da bandeja.",
+    "no autostart e sobe a bandeja (`garantir_a_bandeja`) ou encerra todas as da sessão "
+    "(`fechar_as_bandejas`).",
 }
 
 SEM_FONTE: dict[str, str] = {
