@@ -325,8 +325,12 @@ def test_o_lancador_o_compositor_e_o_remapeador_nao_sao_jogo(
     assert vereditos == {**dict.fromkeys(nao_jogos, False), **dict.fromkeys(jogos, True)}
 
 
-def test_o_doctor_diz_por_controle_quem_segura_o_pad_e_por_que(raizes: Path) -> None:
-    from hefesto_dualsense4unix.cli.cmd_doctor import _linhas_de_quem_segura_o_pad
+def test_o_doctor_diz_por_controle_quem_segura_o_pad_e_por_que(
+    raizes: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    from hefesto_dualsense4unix.cli import cmd_doctor
 
     mesa, _pads = _mesa(raizes, 2, "dualsense", "uhid", "cabo")
     heroic = mesa.processo("heroic", NAO_JOGOS["heroic"], mesa.nos[1][1])
@@ -335,7 +339,21 @@ def test_o_doctor_diz_por_controle_quem_segura_o_pad_e_por_que(raizes: Path) -> 
         {"player": p, "evdev": str(mesa.nos[p][0]), "hidraw": str(mesa.nos[p][1])} for p in (1, 2)
     ]
     por_vpad.append({"player": 3, "evdev": None, "hidraw": None})
-    assert _linhas_de_quem_segura_o_pad({"rumble_ff": {"per_vpad": por_vpad}}) == [
+    estado = {"rumble_ff": {"per_vpad": por_vpad}}
+
+    class _Cliente:
+        async def __aenter__(self) -> _Cliente:
+            return self
+
+        async def __aexit__(self, *_a: Any) -> None:
+            return None
+
+        async def call(self, metodo: str, *_a: Any, **_k: Any) -> dict[str, Any]:
+            return estado if metodo == "daemon.state_full" else {}
+
+    monkeypatch.setattr(cmd_doctor.IpcClient, "connect", lambda *_a, **_k: _Cliente())
+    linhas = asyncio.run(cmd_doctor._daemon_checks())
+    assert [x for x in linhas if x[1].startswith("controle ")] == [
         ("[INFO]", f"controle 1: heroic (pid {heroic}) segura o pad; não conta como jogo: "
                    "lançador"),
         ("[INFO]", f"controle 2: forja (pid {forja}) segura o pad; conta como jogo: "
