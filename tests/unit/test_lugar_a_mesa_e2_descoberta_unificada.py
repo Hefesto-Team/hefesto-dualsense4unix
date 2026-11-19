@@ -213,9 +213,7 @@ def test_a_queda_do_device_nao_deixa_gatilho_sintetizado_travado() -> None:
     dualsense = _reader_com(_caps_dualsense())
     dualsense._handle_abs(ecodes.ABS_Z, 200, ecodes)
     dualsense._reset_on_disconnect()
-    assert dualsense.snapshot().l2_raw == 200, (
-        "zerar o gatilho analógico no reset é mudança que ninguém pediu"
-    )
+    assert dualsense.snapshot().l2_raw == 0, "o gatilho analógico também repousa na queda"
 
 
 def _instalar_evdev_fake(

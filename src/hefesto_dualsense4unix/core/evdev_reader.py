@@ -1750,17 +1750,14 @@ class EvdevReader(_EvdevReconnectLoop):
         return "evdev"
 
     def _reset_on_disconnect(self) -> None:
-        """Limpa botões 'travados' quando o device caiu."""
+        """O device caiu: botões soltos, analógicos no centro e gatilhos no zero."""
         with self._lock:
             self._pressed.clear()
             self._dpad_x = 0
             self._dpad_y = 0
-            mudancas: dict[str, Any] = {"buttons_pressed": frozenset()}
-            if self._sintetizar_l2:
-                mudancas["l2_raw"] = 0
-            if self._sintetizar_r2:
-                mudancas["r2_raw"] = 0
-            self._snapshot = self._with(**mudancas)
+            self._snapshot = self._with(
+                buttons_pressed=frozenset(), lx=128, ly=128, rx=128, ry=128, l2_raw=0, r2_raw=0
+            )
             self._eixos = {}
             self._sintetizar_l2 = False
             self._sintetizar_r2 = False

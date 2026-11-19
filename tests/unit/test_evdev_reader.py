@@ -339,6 +339,61 @@ def test_reset_buttons_on_disconnect_limpa_pressed():
     assert reader._pressed == set()
 
 
+def _no_extremo(uniq: str) -> EvdevReader:
+    from types import SimpleNamespace
+
+    from evdev import ecodes
+
+    reader = EvdevReader(device_path=None, target_uniq=uniq)
+    for codigo, valor in ((ecodes.ABS_X, 255), (ecodes.ABS_Y, 0), (ecodes.ABS_RX, 255),
+                          (ecodes.ABS_RY, 0), (ecodes.ABS_Z, 200), (ecodes.ABS_RZ, 255)):
+        reader._handle_event(SimpleNamespace(type=ecodes.EV_ABS, code=codigo, value=valor), ecodes)
+    return reader
+
+
+def _retrato(snap: Any) -> tuple[int, ...]:
+    return (snap.lx, snap.ly, snap.rx, snap.ry, snap.l2_raw, snap.r2_raw)
+
+
+def test_o_leitor_que_cai_leva_os_analogicos_e_os_gatilhos_ao_repouso() -> None:
+    """D-1911-O-LEITOR-QUE-CAI-REPOUSA: centro nos quatro eixos e zero nos dois gatilhos."""
+    reader = _no_extremo("aa:bb:cc:00:00:02")
+    assert _retrato(reader.snapshot()) == (255, 0, 255, 0, 200, 255)
+    reader._reset_on_disconnect()
+    assert _retrato(reader.snapshot()) == (128, 128, 128, 128, 0, 0)
+
+
+def test_o_pad_de_cada_jogador_recebe_o_repouso_do_leitor_que_caiu() -> None:
+    """D-1911-O-LEITOR-QUE-CAI-REPOUSA: do segundo ao quarto jogador, no tique seguinte."""
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
+
+    daemon = SimpleNamespace(
+        store=SimpleNamespace(udp_trigger_thresholds=(0, 0)), controller=SimpleNamespace(),
+        identity_registry=None, config=SimpleNamespace(coop_enabled=True,
+                                                      gamepad_flavor="dualsense"),
+        _gamepad_device=object(), _coop_manager=None)
+    mgr = CoopManager(daemon)
+    pads = {}
+    for jogador in (2, 3, 4):
+        uniq = f"aa:bb:cc:00:00:0{jogador}"
+        pads[uniq] = MagicMock()
+        mgr._players[uniq] = _SecondaryPlayer(
+            identity=uniq, evdev_path=f"/dev/input/event9{jogador}", reader=_no_extremo(uniq),
+            player_index=jogador, vpad=pads[uniq])
+    mgr.forward_all()
+    for pad in pads.values():
+        assert pad.forward_analog.call_args.kwargs == dict(
+            lx=255, ly=0, rx=255, ry=0, l2=200, r2=255)
+    for player in mgr._players.values():
+        player.reader._reset_on_disconnect()
+    mgr.forward_all()
+    for uniq, pad in pads.items():
+        assert pad.forward_analog.call_args.kwargs == dict(
+            lx=128, ly=128, rx=128, ry=128, l2=0, r2=0), uniq
+
+
 def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     """HOTFIX-3: se a leitura levanta OSError, reader tenta reabrir."""
     import time
