@@ -178,6 +178,16 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "perigo é instalar peças e reiniciar o serviço, e quem grava é o processo, não o gesto",
     ("*", "atualizacoes-tentar"):
         "idem: solta de novo, num fio que espera a fila de agora, as peças que falharam",
+    ("*", "atualizacoes-continuar"):
+        "idem: solta de novo a fila parada com as peças que não terminaram",
+    ("*", "atualizacoes-fechar-a-steam"):
+        "grava o pedido no runtime, e quem fecha a Steam é o processo da fila",
+    ("*", "atualizacoes-registro-salvar"):
+        "copia o registro da atualização para a pasta de downloads de quem usa: arquivo novo, "
+        "nada do produto muda",
+    ("*", "atualizacoes-reiniciar-o-computador"):
+        "pede o reinício ao logind (`systemctl reboot`): o perigo é o computador reiniciar, e "
+        "isso não é chamada de função do produto",
     ("*", "voltar-a-anterior"):
         "volta a peça pelo passo `voltar` do registro do atualizador (Proton, MangoHud, umu, "
         "Python, kernel), que a árvore não alcança pelo nome: é campo de um `Peca`",

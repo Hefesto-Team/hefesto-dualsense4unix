@@ -29,6 +29,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
        for gesto in ("atualizacoes-abrir", "atualizacoes-agora-nao", "atualizacoes-anteriores",
                      "atualizacoes-atualizar", "atualizacoes-fechar", "atualizacoes-lista",
                      "atualizacoes-parar", "atualizacoes-registro", "atualizacoes-tentar",
+                     "atualizacoes-continuar", "atualizacoes-fechar-a-steam",
+                     "atualizacoes-registro-copiar", "atualizacoes-registro-salvar",
+                     "atualizacoes-registro-voltar", "atualizacoes-reiniciar-o-computador",
                      "atualizar-sozinho", "peca-da-atualizacao", "pecas-do-grupo",
                      "prazo-da-atualizacao", "voltar-a-anterior")},
     "calibrar-sinal": "O passo do sentido só lê o giro da peça e diz o veredito: não grava "
