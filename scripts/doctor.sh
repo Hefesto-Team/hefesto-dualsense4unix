@@ -4314,16 +4314,32 @@ _medir_o_broker_em_memoria() {
     _veredito_do_broker_em_memoria "${inicio}" "${instalado}" "${recarregar}"
 }
 
+_a_regra_do_no_fechada_sem_broker() {
+    local motivo="$1" conselho="$2" caminho
+    caminho="$(_caminho_da_regra_do_no)"
+    [[ "${caminho##*/}" == "${REGRA_DO_NO}" ]] || return 1
+    _regra_do_no_e_a_aberta "${caminho}" && return 1
+    fail "regra fechada sem broker ativo: a ${caminho} faz o hidraw do DualSense nascer 0600 de root, e ${motivo} — ninguém o abre, e o controle não chega ao Hefesto, no cabo e no rádio; ${conselho}"
+    return 0
+}
+
 check_hidraw_broker() {
-    command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo o broker hide-hidraw"; return; }
+    if ! command -v systemctl >/dev/null 2>&1; then
+        _a_regra_do_no_fechada_sem_broker "não há systemctl para subir o broker" "$(conselho_de_instalacao)" \
+            || info "systemctl ausente — não checo o broker hide-hidraw"
+        return
+    fi
     if ! systemctl cat hefesto-hidraw-broker.socket >/dev/null 2>&1; then
-        info "broker hide-hidraw não instalado ($(conselho_de_instalacao)$(so_no_checkout "— o broker vem por default, sem flag"))"
+        _a_regra_do_no_fechada_sem_broker "o broker não está instalado" "$(conselho_de_instalacao)" \
+            || info "broker hide-hidraw não instalado ($(conselho_de_instalacao)$(so_no_checkout "— o broker vem por default, sem flag"))"
         return
     fi
     local sock_state
     sock_state="$(systemctl is-active hefesto-hidraw-broker.socket 2>/dev/null || true)"
     if [[ "${sock_state}" != "active" ]]; then
-        warn "hefesto-hidraw-broker.socket instalado mas ${sock_state:-inativo} — o físico NÃO é escondido do jogo (P2 duplicado volta); ligue: sudo systemctl enable --now hefesto-hidraw-broker.socket"
+        _a_regra_do_no_fechada_sem_broker "o socket do broker está ${sock_state:-inativo}" \
+                "ligue: sudo systemctl enable --now hefesto-hidraw-broker.socket" \
+            || warn "hefesto-hidraw-broker.socket instalado mas ${sock_state:-inativo} — o físico NÃO é escondido do jogo (P2 duplicado volta); ligue: sudo systemctl enable --now hefesto-hidraw-broker.socket"
         return
     fi
     pass "hefesto-hidraw-broker.socket ativo"

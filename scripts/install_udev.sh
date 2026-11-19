@@ -23,7 +23,10 @@ Opções:
                         quem o abre é o broker, sob pedido — é o que impede a
                         Steam de pegá-lo no instante da conexão pelo rádio. Se
                         usar aqui, use também no ./install.sh: o broker precisa
-                        ser renderizado sabendo disso
+                        ser renderizado sabendo disso. Sem o broker de pé
+                        (o socket ativo no systemd), a regra vai ABERTA
+                        mesmo sem a opção: fechá-la sem quem a abra
+                        travaria o controle
   --help, -h            mostra esta ajuda e sai
 
 Nada é instalado enquanto esta ajuda estiver sendo exibida.
@@ -42,6 +45,11 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+if [[ "$ABRIR_O_NO" -eq 0 ]] && ! systemctl is-active --quiet hefesto-hidraw-broker.socket 2>/dev/null; then
+    ABRIR_O_NO=1
+    echo "o broker ainda não está de pé: a regra do nó do DualSense vai ABERTA; o ./install.sh a fecha quando ele subir"
+fi
 
 for f in \
     "$ASSETS/73-hefesto-ps5-controller.rules" \
@@ -89,13 +97,13 @@ if [[ "$ABRIR_O_NO" -eq 1 ]]; then
     if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
             "$ASSETS/73-hefesto-ps5-controller.rules" "$_regra_aberta"; then
         rm -f "$_regra_aberta"
-        echo "ERRO: --no-fechar-o-no não conseguiu reabrir todas as linhas do asset." >&2
+        echo "ERRO: a regra aberta não conseguiu reabrir todas as linhas do asset." >&2
         echo "nada foi instalado. Confira assets/73-hefesto-ps5-controller.rules." >&2
         exit 1
     fi
     sudo install -Dm644 "$_regra_aberta"                          /etc/udev/rules.d/73-hefesto-ps5-controller.rules
     rm -f "$_regra_aberta"
-    echo "  AVISO: --no-fechar-o-no — o hidraw do DualSense nasce ABERTO; a Steam pode pegá-lo antes do broker"
+    echo "  AVISO: o hidraw do DualSense nasce ABERTO; a Steam pode pegá-lo antes do broker"
 else
     sudo install -Dm644 "$ASSETS/73-hefesto-ps5-controller.rules" /etc/udev/rules.d/73-hefesto-ps5-controller.rules
 fi
@@ -108,7 +116,7 @@ if [[ "$ABRIR_O_NO" -eq 1 ]]; then
     if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
             "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" "$_regra_72_aberta"; then
         rm -f "$_regra_72_aberta"
-        echo "ERRO: --no-fechar-o-no não conseguiu reabrir as entradas da 72." >&2
+        echo "ERRO: a regra aberta não conseguiu reabrir as entradas da 72." >&2
         exit 1
     fi
     sudo install -Dm644 "$_regra_72_aberta" /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules

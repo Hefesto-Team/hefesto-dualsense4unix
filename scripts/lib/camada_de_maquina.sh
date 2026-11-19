@@ -225,6 +225,15 @@ _instalar_o_acionador_raiz() {
     printf '      só o teclado ou o pedal autorizado vira botão; o aparelho novo pede a senha de administrador uma vez\n'
 }
 
+_fechar_a_regra_do_no_com_o_broker_de_pe() {
+    [[ "${ABRIR_O_NO:-0}" -eq 0 && "${_broker_de_pe_antes:-0}" -eq 0 ]] || return 0
+    if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
+        printf '      a regra do nó do DualSense fechada agora que o broker está de pé para abri-lo\n'
+    else
+        warn "install_udev.sh falhou ao fechar a regra do nó — a regra segue aberta; rode: sudo bash scripts/install_udev.sh"
+    fi
+}
+
 install_broker_host() {
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         printf '      broker pulado (--no-udev) — re-execute ./install.sh sem a flag para ativá-lo\n'
@@ -241,6 +250,8 @@ install_broker_host() {
     _broker_bin_src="${ROOT_DIR}/src/hefesto_dualsense4unix/broker/hidraw_broker.py"
     _broker_bin_dst="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
     _broker_tmp="$(mktemp -d)"
+    _broker_de_pe_antes=0
+    systemctl is-active --quiet hefesto-hidraw-broker.socket 2>/dev/null && _broker_de_pe_antes=1
     if [[ ! -f "${_broker_bin_src}" ]]; then
         warn "src/hefesto_dualsense4unix/broker/hidraw_broker.py ausente — broker NÃO instalado"
     elif ! _render_broker_units \
@@ -291,6 +302,7 @@ install_broker_host() {
                 sudo rm -f "${_marca}"
                 cumprir_a_troca broker
             fi
+            _fechar_a_regra_do_no_com_o_broker_de_pe
         else
             warn "enable --now do hefesto-hidraw-broker.socket falhou — habilite manualmente"
         fi

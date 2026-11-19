@@ -361,6 +361,14 @@ ok()    { printf '      ok\n'; }
 warn()  { printf '      aviso: %s\n' "$*"; }
 die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
 
+_sem_systemd_logind() {
+    local raiz="${HEFESTO_RAIZ_DO_SISTEMA:-}"
+    [[ ! -d "${raiz}/run/systemd/system" && ! -e "${raiz}/.dockerenv" && ! -e "${raiz}/run/.containerenv" ]]
+}
+if _sem_systemd_logind; then
+    die "distro sem systemd-logind (Alpine/Void/Gentoo OpenRC, Devuan): este setup não funciona. Ver docs/adr/009-systemd-logind-scope.md. Nada foi instalado."
+fi
+
 _ENSAIO_MUDANCAS=0
 _ENSAIO_ROOT=0
 
@@ -1061,8 +1069,10 @@ _ensaio_camada() {
             fi
             if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
                 _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh) — a regra do nó do DualSense vai ABERTA (--no-fechar-o-no)"
+            elif systemctl is-active --quiet hefesto-hidraw-broker.socket 2>/dev/null; then
+                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh) — a regra do nó do DualSense vai fechada: o broker já está de pé"
             else
-                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh)"
+                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh) — a regra do nó do DualSense vai ABERTA até o broker subir"
             fi
             ;;
         osk)
@@ -1086,6 +1096,9 @@ _ensaio_camada() {
                 _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (sem uid nem grupo por máquina: atende quem está na frente do computador)"
             fi
             _faria_root "systemctl daemon-reload e enable --now hefesto-hidraw-broker.socket"
+            if [[ "${ABRIR_O_NO:-0}" -eq 0 ]] && ! systemctl is-active --quiet hefesto-hidraw-broker.socket 2>/dev/null; then
+                _faria_root "com o socket do broker de pé, trocar a regra do nó do DualSense pela fechada (scripts/install_udev.sh)"
+            fi
             _faria "gravar o registro de posse em ${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
             ;;
         trava-do-radio)
@@ -1751,10 +1764,8 @@ else
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _ensaio_camada udev
         _faria_root "gravar /etc/modules-load.d/ para o uinput e o uhid subirem no boot, e recarregar o udev"
-    elif bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
-        printf '      regras aplicadas + udev recarregado + uinput carregado\n'
     else
-        warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
+        install_udev_host
     fi
 
     if command -v flatpak >/dev/null 2>&1 \
