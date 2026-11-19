@@ -65,6 +65,16 @@ Flags:
                         e o broker é renderizado sabendo disso (as duas metades
                         da cura têm de concordar). Use só se precisar do nó
                         aberto para ferramenta de terceiro.
+  --sem-sudo-sem-senha  OPT-OUT das três regras de administrador sem senha
+                        (DEFAULT ON) em /etc/sudoers.d: 49-hefesto-bt-ponte
+                        (mover controle entre adaptadores Bluetooth; vale
+                        para o grupo hefesto, que a conta ganha),
+                        49-hefesto-placa (a placa de vídeo acordada no jogo)
+                        e 49-hefesto-atualizador (instalar pacote do sistema,
+                        refazer módulo DKMS e voltar o kernel pela janela).
+                        Sem as regras, essas três coisas ficam para o terminal.
+                        --no-udev também pula as três; o ./uninstall.sh as
+                        remove; o resumo final lista as que foram gravadas.
   --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
                         usuário que vigia o ecossistema USB/BT/xHCI no journal
                         (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
@@ -279,6 +289,7 @@ NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 NO_UCM=0
 ABRIR_O_NO=0
+SEM_SUDO_SEM_SENHA=0
 KEEP_STEAM_INPUT=0
 RUN_DOCTOR=1
 FORCE_XWAYLAND=0
@@ -313,6 +324,7 @@ for arg in "$@"; do
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
         --no-ucm)             NO_UCM=1 ;;
         --no-fechar-o-no)     ABRIR_O_NO=1 ;;
+        --sem-sudo-sem-senha) SEM_SUDO_SEM_SENHA=1 ;;
         --no-kernel-watch)    SKIP_KERNEL_WATCH=1 ;;
         --with-storm-watch)   : ;;
         --no-proton-pin)      NO_PROTON_PIN=1 ;;
@@ -1130,15 +1142,27 @@ _ensaio_camada() {
             _faria_root "instalar /etc/systemd/system/hefesto-bt-agent.service e habilitá-lo (agente de pareamento persistente; instala bluez-tools se faltar)"
             ;;
         bt-ponte)
+            if [[ "${SKIP_UDEV}" -eq 1 || "${SEM_SUDO_SEM_SENHA}" -eq 1 ]]; then
+                _nao_faria "ponte privilegiada do Bluetooth e /etc/sudoers.d/49-hefesto-bt-ponte (--no-udev ou --sem-sudo-sem-senha)"
+                return 0
+            fi
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
             _faria_root "pôr a sua conta no grupo hefesto (a regra do sudoers da ponte é do grupo, e não só sua)"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-bt-ponte (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
             ;;
         placa)
+            if [[ "${SKIP_UDEV}" -eq 1 || "${SEM_SUDO_SEM_SENHA}" -eq 1 ]]; then
+                _nao_faria "placa acordada e /etc/sudoers.d/49-hefesto-placa (--no-udev ou --sem-sudo-sem-senha)"
+                return 0
+            fi
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-placa (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
             ;;
         atualizador)
+            if [[ "${SKIP_UDEV}" -eq 1 || "${SEM_SUDO_SEM_SENHA}" -eq 1 ]]; then
+                _nao_faria "atualizador sem senha e /etc/sudoers.d/49-hefesto-atualizador (--no-udev ou --sem-sudo-sem-senha)"
+                return 0
+            fi
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz"
             _faria_root "gravar /usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa (os SUFIXO= dos assets/*-backport/BASELINE)"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-atualizador (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
@@ -1557,6 +1581,7 @@ if [[ "${FORMAT}" != "native" ]]; then
     printf ' valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
     printf '─────────────────────────────────────────\n'
+    dizer_as_regras_do_sudo
     dizer_o_reinicio_pendente
     printf '\n'
     exit 0
@@ -4053,5 +4078,6 @@ fi
 [[ "${DRY_RUN:-0}" -eq 1 ]] || rm -f "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pendente"
 [[ "${DRY_RUN:-0}" -ne 1 ]] || _faria "guardar as flags desta linha em ${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas (o install do fecho da janela repete as mesmas)"
 [[ "${DRY_RUN:-0}" -eq 1 ]] || { mkdir -p "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix" && printf '%s\n' "--format=${FORMAT:-native}" "$@" > "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas"; } 2>/dev/null || true
+dizer_as_regras_do_sudo
 dizer_o_reinicio_pendente
 printf '\n'
