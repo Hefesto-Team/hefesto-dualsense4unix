@@ -218,11 +218,33 @@ def test_o_que_alarga_o_alcance_espera_o_atualizar_e_so_a_versao_passa(
     assert (entrada.versao, entrada.versao_esperando) == ("0.1.0", "0.2.0")
     assert entrada.motivo_da_espera == f"A versão 0.2.0 {frase}."
     assert manifesto_instalado("exemplo", lugares=lar).lancador == antes["lancador"]
+    aceitos = alcances_do_sim(manifesto_instalado("exemplo", lugares=lar))
     assert atualizar("exemplo", lugares=lar).trocou
     novo = manifesto_instalado("exemplo", lugares=lar)
-    assert not ler_registro(lar.registro)["exemplo"].ligada
+    entrada = ler_registro(lar.registro)["exemplo"]
+    assert not entrada.ligada and entrada.alcances_aceitos == aceitos
     entrada = ligar("exemplo", permissoes_vistas=pedidos_do_sim(novo), lugares=lar)
     assert entrada.alcances_aceitos == alcances_do_sim(novo)
+
+
+def test_a_ligada_antes_dos_alcances_se_atualiza_sozinha_sem_pedir_o_sim(
+    lar: Lugares, remoto: Path
+) -> None:
+    """MORDIDA: tirar o ``migrar_os_alcances`` do ``instalar``."""
+    (remoto / "fixar.py").write_text("", encoding="utf-8")
+    _publicar(remoto, "0.1.0", **_alcance(*_DE_ANTES))
+    instalar(f"file://{remoto}", lugares=lar)
+    ligar("exemplo", permissoes_vistas=pedidos_do_sim(manifesto_instalado("exemplo", lugares=lar)),
+          lugares=lar)
+    bruto = json.loads(lar.registro.read_text(encoding="utf-8"))
+    for linha in bruto["mods"]:
+        linha.pop("alcances_aceitos", None)
+    lar.registro.write_text(json.dumps(bruto), encoding="utf-8")
+    _publicar(remoto, "0.2.0", **_alcance(*_DE_ANTES))
+    assert atualizar("exemplo", lugares=lar, sozinha=True).trocou
+    entrada = ler_registro(lar.registro)["exemplo"]
+    assert entrada.ligada and entrada.versao == "0.2.0"
+    assert entrada.alcances_aceitos == alcances_do_sim(manifesto_instalado("exemplo", lugares=lar))
 
 
 def test_a_tag_oficial_que_deixa_de_conferir_com_a_chave_fica_esperando(
