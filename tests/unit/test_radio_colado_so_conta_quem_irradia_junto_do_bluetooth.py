@@ -64,7 +64,7 @@ def _vizinhanca(sysfs: Sysfs) -> exame_da_mesa.Item:
 
 
 def test_pendrive_e_receptores_colados_longe_do_bluetooth_nao_acusam() -> None:
-    """A mesa medida em 19/11: pendrive e dois receptores vizinhos, os adaptadores longe."""
+    """D-1911-O-RADIO-COLADO-PEDE-UM-ADAPTADOR-NO-PAR: a mesa medida em 19/11."""
     sysfs = Sysfs({
         "1-3": _no("3", "0781", "5583"),
         "1-4": _no("4", "1d57", "fa20"),

@@ -33,7 +33,7 @@ def _pela_metade(classe: int) -> dict[str, str]:
 
 
 def test_o_fone_pela_metade_nao_acusa_controle() -> None:
-    """Só um fone com ``Paired`` sem ``Bonded``: nenhum controle pareado, nada a acusar."""
+    """D-1911-O-CHECK-UP-CONTA-SO-PAREAMENTO-DE-CONTROLE: só um fone pela metade."""
     item = pareamentos(executar=_bluez({FONE: _pela_metade(CLASSE_DO_FONE)}))
     assert item.estado == ESTADO_CERTO, item.porque
     assert "Nenhum controle" in item.porque
