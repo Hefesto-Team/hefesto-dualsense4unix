@@ -112,6 +112,7 @@ def test_o_reiniciar_repoe_a_steam_da_flatpak(monkeypatch: pytest.MonkeyPatch) -
     steam = next(x for x in rl.LANCADORES if x.chave == "steam")
     monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
     monkeypatch.setattr(rl, "abertos", lambda: [steam])
+    monkeypatch.setattr(rl, "pids_de", lambda _lancador: [])
     monkeypatch.setattr(rl, "fechar", lambda _lancador: True)
     recibo = rl.repor()
     assert recibo.repostos == (steam.nome,)

@@ -151,6 +151,64 @@ def test_a_pergunta_do_install_e_a_do_produto(tmp_path: Path, jogo: bool) -> Non
     assert feito.returncode == (0 if jogo else 1), feito.stderr
 
 
+def _maquina_com_o_pad(tmp_path: Path, comm: str, cmdline: str, cgroup: str) -> list[str]:
+    """`/proc`, `/sys` e `/dev` de mentira: um processo segura o hidraw do pad virtual."""
+    hid = tmp_path / "sys/class/hidraw/hidraw7/device"
+    hid.mkdir(parents=True)
+    (hid / "uevent").write_text("HID_PHYS=hefesto-vpad-1\nHID_UNIQ=02:fe:00:00:00:01\n")
+    (tmp_path / "dev").mkdir()
+    (tmp_path / "dev/hidraw7").write_bytes(b"")
+    pasta = tmp_path / "proc/700"
+    (pasta / "fd").mkdir(parents=True)
+    (pasta / "comm").write_text(comm + "\n")
+    (pasta / "cmdline").write_bytes(cmdline.replace(" ", "\0").encode() + b"\0")
+    (pasta / "environ").write_bytes(b"HOME=/x\0")
+    (pasta / "cgroup").write_text(cgroup)
+    (pasta / "stat").write_text(f"700 ({comm}) S 1 700\n")
+    (pasta / "fd/3").symlink_to(tmp_path / "dev/hidraw7")
+    return [str(tmp_path / r) for r in ("proc", "sys", "dev")]
+
+
+_EMULADOR = ("retroarch", "/usr/bin/retroarch -L snes9x",
+             "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-r-1.scope\n")
+_DE_FUNDO = ("sunshine", "/usr/bin/sunshine",
+             "0::/user.slice/user-1000.slice/user@1000.service/app.slice/sunshine.service\n")
+
+
+def test_o_install_ve_o_emulador_que_segura_o_pad(tmp_path: Path) -> None:
+    """D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR: o `--ha-jogo` sem o venv vê o emulador."""
+    proc, sys_, dev = _maquina_com_o_pad(tmp_path, *_EMULADOR)
+    argv = ["--ha-jogo", "--proc", proc, "--sys", sys_, "--dev", dev]
+    assert quem_o_jogo_le.main(argv) == 0
+    ambiente = {k: v for k, v in os.environ.items()
+                if k not in ("XDG_RUNTIME_DIR", "WAYLAND_DISPLAY")}
+    feito = subprocess.run(
+        ["python3", "-I", str(RAIZ / "src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py"),
+         *argv],
+        capture_output=True, check=False, timeout=30, env=ambiente,
+    )
+    assert feito.returncode == 0, feito.stderr
+
+
+@pytest.mark.parametrize(("leitor", "sai"), [(_EMULADOR, False), (_DE_FUNDO, True)])
+def test_o_leitor_de_fundo_no_pad_nao_prende_a_troca_adiada(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, leitor: tuple[str, str, str], sai: bool
+) -> None:
+    proc, sys_, dev = _maquina_com_o_pad(tmp_path, *leitor)
+    for nome, raiz in (("RAIZ_PROC", proc), ("RAIZ_SYS", sys_), ("RAIZ_DEV", dev)):
+        monkeypatch.setattr(quem_o_jogo_le, nome, raiz)
+    monkeypatch.setattr(quem_o_jogo_le, "RAIZ_RUNTIME", str(tmp_path))
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    troca.arquivo_da_troca().parent.mkdir(parents=True, exist_ok=True)
+    troca.arquivo_da_troca().write_text("daemon\n", encoding="utf-8")
+    disparos: list[list[str]] = []
+    monkeypatch.setattr(troca, "disparar", lambda itens: disparos.append(list(itens)))
+    daemon = type("Daemon", (), {})()
+    for instante in (0.0, 10.0):
+        asyncio.run(lifecycle._a_troca_que_o_jogo_adiou(daemon, relogio=lambda i=instante: i))
+    assert disparos == ([["daemon"]] if sai else [])
+
+
 def test_o_udev_nao_reenumera_o_controle_com_jogo_aberto() -> None:
     """MORDIDA: devolva os quatro `trigger` para fora do `else` — o físico reenumera no jogo."""
     texto = UDEV.read_text(encoding="utf-8")

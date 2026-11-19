@@ -52,6 +52,12 @@ from dataclasses import dataclass
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
 from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
+    _texto,
+    conta_como_jogo,
+    descendentes,
+    ha_jogo_aberto,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -59,6 +65,21 @@ logger = get_logger(__name__)
 ESPERA_PARA_FECHAR_S: float = 12.0
 
 PASSO_DA_ESPERA_S: float = 0.5
+
+RAIZ_PROC = "/proc"
+
+
+AJUDANTES: tuple[str, ...] = (
+    "bwrap",
+    "srt-",
+    "pv-",
+    "zypak-",
+    "chrome_crashpad",
+    "xdg-dbus-proxy",
+    "fossilize_repla",
+    "x86_64-linux-gn",
+    "i386-linux-gnu",
+)
 
 
 @dataclass(frozen=True)
@@ -70,6 +91,7 @@ class Lancador:
     processos: tuple[str, ...]
     flatpak: str | None = None
     nativo: str | None = None
+    ajudantes: tuple[str, ...] = AJUDANTES
 
 
 LANCADORES: tuple[Lancador, ...] = tuple(
@@ -128,14 +150,28 @@ def abertos() -> list[Lancador]:
 
 
 def jogo_aberto() -> bool:
-    """Há jogo rodando? — a pergunta que vem ANTES de qualquer fechamento."""
+    """Há jogo rodando, de qualquer lançador? — a pergunta que vem ANTES de qualquer fechamento."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
         invalidar_varredura_de_proc,
         steam_game_running,
     )
 
     invalidar_varredura_de_proc()
-    return steam_game_running()
+    return steam_game_running() or ha_jogo_aberto()
+
+
+def jogo_debaixo_de(lancador: Lancador) -> bool:
+    """Um descendente do lançador que não é dele, não é ajudante e conta como jogo."""
+    for pid in descendentes(pids_de(lancador), RAIZ_PROC):
+        pasta = os.path.join(RAIZ_PROC, str(pid))
+        nome, cmdline = _texto(os.path.join(pasta, "comm")), _texto(os.path.join(pasta, "cmdline"))
+        if nome in lancador.processos or nome.startswith(lancador.ajudantes):
+            continue
+        if "--type=" not in cmdline and conta_como_jogo(
+            nome, cmdline, pid=pid, meu_pid=os.getpid(), raiz_proc=RAIZ_PROC
+        ):
+            return True
+    return False
 
 
 def fechar(lancador: Lancador) -> bool:
@@ -211,6 +247,8 @@ def repor() -> Recibo:
     de_pe = abertos()
     if not de_pe:
         return Recibo()
+    if any(jogo_debaixo_de(x) for x in de_pe):
+        return Recibo(barrado_por_jogo=True)
 
     fechados = [x for x in de_pe if fechar(x)]
     nao_fecharam = tuple(x.nome for x in de_pe if x not in fechados)
@@ -260,6 +298,7 @@ __all__ = [
     "fechar",
     "frase_do_recibo",
     "jogo_aberto",
+    "jogo_debaixo_de",
     "pids_de",
     "repor",
 ]

@@ -70,9 +70,19 @@ from typing import Any
 try:
     from . import fora_do_servico
     from .ambiente_do_jogo import ambiente_limpo
+    from .quem_o_jogo_le import (
+        _STEAM_LAUNCH_APPID_RE,
+        _STEAM_LAUNCH_RE,
+        e_avaliador_do_install_script,
+    )
 except ImportError:  # pragma: no cover
     import fora_do_servico  # type: ignore[no-redef]
     from ambiente_do_jogo import ambiente_limpo  # type: ignore[no-redef]
+    from quem_o_jogo_le import (  # type: ignore[no-redef]
+        _STEAM_LAUNCH_APPID_RE,
+        _STEAM_LAUNCH_RE,
+        e_avaliador_do_install_script,
+    )
 
 WRAPPER_HOME_RELPATH = ".local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 
@@ -1131,20 +1141,6 @@ def steam_running() -> bool:
     return steam_de_pe()
 
 
-_STEAM_LAUNCH_RE = re.compile(r"SteamLaunch AppId=\d")
-
-_STEAM_LAUNCH_APPID_RE = re.compile(r"SteamLaunch AppId=\d+")
-
-_TOKEN_DO_INSTALL_SCRIPT = "Install=1"
-
-
-def e_avaliador_do_install_script(cmd: str) -> bool:
-    """A cmdline é o avaliador do install script da Steam, e não um jogo?"""
-    achado = _STEAM_LAUNCH_APPID_RE.search(cmd)
-    if achado is None:
-        return False
-    argumentos_do_reaper = cmd[achado.end():].split(" -- ", 1)[0]
-    return _TOKEN_DO_INSTALL_SCRIPT in argumentos_do_reaper.split()
 
 VALIDADE_DA_VARREDURA_S: float = 5.0
 

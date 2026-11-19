@@ -14,6 +14,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems.game_signal import GameSignal, classify
 from hefesto_dualsense4unix.integrations import no_do_vpad
+from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
 from hefesto_dualsense4unix.integrations import quem_segura_o_pad as qsp
 from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     VPAD_HID_PHYS,
@@ -151,7 +152,7 @@ def raizes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for parte in ("proc", "dev/input", "sys/class/input", "run"):
         (tmp_path / parte).mkdir(parents=True)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
-    monkeypatch.setattr(qsp, "RAIZ_RUNTIME", str(tmp_path / "run"))
+    monkeypatch.setattr(qjl, "RAIZ_RUNTIME", str(tmp_path / "run"))
     monkeypatch.setattr(no_do_vpad, "RAIZ_CLASS_INPUT", str(tmp_path / "sys/class/input"))
     monkeypatch.setattr(no_do_vpad, "RAIZ_DEV_INPUT", str(tmp_path / "dev/input"))
     monkeypatch.setattr(no_do_vpad, "RAIZ_DEV", str(tmp_path / "dev"))

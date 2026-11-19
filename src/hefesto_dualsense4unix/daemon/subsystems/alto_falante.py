@@ -1102,17 +1102,10 @@ class AltoFalanteSubsystem:
         return self._ha_jogo_aberto()
 
     def _ha_jogo_aberto(self) -> bool:
-        """Algum processo da máquina é um jogo, pelo ambiente e não pelo nome.
+        """Há jogo aberto, venha de que lançador vier (``quem_o_jogo_le.ha_jogo_aberto``)."""
+        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import ha_jogo_aberto
 
-        É a pergunta de ``quem_o_jogo_le.pids_de_jogo``, e não depende de
-        lista de jogos nem de lançador.
-        """
-        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
-
-        try:
-            return bool(pids_de_jogo())
-        except Exception:  # pragma: no cover
-            return True
+        return ha_jogo_aberto()
 
     def _aparelhos_da_mesa(self, controles: list[Any]) -> dict[str, str]:
         """``{uniq: marca}`` de cada DualSense da mesa. Um aparelho por controle.

@@ -546,9 +546,9 @@ def test_o_jogo_aberto_e_a_pergunta_de_quem_vibra(monkeypatch: pytest.MonkeyPatc
     from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
 
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=list)
-    monkeypatch.setattr(qjl, "pids_de_jogo", lambda *_a, **_k: set())
+    monkeypatch.setattr(qjl, "ha_jogo_aberto", lambda *_a, **_k: False)
     assert sub._ha_jogo_aberto() is False, "sem jogo nenhum, a guarda viu um"
-    monkeypatch.setattr(qjl, "pids_de_jogo", lambda *_a, **_k: {4242})
+    monkeypatch.setattr(qjl, "ha_jogo_aberto", lambda *_a, **_k: True)
     assert sub._ha_jogo_aberto() is True
 
 

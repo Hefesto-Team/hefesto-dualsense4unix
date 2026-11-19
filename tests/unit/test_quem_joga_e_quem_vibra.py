@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
+import socket
 
+import pytest
+
+from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
 from hefesto_dualsense4unix.integrations.quem_o_jogo_le import ENV_DO_JOGO, pids_de_jogo
 
 
@@ -54,3 +59,80 @@ class TestONaoHaPortaoDeQuemMexe:
         assert "endpoint_aberto" in condicao, "o canal saiu da condição da háptica"
         assert "este_joga" not in condicao
         assert "som_toca" not in condicao, "o alto-falante voltou a decidir a háptica"
+
+
+SERVICO = "0::/user.slice/user-1000.slice/user@1000.service/session.slice/{}.service\n"
+APP = "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-{}-1.scope\n"
+
+
+class _Maquina:
+    """`/proc`, `/sys` e `/dev` de mentira, com o pad virtual e o físico."""
+
+    def __init__(self, raiz: pathlib.Path) -> None:
+        self.raiz = raiz
+        self.proc, self.sys, self.dev = raiz / "proc", raiz / "sys", raiz / "dev"
+        self.proximo = 500
+        self.pad = self._hidraw("hidraw7", "HID_PHYS=hefesto-vpad-1\nHID_UNIQ=02:fe:00:00:00:01\n")
+        self.fisico = self._hidraw("hidraw2", "HID_PHYS=usb-0000:00:14.0-1/input3\n"
+                                   "HID_UNIQ=aa:bb:cc:00:00:01\n")
+
+    def _hidraw(self, no: str, uevent: str) -> pathlib.Path:
+        (self.sys / "class/hidraw" / no / "device").mkdir(parents=True)
+        (self.sys / "class/hidraw" / no / "device/uevent").write_text(uevent)
+        self.dev.mkdir(exist_ok=True)
+        (self.dev / no).write_bytes(b"")
+        return self.dev / no
+
+    def processo(
+        self, comm: str, cmdline: str, *nos: pathlib.Path, cgroup: str = "", pid: int = 0
+    ) -> int:
+        pid = pid or self.proximo
+        self.proximo += 1
+        pasta = self.proc / str(pid)
+        (pasta / "fd").mkdir(parents=True)
+        (pasta / "comm").write_text(comm + "\n")
+        (pasta / "cmdline").write_bytes(cmdline.replace(" ", "\0").encode() + b"\0")
+        (pasta / "environ").write_bytes(b"HOME=/x\0")
+        (pasta / "cgroup").write_text(cgroup)
+        (pasta / "stat").write_text(f"{pid} ({comm}) S 1 {pid}\n")
+        for n, no in enumerate(nos, start=3):
+            (pasta / "fd" / str(n)).symlink_to(no)
+        return pid
+
+    def ha_jogo(self) -> bool:
+        return qjl.ha_jogo_aberto(str(self.proc), str(self.sys), str(self.dev), meu_pid=1)
+
+
+@pytest.fixture
+def maquina(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> _Maquina:
+    (tmp_path / "run").mkdir()
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.setattr(qjl, "RAIZ_RUNTIME", str(tmp_path / "run"))
+    return _Maquina(tmp_path)
+
+
+class TestOJogoAbertoEmQualquerLancador:
+    def test_o_emulador_sem_a_variavel_que_segura_o_pad_e_jogo(self, maquina: _Maquina) -> None:
+        """D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR: o emulador sem Proton conta."""
+        assert maquina.ha_jogo() is False
+        maquina.processo("retroarch", "/usr/bin/retroarch -L snes9x", maquina.pad,
+                         cgroup=APP.format("retroarch"))
+        assert maquina.ha_jogo() is True
+
+    def test_o_compositor_o_lancador_e_o_fundo_no_pad_nao_sao_jogo(
+        self, maquina: _Maquina
+    ) -> None:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as compositor:
+            compositor.bind(str(maquina.raiz / "run" / "wayland-0"))
+            compositor.listen()
+            maquina.processo(
+                "kwin_wayland", "/usr/bin/kwin_wayland", maquina.pad, pid=os.getpid()
+            )
+            maquina.processo("heroic", "/opt/Heroic/heroic", maquina.pad)
+            maquina.processo("input-remapper-", "/usr/bin/python3 /usr/bin/input-remapper-gtk",
+                             maquina.pad, cgroup=SERVICO.format("input-remapper"))
+            assert maquina.ha_jogo() is False
+
+    def test_o_jogo_no_controle_fisico_nao_e_o_pad_do_hefesto(self, maquina: _Maquina) -> None:
+        maquina.processo("retroarch", "/usr/bin/retroarch", maquina.fisico)
+        assert maquina.ha_jogo() is False

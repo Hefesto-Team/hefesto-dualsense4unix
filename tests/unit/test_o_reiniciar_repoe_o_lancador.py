@@ -9,6 +9,8 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
+JOGO_ABERTO_DE_VERDADE = rl.jogo_aberto
+
 
 class _Saida:
     def __init__(self, texto: str = "", rc: int = 0) -> None:
@@ -295,3 +297,65 @@ def test_a_frase_diz_o_que_aconteceu() -> None:
     assert "Steam" in frase
     assert "Heroic" in frase
     assert "Não consegui fechar" in frase
+
+
+def _arvore_do_heroic(raiz: Any, filhos: list[tuple[str, str, str]]) -> None:
+    """O Heroic de flatpak (a caixa `bwrap` no pid 100) e os filhos dele num `/proc` de mentira."""
+    for pid, pai, comm, cmdline, ambiente in [
+        (100, 1, "bwrap", "bwrap --args 40 heroic", ""),
+        (101, 100, "heroic", "/app/heroic/heroic", ""),
+        *((102 + n, 101, c, linha, amb) for n, (c, linha, amb) in enumerate(filhos)),
+    ]:
+        pasta = raiz / str(pid)
+        pasta.mkdir(parents=True)
+        (pasta / "comm").write_text(comm + "\n")
+        (pasta / "cmdline").write_bytes(cmdline.replace(" ", "\0").encode() + b"\0")
+        (pasta / "stat").write_text(f"{pid} ({comm}) S {pai} {pid}\n")
+        (pasta / "environ").write_bytes(ambiente.encode() + b"\0")
+
+
+_AJUDANTES = [
+    ("heroic", "/app/heroic/heroic --type=renderer", ""),
+    ("chrome_crashpad", "/app/heroic/chrome_crashpad_handler --monitor-self", ""),
+    ("zypak-sandbox", "/app/bin/zypak-sandbox", ""),
+]
+
+
+@pytest.mark.parametrize("jogo", [True, False])
+def test_o_heroic_com_jogo_debaixo_nao_e_fechado(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any, jogo: bool
+) -> None:
+    """D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR: o pid do flatpak é a caixa do jogo."""
+    filhos = [*_AJUDANTES, *([("Jogo.x86_64", "/jogos/Jogo.x86_64", "")] if jogo else [])]
+    _arvore_do_heroic(tmp_path / "proc", filhos)
+    monkeypatch.setattr(rl, "RAIZ_PROC", str(tmp_path / "proc"))
+    from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
+
+    monkeypatch.setattr(qjl, "RAIZ_RUNTIME", str(tmp_path))
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    heroic = next(x for x in rl.LANCADORES if x.chave == "heroic")
+    monkeypatch.setattr(rl, "abertos", lambda: [heroic])
+    monkeypatch.setattr(rl, "pids_de", lambda x: [100] if x is heroic else [])
+    fechados: list[str] = []
+    monkeypatch.setattr(rl, "fechar", lambda x: fechados.append(x.chave) or True)
+    monkeypatch.setattr(rl, "abrir", lambda _x: True)
+
+    recibo = rl.repor()
+
+    assert recibo.barrado_por_jogo is jogo
+    assert fechados == ([] if jogo else ["heroic"])
+
+
+def test_o_jogo_do_heroic_sem_a_steam_e_jogo_aberto(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """A pergunta antes de fechar não é só a da Steam: o jogo do umu também é jogo."""
+    from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    _arvore_do_heroic(tmp_path / "proc", [("Jogo.exe", "/jogos/Jogo.exe", "UMU_ID=umu-0")])
+    monkeypatch.setattr(qjl, "RAIZ_PROC", str(tmp_path / "proc"))
+    monkeypatch.setattr(qjl, "RAIZ_SYS", str(tmp_path / "sys"))
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+
+    assert JOGO_ABERTO_DE_VERDADE() is True

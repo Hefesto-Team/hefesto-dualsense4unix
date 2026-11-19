@@ -2477,13 +2477,10 @@ def _pedir_ao_broker(
 
 
 def _ha_jogo_aberto() -> bool:
-    """A pergunta do nó de háptica (`quem_o_jogo_le.pids_de_jogo`)."""
-    from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
+    """A pergunta de todo lançador (`quem_o_jogo_le.ha_jogo_aberto`)."""
+    from hefesto_dualsense4unix.integrations.quem_o_jogo_le import ha_jogo_aberto
 
-    try:
-        return bool(pids_de_jogo())
-    except Exception:  # pragma: no cover
-        return True
+    return ha_jogo_aberto()
 
 
 PEDIR_O_PAD_USB: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None] = (
@@ -2533,8 +2530,8 @@ def _estado_do_processo(raiz_proc: str, pid: str) -> str:
 
 
 def _o_leitor_e_jogo(raiz: str, pid: str, eu: str) -> tuple[bool, str]:
-    """O leitor é jogo pelo `quem_segura_o_pad.conta_como_jogo`, e o nome dele."""
-    from hefesto_dualsense4unix.integrations.quem_segura_o_pad import conta_como_jogo
+    """O leitor é jogo pelo `quem_o_jogo_le.conta_como_jogo`, e o nome dele."""
+    from hefesto_dualsense4unix.integrations.quem_o_jogo_le import conta_como_jogo
 
     def _ler(arquivo: str) -> str:
         try:
