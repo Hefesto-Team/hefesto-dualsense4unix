@@ -13,7 +13,8 @@ MORDIDAS:
     que veio de fora; tire o esquecer do `manager.esquecer_o_perfil_apagado`: o perfil de mesmo nome
     herda o comando do apagado; tire o `chave_do_comando(nome) != path.stem` da migração: o
     `nome-2.json` leva o comando dele ao computador; tire o comando do `duplicar` da aba Perfis: a
-    cópia nasce sem ele.
+    cópia nasce sem ele; devolva `""` no comando do `perfis_web._pacote_do_editor`: o editor não o
+    mostra.
 """
 from __future__ import annotations
 
@@ -280,6 +281,7 @@ def test_o_comando_da_aba_roda_vai_com_o_renomeado_e_sai_com_o_apagado(
     a10_perfis.editor_quando(ctx, {"valor": "true", "que": "comando", "evento": "change"},
                              _Ponte(""))
     assert "evento_comando" not in loader.arquivo_do_perfil("Meu").read_text(encoding="utf-8")
+    assert a10_perfis.pacote(ctx)["editor.evento.comando"] == "true", "o editor não o mostra"
     assert _o_motor_roda() == (["true"], ["Meu"])
 
     a10_perfis.duplicar(ctx, {}, _Ponte(""))
