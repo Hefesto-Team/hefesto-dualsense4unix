@@ -341,7 +341,9 @@ def inicio_do_trecho_do_jogo(linha: str) -> tuple[int, str] | None:
     """O começo do trecho que leva o ``%command%`` e as aspas em volta; ``None`` sem composição.
 
     O trecho começa depois do último ``&&``, ``||``, ``;``, ``|``, ``&`` ou quebra de linha, ou na
-    abertura das aspas, do ``$(``, do ``(`` ou da crase que guarda o ``%command%``.
+    abertura das aspas, do ``$(`` ou do ``(`` que guarda o ``%command%``. Dentro da crase, ou
+    no ``$(`` cujo trecho não começa pelo ``%command%``, o que roda é outro comando, e não há
+    composição.
     """
     pilha: list[list[Any]] = [["", 0]]
     achado: tuple[int, str] | None = None
@@ -349,7 +351,7 @@ def inicio_do_trecho_do_jogo(linha: str) -> tuple[int, str] | None:
     while i < len(linha):
         tipo = pilha[-1][0]
         if linha.startswith(_COMANDO, i):
-            if achado is not None:
+            if achado is not None or any(quadro[0] == "`" for quadro in pilha):
                 return None
             achado = (pilha[-1][1], tipo)
             i += len(_COMANDO)
@@ -386,6 +388,8 @@ def inicio_do_trecho_do_jogo(linha: str) -> tuple[int, str] | None:
         if palavra == "eval":
             return None
         if palavra not in _PALAVRAS_QUE_ABREM:
+            if aspas == "$(" and not linha.startswith(_COMANDO, inicio):
+                return None
             return inicio, aspas
         inicio += len(palavra)
 
@@ -1903,7 +1907,7 @@ def _report_status(vdfs: list[Path]) -> int:
             print(f"[launch-options] ERRO lendo {vdf}: {exc}")
             continue
         n_poison = text.count(IGNORE_SIGNATURE)
-        n_wrapper = text.count(_vdf_escape(WRAPPER_PREFIX))
+        n_wrapper = sum(map(tem_o_atalho, read_launch_options_by_appid(text).values()))
         print(f"[launch-options] {vdf}")
         print(f"    veneno estático (IGNORE 0x054c/0x0ce6): {n_poison}")
         print(f"    chamadas do wrapper hefesto-launch:     {n_wrapper}")

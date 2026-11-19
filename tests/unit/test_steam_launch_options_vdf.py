@@ -511,20 +511,36 @@ def test_o_atalho_entra_no_trecho_que_abre_o_jogo(lar_do_atalho: Path, linha: st
 
 def test_a_linha_quebrada_de_hoje_se_recompoe_e_a_que_nao_se_compoe_fica() -> None:
     quebrada = f"{slo.WRAPPER_PREFIX} cd /tmp && %command%"
-    ambigua = "eval %command%"
-    texto = _vdf({"9900620": slo._vdf_escape(quebrada), "9900621": ambigua})
+    ambiguas = {
+        "9900621": "eval %command%",
+        "9900622": 'eval `echo "%command%" | sed s/Launcher/Jogo/`',
+        "9900623": "eval $(echo %command% | sed s/Launcher/Jogo/)",
+    }
+    texto = _vdf({"9900620": slo._vdf_escape(quebrada), **{
+        a: slo._vdf_escape(v) for a, v in ambiguas.items()
+    }})
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
     valores = slo.read_launch_options_by_appid(novo)
     assert valores["9900620"] == f"cd /tmp && {slo.WRAPPER_PREFIX} %command%"
-    assert valores["9900621"] == ambigua
+    assert {a: valores[a] for a in ambiguas} == ambiguas
     assert aplicados == ["9900620"]
-    assert pulados == [("9900621", slo.LINHA_QUE_NAO_SE_COMPOE)]
+    assert sorted(pulados) == [(a, slo.LINHA_QUE_NAO_SE_COMPOE) for a in sorted(ambiguas)]
     assert slo.apply_wrapper_vdf_text(novo)[1] == []
     from hefesto_dualsense4unix.integrations import opcoes_por_jogo as opj
 
     desejada = opj.linha_desejada("VAR=1 %command%", com_atalho=True)
     composta = opj.compor_linha(quebrada, desejada)
     assert composta == f"cd /tmp && {slo.WRAPPER_PREFIX} VAR=1 %command%"
+
+
+def test_o_status_conta_o_atalho_em_qualquer_forma(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    linhas = [slo.migrate_value(x) for x in sorted(_LINHAS_DO_USUARIO)]
+    vdf = tmp_path / "localconfig.vdf"
+    vdf.write_text(_vdf({str(9900700 + n): slo._vdf_escape(x) for n, x in enumerate(linhas)}))
+    slo._report_status([vdf])
+    assert f"chamadas do wrapper hefesto-launch:     {len(linhas)}" in capsys.readouterr().out
 
 
 def test_apply_wrapper_insere_launch_options_em_jogo_sem_nenhuma():
