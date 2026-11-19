@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1265883,
+      "piso": 1266054,
       "por_item": {
         "docs": 107095,
-        "scripts": 114340,
-        "src": 321143,
-        "tests": 723305
+        "scripts": 114373,
+        "src": 321145,
+        "tests": 723441
       },
-      "razao": "tamanho: +25 linhas (1265858 -> 1265883), pagas por Origem: D-1811-O-TRACO-DO-EFEITO-HAPTICO-CALA-TUDO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo ec1ccaef2070",
+      "razao": "tamanho: +171 linhas (1265883 -> 1266054), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo 3c9d245aabfe",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2007,6 +2007,12 @@
           "de": 1265858,
           "para": 1265883,
           "razao": "tamanho: +25 linhas (1265858 -> 1265883), pagas por Origem: D-1811-O-TRACO-DO-EFEITO-HAPTICO-CALA-TUDO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo ec1ccaef2070"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1265883,
+          "para": 1266054,
+          "razao": "tamanho: +171 linhas (1265883 -> 1266054), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo 3c9d245aabfe"
         }
       ],
       "unidade": "linhas",
