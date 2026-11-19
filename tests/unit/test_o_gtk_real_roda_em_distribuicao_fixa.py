@@ -60,7 +60,8 @@ def faltas(jobs: dict[str, Any], classificadores: list[str]) -> list[str]:
     if CELULA_QUE_DECIDE not in gtk.get("strategy", {}).get("matrix", {}).get("os", []):
         achados.append(f"gtk-real: a célula que decide ({CELULA_QUE_DECIDE}) não roda as faixas")
     achados += [f"gtk-real: «{d}» sem Python medido" for d in distros if d not in PYTHON_DA_DISTRO]
-    pernas = jobs.get("lint-test", {}).get("strategy", {}).get("matrix", {}).get("python", [])
+    matriz = jobs.get("lint-test", {}).get("strategy", {}).get("matrix", {})
+    pernas = [*matriz.get("python", []), *(c["python"] for c in matriz.get("include", []))]
     provadas = {str(v) for v in pernas}
     provadas |= {PYTHON_DA_DISTRO[d] for d in distros if d in PYTHON_DA_DISTRO}
     achados += [

@@ -5,8 +5,8 @@ O julgamento tem UM dono, este arquivo, e dois chamadores:
 
   - em casa (portão `coleta-sem-gtk`): `python3 scripts/check_a_coleta_sem_gtk.py` coleta a suíte com o
     `gi` e o `cairo` bloqueados (o ambiente do lint-test) e julga a saída;
-  - no CI (passo «Censo de coleta» do lint-test): o passo coleta no runner e chama
-    `python3 scripts/check_a_coleta_sem_gtk.py --julgar /tmp/coleta.txt`.
+  - no CI: cada faixa do lint-test roda as suas partes com este plugin, e o job `lint-test-perna` junta as
+    linhas `CENSO` das faixas de uma perna e chama `python3 scripts/check_a_coleta_sem_gtk.py --julgar -`.
 
 A coleta carrega ESTE arquivo como plugin do pytest (`-p scripts.check_a_coleta_sem_gtk`): ele anota, módulo
 a módulo, o que a coleta fez, e escreve na saída as linhas `CENSO …`. Sem ele a saída não diz de qual módulo é
@@ -84,6 +84,12 @@ def pytest_collectreport(report) -> None:  # type: ignore[no-untyped-def]
 def pytest_report_collectionfinish(config, start_path, items) -> list[str]:  # type: ignore[no-untyped-def]
     """As linhas do censo: só o que foge do comum (pulado, erro, vazio) e a marca de que o plugin rodou."""
     linhas = ["CENSO ativo"]
+    if not config.getoption("collectonly"):
+        nos: dict[str, int] = {}
+        for item in items:
+            modulo = item.nodeid.split("::", 1)[0]
+            nos[modulo] = nos.get(modulo, 0) + 1
+        linhas += [f"CENSO nos {modulo} {n}" for modulo, n in sorted(nos.items())]
     for modulo in sorted(_PULADOS):
         linhas.append(f"CENSO pulado {modulo} :: {_PULADOS[modulo]}")
     for modulo in sorted(_ERROS):
@@ -94,6 +100,7 @@ def pytest_report_collectionfinish(config, start_path, items) -> list[str]:  # t
 
 
 _RE_NO = re.compile(r"^(tests/[^\s:]+\.py)::")
+_RE_NOS = re.compile(r"^CENSO nos (\S+) (\d+)$")
 _RE_PULADO = re.compile(r"^CENSO pulado (\S+) :: ?(.*)$")
 _RE_ERRO = re.compile(r"^CENSO erro (\S+) :: ?(.*)$")
 _RE_ERRO_DO_PYTEST = re.compile(r"^ERROR (tests/[^\s:]+\.py)\b")
@@ -121,6 +128,8 @@ def julgar(saida: str, modulos: list[str]) -> tuple[list[str], int, int]:
     for ln in linhas:
         if (m := _RE_NO.match(ln)) is not None:
             com_nos[m.group(1)] = com_nos.get(m.group(1), 0) + 1
+        elif (m := _RE_NOS.match(ln)) is not None:
+            com_nos[m.group(1)] = com_nos.get(m.group(1), 0) + int(m.group(2))
         elif (m := _RE_PULADO.match(ln)) is not None:
             pulados[m.group(1)] = m.group(2).strip()
         elif (m := _RE_ERRO.match(ln)) is not None:

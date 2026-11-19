@@ -10,13 +10,15 @@ estourou o prazo de 95 minutos na parte 19.
 A cura é do desenho do YAML, e esta régua o confere:
 1. o passo da suíte do `lint-test` é o `scripts/rodar-a-suite.sh` (nenhum job roda `tests/unit`
    inteiro num processo só);
-2. as faixas do `gtk-real` cobrem as partes de 00 à última, sem furo e sem repetição;
+2. as faixas do `gtk-real` e as de cada perna do `lint-test` cobrem as partes de 00 à última, sem
+   furo e sem repetição, e o censo de coleta junta as faixas de cada perna;
 3. cada perna escreve a cobertura e os logs num nome só seu (dois nomes iguais num
    `upload-artifact` reprovam a segunda perna);
 4. a cobertura de cada faixa é SOMADA antes de o piso cobrar (o piso de 70 é da suíte inteira);
 5. nenhum `parametrize` de `tests/` usa o texto de um arquivo como valor sem `ids=`: o id do teste
    vira o arquivo inteiro numa linha, e o log do CI perde tudo dali em diante.
 """
+
 from __future__ import annotations
 
 import ast
@@ -55,22 +57,31 @@ def _passo_da_suite(job: dict[str, Any]) -> dict[str, Any]:
     return passo
 
 
-def _faixas(job: dict[str, Any]) -> list[tuple[int, int]]:
+def _faixas(textos: list[Any]) -> list[tuple[int, int]]:
     faixas = []
-    for texto in job["strategy"]["matrix"]["faixa"]:
+    for texto in textos:
         achado = re.fullmatch(r"(\d\d)-(\d\d)", str(texto))
         assert achado, f"faixa «{texto}» não tem a forma NN-NN"
         faixas.append((int(achado[1]), int(achado[2])))
     return faixas
 
 
-def faltas_das_faixas(job: dict[str, Any], partes: int) -> list[str]:
-    """O que falta para as pernas do `gtk-real` cobrirem as partes. Função pura."""
+def _faixas_por_perna(job: dict[str, Any]) -> dict[str, list[Any]]:
+    matriz = job["strategy"]["matrix"]
+    celulas = [{"python": p, "faixa": f} for p in matriz["python"] for f in matriz["faixa"]]
+    pernas: dict[str, list[Any]] = {}
+    for celula in celulas + list(matriz.get("include", [])):
+        pernas.setdefault(str(celula["python"]), []).append(celula["faixa"])
+    return pernas
+
+
+def faltas_das_faixas(textos: list[Any], partes: int, rotulo: str = "gtk-real") -> list[str]:
+    """O que falta para as faixas de uma perna cobrirem as partes. Função pura."""
     faltas: list[str] = []
     try:
-        faixas = _faixas(job)
-    except (KeyError, AssertionError) as erro:
-        return [f"gtk-real: a matriz de faixas sumiu ou mudou de forma ({erro})"]
+        faixas = _faixas(textos)
+    except AssertionError as erro:
+        return [f"{rotulo}: a matriz de faixas mudou de forma ({erro})"]
     dadas: list[int] = []
     for ini, fim in faixas:
         if ini > fim:
@@ -80,11 +91,11 @@ def faltas_das_faixas(job: dict[str, Any], partes: int) -> list[str]:
     sem_dono = sorted(set(range(partes)) - set(dadas))
     de_fora = sorted(set(dadas) - set(range(partes)))
     if repetidas:
-        faltas.append(f"partes em mais de uma faixa: {repetidas}")
+        faltas.append(f"{rotulo}: partes em mais de uma faixa: {repetidas}")
     if sem_dono:
-        faltas.append(f"partes que nenhuma faixa roda: {sem_dono}")
+        faltas.append(f"{rotulo}: partes que nenhuma faixa roda: {sem_dono}")
     if de_fora:
-        faltas.append(f"faixa com parte que a suíte não tem (são {partes}): {de_fora}")
+        faltas.append(f"{rotulo}: faixa com parte que a suíte não tem (são {partes}): {de_fora}")
     return faltas
 
 
@@ -93,7 +104,10 @@ def faltas_do_gtk_real(jobs: dict[str, Any], partes: int) -> list[str]:
     job = jobs.get("gtk-real")
     if job is None:
         return ["gtk-real: o job sumiu"]
-    faltas = faltas_das_faixas(job, partes)
+    try:
+        faltas = faltas_das_faixas(list(job["strategy"]["matrix"]["faixa"]), partes)
+    except KeyError as erro:
+        return [f"gtk-real: a matriz de faixas sumiu ({erro})"]
     passo = _passo_da_suite(job)
     corpo = str(passo.get("run", ""))
     if "FAIXA" not in corpo or 'rodar-a-suite.sh "$' not in corpo:
@@ -148,6 +162,40 @@ def faltas_da_cobertura(jobs: dict[str, Any]) -> list[str]:
     return faltas
 
 
+def faltas_das_pernas(jobs: dict[str, Any], partes: int) -> list[str]:
+    """Cada perna do lint-test cobre as partes, e o censo junta as faixas de cada perna."""
+    lint = jobs.get("lint-test", {})
+    try:
+        pernas = _faixas_por_perna(lint)
+    except KeyError as erro:
+        return [f"lint-test: a matriz de faixas por perna sumiu ({erro})"]
+    faltas = [
+        f
+        for python, textos in sorted(pernas.items())
+        for f in faltas_das_faixas(textos, partes, f"lint-test py{python}")
+    ]
+    passos = [p for p in lint.get("steps", []) if "rodar-a-suite.sh" in str(p.get("run", ""))]
+    for passo in passos:
+        corpo = str(passo.get("run", ""))
+        if "FAIXA" not in corpo or 'rodar-a-suite.sh "$' not in corpo:
+            faltas.append("lint-test: o passo não chama o rodar-a-suite.sh com UMA parte por volta")
+        argumentos = str((passo.get("env") or {}).get("SUITE_PYTEST_ARGS"))
+        if "-p scripts.check_a_coleta_sem_gtk" not in argumentos:
+            faltas.append("lint-test: as partes rodam sem o plugin do censo de coleta")
+    perna = jobs.get("lint-test-perna", {})
+    julgadas = map(str, perna.get("strategy", {}).get("matrix", {}).get("python", []))
+    if sorted(julgadas) != sorted(pernas):
+        faltas.append("lint-test-perna: não julga cada perna do lint-test")
+    corpo_da_perna = "\n".join(str(p.get("run", "")) for p in perna.get("steps", []))
+    if "check_a_coleta_sem_gtk.py --julgar" not in corpo_da_perna:
+        faltas.append("lint-test-perna: não junta os relatos das faixas no --julgar")
+    if "lint-test" not in str(perna.get("needs", "")) or ".estado" not in corpo_da_perna:
+        faltas.append("lint-test-perna: não reprova quando uma faixa da perna reprova")
+    if "lint-test" in str(jobs.get("runtime-smoke", {}).get("needs", "")):
+        faltas.append("runtime-smoke: espera o lint-test sem usar nada dele")
+    return faltas
+
+
 def faltas_do_lint_test(jobs: dict[str, Any]) -> list[str]:
     """Nenhum job roda `tests/unit` inteiro num processo só; o lint-test usa o dono do comando."""
     faltas = []
@@ -169,15 +217,20 @@ def faltas_do_lint_test(jobs: dict[str, Any]) -> list[str]:
         if str(p.get("uses", "")).startswith("actions/upload-artifact")
     ]
     faltas += [
-        f"lint-test: o artefato «{n}» não leva o python; a segunda perna reprova no upload"
+        f"lint-test: o artefato «{n}» não leva o python e a faixa; a outra perna reprova no upload"
         for n in nomes
-        if "matrix.python" not in n
+        if "matrix.python" not in n or "matrix.faixa" not in n
     ]
     return faltas
 
 
 def todas_as_faltas(jobs: dict[str, Any], partes: int) -> list[str]:
-    return faltas_do_lint_test(jobs) + faltas_do_gtk_real(jobs, partes) + faltas_da_cobertura(jobs)
+    return (
+        faltas_do_lint_test(jobs)
+        + faltas_das_pernas(jobs, partes)
+        + faltas_do_gtk_real(jobs, partes)
+        + faltas_da_cobertura(jobs)
+    )
 
 
 def test_o_ci_roda_a_suite_em_partes_e_as_pernas_cobrem_as_24() -> None:
@@ -185,10 +238,12 @@ def test_o_ci_roda_a_suite_em_partes_e_as_pernas_cobrem_as_24() -> None:
     assert todas_as_faltas(_jobs(), _partes_do_script()) == []
 
 
-def test_a_regua_le_as_24_partes_e_as_quatro_faixas() -> None:
+def test_a_regua_le_as_24_partes_e_as_faixas() -> None:
     """Sem isto a régua de cima passaria sobre uma matriz que não leu."""
     assert _partes_do_script() == 24
-    assert len(_faixas(_jobs()["gtk-real"])) == 4
+    assert len(_faixas(_jobs()["gtk-real"]["strategy"]["matrix"]["faixa"])) == 6
+    pernas = _faixas_por_perna(_jobs()["lint-test"])
+    assert {p: len(f) for p, f in pernas.items()} == {"3.10": 4, "3.11": 4, "3.12": 6}
 
 
 def _copia() -> dict[str, Any]:
@@ -199,18 +254,18 @@ def test_mordida_faixa_tirada_deixa_parte_sem_dono() -> None:
     jobs = _copia()
     jobs["gtk-real"]["strategy"]["matrix"]["faixa"].pop()
     faltas = todas_as_faltas(jobs, 24)
-    assert any("nenhuma faixa roda: [18, 19, 20, 21, 22, 23]" in f for f in faltas)
+    assert any("nenhuma faixa roda: [20, 21, 22, 23]" in f for f in faltas)
 
 
 def test_mordida_faixa_sobreposta_repete_parte() -> None:
     jobs = _copia()
-    jobs["gtk-real"]["strategy"]["matrix"]["faixa"][1] = "05-11"
-    assert any("mais de uma faixa: [5]" in f for f in todas_as_faltas(jobs, 24))
+    jobs["gtk-real"]["strategy"]["matrix"]["faixa"][1] = "03-07"
+    assert any("mais de uma faixa: [3]" in f for f in todas_as_faltas(jobs, 24))
 
 
 def test_mordida_faixa_alem_das_24() -> None:
     jobs = _copia()
-    jobs["gtk-real"]["strategy"]["matrix"]["faixa"][3] = "18-24"
+    jobs["gtk-real"]["strategy"]["matrix"]["faixa"][5] = "20-24"
     assert any("que a suíte não tem" in f for f in todas_as_faltas(jobs, 24))
 
 
@@ -245,6 +300,28 @@ def test_mordida_artefato_do_lint_test_sem_o_python_no_nome() -> None:
         if str(p.get("uses", "")).startswith("actions/upload-artifact"):
             p["with"]["name"] = "suite-lint-test"
     assert any("não leva o python" in f for f in todas_as_faltas(jobs, 24))
+
+
+def test_mordida_faixa_da_perna_sem_a_parte_05() -> None:
+    jobs = _copia()
+    for celula in jobs["lint-test"]["strategy"]["matrix"]["include"]:
+        if celula == {"python": "3.11", "faixa": "00-05"}:
+            celula["faixa"] = "00-04"
+    assert "lint-test py3.11: partes que nenhuma faixa roda: [5]" in todas_as_faltas(jobs, 24)
+
+
+def test_mordida_as_partes_sem_o_plugin_do_censo() -> None:
+    jobs = _copia()
+    _passo_da_suite(jobs["lint-test"])["env"]["SUITE_PYTEST_ARGS"] = (
+        "--continue-on-collection-errors"
+    )
+    assert "lint-test: as partes rodam sem o plugin do censo de coleta" in todas_as_faltas(jobs, 24)
+
+
+def test_mordida_o_smoke_volta_a_esperar_o_lint_test() -> None:
+    jobs = _copia()
+    jobs["runtime-smoke"]["needs"] = "lint-test"
+    assert "runtime-smoke: espera o lint-test sem usar nada dele" in todas_as_faltas(jobs, 24)
 
 
 def test_mordida_job_sem_a_soma_da_cobertura() -> None:
@@ -346,7 +423,7 @@ def test_nenhum_id_de_teste_e_um_arquivo_inteiro() -> None:
 
 def test_mordida_o_id_sem_nome_volta_a_ser_o_install_inteiro() -> None:
     fonte = (TESTES / "unit" / "test_install_headless.py").read_text(encoding="utf-8")
-    mordida = re.sub(r', ids=\[[^\]]*\]', "", fonte)
+    mordida = re.sub(r", ids=\[[^\]]*\]", "", fonte)
     assert mordida != fonte, "a mordida não achou o `ids=` do test_install_headless"
     assert ids_que_viram_o_arquivo(fonte) == []
     assert any("INSTALL" in f for f in ids_que_viram_o_arquivo(mordida))

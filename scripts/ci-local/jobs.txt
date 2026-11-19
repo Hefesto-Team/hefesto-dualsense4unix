@@ -35,12 +35,14 @@ ROLA|typecheck|rapido
 ROLA|lint-test|rapido
 PULA-NO-RAPIDO|lint-test|Pytest unit
 PULA-NO-RAPIDO|lint-test|Pytest core
+PULA-NO-RAPIDO|lint-test|O censo desta faixa
+PULA-NO-RAPIDO|lint-test|Os relatos do censo
+FORA-DE-CASA|lint-test-perna|o job junta o estado e as linhas `CENSO` que cada faixa do `lint-test` sobe como artefato depois de rodar as suas partes, e o `needs: lint-test` dele faria o act rodar as faixas (a suíte inteira, nas três pernas) antes do julgamento. Em casa o mesmo julgamento é o portão `coleta-sem-gtk` (scripts/check_a_coleta_sem_gtk.py, com o `gi` e o `cairo` bloqueados).
 ROLA|gtk-real|rapido
 PULA-NO-RAPIDO|gtk-real|A suíte inteira sob Xvfb, com o GTK real
 PULA-NO-RAPIDO|gtk-real|Os dados de cobertura desta faixa
-FORA-DE-CASA|cobertura|o job soma os dados de cobertura que as quatro faixas do `gtk-real` sobem como artefato, e o `needs: gtk-real` dele faria o act rodar as quatro faixas (a suíte inteira, perto de 110 minutos) antes da soma; é o mesmo motivo das linhas SEM-NEEDS abaixo, só que sem job desta tabela que valha a soma sozinho. O piso de 70 da suíte inteira só é cobrado no GitHub: em casa as faixas rodam e medem, e a soma não.
+FORA-DE-CASA|cobertura|o job soma os dados de cobertura que as faixas do `gtk-real` sobem como artefato, e o `needs: gtk-real` dele faria o act rodar as faixas (a suíte inteira, perto de 110 minutos) antes da soma; é o mesmo motivo das linhas SEM-NEEDS abaixo, só que sem job desta tabela que valha a soma sozinho. O piso de 70 da suíte inteira só é cobrado no GitHub: em casa as faixas rodam e medem, e a soma não.
 ROLA|runtime-smoke|completo
-SEM-NEEDS|runtime-smoke|lint-test|o needs: lint-test mandaria o act rodar a suíte inteira antes dele; o lint-test é job desta tabela
 ROLA|build-wheel|completo
 FORA-DE-CASA|pacote-appimage|o passo «Smoke AppImage» executa o AppImage, que monta a si mesmo por FUSE, e o container do act não tem `/dev/fuse` (o mesmo `ls /dev/fuse` do `appimage` do release.yml, medido em 06/10/2026: «No such file or directory»); liberar o dispositivo pede `--privileged` ou `--device`, e esta casa não entrega o kernel da máquina ao container. No GitHub ele roda no CI do fecho, antes da tag.
 ROLA|pacote-peca-gdk|completo

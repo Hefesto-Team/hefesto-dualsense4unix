@@ -430,8 +430,9 @@ jobs:
           echo "Sync OK: ambos em $PYPROJECT_VERSION"
 
   lint-test:
+    name: lint-test (py${{ matrix.python }}), partes ${{ matrix.faixa }}
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 50
     strategy:
       # GUARDA-GI-REAL-01: sem `fail-fast: false`, a primeira versão de Python
       # a reprovar CANCELA as outras duas — e o relatório mostra dois jobs
@@ -439,7 +440,17 @@ jobs:
       # responder sempre, como já acontece na matriz de acentuação.
       fail-fast: false
       matrix:
-        python: ["3.10", "3.11", "3.12"]
+        python: ["3.12"]
+        faixa: ["00-03", "04-07", "08-11", "12-15", "16-19", "20-23"]
+        include:
+          - {python: "3.11", faixa: "00-05"}
+          - {python: "3.11", faixa: "06-11"}
+          - {python: "3.11", faixa: "12-17"}
+          - {python: "3.11", faixa: "18-23"}
+          - {python: "3.10", faixa: "00-05"}
+          - {python: "3.10", faixa: "06-11"}
+          - {python: "3.10", faixa: "12-17"}
+          - {python: "3.10", faixa: "18-23"}
     steps:
       # Z6-07 (24/08/2026, P-11): histórico completo — este é o outro job que
       # a PAREAMENTO-01 nomeia como precisando dele (portões futuros que
@@ -497,6 +508,7 @@ jobs:
       - name: Instalar Hefesto - DualSense4Unix em modo dev
         run: pip install -c constraints.txt -e ".[dev]"
       - name: Verificar tamanho de HID captures
+        if: startsWith(matrix.faixa, '00-')
         run: |
           OVERSIZE=$(find tests/fixtures -name "*.bin" -size +5M 2>/dev/null)
           if [[ -n "$OVERSIZE" ]]; then
@@ -506,19 +518,8 @@ jobs:
           fi
       # o `curvas` mora no job que instala o produto: o gerador importa pydantic (CURVA-TABELA-01, na tabela)
       - name: Os portões do job, pelo nome na tabela
+        if: startsWith(matrix.faixa, '00-')
         run: bash scripts/portoes.sh --so ruff curvas
-      # O CENSO DE COLETA (O-CENSO-DE-COLETA-SEGUE-A-ARVORE-01, 06/10/2026). Um módulo que some da coleta
-      # some CALADO (GUARDA-GI-REAL-01). O passo comparava a coleta com um número escrito num dia (o `PISO`,
-      # 8100 em 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65% abaixo da coleta, sem guardar
-      # nada. Quem julga agora é `scripts/check_a_coleta_sem_gtk.py`, módulo a módulo: todo `test_*.py`
-      # versionado dá ao menos um nó ou aparece pulado com motivo. O mesmo julgamento roda em casa, no
-      # portão `coleta-sem-gtk`, com o `gi` e o `cairo` bloqueados.
-      - name: Censo de coleta (nenhum módulo pode sumir calado)
-        run: |
-          set -uo pipefail
-          python -m pytest tests --collect-only -q --continue-on-collection-errors \
-            -p no:cacheprovider -p scripts.check_a_coleta_sem_gtk > /tmp/coleta.txt 2>&1 || true
-          python3 scripts/check_a_coleta_sem_gtk.py --julgar /tmp/coleta.txt
       # GUARDA-GI-REAL-01: `--cov` sem `--cov-fail-under` NÃO é um portão — é
       # um relatório que ninguém lê. O piso 70 foi MEDIDO em 28/07 nesta
       # árvore, no ambiente SEM PyGObject (72% exatos: 19.379 de 26.937
@@ -552,21 +553,45 @@ jobs:
       # dono do comando roda as 24 partes, cada uma num processo, com a saída do pytest
       # num arquivo por parte: no log do passo só entra o sumário de cada parte, o
       # silêncio de pytest é erro duro, e o log da parte sobe como artefato quando algo
-      # reprova. Os 31155 testes de uma perna levaram 49 a 62 minutos num processo; o
-      # teto de 85 cobre isso com os 24 inícios de processo. A
-      # `--continue-on-collection-errors` segue: um módulo quebrado não esconde o resto
-      # da parte dele.
+      # reprova. A `--continue-on-collection-errors` segue: um módulo quebrado não esconde o
+      # resto da parte dele.
+      # AS FAIXAS (O-LINT-TEST-DO-CI-CORRE-EM-FAIXAS-01, 19/11/2026): as 24 partes em série
+      # levavam de 47 a 82 minutos por perna (2,8 a 3,4 por parte). Cada job roda as partes
+      # da sua faixa, uma a uma e sem parar na primeira vermelha, como o `gtk-real`; o 3.10 e
+      # o 3.11 ficam em quatro faixas de seis partes (uns 17 minutos) para a matriz caber nos
+      # 20 jobs simultâneos. O teto é o dobro da pior faixa. O plugin do censo anota, em cada
+      # parte, o que a coleta fez com cada módulo, e o `lint-test-perna` junta as faixas de cada perna.
       - name: Pytest unit
-        timeout-minutes: 85
+        timeout-minutes: 35
         env:
           SAIDA: /tmp/suite-ci
-          SUITE_PYTEST_ARGS: --continue-on-collection-errors
+          SUITE_PYTEST_ARGS: --continue-on-collection-errors -p scripts.check_a_coleta_sem_gtk
+          FAIXA: ${{ matrix.faixa }}
         run: |
-          bash scripts/rodar-a-suite.sh
+          rc=0
+          for ((k = 10#${FAIXA%-*}; k <= 10#${FAIXA#*-}; k++)); do
+            bash scripts/rodar-a-suite.sh "$(printf "%02d" "$k")" || rc=1
+          done
+          exit "$rc"
       # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
       # NENHUM job — existia no repo e nunca reprovava nada.
       - name: Pytest core
-        run: pytest tests/core -v
+        if: ${{ !cancelled() && startsWith(matrix.faixa, '00-') }}
+        run: pytest tests/core -v -p no:cacheprovider -p scripts.check_a_coleta_sem_gtk | tee /tmp/suite-ci/core.log
+      - name: O censo desta faixa
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p /tmp/censo
+          echo "${{ job.status }}" > "/tmp/censo/faixa-${{ matrix.python }}-${{ matrix.faixa }}.estado"
+          sed -n '/^CENSO /p' /tmp/suite-ci/*.log > "/tmp/censo/censo-${{ matrix.python }}-${{ matrix.faixa }}.txt"
+      - name: Os relatos do censo
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: censo-${{ matrix.python }}-${{ matrix.faixa }}
+          path: /tmp/censo/
+          retention-days: 3
+          if-no-files-found: error
       # O vermelho traz a pilha, igual ao `gtk-real` (O-CI-TERMINA-E-DIZ-O-VERMELHO-01).
       - name: A pilha de quem reprovou na suíte
         if: failure()
@@ -595,25 +620,54 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: suite-lint-test-${{ matrix.python }}
+          name: suite-lint-test-${{ matrix.python }}-${{ matrix.faixa }}
           path: /tmp/suite-ci/*.log
           retention-days: 14
+
+  lint-test-perna:
+    name: lint-test (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint-test
+    if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Os relatos das faixas desta perna
+        uses: actions/download-artifact@v8
+        with:
+          pattern: censo-${{ matrix.python }}-*
+          path: /tmp/censo
+          merge-multiple: true
+      - name: As faixas desta perna passaram
+        run: |
+          ls /tmp/censo/*.estado
+          ! grep -H -v -x success /tmp/censo/*.estado
+      - name: Censo de coleta (nenhum módulo pode sumir calado)
+        if: ${{ !cancelled() }}
+        run: cat /tmp/censo/*.txt | python3 scripts/check_a_coleta_sem_gtk.py --julgar -
 
   gtk-real:
     name: Interface com GTK REAL (${{ matrix.os }}), partes ${{ matrix.faixa }}
     runs-on: ${{ matrix.os }}
-    # O JOB É UMA FAIXA DE SEIS PARTES (O-CI-TERMINA-E-DIZ-O-VERMELHO-01, 21/10/2026). As 24 partes em
-    # série estouraram o prazo de 95 minutos na parte 19 (run 39619656976): cada parte leva de 2 a 6
-    # minutos (a média das vinte primeiras é 4,4) e a suíte inteira, perto de 110. Quatro faixas de
-    # seis partes levam uns 25 minutos cada, em paralelo; a régua `test_o_ci_roda_a_suite_em_partes`
+    # O JOB É UMA FAIXA DE QUATRO PARTES (O-CI-TERMINA-E-DIZ-O-VERMELHO-01, 21/10/2026; seis faixas
+    # desde a O-LINT-TEST-DO-CI-CORRE-EM-FAIXAS-01, 19/11/2026). As 24 partes em série estouraram o
+    # prazo de 95 minutos na parte 19 (run 39619656976): cada parte leva de 2 a 6 minutos (a média das
+    # vinte primeiras é 4,4) e a suíte inteira, perto de 110. A régua `test_o_ci_roda_a_suite_em_partes`
     # confere que as faixas juntas cobrem as 24 partes, sem furo e sem repetição.
-    timeout-minutes: 70
+    timeout-minutes: 50
     strategy:
       # Como no `lint-test`: cada faixa responde sempre, e uma que reprova não cancela as outras.
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        faixa: ["00-05", "06-11", "12-17", "18-23"]
+        faixa: ["00-03", "04-07", "08-11", "12-15", "16-19", "20-23"]
         include:
           - os: ubuntu-26.04
             faixa: janela-e-bandeja
@@ -632,7 +686,7 @@ jobs:
     #
     # Ele NÃO é `needs:` do `lint-test`, do `mypy` nem do `runtime-smoke`, de propósito: a
     # falha deste job não pode cancelar nem mascarar os que respondem perguntas diferentes.
-    # Só o `cobertura` depende dele, e só para somar os dados das quatro faixas.
+    # Só o `cobertura` depende dele, e só para somar os dados das faixas.
     steps:
       - uses: actions/checkout@v7
       - name: Prazo do apt (três tentativas, 30 s por conexão)
@@ -764,16 +818,16 @@ jobs:
       # só os arquivos marcados com `exigir_gi_real`, sete de cento e cinquenta;
       # o resto da interface pulava no `lint-test` e não rodava em lugar nenhum.
       # Em 24 partes, pelo `scripts/rodar-a-suite.sh` (um processo só morre no
-      # meio), repartidas em quatro faixas de seis partes, uma por perna da matriz
+      # meio), repartidas em seis faixas de quatro partes, uma por perna da matriz
       # (O-CI-TERMINA-E-DIZ-O-VERMELHO-01, 21/10/2026). A faixa roda as suas partes
       # uma a uma e NÃO para na primeira vermelha: o relato diz todas.
       # O TETO, pela mesma razão do `Pytest unit` do lint-test. Medido no run
       # 39619656976 (partes 00 a 19, uma a uma): de 2,8 a 5,8 minutos cada, 4,4 de média; a pior
-      # faixa de seis, a 12-17, levou 24 minutos mais os arquivos do WebKit em processo próprio.
-      # O teto é 50, o dobro, e o job (70) cobre o teto mais a montagem do GTK.
+      # faixa de seis, a 12-17, levou 24 minutos mais os arquivos do WebKit em processo próprio; a de
+      # quatro fica perto de 17. O teto é 35, o dobro, e o job (50) cobre o teto mais a montagem do GTK.
       # A cobertura de cada faixa vai a um arquivo próprio, que o job `cobertura` soma.
       - name: A suíte inteira sob Xvfb, com o GTK real
-        timeout-minutes: 50
+        timeout-minutes: 35
         env:
           HEFESTO_EXIGE_GTK_REAL: "1"
           GDK_BACKEND: x11
@@ -837,12 +891,12 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
-  # A COBERTURA DA SUÍTE INTEIRA, somada das quatro faixas (O-CI-TERMINA-E-DIZ-O-VERMELHO-01).
+  # A COBERTURA DA SUÍTE INTEIRA, somada das faixas (O-CI-TERMINA-E-DIZ-O-VERMELHO-01).
   # Cada faixa do `gtk-real` mede só as suas seis partes, e o piso de 70 é da suíte inteira: o
-  # `coverage combine` junta os quatro arquivos antes de o `report` cobrar o piso. Só roda quando as
-  # quatro faixas passaram (o padrão do `needs:`): a cobertura de uma suíte que reprova não diz nada.
+  # `coverage combine` junta os arquivos antes de o `report` cobrar o piso. Só roda quando as
+  # faixas passaram (o padrão do `needs:`): a cobertura de uma suíte que reprova não diz nada.
   cobertura:
-    name: A cobertura da suíte inteira (as quatro faixas somadas)
+    name: A cobertura da suíte inteira (as faixas somadas)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gtk-real
@@ -852,7 +906,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Os dados das quatro faixas
+      - name: Os dados das faixas
         uses: actions/download-artifact@v8
         with:
           pattern: cobertura-*
@@ -921,7 +975,6 @@ jobs:
   runtime-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: lint-test
     strategy:
       fail-fast: false
       matrix:

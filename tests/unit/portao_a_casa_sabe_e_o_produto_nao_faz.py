@@ -1161,7 +1161,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`docs/protocol/curvas-proprias.md`. O único chamador é "
         "`scripts/gerar-tabela-de-curvas.py:52-83` (`gerar_tabela_markdown`), que roda no CI com "
         "`--check` "
-        "(`.github/workflows/ci.yml:509` (`curvas`)). Gerador de documentação é instrumento, "
+        "(`.github/workflows/ci.yml:522` (`curvas`)). Gerador de documentação é instrumento, "
         "e instrumento não é caminho de produção — a mesma linha que vale para "
         "`tests/`."
     ),

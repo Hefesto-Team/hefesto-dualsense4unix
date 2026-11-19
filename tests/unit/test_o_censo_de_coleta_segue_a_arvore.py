@@ -1,6 +1,6 @@
 """O censo de coleta segue a árvore: nenhum módulo de teste versionado some calado da coleta.
 
-O passo «Censo de coleta» do lint-test comparava o tamanho da coleta com um número escrito
+O passo «Censo de coleta» comparava o tamanho da coleta com um número escrito
 num dia (o piso 8100, de 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65%
 abaixo da raiz, de modo que qualquer módulo podia sumir sem o passo ver. O julgamento mora em
 `scripts/check_a_coleta_sem_gtk.py` (`julgar`), módulo a módulo, e o `ci.yml` o chama; aqui
@@ -127,10 +127,15 @@ def test_o_julgamento_so_olha_o_que_o_git_versiona() -> None:
     assert (RAIZ / versionados[0]).is_file()
 
 
+def _jobs() -> dict[str, Any]:
+    jobs: dict[str, Any] = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
+    return jobs
+
+
 def _passo_do_censo() -> dict[str, Any]:
-    jobs = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
-    achados = [p for p in jobs["lint-test"]["steps"] if "Censo de coleta" in str(p.get("name", ""))]
-    assert len(achados) == 1, "o lint-test tem de ter UM passo «Censo de coleta»"
+    passos = _jobs()["lint-test-perna"]["steps"]
+    achados = [p for p in passos if "Censo de coleta" in str(p.get("name", ""))]
+    assert len(achados) == 1, "o lint-test-perna tem de ter UM passo «Censo de coleta»"
     passo: dict[str, Any] = achados[0]
     return passo
 
@@ -138,7 +143,11 @@ def _passo_do_censo() -> dict[str, Any]:
 def test_o_ci_chama_o_dono_do_julgamento_e_nao_tem_numero() -> None:
     corpo = _passo_do_censo()["run"]
     assert "scripts/check_a_coleta_sem_gtk.py --julgar" in corpo
-    assert "-p scripts.check_a_coleta_sem_gtk" in corpo, "sem o plugin a saída não traz o censo"
+    passos = _jobs()["lint-test"]["steps"]
+    argumentos = [str((p.get("env") or {}).get("SUITE_PYTEST_ARGS", "")) for p in passos]
+    assert any("-p scripts.check_a_coleta_sem_gtk" in a for a in argumentos), (
+        "sem o plugin nas partes a saída não traz o censo"
+    )
     assert not re.search(r"\bPISO\s*=", corpo) and not re.search(
         r"-lt\s+\$\{?[A-Z_]*PISO", corpo
     ), "o passo voltou a julgar por um número escrito à mão"
@@ -255,3 +264,44 @@ def test_de_ponta_a_ponta_o_import_sem_guarda_reprova_com_a_causa_e_sem_o_r_do_p
         for q in queixas
     ), queixas
     assert not any("SUMIRAM" in q for q in queixas)
+
+
+def _rodar_a_faixa(base: Path, arquivos: list[str]) -> str:
+    ambiente = {"PYTHONPATH": f"{base}:{RAIZ}", "PATH": "/usr/bin:/bin", "HOME": str(base)}
+    saida = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            *arquivos,
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-p",
+            censo.PLUGIN,
+        ],
+        cwd=base,
+        env=ambiente,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    ).stdout
+    return "".join(ln + "\n" for ln in saida.splitlines() if ln.startswith("CENSO "))
+
+
+def test_a_juncao_das_faixas_julga_a_perna_inteira(tmp_path: Path) -> None:
+    modulos = _projeto(tmp_path)
+    relatos = _rodar_a_faixa(tmp_path, modulos[:2]) + _rodar_a_faixa(tmp_path, modulos[2:])
+    queixas, total, pulados = censo.julgar(relatos, modulos)
+    assert queixas == [] and total == 2 and pulados == 2, relatos
+    assert censo.julgar(_rodar_a_faixa(tmp_path, modulos[:2]), modulos)[0] != []
+
+
+def test_mordida_o_modulo_que_nao_coleta_nada_reprova_na_juncao(tmp_path: Path) -> None:
+    modulos = _projeto(tmp_path)
+    (tmp_path / "tests" / "unit" / "test_de_mentira.py").write_text("VALOR = 1\n", encoding="utf-8")
+    modulos.append("tests/unit/test_de_mentira.py")
+    relatos = _rodar_a_faixa(tmp_path, modulos[:2]) + _rodar_a_faixa(tmp_path, modulos[2:])
+    queixas, _, _ = censo.julgar(relatos, modulos)
+    assert "  tests/unit/test_de_mentira.py" in queixas, queixas
