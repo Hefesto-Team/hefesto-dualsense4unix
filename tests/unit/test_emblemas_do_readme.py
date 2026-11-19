@@ -96,3 +96,28 @@ def test_o_emblema_so_vale_se_o_host_da_url_e_o_do_shields() -> None:
         achado = re.search(alvo, texto)
         assert achado is not None
         assert _host_da_url_em(texto, achado.start()) == esperado
+
+
+_RE_SELO_DO_CI = re.compile(r"actions/workflows/ci\.yml/badge\.svg(\?[^)\s]*)?")
+
+
+def faltas_do_selo_do_ci(texto: str) -> list[str]:
+    achado = _RE_SELO_DO_CI.search(texto)
+    if achado is None:
+        return ["o selo do ci.yml sumiu da capa do README"]
+    consulta = achado.group(1) or ""
+    faltas = []
+    if "event=push" not in consulta:
+        faltas.append("o selo do ci.yml não mostra o evento push, que só a tag da release dispara")
+    if "branch=" in consulta:
+        faltas.append("o selo do ci.yml segue um ramo, onde o CI só roda à mão")
+    return faltas
+
+
+def test_o_selo_do_ci_mostra_o_ci_da_ultima_release() -> None:
+    assert faltas_do_selo_do_ci(_texto_do_readme()) == []
+
+
+def test_mordida_o_selo_volta_ao_ramo_dev() -> None:
+    texto = _texto_do_readme().replace("badge.svg?event=push", "badge.svg?branch=dev")
+    assert len(faltas_do_selo_do_ci(texto)) == 2
