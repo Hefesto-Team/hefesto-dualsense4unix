@@ -385,9 +385,9 @@ def registro_voltar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "atualizacoes-registro-copiar")
 def registro_copiar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    from hefesto_dualsense4unix.interface.janela import por_na_area_de_transferencia
+    from hefesto_dualsense4unix.utils import area_de_transferencia
 
-    if not por_na_area_de_transferencia(_o_registro()):
+    if not area_de_transferencia.por(_o_registro()):
         raise RuntimeError("registro: a área de transferência não aceitou")
 
 

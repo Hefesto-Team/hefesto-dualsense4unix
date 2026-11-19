@@ -505,9 +505,9 @@ def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,
     corpo = gestos.conteudo(None)
     assert "primeira &lt;fila&gt;" in corpo and "Copiar" in corpo and "Salvar" in corpo
     copiado: list[str] = []
-    from hefesto_dualsense4unix.interface import janela
+    from hefesto_dualsense4unix.utils import area_de_transferencia
 
-    monkeypatch.setattr(janela, "por_na_area_de_transferencia",
+    monkeypatch.setattr(area_de_transferencia, "por",
                         lambda texto: copiado.append(texto) or True)
     _gesto("atualizacoes-registro-copiar")
     assert copiado == ["primeira <fila>\n"]

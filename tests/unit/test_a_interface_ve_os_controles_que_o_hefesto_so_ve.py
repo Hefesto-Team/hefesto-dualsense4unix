@@ -236,6 +236,9 @@ class _PilotoDeMentira:
         self._externos: list[dict[str, Any]] = []
         self._externos_lidos_em = 0.0
         self._externos_no_ar = False
+        self._externos_no_diario = __import__(
+            "hefesto_dualsense4unix.interface.hefesto_vivo",
+            fromlist=["UmaLinhaPorMudanca"]).UmaLinhaPorMudanca("[externos]")
         self.leitor = _LeitorDeMentira()
 
     SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = (

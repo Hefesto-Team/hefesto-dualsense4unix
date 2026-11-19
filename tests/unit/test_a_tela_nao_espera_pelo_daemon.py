@@ -172,6 +172,7 @@ def _piloto_de_mentira(leitor: hv.LeitorDoEstado) -> Any:
     """O mínimo do `Piloto` que o caminho da resposta toca."""
     piloto = SimpleNamespace(
         _folga=hv.FolgaDoServicoMudo(),
+        _mudo_no_diario=hv.UmaLinhaPorMudanca("[daemon mudo]"),
         _estado_vivo=leitor,
         _geracao_vista=-1,
         _st_de_agora={},
