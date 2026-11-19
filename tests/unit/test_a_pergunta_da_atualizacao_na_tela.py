@@ -436,6 +436,7 @@ def test_o_jogo_de_fora_da_steam_diz_o_nome_do_perfil_de_jogo_que_entrou(
 
 
 def test_a_linha_que_reinstala_tem_glifo_proprio_e_a_que_sobe_diz_de_para() -> None:
+    """D-1911-A-LINHA-QUE-REINSTALA-TEM-GLIFO-PROPRIO: a versão uma vez, com o glifo."""
     sobe = {**_andamento("fila")["pecas"][0], "fazer": "subir"}
     refaz = {**sobe, "fazer": "reinstalar", "de": "11-12", "para": "11-12"}
     assert "→" in tela._linha_do_andamento(sobe) and tela.GLIFO_DA_REINSTALACAO not in \
@@ -460,6 +461,7 @@ def test_a_fila_parada_diz_parada_oferece_continuar_e_o_x_fecha(
 
 
 def test_so_a_espera_que_a_steam_segura_oferece_fechar_e_continuar(registro: list[at.Peca]) -> None:
+    """D-1911-A-FILA-TEM-A-POSSE-DA-STEAM: a espera que a Steam segura traz «Fechar e continuar»."""
     import os
 
     botao = 'data-gesto="atualizacoes-fechar-a-steam"'
@@ -483,6 +485,7 @@ def test_so_a_espera_que_a_steam_segura_oferece_fechar_e_continuar(registro: lis
 
 
 def test_o_fim_que_pede_reinicio_oferece_reiniciar_agora(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO: o fim diz e oferece «Reiniciar agora»."""
     fim = {**_andamento("pronta"), "fase": at.FIM}
     assert "Reiniciar agora" not in tela.html_do_andamento(fim, rodando=False)
     corpo = tela.html_do_andamento(fim, rodando=False, pede_reinicio="O sistema pede o reinício")
@@ -500,6 +503,7 @@ def test_o_fim_que_pede_reinicio_oferece_reiniciar_agora(monkeypatch: pytest.Mon
 
 def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,
                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-1911-O-REGISTRO-ABRE-NA-JANELA: a caixa, com Copiar e Salvar."""
     at.caminho_do_registro().write_text("primeira <fila>\n", encoding="utf-8")
     at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO,
                     {**_andamento("pronta"), "fase": at.FIM, "fim_em": time.time()})

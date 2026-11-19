@@ -638,6 +638,7 @@ def _pecas_da_steam(d: _Diario, steam: _Steam) -> list[at.Peca]:
 
 
 def test_a_fila_fecha_a_steam_uma_vez_e_a_reabre_no_fim() -> None:
+    """D-1911-A-FILA-TEM-A-POSSE-DA-STEAM: sem jogo, fecha uma vez e reabre no fim."""
     d, steam = _Diario(), _Steam()
     lista = _pecas_da_steam(d, steam)
     at.conferir(rede=True, lista=lista)
@@ -667,6 +668,7 @@ def test_a_fila_parada_reabre_a_steam_que_fechou() -> None:
 
 
 def test_com_jogo_aberto_nada_fecha_e_o_pedido_fecha_e_segue() -> None:
+    """D-1911-A-FILA-TEM-A-POSSE-DA-STEAM: com jogo, espera; o pedido fecha e segue."""
     d, steam = _Diario(), _Steam(jogo=True)
     lista = _pecas_da_steam(d, steam)[1:2]
     voltas, tempo = [0], [0.0]

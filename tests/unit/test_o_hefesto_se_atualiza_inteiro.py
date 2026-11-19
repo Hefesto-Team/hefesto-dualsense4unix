@@ -373,6 +373,7 @@ def test_a_python_em_dia_diz_quantas_bibliotecas_conferiu(
 
 def test_sem_o_umu_do_hefesto_a_peca_se_oferece(monkeypatch: pytest.MonkeyPatch,
                                                 tmp_path: Path) -> None:
+    """D-1911-O-UMU-AUSENTE-SE-OFERECE: sem o umu do Hefesto, nenhum ou o de fora, a peça é nova."""
     monkeypatch.setattr(pa, "_release", lambda _repo: {"tag_name": "v1.4.4"})
     monkeypatch.setattr(pa.shutil, "which", lambda _nome: None)
     assert pa.versoes_do_umu(True).tem_nova()
