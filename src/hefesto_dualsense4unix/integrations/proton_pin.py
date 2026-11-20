@@ -2236,21 +2236,18 @@ def a_ultima_do_ge(release: dict[str, object]) -> tuple[str, str, str] | None:
     return None
 
 
-def _na_quarentena(release: dict[str, object], corte: float | None) -> str:
-    """O porquê de a release ainda não subir sozinha com o ``corte`` da quarentena do
-    atualizador; vazio se pode. Sem a data da publicação, não sobe."""
-    from hefesto_dualsense4unix.app.actions.atualizador import (
-        data_do_github,
-        passou_a_quarentena,
-        sobe_sozinha_em,
-    )
+def _sobe_sozinha_em(release: dict[str, object]) -> float:
+    """A quarentena do atualizador sobre o ``published_at`` da release; 0 sem a data."""
+    from hefesto_dualsense4unix.app.actions.atualizador import data_do_github, sobe_sozinha_em
 
-    publicada = data_do_github(str(release.get("published_at") or ""))
-    if passou_a_quarentena(publicada, corte):
-        return ""
-    sobe = sobe_sozinha_em(publicada)
-    return f"sobe sozinha em {time.strftime('%d/%m', time.localtime(sobe))}" if sobe else \
-        "ainda na quarentena"
+    return sobe_sozinha_em(data_do_github(str(release.get("published_at") or "")))
+
+
+def _passou_do_corte(release: dict[str, object], corte: float | None) -> bool:
+    """A release saiu antes do ``corte`` que a fila automática do atualizador traz?"""
+    from hefesto_dualsense4unix.app.actions.atualizador import data_do_github, passou_a_quarentena
+
+    return passou_a_quarentena(data_do_github(str(release.get("published_at") or "")), corte)
 
 
 def _ler_registro(cache: Path) -> dict[str, object]:
@@ -2292,8 +2289,8 @@ def baixar_a_ultima_do_ge(
     """Traz para o cache a GE-Proton mais nova publicada, conferida pelo sha512 do próprio release.
 
     A consulta se repete no máximo a cada ``INTERVALO_DA_CONSULTA_S`` (``forcar`` ignora o prazo).
-    A versão nova publicada depois do ``corte`` da quarentena fica de fora (``em_quarentena``);
-    sem ``forcar``, o corte é o de agora.
+    A versão nova publicada depois do ``corte`` da fila automática (ou sem data) fica de fora
+    (``em_quarentena``), e o vigia sem ``forcar`` espera a quarentena de agora.
     Sem rede, ``nao_consultado``, nunca «em dia». O tarball só fica no cache com o sha512 batendo,
     e o registro guarda o sha256 dele, que é o que a extração confere. Um processo por vez (o
     segundo recebe ``em_andamento``). Nunca levanta.
@@ -2336,13 +2333,13 @@ def _baixar_com_a_trava(cache: Path, *, ler: Callable[[str], bytes],
     if achada is None:
         return Atualizacao("nao_consultado", nome_antigo, "a release não traz o tarball x86_64")
     nome, url, url_da_soma = achada
-    if not forcar and corte is None:
-        from hefesto_dualsense4unix.app.actions.atualizador import corte_da_quarentena
-
-        corte = corte_da_quarentena(agora())
-    porque = _na_quarentena(release, corte) if nome != nome_antigo else ""
-    if porque:
-        return Atualizacao("em_quarentena", nome_antigo, f"{nome} {porque}")
+    if nome != nome_antigo and not _passou_do_corte(release, corte):
+        return Atualizacao("em_quarentena", nome_antigo, f"{nome} ainda na quarentena")
+    if not forcar and nome != nome_antigo:
+        sobe_em = _sobe_sozinha_em(release)
+        if sobe_em > agora():
+            quando = time.strftime("%d/%m", time.localtime(sobe_em))
+            return Atualizacao("em_quarentena", nome_antigo, f"{nome} sobe sozinha em {quando}")
     tarball = cache / f"{nome}.tar.gz"
     sha256_guardado = str(registro.get("sha256", ""))
     if nome == nome_antigo and tarball.is_file() and sha256_guardado:
