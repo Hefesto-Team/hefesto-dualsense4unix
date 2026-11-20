@@ -2,6 +2,7 @@ import ast
 import pathlib
 import re
 import sys
+import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (
@@ -428,6 +429,9 @@ EXEMPLO_DAS_PECAS = {"pecas": [
         ("mangohud", "MangoHud", "O painel por cima do jogo", "0.8.4", "0.8.4", "em_dia", True, 1,
          ""),
         ("umu", "umu", "Os jogos de fora da Steam no Proton", "", "1.4.4", "em_dia", True, 1, ""))]}
+EXEMPLO_DAS_PECAS["pecas"][1].update(
+    publicada_em=time.mktime((2026, 11, 18, 9, 0, 0, 0, 0, -1)), idade_dias=1,
+    sobe_em=time.mktime((2026, 11, 21, 9, 0, 0, 0, 0, -1)))
 
 
 def _novas_do_desenho():

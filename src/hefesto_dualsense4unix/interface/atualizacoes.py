@@ -316,21 +316,48 @@ def _linha(item: dict[str, Any], classe: str, dica_do_selo: str, meio: str, fim:
             f'{meio}{_selo(classe, dica_do_selo)}<span class="mp-mx">{fim}</span></{tag}>')
 
 
+def _numero(valor: Any) -> float:
+    try:
+        return float(valor or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _idade(item: dict[str, Any]) -> tuple[str, str]:
+    """A idade da versão nova de fora (``idade_dias``) e a dica com a data da publicação e a de
+    subir sozinha (``sobe_em``, só enquanto falta); vazio sem a data da publicação."""
+    publicada = _numero(item.get("publicada_em"))
+    if _grupo_do_cartao(item) != "nova" or publicada <= 0 or "idade_dias" not in item:
+        return "", ""
+    dias = int(_numero(item.get("idade_dias")))
+    texto = "hoje" if dias <= 0 else f"{dias} dia{'s' if dias != 1 else ''}"
+    sobe = _numero(item.get("sobe_em"))
+    dica = _junto(f"Publicada em {time.strftime('%d/%m', time.localtime(publicada))}",
+                  f"Sobe sozinha em {time.strftime('%d/%m', time.localtime(sobe))}"
+                  if sobe > 0 else "")
+    return texto, dica
+
+
 def _linha_do_mapa(item: dict[str, Any]) -> str:
     classe, estado = ESTADO_DO_MAPA[_grupo_do_cartao(item)]
-    versao = f'<span class="mp-v">{_versao_a_vista(item)}</span>'
+    idade, dica_da_idade = _idade(item)
+    antes = (f'<span style="color:var(--texto-mudo);margin-right:12px"{_dica(dica_da_idade)}>'
+             f'{_e(idade)}</span>' if idade else "")
+    versao = f'<span class="mp-v">{antes}{_versao_a_vista(item)}</span>'
     if not marcavel(item):
-        dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), _por_que_sem_marca(item))
+        dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), dica_da_idade,
+                      _por_que_sem_marca(item))
         return _linha(item, classe, estado, versao, "", dica)
     reinstala = DICA_DA_REINSTALACAO if e_reinstalacao(item) else ""
     caixa = (f'<input type="checkbox" class="mp-m"{" checked" if marcada(item) else ""}'
              f' data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
-    dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), reinstala)
+    dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), dica_da_idade, reinstala)
     return _linha(item, classe, estado, versao, caixa, dica, marca=True)
 
 
 def html_do_mapa(conferencia: dict[str, Any]) -> str:
-    """Uma linha por peça: o nome, a versão de agora → a nova, o estado e a marca."""
+    """Uma linha por peça: o nome, a idade da versão de fora, a versão de agora → a nova, o
+    estado e a marca."""
     itens = _ordenadas(conferencia.get("pecas") or [])
     return f'<div class="mp-lista">{"".join(_linha_do_mapa(i) for i in itens)}</div>'
 

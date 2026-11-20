@@ -81,7 +81,7 @@ class _PipDeMentira:
 def pip(monkeypatch: pytest.MonkeyPatch) -> _PipDeMentira:
     falso_pip = _PipDeMentira()
     monkeypatch.setattr(pa, "_pip", falso_pip)
-    monkeypatch.setattr(pa, "_atrasadas", lambda: {
+    monkeypatch.setattr(pa, "_atrasadas", lambda _corte=None: {
         nome: (falso_pip.instalados[nome], para)
         for nome, para in (("evdev", "2.0.0"), ("pydantic", "2.14.3"))
         if falso_pip.instalados[nome] != para})

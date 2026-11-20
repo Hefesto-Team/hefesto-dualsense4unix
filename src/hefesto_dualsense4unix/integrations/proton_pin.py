@@ -2236,6 +2236,13 @@ def a_ultima_do_ge(release: dict[str, object]) -> tuple[str, str, str] | None:
     return None
 
 
+def _sobe_sozinha_em(release: dict[str, object]) -> float:
+    """A quarentena do atualizador sobre o ``published_at`` da release; 0 sem a data."""
+    from hefesto_dualsense4unix.app.actions.atualizador import data_do_github, sobe_sozinha_em
+
+    return sobe_sozinha_em(data_do_github(str(release.get("published_at") or "")))
+
+
 def _ler_registro(cache: Path) -> dict[str, object]:
     try:
         dado = json.loads((cache / ULTIMA_DO_GE_BASENAME).read_text(encoding="utf-8"))
@@ -2315,6 +2322,11 @@ def _baixar_com_a_trava(cache: Path, *, ler: Callable[[str], bytes],
     if achada is None:
         return Atualizacao("nao_consultado", nome_antigo, "a release não traz o tarball x86_64")
     nome, url, url_da_soma = achada
+    if not forcar and nome != nome_antigo:
+        sobe_em = _sobe_sozinha_em(release)
+        if sobe_em > agora():
+            quando = time.strftime("%d/%m", time.localtime(sobe_em))
+            return Atualizacao("em_quarentena", nome_antigo, f"{nome} sobe sozinha em {quando}")
     tarball = cache / f"{nome}.tar.gz"
     sha256_guardado = str(registro.get("sha256", ""))
     if nome == nome_antigo and tarball.is_file() and sha256_guardado:

@@ -42,6 +42,7 @@ PEDIDO_DE_FECHAR_A_STEAM = "atualizador.fechar-a-steam"
 DIAS_PADRAO = 7
 DIAS_MINIMO = 1
 DIAS_MAXIMO = 90
+QUARENTENA_PADRAO = 3
 DIA_S = 86400.0
 ESPERA_DO_DEV_S = 30.0
 
@@ -133,6 +134,7 @@ class Versoes:
     existe: bool = True
     completa: str = ""
     revisar: str = ""
+    publicada_em: float = 0.0
 
     def tem_nova(self) -> bool:
         if self.nova is not None:
@@ -257,10 +259,12 @@ def _girar_o_registro() -> None:
 
 @dataclass
 class Escolha:
-    """O que quem usa escolheu: as peças marcadas, a «Atualização automática» e o prazo."""
+    """O que quem usa escolheu: as peças marcadas, a «Atualização automática», o prazo e os dias
+    de quarentena da versão de fora antes de subir sozinha (zero: na hora)."""
 
     sozinho: bool = False
     dias: int = DIAS_PADRAO
+    quarentena: int = QUARENTENA_PADRAO
     marcadas: dict[str, bool] = field(default_factory=dict)
     perguntada_em: float = 0.0
     seguradas: dict[str, str] = field(default_factory=dict)
@@ -276,6 +280,10 @@ def ler_a_escolha() -> Escolha:
     except (TypeError, ValueError):
         dias = DIAS_PADRAO
     try:
+        quarentena = int(dado.get("quarentena", QUARENTENA_PADRAO))
+    except (TypeError, ValueError):
+        quarentena = QUARENTENA_PADRAO
+    try:
         perguntada = float(dado.get("perguntada_em", 0.0) or 0.0)
     except (TypeError, ValueError):
         perguntada = 0.0
@@ -284,6 +292,7 @@ def ler_a_escolha() -> Escolha:
     return Escolha(
         sozinho=bool(dado.get("sozinho", False)),
         dias=max(DIAS_MINIMO, min(DIAS_MAXIMO, dias)),
+        quarentena=max(0, min(DIAS_MAXIMO, quarentena)),
         marcadas={str(k): bool(v) for k, v in marcadas.items()} if isinstance(marcadas, dict)
         else {},
         perguntada_em=perguntada,
@@ -315,6 +324,31 @@ def mudar_a_escolha(*, sozinho: bool | None = None, dias: int | None = None,
 
 def prazo_vencido(escolha: Escolha, agora: float) -> bool:
     return agora - escolha.perguntada_em >= escolha.dias * DIA_S
+
+
+def data_do_github(texto: str) -> float:
+    """O ``published_at`` de uma release do GitHub em segundos; 0 se não veio ou não se lê."""
+    from datetime import datetime
+
+    try:
+        return datetime.fromisoformat(texto.replace("Z", "+00:00")).timestamp() if texto else 0.0
+    except ValueError:
+        return 0.0
+
+
+def sobe_sozinha_em(publicada_em: float, escolha: Escolha | None = None) -> float:
+    """O dono da quarentena: quando a versão de fora publicada em ``publicada_em`` pode subir
+    sozinha; 0 sem a data ou com a quarentena zerada. A subida pedida pela janela não espera."""
+    escolha = ler_a_escolha() if escolha is None else escolha
+    if publicada_em <= 0 or escolha.quarentena <= 0:
+        return 0.0
+    return publicada_em + escolha.quarentena * DIA_S
+
+
+def corte_da_quarentena(agora: float, escolha: Escolha | None = None) -> float | None:
+    """O instante antes do qual a versão tem de ter saído para subir sozinha; ``None``: na hora."""
+    escolha = ler_a_escolha() if escolha is None else escolha
+    return agora - escolha.quarentena * DIA_S if escolha.quarentena > 0 else None
 
 
 def _chave_do_que_ja_esta(versoes: Versoes) -> str:
@@ -397,6 +431,7 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
             "dica_do_aplicar": peca.dica_do_aplicar,
             "de": versoes.instalada, "para": versoes.publicada or "",
             "completa": versoes.completa, "rotulo": versoes.rotulo, "estado": estado,
+            "publicada_em": versoes.publicada_em,
             "marcada": escolha.marcada(peca),
             "pode_voltar": peca.voltar is not None,
             "reinstala": not motivo, "motivo": motivo,
@@ -411,13 +446,21 @@ def ler_a_conferencia() -> dict[str, Any]:
 
 
 def novas(conferencia: dict[str, Any], escolha: Escolha | None = None,
-          *, so_marcadas: bool = True) -> list[str]:
-    """As peças com versão nova, na ordem do registro; ``so_marcadas`` aplica a escolha."""
+          *, so_marcadas: bool = True, sozinha_em: float | None = None) -> list[str]:
+    """As peças com versão nova, na ordem do registro; ``so_marcadas`` aplica a escolha, e
+    ``sozinha_em`` (o agora da subida automática) deixa de fora a versão ainda na quarentena."""
     escolha = ler_a_escolha() if escolha is None else escolha
     saida = []
     for item in conferencia.get("pecas") or []:
         if not isinstance(item, dict) or item.get("estado") != NOVA:
             continue
+        if sozinha_em is not None:
+            try:
+                publicada = float(item.get("publicada_em") or 0)
+            except (TypeError, ValueError):
+                publicada = 0.0
+            if sobe_sozinha_em(publicada, escolha) > sozinha_em:
+                continue
         if so_marcadas and not escolha.marcadas.get(str(item.get("id")),
                                                     bool(item.get("marcada", True))):
             continue
@@ -1017,6 +1060,7 @@ def rodar(
     steam_aberta: Callable[[], bool] = _steam_aberta,
     fechar_a_steam: Callable[[], bool] = _fechar_a_steam,
     reabrir_a_steam: Callable[[], bool] = _reabrir_a_steam,
+    corte: float | None = None,
     maquina: Callable[[Peca], None] | None = None,
     inibidor: Callable[[str], AbstractContextManager[None]] | None = None,
 ) -> int:
@@ -1027,7 +1071,8 @@ def rodar(
     passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma falha não para as
     outras. Se alguma peça mudou, reinicia o serviço e reabre a janela, antes de esperar a que
     ficou para trás e de novo se a peça mudar. A tomada, o disco e o inibidor do desligar vêm de
-    quem chama (o ``--rodar`` liga os reais). Devolve 0 pronto, 1 com falha, 2 parada ou esperando.
+    quem chama (o ``--rodar`` liga os reais); ``corte`` vai a cada peça como ``dados["corte"]``.
+    Devolve 0 pronto, 1 com falha, 2 parada ou esperando.
     """
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
@@ -1088,6 +1133,10 @@ def rodar(
                 andamento.gravar()
             return espera
 
+        def _vez_nova(ident: str) -> _Vez:
+            dados: dict[str, Any] = {} if corte is None else {"corte": corte}
+            return _Vez(dados=dados, antes=ler_as_anteriores().get(ident))
+
         def _recolher_o_pedido_de_tentar() -> None:
             for ident in _pedido_de_tentar():
                 if ident not in versoes or andamento.peca(ident).get("selo") != FALHOU:
@@ -1096,8 +1145,7 @@ def rodar(
                 linha["selo"], linha["motivo"] = FILA, ""
                 linha["etapas"] = dict.fromkeys(ETAPAS, "")
                 _anotar(f"{ident}: de novo, a pedido")
-                adiadas.append((registro[ident], EsperaError("", lambda: True),
-                                _Vez(antes=ler_as_anteriores().get(ident))))
+                adiadas.append((registro[ident], EsperaError("", lambda: True), _vez_nova(ident)))
 
         def _ja_subiu(peca: Peca, linha: dict[str, Any]) -> bool:
             """A peça que ia subir, conferida antes de começar: em dia, fica «Atualizado»."""
@@ -1115,7 +1163,7 @@ def rodar(
                     raise FilaParadaError
                 if _ja_subiu(peca, linha):
                     continue
-                vez = _Vez(antes=ler_as_anteriores().get(peca.id))
+                vez = _vez_nova(peca.id)
                 espera = _rodar(peca, vez)
                 if espera is not None:
                     adiadas.append((peca, espera, vez))
@@ -1239,8 +1287,10 @@ def voltar(ident: str, *, lista: Sequence[Peca] | None = None,
         os.close(trava)
 
 
-def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None) -> bool:
-    """Abre a fila numa unidade própria, que a janela não leva quando fecha. Diz se soltou."""
+def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None,
+           sozinha: bool = False) -> bool:
+    """Abre a fila numa unidade própria, que a janela não leva quando fecha. Diz se soltou;
+    ``sozinha`` é a subida automática, que leva o corte da quarentena."""
     from hefesto_dualsense4unix.integrations import fora_do_servico
     from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 
@@ -1248,15 +1298,19 @@ def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None) -> bo
         return False
     try:
         (abrir or fora_do_servico.abrir)(
-            [sys.executable, "-m", MODULO, "--rodar", *ids],
+            [sys.executable, "-m", MODULO, "--rodar", *(["--sozinha"] if sozinha else []), *ids],
             env=ambiente_limpo(os.environ), aplicativo="atualizador", diario=True)
     except OSError:
         return False
     return True
 
 
+def soltar_sozinha(ids: Sequence[str]) -> bool:
+    return soltar(ids, sozinha=True)
+
+
 def conferir_ao_abrir(fio_do_dev: threading.Thread | None = None, *,
-                      soltar_: Callable[[Sequence[str]], bool] = soltar,
+                      soltar_: Callable[[Sequence[str]], bool] = soltar_sozinha,
                       agora: Callable[[], float] = time.time) -> threading.Thread:
     """O vigia da abertura, num fio: encerra o andamento órfão, confere, e com «Atualização
     automática» no prazo, solta a fila.
@@ -1274,7 +1328,7 @@ def conferir_ao_abrir(fio_do_dev: threading.Thread | None = None, *,
             return
         escolha = ler_a_escolha()
         if escolha.sozinho and prazo_vencido(escolha, agora()) and not em_curso():
-            ids = novas(conferencia, escolha)
+            ids = novas(conferencia, escolha, sozinha_em=agora())
             if ids and soltar_(ids):
                 mudar_a_escolha(perguntada_em=agora())
 
@@ -1296,8 +1350,11 @@ def hora_da_pergunta(agora: float | None = None) -> bool:
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["--rodar"]:
+        ids = [a for a in args[1:] if a != "--sozinha"]
+        corte = corte_da_quarentena(time.time()) if "--sozinha" in args[1:] else None
         try:
-            return rodar(args[1:], maquina=conferir_a_maquina, inibidor=segurar_o_desligar)
+            return rodar(ids, corte=corte, maquina=conferir_a_maquina,
+                         inibidor=segurar_o_desligar)
         except Exception as erro:
             _a_fila_caiu(erro)
             raise

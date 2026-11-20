@@ -33,13 +33,24 @@ TELA: dict[str, Any] = {"vista": "", "perguntou": False, "escondida": 0.0, "lido
 
 
 def _com_a_escolha(conferencia: dict[str, Any], escolha: at.Escolha,
-                   reinstalar: set[str] | frozenset[str] = frozenset()) -> dict[str, Any]:
+                   reinstalar: set[str] | frozenset[str] = frozenset(),
+                   agora: float | None = None) -> dict[str, Any]:
+    """A conferência com a marca de cada peça, a idade em dias da versão de fora e, com a
+    «Atualização automática», quando a versão sai da quarentena (``sobe_em``, 0 se já saiu)."""
+    momento = time.time() if agora is None else agora
     pecas = []
     for item in conferencia.get("pecas") or []:
         if isinstance(item, dict):
             marcada = escolha.marcadas.get(str(item.get("id")), bool(item.get("marcada", True)))
+            try:
+                publicada = float(item.get("publicada_em") or 0)
+            except (TypeError, ValueError):
+                publicada = 0.0
+            sobe = at.sobe_sozinha_em(publicada, escolha) if escolha.sozinho else 0.0
+            idade = {"idade_dias": max(0, int((momento - publicada) // at.DIA_S)),
+                     "sobe_em": sobe if sobe > momento else 0.0} if publicada > 0 else {}
             pecas.append({**item, "marcada": marcada and item.get("volta", 1) == 1,
-                          "reinstalar": str(item.get("id")) in reinstalar})
+                          "reinstalar": str(item.get("id")) in reinstalar, **idade})
     return {**conferencia, "pecas": pecas}
 
 

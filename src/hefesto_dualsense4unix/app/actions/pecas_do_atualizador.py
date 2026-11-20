@@ -25,6 +25,7 @@ import tarfile
 import time
 import urllib.request
 from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,7 @@ from hefesto_dualsense4unix.app.actions.atualizador import (
     Reinstalacao,
     Versoes,
     _anotar,
+    data_do_github,
     ordem,
 )
 
@@ -192,6 +194,11 @@ def _release(repo: str) -> dict[str, Any]:
     if not isinstance(release, dict):
         raise ValueError("a release não veio")
     return release
+
+
+def publicada_em(release: dict[str, Any]) -> float:
+    """O ``published_at`` da release do GitHub, em segundos; 0 se não veio."""
+    return data_do_github(str(release.get("published_at") or ""))
 
 
 def _ativo(release: dict[str, Any], casa: Callable[[str], bool]) -> tuple[str, str, str]:
@@ -499,7 +506,8 @@ def versoes_do_proton(rede: bool) -> Versoes:
     registro = pp._ler_registro(pp.default_cache_dir())
     revisar = pp.reprovada_no_registro(registro) if registro.get("name") == nome else ""
     return Versoes(_curto_do_ge(vale), _curto_do_ge(nome),
-                   nova=qp.ordem_da_versao(nome) > qp.ordem_da_versao(vale), revisar=revisar)
+                   nova=qp.ordem_da_versao(nome) > qp.ordem_da_versao(vale), revisar=revisar,
+                   publicada_em=publicada_em(release))
 
 
 def _baixar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
@@ -655,8 +663,9 @@ def versoes_do_mangohud(rede: bool) -> Versoes:
     instalada = _sem_v((texto or "").strip().split()[0]) if (texto or "").strip() else ""
     if not rede:
         return Versoes(instalada, None)
-    publicada = _sem_v(str(_release(REPO_DO_MANGOHUD).get("tag_name", "")))
-    return Versoes(instalada, publicada or None)
+    release = _release(REPO_DO_MANGOHUD)
+    publicada = _sem_v(str(release.get("tag_name", "")))
+    return Versoes(instalada, publicada or None, publicada_em=publicada_em(release))
 
 
 def _pasta_do_mangohud() -> Path:
@@ -723,11 +732,13 @@ def versoes_do_umu(rede: bool) -> Versoes:
         texto = _saida([str(caminho), "--version"]) or ""
         achada = re.search(r"(\d+(?:\.\d+)+)", texto)
         instalada = achada.group(1) if achada else ""
-    publicada = _sem_v(str(_release(REPO_DO_UMU).get("tag_name", ""))) if rede else None
+    release = _release(REPO_DO_UMU) if rede else {}
+    publicada = _sem_v(str(release.get("tag_name", ""))) if rede else None
     if caminho is None or not nosso:
         return Versoes(instalada, publicada, nova=publicada is not None and bool(publicada),
-                       dica="" if caminho is None else str(caminho))
-    return Versoes(instalada, publicada or None)
+                       dica="" if caminho is None else str(caminho),
+                       publicada_em=publicada_em(release))
+    return Versoes(instalada, publicada or None, publicada_em=publicada_em(release))
 
 
 def _e_o_zipapp(nome: str) -> bool:
@@ -878,10 +889,19 @@ def _pip(*args: str, linha: Callable[[str], None] | None = None) -> tuple[int, s
                     linha=linha)
 
 
-def _atrasadas() -> dict[str, tuple[str, str]]:
-    """As bibliotecas do produto com versão nova, fora a versão que já não montou aqui."""
+def _so_antes_de(corte: float | None) -> list[str]:
+    """O ``--uploaded-prior-to`` da quarentena: a subida automática só vê o que saiu antes."""
+    if corte is None:
+        return []
+    quando = datetime.fromtimestamp(corte, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return ["--uploaded-prior-to", quando]
+
+
+def _atrasadas(corte: float | None = None) -> dict[str, tuple[str, str]]:
+    """As bibliotecas do produto com versão nova, fora a versão que já não montou aqui; com
+    ``corte``, só as publicadas antes dele."""
     texto = _saida([sys.executable, "-m", "pip", "--disable-pip-version-check", "list",
-                    "--outdated", "--format=json"])
+                    "--outdated", "--format=json", *_so_antes_de(corte)])
     if texto is None:
         raise ValueError("o pip não respondeu")
     deps = set(_dependencias_do_produto())
@@ -929,8 +949,8 @@ def _pasta_do_python() -> Path:
     return _cache() / "python"
 
 
-def _rodas(pasta: Path, alvo: Sequence[str]) -> None:
-    rc, ultima = _pip("wheel", "--wheel-dir", str(pasta), *alvo)
+def _rodas(pasta: Path, alvo: Sequence[str], corte: float | None = None) -> None:
+    rc, ultima = _pip("wheel", "--wheel-dir", str(pasta), *_so_antes_de(corte), *alvo)
     if rc != 0:
         raise EtapaFalhouError(ultima or "o pip não montou as rodas")
 
@@ -976,18 +996,20 @@ def _o_produto_sobe() -> str:
     return "" if rc == 0 else (ultima or f"o Hefesto não importou ({rc})")
 
 
-def _baixar_o_python(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+def _baixar_o_python(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
     """As rodas das versões novas e das de agora. Se o conjunto não monta, cada pacote se monta
     sozinho; o que não monta (nem a nova nem a de agora, para voltar) fica na versão de agora e
-    não se oferece de novo nessa versão."""
-    atrasadas = _atrasadas()
+    não se oferece de novo nessa versão. A subida automática leva o corte da quarentena."""
+    corte = dados.get("corte")
+    corte = float(corte) if isinstance(corte, (int, float)) else None
+    atrasadas = _atrasadas(corte)
     if not atrasadas:
         raise NadaAFazerError("")
     pasta = _pasta_do_python()
     shutil.rmtree(pasta, ignore_errors=True)
     (pasta / "antes").mkdir(parents=True)
     try:
-        _rodas(pasta, [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())])
+        _rodas(pasta, [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())], corte)
         passo.fracao(0.5)
         _rodas(pasta / "antes", [f"{n}=={v}" for n, (v, _u) in sorted(atrasadas.items())])
     except EtapaFalhouError:
