@@ -353,6 +353,12 @@ def corte_da_quarentena(agora: float, escolha: Escolha | None = None) -> float |
     return agora - escolha.quarentena * DIA_S if escolha.quarentena > 0 else None
 
 
+def passou_a_quarentena(publicada_em: float, corte: float | None) -> bool:
+    """A versão de fora publicada em ``publicada_em`` pode subir com este ``corte``? Sem corte,
+    pode; com ele, só a publicada antes, e a sem data não pode."""
+    return corte is None or 0 < publicada_em <= corte
+
+
 def _chave_do_que_ja_esta(versoes: Versoes) -> str:
     return versoes.completa or versoes.publicada or ""
 

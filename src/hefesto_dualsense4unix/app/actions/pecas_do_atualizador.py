@@ -41,6 +41,7 @@ from hefesto_dualsense4unix.app.actions.atualizador import (
     _anotar,
     data_do_github,
     ordem,
+    passou_a_quarentena,
 )
 
 AJUDANTE = Path("/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz")
@@ -199,6 +200,22 @@ def _release(repo: str) -> dict[str, Any]:
 def publicada_em(release: dict[str, Any]) -> float:
     """O ``published_at`` da release do GitHub, em segundos; 0 se não veio."""
     return data_do_github(str(release.get("published_at") or ""))
+
+
+def _corte(dados: dict[str, Any]) -> float | None:
+    """O corte da quarentena que a subida automática traz nos dados da peça; ``None``: na hora."""
+    corte = dados.get("corte")
+    return float(corte) if isinstance(corte, (int, float)) else None
+
+
+def _release_da_vez(repo: str, dados: dict[str, Any]) -> dict[str, Any]:
+    """A release que o download leva: a última; na subida automática, só a publicada antes do
+    corte, e a peça fica como está nesta vez se a última ainda está na quarentena."""
+    release = _release(repo)
+    if not passou_a_quarentena(publicada_em(release), _corte(dados)):
+        _anotar(f"{repo}: {release.get('tag_name') or '?'} na quarentena; fica para a próxima")
+        raise NadaAFazerError("")
+    return release
 
 
 def _ativo(release: dict[str, Any], casa: Callable[[str], bool]) -> tuple[str, str, str]:
@@ -510,11 +527,14 @@ def versoes_do_proton(rede: bool) -> Versoes:
                    publicada_em=publicada_em(release))
 
 
-def _baixar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
+def _baixar_o_proton(passo: Passo, dados: dict[str, Any]) -> None:
     pp = _proton()
     feito = pp.baixar_a_ultima_do_ge(
-        pp.default_cache_dir(), forcar=True,
+        pp.default_cache_dir(), forcar=True, corte=_corte(dados),
         baixar=lambda url, destino: _baixar(url, destino, passo))
+    if feito.estado == "em_quarentena":
+        _anotar(f"proton: {feito.detalhe}; fica para a próxima")
+        raise NadaAFazerError("")
     if feito.estado not in ("baixada", "em_cache"):
         raise EtapaFalhouError(feito.detalhe or feito.estado)
 
@@ -676,8 +696,8 @@ def _e_o_binario_do_mangohud(nome: str) -> bool:
     return nome.startswith("MangoHud-") and nome.endswith(".tar.gz") and "Source" not in nome
 
 
-def _baixar_o_mangohud(passo: Passo, _dados_: dict[str, Any]) -> None:
-    nome, url, sha = _ativo(_release(REPO_DO_MANGOHUD), _e_o_binario_do_mangohud)
+def _baixar_o_mangohud(passo: Passo, dados: dict[str, Any]) -> None:
+    nome, url, sha = _ativo(_release_da_vez(REPO_DO_MANGOHUD, dados), _e_o_binario_do_mangohud)
     pasta = _pasta_do_mangohud()
     if pasta.is_dir():
         for velho in pasta.iterdir():
@@ -745,8 +765,8 @@ def _e_o_zipapp(nome: str) -> bool:
     return nome.startswith("umu-launcher-") and nome.endswith("-zipapp.tar")
 
 
-def _baixar_o_umu(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
-    release = _release(REPO_DO_UMU)
+def _baixar_o_umu(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
+    release = _release_da_vez(REPO_DO_UMU, dados)
     nome, url, sha = _ativo(release, _e_o_zipapp)
     destino = _cache() / "umu" / nome
     _baixar(url, destino, passo, sha)
@@ -955,14 +975,16 @@ def _rodas(pasta: Path, alvo: Sequence[str], corte: float | None = None) -> None
         raise EtapaFalhouError(ultima or "o pip não montou as rodas")
 
 
-def _roda_de_um(pasta: Path, pedido: str) -> str:
+def _roda_de_um(pasta: Path, pedido: str, corte: float | None = None) -> str:
     """A roda de um pacote só: com o build isolado, e senão com as ferramentas de build do próprio
-    ambiente (o setuptools que já está nele). Vazio se montou; o porquê senão."""
-    rc, ultima = _pip("wheel", "--no-deps", "--wheel-dir", str(pasta), pedido)
+    ambiente (o setuptools que já está nele); com ``corte``, o pip só vê o que saiu antes. Vazio
+    se montou; o porquê senão."""
+    antes = _so_antes_de(corte)
+    rc, ultima = _pip("wheel", "--no-deps", *antes, "--wheel-dir", str(pasta), pedido)
     if rc == 0:
         return ""
-    rc, ultima = _pip("wheel", "--no-deps", "--no-build-isolation", "--wheel-dir", str(pasta),
-                      pedido)
+    rc, ultima = _pip("wheel", "--no-deps", "--no-build-isolation", *antes, "--wheel-dir",
+                      str(pasta), pedido)
     return "" if rc == 0 else (ultima or f"o pip não montou {pedido}")
 
 
@@ -1000,8 +1022,7 @@ def _baixar_o_python(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
     """As rodas das versões novas e das de agora. Se o conjunto não monta, cada pacote se monta
     sozinho; o que não monta (nem a nova nem a de agora, para voltar) fica na versão de agora e
     não se oferece de novo nessa versão. A subida automática leva o corte da quarentena."""
-    corte = dados.get("corte")
-    corte = float(corte) if isinstance(corte, (int, float)) else None
+    corte = _corte(dados)
     atrasadas = _atrasadas(corte)
     if not atrasadas:
         raise NadaAFazerError("")
@@ -1011,12 +1032,13 @@ def _baixar_o_python(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
     try:
         _rodas(pasta, [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())], corte)
         passo.fracao(0.5)
-        _rodas(pasta / "antes", [f"{n}=={v}" for n, (v, _u) in sorted(atrasadas.items())])
+        _rodas(pasta / "antes", [f"{n}=={v}" for n, (v, _u) in sorted(atrasadas.items())],
+               corte)
     except EtapaFalhouError:
         falhas: dict[str, tuple[str, str]] = {}
         for nome, (velha, nova) in sorted(atrasadas.items()):
-            motivo = _roda_de_um(pasta, f"{nome}=={nova}") or _roda_de_um(
-                pasta / "antes", f"{nome}=={velha}")
+            motivo = _roda_de_um(pasta, f"{nome}=={nova}", corte) or _roda_de_um(
+                pasta / "antes", f"{nome}=={velha}", corte)
             if motivo:
                 falhas[nome] = (nova, motivo)
         if len(falhas) == len(atrasadas):
@@ -1029,17 +1051,18 @@ def _baixar_o_python(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
     return {"pacotes": {n: [v, u] for n, (v, u) in atrasadas.items()}}
 
 
-def _voltar_as_de_antes(pacotes: dict[str, Any]) -> tuple[int, str]:
+def _voltar_as_de_antes(pacotes: dict[str, Any],
+                        corte: float | None = None) -> tuple[int, str]:
     alvo = [f"{n}=={v}" for n, (v, _u) in sorted(pacotes.items())]
     antes = _pasta_do_python() / "antes"
     if antes.is_dir():
         return _instalar_rodas(antes, alvo)
-    return _pip("install", *alvo)
+    return _pip("install", *_so_antes_de(corte), *alvo)
 
 
-def _a_volta(pacotes: dict[str, Any]) -> str:
+def _a_volta(pacotes: dict[str, Any], corte: float | None = None) -> str:
     """Volta às rodas de antes e confere que o produto sobe: a frase do que se viu."""
-    rc, ultima = _voltar_as_de_antes(pacotes)
+    rc, ultima = _voltar_as_de_antes(pacotes, corte)
     if rc != 0:
         return f"e não voltou: {ultima}"
     motivo = _o_produto_sobe()
@@ -1065,17 +1088,17 @@ def _instalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
 def _trocar_o_python(dados: dict[str, Any]) -> None:
     """A troca das rodas na venv, logo antes do reinício do serviço: o pip que falha no meio e o
     produto que não sobe voltam às de antes, e a volta também se prova."""
-    pacotes = dados.get("pacotes") or {}
+    pacotes, corte = dados.get("pacotes") or {}, _corte(dados)
     if not pacotes:
         return
     alvo = [f"{n}=={u}" for n, (_v, u) in sorted(pacotes.items())]
     rc, ultima = _instalar_rodas(_pasta_do_python(), alvo)
     if rc != 0:
-        raise EtapaFalhouError(f"o pip não instalou ({ultima or rc}); {_a_volta(pacotes)}")
+        raise EtapaFalhouError(f"o pip não instalou ({ultima or rc}); {_a_volta(pacotes, corte)}")
     motivo = _o_produto_sobe()
     if motivo:
         raise EtapaFalhouError(f"o Hefesto não sobe com as versões novas ({motivo}); "
-                               f"{_a_volta(pacotes)}")
+                               f"{_a_volta(pacotes, corte)}")
 
 
 def _rodas_de_agora() -> dict[str, str]:

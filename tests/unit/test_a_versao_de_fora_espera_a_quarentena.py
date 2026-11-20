@@ -7,11 +7,15 @@ barrada. Nenhum caso abre unidade nem baixa nada.
 AS MORDIDAS (feitas na sprint, com a cura devolvida e o md5 conferido): o ``published_at`` sem
 leitura reprova o caso da release de um dia; as novas sem o filtro reprovam o mesmo caso; o pip
 sem o ``--uploaded-prior-to`` reprova o caso do pip; a linha sem a idade reprova o caso da tela;
-o vigia do Proton sem a quarentena reprova o caso do Proton.
+o vigia do Proton sem a quarentena reprova o caso do Proton. Em 20/11/2026, as do download e do
+recuo: o download do MangoHud e do umu sem o corte, o do Proton sem o corte e a release sem data
+aceita reprovam o caso do download; o recuo de uma roda por vez, a roda de antes e a volta pelo
+índice sem o corte reprovam o caso do recuo.
 """
 from __future__ import annotations
 
 import json
+import shutil
 import socket
 import time
 from datetime import UTC, datetime
@@ -171,3 +175,75 @@ def test_o_vigia_do_proton_espera_a_quarentena_e_a_janela_baixa(tmp_path: Path) 
     pedida = pp.baixar_a_ultima_do_ge(tmp_path / "cache", ler=ler, forcar=True,
                                       baixar=lambda url, _d: baixados.append(url))
     assert pedida.estado == "nao_consultado" and "sha512" in pedida.detalhe
+
+
+def _release_de_fora(dias: float | None, tag: str) -> dict[str, Any]:
+    publicada = {} if dias is None else {"published_at": _iso(time.time() - dias * at.DIA_S)}
+    return {"tag_name": tag, **publicada, "assets": [
+        {"name": f"MangoHud-{tag}.tar.gz", "browser_download_url": "https://x/m",
+         "digest": "sha256:" + "0" * 64},
+        {"name": f"umu-launcher-{tag}-zipapp.tar", "browser_download_url": "https://x/u",
+         "digest": "sha256:" + "0" * 64},
+        {"name": f"GE-Proton{tag}-x86_64.tar.gz", "browser_download_url": "https://x/t.tar.gz"},
+        {"name": f"GE-Proton{tag}-x86_64.sha512sum", "browser_download_url": "https://x/s"}]}
+
+
+@pytest.mark.parametrize("dias", [1, None])
+def test_o_download_da_subida_automatica_so_leva_o_que_passou_a_quarentena(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path, dias: float | None) -> None:
+    """D-1911-A-VERSAO-DE-FORA-ESPERA-TRES-DIAS: a versão publicada depois da conferência (ou sem
+    data) não se baixa na subida automática; a velha e a pedida pela janela, sim."""
+    corte = time.time() - 3 * at.DIA_S
+    baixados: list[str] = []
+    monkeypatch.setattr(pa, "_baixar", lambda url, *_a, **_k: baixados.append(url))
+    release = _release_de_fora(dias, "11-13")
+    monkeypatch.setattr(pa, "_release", lambda _repo: release)
+
+    def ler(url: str) -> bytes:
+        if url == pp.GE_ULTIMA_API:
+            return json.dumps(release).encode()
+        raise OSError("a soma não vem no teste")
+
+    real = pp.baixar_a_ultima_do_ge
+    monkeypatch.setattr(pp, "baixar_a_ultima_do_ge",
+                        lambda _cache, **kw: real(tmp_path / "cache", ler=ler, **kw))
+    for baixar in (pa._baixar_o_mangohud, pa._baixar_o_umu, pa._baixar_o_proton):
+        with pytest.raises(at.NadaAFazerError):
+            baixar(at.Passo(), {"corte": corte})
+    assert baixados == []
+    pa._baixar_o_mangohud(at.Passo(), {})
+    pa._baixar_o_umu(at.Passo(), {})
+    assert baixados == ["https://x/m", "https://x/u"]
+    with pytest.raises(at.EtapaFalhouError, match="sha512"):
+        pa._baixar_o_proton(at.Passo(), {})
+    release.update(_release_de_fora(4, "11-13"))
+    pa._baixar_o_mangohud(at.Passo(), {"corte": corte})
+    with pytest.raises(at.EtapaFalhouError, match="sha512"):
+        pa._baixar_o_proton(at.Passo(), {"corte": corte})
+
+
+def test_o_recuo_do_pip_leva_o_corte_da_quarentena(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-1911-A-VERSAO-DE-FORA-ESPERA-TRES-DIAS: o conjunto que não monta cai para uma roda por
+    vez, e cada pip que vai ao índice (as rodas, o build isolado e a volta) leva o corte."""
+    chamados: list[list[str]] = []
+    monkeypatch.setattr(pa, "_saida", lambda _argv: json.dumps(
+        [{"name": "evdev", "version": "1.9.3", "latest_version": "2.0.0"},
+         {"name": "pydantic", "version": "2.13.5", "latest_version": "2.14.3"}]))
+    monkeypatch.setattr(pa, "_dependencias_do_produto", lambda: ["evdev", "pydantic"])
+
+    def pip(*args: str, **_k: Any) -> tuple[int, str]:
+        chamados.append(list(args))
+        return (1, "o conjunto não monta") if len([a for a in args if "==" in a]) > 1 else (0, "")
+
+    monkeypatch.setattr(pa, "_pip", pip)
+    corte = AGORA - 3 * at.DIA_S
+    pa._baixar_o_python(at.Passo(), {"corte": corte})
+    rodas = [c for c in chamados if c[0] == "wheel"]
+    assert len([c for c in rodas if "--no-deps" in c]) == 4
+    assert all(c[c.index("--uploaded-prior-to") + 1] == "2026-11-16T12:00:00Z" for c in rodas)
+    chamados.clear()
+    shutil.rmtree(pa._pasta_do_python())
+    pa._voltar_as_de_antes({"evdev": ["1.9.3", "2.0.0"]}, corte)
+    pa._baixar_o_python(at.Passo(), {})
+    assert chamados[0][-3:-1] == ["--uploaded-prior-to", "2026-11-16T12:00:00Z"]
+    assert not any("--uploaded-prior-to" in c for c in chamados[1:])
