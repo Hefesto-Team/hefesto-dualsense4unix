@@ -7,7 +7,8 @@ O-REINICIAR-O-COMPUTADOR-PEDE-CONFIRMACAO-E-DIZ-O-QUE-REINICIA-01 (20/11/2026). 
 AS MORDIDAS (feitas na sprint, com a cura devolvida e o md5 conferido): o primeiro gesto chamando
 ``systemctl reboot`` reprova o caso do primeiro clique; o «Reiniciar» sem conferir a pergunta
 reprova o caso da pergunta aberta; a pergunta conferida só pela vista, sem reler a fila, reprova o
-caso da pergunta armada.
+caso da pergunta armada; a vista da pergunta que sobra quando o fim vence reprova o caso do fim que
+vence.
 """
 from __future__ import annotations
 
@@ -89,9 +90,9 @@ def test_o_primeiro_clique_so_abre_a_pergunta(comandos: list[list[str]]) -> None
     corpo = gestos.conteudo(None)
     assert _a_pergunta_aberta(corpo)
     assert "Reiniciar o computador agora?" in corpo and "O que estiver aberto fecha." in corpo
-    assert f'<button class="btn empurra" data-gesto="{AGORA_NAO}">Agora não</button>' in corpo
-    assert f'<button class="btn borda-vermelha" data-gesto="{REINICIA}">Reiniciar</button>' \
-        in corpo
+    assert f'<button class="btn" data-gesto="{AGORA_NAO}">Agora não</button>' in corpo
+    assert f'<button class="btn borda-vermelha empurra" data-gesto="{REINICIA}">Reiniciar' \
+        '</button>' in corpo
 
 
 def test_agora_nao_volta_a_caixa_como_estava(comandos: list[list[str]]) -> None:
@@ -154,6 +155,20 @@ def test_a_pergunta_nunca_fica_armada(comandos: list[list[str]]) -> None:
     finally:
         os.close(trava)
     assert not _a_pergunta_aberta(gestos.conteudo(None))
+    with pytest.raises(ValueError):
+        _gesto(REINICIA)
+    assert comandos == []
+
+
+def test_o_fim_que_vence_desarma_a_pergunta(comandos: list[list[str]]) -> None:
+    """A pergunta aberta sobre um fim que vence não volta sozinha no fim da fila seguinte."""
+    _fim()
+    _gesto(ABRE)
+    assert _a_pergunta_aberta(gestos.conteudo(None))
+    assert gestos.conteudo(None, agora=time.time() + gestos.VALIDADE_DO_FIM_S + 1) == ""
+    _fim(inicio=456.0)
+    corpo = gestos.conteudo(None)
+    assert not _a_pergunta_aberta(corpo) and f'data-gesto="{ABRE}"' in corpo
     with pytest.raises(ValueError):
         _gesto(REINICIA)
     assert comandos == []

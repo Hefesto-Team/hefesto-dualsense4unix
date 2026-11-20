@@ -492,9 +492,9 @@ def html_da_pergunta_do_reinicio() -> str:
             f'aria-label="{ROTULO_DO_REINICIO}">'
             f'<div class="tn-topo"><span class="tn-tit">{PERGUNTA_DO_REINICIO}</span></div>'
             f'<div class="tn-corpo"><span>{O_QUE_O_REINICIO_FECHA}</span></div>'
-            '<div class="tn-rod"><button class="btn empurra" '
+            '<div class="tn-rod"><button class="btn" '
             'data-gesto="atualizacoes-nao-reiniciar">Agora não</button>'
-            '<button class="btn borda-vermelha" '
+            '<button class="btn borda-vermelha empurra" '
             'data-gesto="atualizacoes-confirmar-o-reinicio">Reiniciar</button></div></div>')
 
 
