@@ -30,6 +30,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     BT_INPUT_CRC_SEED,
     bt_crc32,
 )
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_PONTE_BT,
 )
@@ -505,7 +506,9 @@ class SourceVirtualPipeWire:
 
     def _modulos_do_servidor_com_este_nome(self) -> list[str]:
         """Os `module-pipe-source` que o SERVIDOR já tem com este `source_name`."""
-        saida = self.runner(["pactl", "list", "modules", "short"])
+        return self._modulos_na_lista(self.runner(["pactl", "list", "modules", "short"]))
+
+    def _modulos_na_lista(self, saida: str | None) -> list[str]:
         achados: list[str] = []
         alvo = f"source_name={self.nome}"
         for linha in (saida or "").splitlines():
@@ -589,6 +592,40 @@ class SourceVirtualPipeWire:
             "bt_mic_source_publicada", source=self.nome, module_id=self._module_id
         )
         return True
+
+    def no_ar(self) -> bool | None:
+        """O módulo desta source está no SERVIDOR agora, PERGUNTADO a ele.
+
+        ``False``: o servidor respondeu e não tem o módulo (reiniciou, ou o módulo caiu), ou a
+        source nunca subiu. ``None``: o servidor não respondeu: não se sabe, e nada se refaz.
+        """
+        if self._module_id is None:
+            return False
+        if pactl_mudo():
+            return None
+        saida = self.runner(["pactl", "list", "modules", "short"])
+        if saida is None:
+            return None
+        return bool(self._modulos_na_lista(saida))
+
+    def fonte_no_ar(self, nome: str) -> bool | None:
+        """O servidor lista a source ``nome`` agora. ``None``: ele não respondeu."""
+        if pactl_mudo():
+            return None
+        saida = self.runner(["pactl", "list", "sources", "short"])
+        if saida is None:
+            return None
+        campos = (linha.split("\t") for linha in saida.splitlines())
+        return any(len(c) > 1 and c[1].strip() == nome for c in campos)
+
+    def renascer(self) -> bool:
+        """O servidor perdeu o módulo: sobe de novo pelo mesmo objeto, e quem o guarda segue."""
+        if self._fd is not None:
+            with contextlib.suppress(OSError):
+                os.close(self._fd)
+            self._fd = None
+        self._module_id = None
+        return self.iniciar()
 
     def parar(self) -> None:
         """Descarrega o módulo e fecha o fifo. Idempotente."""
@@ -767,6 +804,11 @@ class PonteMicBluetooth:
     def mic_no_ar(self) -> bool:
         """O microfone deste controle está PEDIDO agora — 10/09/2026."""
         return self._mic_pedido is True
+
+    def terminou_sozinha(self) -> bool:
+        """A thread do áudio morreu sem que ninguém pedisse (EIO, select falho, leitura vazia)."""
+        thread = self._thread
+        return thread is not None and not thread.is_alive() and not self._parar_evt.is_set()
 
     def estatistica(self) -> EstatisticaMic:
         """Snapshot dos contadores (barato: só lê um dataclass sob lock)."""
@@ -1137,6 +1179,19 @@ class _TitularDaLease:
 _TITULAR_DA_LEASE = _TitularDaLease()
 
 
+def _por_que_a_ponte_caiu(ponte: Any, no: NoDualSenseBT) -> str | None:
+    """A ponte da tabela já não serve ao nó que está neste caminho: a thread morreu sozinha, ou
+    o caminho foi reaproveitado por outro controle. ``None`` = segue valendo."""
+    terminou = getattr(ponte, "terminou_sozinha", None)
+    if callable(terminou) and terminou():
+        return "terminou"
+    da_ponte = norm_mac(str(getattr(getattr(ponte, "no", None), "uniq", "") or ""))
+    do_no = norm_mac(str(no.uniq or ""))
+    if da_ponte and do_no and da_ponte != do_no:
+        return "outro_controle"
+    return None
+
+
 class GerenciadorMicBluetooth:
     """Sobe/derruba uma `PonteMicBluetooth` por DualSense conectado em BT.
 
@@ -1174,7 +1229,15 @@ class GerenciadorMicBluetooth:
         atuais = nos if nos is not None else nos_dualsense_bluetooth()
         presentes = {no.caminho: no for no in atuais}
         with self._trava:
-            saem = [self._pontes.pop(c) for c in list(self._pontes) if c not in presentes]
+            saem = []
+            for caminho in list(self._pontes):
+                motivo = "saiu" if caminho not in presentes else _por_que_a_ponte_caiu(
+                    self._pontes[caminho], presentes[caminho])
+                if motivo is None:
+                    continue
+                if motivo != "saiu":
+                    logger.warning("bt_mic_ponte_caiu", no=caminho, motivo=motivo)
+                saem.append(self._pontes.pop(caminho))
         for ponte in saem:
             with contextlib.suppress(Exception):
                 ponte.parar()

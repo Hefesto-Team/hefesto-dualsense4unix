@@ -843,6 +843,14 @@ class BtMicSubsystem:
             self._passos = _PassosDoLaco(self._store if self._store is not None else StateStore())
         return self._passos
 
+    def _reerguer_os_canais(self) -> None:
+        """O canal de pé que o servidor perdeu volta, com o alimentador e a voz juntos."""
+        from hefesto_dualsense4unix.integrations import canal_do_microfone
+
+        for uniq in canal_do_microfone.reerguer_o_que_sumiu():
+            RELOGIO.marcar(uniq, MICROFONE)
+            logger.info("bt_mic_canal_reerguido", uniq=uniq)
+
     def _reconciliar_as_pontes(self, gerenciador: Any, nos: Any) -> None:
         gerenciador.reconciliar(self.alvos(nos))
         for uniq in getattr(gerenciador, "pontes", None) or ():
@@ -865,6 +873,7 @@ class BtMicSubsystem:
         da_volta: tuple[tuple[str, Callable[..., object], bool], ...] = (
             ("esquecer", self._esquecer_quem_saiu_da_mesa, True),
             ("desmarcados", self._soltar_os_que_o_usuario_desmarcou, False),
+            ("canais", self._reerguer_os_canais, False),
             ("cabo", self._reconciliar_o_cabo, True),
             ("pontes", partial(self._reconciliar_as_pontes, gerenciador), True),
             ("espera", self._refazer_quem_esperava_o_canal, False),

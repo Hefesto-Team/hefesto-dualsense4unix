@@ -910,7 +910,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > **O `0x32` que este projeto mediu não decide a questão.** O que foi medido ao
 > vivo em 25/07 é o `0x32` de **controle** — 142 bytes, TLV `0x11|0x80`, o
-> byte que destrava o microfone (`integrations/dualsense_bt_audio.py:59`).
+> byte que destrava o microfone (`integrations/dualsense_bt_audio.py:60`).
 > Isso não é o report de **payload**, e nunca foi. Ninguém aqui escreveu um
 > byte de áudio de saída por rádio.
 >

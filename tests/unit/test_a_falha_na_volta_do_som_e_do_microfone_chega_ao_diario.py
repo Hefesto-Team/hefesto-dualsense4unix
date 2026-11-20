@@ -22,9 +22,10 @@ from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio
 
 PASSOS_DO_MIC = (
-    "_esquecer_quem_saiu_da_mesa", "_soltar_os_que_o_usuario_desmarcou", "_reconciliar_o_cabo",
-    "_reconciliar_as_pontes", "_refazer_quem_esperava_o_canal", "_aplicar_a_palavra_do_usuario",
-    "_varrer_os_orfaos", "_renomear_os_canais_velhos", "_devolver_a_fonte_padrao",
+    "_esquecer_quem_saiu_da_mesa", "_soltar_os_que_o_usuario_desmarcou",
+    "_reerguer_os_canais", "_reconciliar_o_cabo", "_reconciliar_as_pontes",
+    "_refazer_quem_esperava_o_canal", "_aplicar_a_palavra_do_usuario", "_varrer_os_orfaos",
+    "_renomear_os_canais_velhos", "_devolver_a_fonte_padrao",
 )
 PASSOS_DO_SOM = (
     "_marcar_os_do_radio", "_anotar_o_que_a_volta_viu", "_anotar_as_placas",

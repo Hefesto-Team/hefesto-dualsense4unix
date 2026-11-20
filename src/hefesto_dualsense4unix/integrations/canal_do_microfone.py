@@ -323,17 +323,70 @@ def abrir(
         _DE_PE[uniq] = source
         _FONTE_PEDIDA[uniq] = str(fonte or "")
         _passar_a_escolha_do_usuario(uniq, nome)
-        mudo = _a_palavra_do_usuario(uniq) is False
-        if escrever_o_mudo_no_no(nome, mudo, rodar=rodar):
-            _MUDO_ESCRITO[uniq] = mudo
-        else:
-            logger.warning("canal_do_mic_nao_escreveu_o_mudo_ao_nascer", extra={"source": nome})
-        if fonte:
-            alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
-            if alimentador.iniciar():
-                _ALIMENTANDO[uniq] = alimentador
+        _ligar_o_canal(uniq, source, fonte, lancar=lancar, rodar=rodar)
     _filtrar(uniq, nome, descricao, filtrar)
     return source
+
+
+def _ligar_o_canal(uniq: str, source: Any, fonte: str | None, *, lancar: Any, rodar: Any) -> None:
+    """O mudo escrito e o alimentador no ar, no canal que acabou de subir. Chamado com a trava."""
+    mudo = _a_palavra_do_usuario(uniq) is False
+    if escrever_o_mudo_no_no(source.nome, mudo, rodar=rodar):
+        _MUDO_ESCRITO[uniq] = mudo
+    else:
+        logger.warning("canal_do_mic_nao_escreveu_o_mudo_ao_nascer", extra={"source": source.nome})
+    if fonte:
+        alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
+        if alimentador.iniciar():
+            _ALIMENTANDO[uniq] = alimentador
+
+
+def reerguer_o_que_sumiu(
+    *, lancar: Any = None, rodar: Any = None, filtrar: Any = None
+) -> list[str]:
+    """Os canais de pé que o SERVIDOR já não tem voltam, pelo dono: módulo, mudo, alimentador e voz.
+
+    O servidor de som reiniciado leva o módulo, o ``parec`` e o filtro, e a tabela segue dizendo
+    «de pé». A pergunta é ao servidor; ele mudo é «não sei» e nada se refaz. A voz que sumiu
+    sozinha, com o canal de pé, volta só a voz. Devolve os controles reerguidos.
+    """
+    with _TRANCA:
+        de_pe_agora = dict(_DE_PE)
+    reerguidos: list[str] = []
+    for uniq, source in de_pe_agora.items():
+        if source.no_ar() is False:
+            if _reerguer(uniq, source, lancar=lancar, rodar=rodar):
+                reerguidos.append(uniq)
+            else:
+                continue
+        elif microfone_filtrado.voz_no_ar(uniq, source.fonte_no_ar) is not False:
+            continue
+        microfone_filtrado.fechar(uniq)
+        _filtrar(uniq, source.nome, source.descricao, filtrar)
+    return reerguidos
+
+
+def _reerguer(
+    uniq: str, source: SourceVirtualPipeWire, *, lancar: Any, rodar: Any
+) -> bool:
+    logger.warning("canal_do_mic_sumiu_do_servidor", extra={"uniq": uniq, "source": source.nome})
+    with _TRANCA:
+        alimentador = _ALIMENTANDO.pop(uniq, None)
+        _MUDO_ESCRITO.pop(uniq, None)
+    microfone_filtrado.fechar(uniq)
+    if alimentador is not None:
+        try:
+            alimentador.parar()
+        except Exception:
+            logger.warning("canal_do_mic_alimentador_nao_parou", exc_info=True)
+    with _TRANCA:
+        if _DE_PE.get(uniq) is not source:
+            return False
+        if not source.renascer():
+            logger.warning("canal_do_mic_nao_renasceu_no_servidor", extra={"uniq": uniq})
+            return False
+        _ligar_o_canal(uniq, source, _FONTE_PEDIDA.get(uniq) or None, lancar=lancar, rodar=rodar)
+    return True
 
 
 def _filtrar(uniq: str, nome: str, descricao: str, lancar: Any) -> None:

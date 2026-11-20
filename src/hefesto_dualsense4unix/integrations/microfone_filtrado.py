@@ -47,6 +47,7 @@ __all__ = [
     "fechar_todos",
     "nome_da_voz",
     "voz_de",
+    "voz_no_ar",
 ]
 
 BIBLIOTECA_DO_FILTRO = "aec/libspa-aec-webrtc"
@@ -137,6 +138,7 @@ class _Filtro:
     descricao: str
     conf: str
     proc: Any
+    visto: bool = False
 
     def vivo(self) -> bool:
         try:
@@ -237,6 +239,28 @@ def voz_de(uniq: str) -> str:
     with _TRANCA:
         filtro = _DE_PE.get(uniq)
     return filtro.voz if filtro is not None and filtro.vivo() else ""
+
+
+def voz_no_ar(uniq: str, no_ar_no_servidor: Callable[[str], bool | None]) -> bool | None:
+    """O filtro deste controle está de pé NO SERVIDOR: o processo vive e a voz está na lista.
+
+    ``no_ar_no_servidor`` pergunta ao servidor por um nome (``True``, ``False``, ou ``None`` se ele
+    não respondeu). ``False``: o processo morreu, ou a voz que já esteve listada sumiu (o servidor
+    reiniciou). ``None``: não há filtro, o servidor não respondeu, ou a voz ainda não apareceu.
+    """
+    with _TRANCA:
+        filtro = _DE_PE.get(uniq)
+    if filtro is None:
+        return None
+    if not filtro.vivo():
+        return False
+    na_lista = no_ar_no_servidor(filtro.voz)
+    if na_lista is None:
+        return None
+    if na_lista:
+        filtro.visto = True
+        return True
+    return False if filtro.visto else None
 
 
 def de_pe() -> dict[str, str]:
