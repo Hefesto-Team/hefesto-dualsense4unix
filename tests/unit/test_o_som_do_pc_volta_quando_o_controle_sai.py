@@ -7,7 +7,8 @@ o de mentira (``pactl`` dos sinks e da saída padrão); a rota de saída e o sub
 
 MORDIDAS: tirar o passo ``saida_padrao`` da volta deixa o padrão no nó sem rota; tirar a conferência
 de que a saída padrão é o nó derruba a escolha de outra fonte; tirar a reposição deixa o som na TV
-depois que o controle volta.
+depois que o controle volta; contar o rádio mudo sem ponte como sem rota desfaz a escolha no
+silêncio e nunca a repõe; repor sem a volta à lista nem a ponte faz o som ir e voltar.
 """
 from __future__ import annotations
 
@@ -73,10 +74,13 @@ class _Mesa:
                      "_casar_as_pontes"):
             monkeypatch.setattr(self.sub, nome, lambda *_a: None)
 
-    def lista(self, *uniqs: str, transporte: str = RADIO) -> None:
+    def lista(self, *uniqs: str, transporte: str = RADIO, tocando: bool = True) -> None:
+        """Os controles na lista; no rádio, o nó que toca tem a ponte de pé, e o mudo não."""
         self.na_lista = [af.ControleNaLista(u, f"/dev/hidraw{i}", transporte)
                          for i, u in enumerate(uniqs)]
-        self.sub._pontes.update({u: object() for u in uniqs if transporte == RADIO})
+        radio = {u for u in uniqs if transporte == RADIO}
+        self.sub._pontes = {u: object() for u in radio} if tocando else {}
+        self.sub._nos_que_tocam = set(radio) if tocando else set()
 
     def volta(self, vezes: int = 1) -> None:
         for _ in range(vezes):
@@ -162,7 +166,8 @@ def test_com_quatro_controles_so_a_saida_do_no_que_perdeu_a_rota_volta(
     def lista(*fora: str) -> None:
         mesa.na_lista = [af.ControleNaLista(u, f"/dev/hidraw{i}", t)
                          for i, (u, t) in enumerate(todos) if u not in fora]
-        mesa.sub._pontes.update({c.uniq: object() for c in mesa.na_lista if c.transporte == RADIO})
+        mesa.sub._pontes = {c.uniq: object() for c in mesa.na_lista if c.transporte == RADIO}
+        mesa.sub._nos_que_tocam = set(mesa.sub._pontes)
 
     lista()
     mesa.volta()
@@ -184,7 +189,6 @@ def test_o_radio_sem_ponte_em_duas_voltas_devolve_o_som(monkeypatch: pytest.Monk
     """D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI: o nó sem ponte não é destino de som."""
     mesa = _mesa(monkeypatch, padrao=nome_do_sink(P[0]), guardada=HDMI)
     mesa.lista(P[0])
-    mesa.sub._pontes[P[0]] = object()
     mesa.volta(3)
     assert mesa.servidor.padrao == nome_do_sink(P[0]), "o rádio com ponte perdeu o som"
     mesa.sub._pontes.clear()
@@ -195,3 +199,45 @@ def test_o_radio_sem_ponte_em_duas_voltas_devolve_o_som(monkeypatch: pytest.Monk
     mesa.sub._pontes[P[0]] = object()
     mesa.volta()
     assert mesa.servidor.padrao == nome_do_sink(P[0]), "a ponte voltou e o som não"
+
+
+def test_o_radio_em_silencio_sem_ponte_segue_com_o_som_que_se_escolheu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI: o nó mudo desce a ponte e fica o padrão."""
+    mesa = _mesa(monkeypatch, padrao=nome_do_sink(P[0]), guardada=HDMI)
+    mesa.lista(P[0], tocando=False)
+    mesa.volta(4)
+    assert mesa.servidor.escritas == [], "o PC em silêncio desfez a escolha do som no controle"
+
+
+def test_o_radio_que_volta_sem_ponte_recebe_o_som_de_volta(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI: o nó que voltou mudo ganha o som de novo."""
+    mesa = _mesa(monkeypatch, padrao=nome_do_sink(P[0]), guardada=HDMI)
+    mesa.lista(P[0])
+    mesa.volta()
+    mesa.lista()
+    mesa.volta(2)
+    assert mesa.servidor.padrao == HDMI
+    mesa.lista(P[0], tocando=False)
+    mesa.volta()
+    assert mesa.servidor.padrao == nome_do_sink(P[0]), "a ponte só sobe se o nó toca, e não toca"
+
+
+def test_o_som_devolvido_pela_ponte_que_nao_sobe_nao_vai_e_volta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI: o nó que toca sem ponte não oscila."""
+    mesa = _mesa(monkeypatch, padrao=nome_do_sink(P[0]), guardada=HDMI)
+    mesa.lista(P[0])
+    mesa.sub._pontes.clear()
+    mesa.volta(2)
+    assert mesa.servidor.padrao == HDMI
+    mesa.lista(P[0], tocando=False)
+    mesa.volta(4)
+    assert mesa.servidor.escritas == [HDMI], "o som voltou ao nó que segue sem ponte"
+    mesa.lista()
+    mesa.volta()
+    mesa.lista(P[0], tocando=False)
+    mesa.volta()
+    assert mesa.servidor.padrao == nome_do_sink(P[0]), "o controle saiu e voltou e o som não"

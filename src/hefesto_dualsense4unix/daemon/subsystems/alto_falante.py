@@ -808,7 +808,8 @@ class AltoFalanteSubsystem:
         self._daemon: Any = daemon
         self._rota_de_saida_injetada = rota_de_saida
         self._sem_rota_antes: frozenset[str] = frozenset()
-        self._saida_devolvida: dict[str, str] = {}
+        self._saida_devolvida: dict[str, tuple[str, bool]] = {}
+        self._nos_que_tocam: set[str] = set()
         self._governador_injetado = governador
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
@@ -2235,6 +2236,8 @@ class AltoFalanteSubsystem:
         o_jogo_manda = self._o_jogo_manda_nos_motores()
         leva_de: dict[str, bool] = {}
         escutar: dict[str, tuple[str, int, str]] = {}
+        tocam: set[str] = set()
+        self._nos_que_tocam = tocam
         for uniq, caminho in vivos.items():
             morta = self._pontes.get(uniq)
             terminou = getattr(morta, "terminou_sozinha", None)
@@ -2250,7 +2253,9 @@ class AltoFalanteSubsystem:
             som_toca = sink_esta_tocando(
                 nome_do_sink(uniq), na_duvida=uniq in self._pontes
             )
-            lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
+            if som_toca:
+                tocam.add(uniq)
+            lendo =endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
             frente_toca = self._a_frente_toca(lendo)
             if (
                 lendo
@@ -2844,16 +2849,19 @@ class AltoFalanteSubsystem:
     def _cuidar_da_saida_padrao(self, gerenciador: Any, alvos: list[Any]) -> None:
         """O som do PC não fica num nó sem destino, e volta ao nó quando o controle volta.
 
-        O nó de um controle que saiu (ou do rádio sem ponte, visto assim em duas voltas seguidas)
-        não leva som a lugar nenhum: se a saída padrão é ele, devolve-a à saída de antes. Na volta
-        do controle a saída padrão que se devolveu, se ninguém a mudou, volta ao nó dele.
+        O nó de um controle que saiu, ou o do rádio que toca sem ponte (visto assim em duas voltas
+        seguidas), não leva som a lugar nenhum: se a saída padrão é ele, devolve-a à saída de
+        antes. O nó do rádio em silêncio não perde nada: a ponte só sobe quando ele toca. A saída
+        que se devolveu, se ninguém a mudou, volta ao nó quando o controle volta à lista, ou
+        quando a ponte dele sobe.
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
 
         na_lista = {str(getattr(c, "uniq", "") or "") for c in alvos}
         sem_rota = {u for u in gerenciador.nos if u not in na_lista} | {
             u for u in self._no_radio
-            if u in na_lista and not any(_mesmo_controle(u, p) for p in self._pontes)
+            if u in na_lista and u in self._nos_que_tocam
+            and not any(_mesmo_controle(u, p) for p in self._pontes)
         }
         confirmados = sem_rota & self._sem_rota_antes
         self._sem_rota_antes = frozenset(sem_rota)
@@ -2863,13 +2871,18 @@ class AltoFalanteSubsystem:
         for uniq in sorted(confirmados - set(self._saida_devolvida)):
             devolvida = rota.devolver_a_saida_de_um_no(nome_do_sink(uniq))
             if devolvida:
-                self._saida_devolvida[uniq] = devolvida
+                self._saida_devolvida[uniq] = (devolvida, uniq not in na_lista)
                 logger.info("som_saida_devolvida", saida=devolvida)
-        for uniq, devolvida in list(self._saida_devolvida.items()):
-            if uniq in na_lista and uniq not in sem_rota:
-                del self._saida_devolvida[uniq]
-                if rota.repor_no_controle(nome_do_sink(uniq), devolvida):
-                    logger.info("som_saida_reposta_no_controle")
+        for uniq, (devolvida, saiu) in list(self._saida_devolvida.items()):
+            if uniq not in na_lista:
+                self._saida_devolvida[uniq] = (devolvida, True)
+                continue
+            com_ponte = any(_mesmo_controle(uniq, p) for p in self._pontes)
+            if uniq in sem_rota or not (saiu or com_ponte):
+                continue
+            del self._saida_devolvida[uniq]
+            if rota.repor_no_controle(nome_do_sink(uniq), devolvida):
+                logger.info("som_saida_reposta_no_controle")
 
     def _reconciliar(self, gerenciador: Any) -> None:
         """Uma varredura: quem está na lista ganha nó e rota, quem saiu perde só a rota.
