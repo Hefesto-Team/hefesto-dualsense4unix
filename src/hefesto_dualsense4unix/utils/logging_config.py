@@ -5,6 +5,7 @@ import atexit
 import contextlib
 import datetime
 import errno
+import faulthandler
 import logging
 import os
 import re
@@ -117,11 +118,28 @@ def _o_processo_que_cai(tipo: type[BaseException], valor: BaseException, rastro:
     _escrever_no_stderr("".join(traceback.format_exception(tipo, valor, rastro)))
 
 
+_DESCRITOR_DO_STDERR = 2
+
+
+def ligar_a_pilha_da_queda_nativa() -> None:
+    """A queda nativa (SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT) deixa a pilha de cada fio.
+
+    O ``faulthandler`` escreve ``Fatal Python error`` com arquivo, linha e função de todos os
+    fios no descritor 2, o stderr que o diário recolhe, sem passar pelo Python que caiu.
+    Quem já ligou o ``faulthandler`` (``PYTHONFAULTHANDLER``, o pytest) fica com o destino
+    dele. Os processos longos da casa chegam aqui pelo :func:`configure_logging`.
+    """
+    if not faulthandler.is_enabled():
+        faulthandler.enable(file=_DESCRITOR_DO_STDERR, all_threads=True)
+
+
 def instalar_os_ganchos_do_fio_que_cai() -> None:
     """O fio e o processo que caem escrevem pelo dono: o nome do fio e o traceback saem crus
-    pelo stderr, por fora do ``logging``, e o filtro do diário não os vê."""
+    pelo stderr, por fora do ``logging``, e o filtro do diário não os vê. A queda nativa
+    deixa a pilha (:func:`ligar_a_pilha_da_queda_nativa`)."""
     threading.excepthook = _o_fio_que_cai
     sys.excepthook = _o_processo_que_cai
+    ligar_a_pilha_da_queda_nativa()
 
 
 EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
@@ -642,6 +660,7 @@ __all__ = [
     "get_logger",
     "guardar_o_registro_do_servico",
     "instalar_os_ganchos_do_fio_que_cai",
+    "ligar_a_pilha_da_queda_nativa",
     "mascarar_a_linha",
     "reset_for_tests",
 ]

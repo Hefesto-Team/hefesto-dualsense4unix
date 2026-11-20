@@ -11,6 +11,7 @@ from hefesto_dualsense4unix.utils.logging_config import (
     configure_logging,
     get_logger,
     guardar_o_registro_do_servico,
+    ligar_a_pilha_da_queda_nativa,
 )
 
 
@@ -71,6 +72,7 @@ def ajustar_a_vez_do_gil() -> None:
 
 
 def run_daemon(poll_hz: int | None = None) -> int:
+    ligar_a_pilha_da_queda_nativa()
     ajustar_a_vez_do_gil()
     from hefesto_dualsense4unix.utils import sd_notify
 

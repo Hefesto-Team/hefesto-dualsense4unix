@@ -505,12 +505,36 @@ def _linhas_do_registro(atual: Path) -> list[tuple[str, str]]:
     return linhas
 
 
+def _linha_das_voltas_sozinho() -> tuple[str, str] | None:
+    """Quantas vezes o systemd reergueu o serviço (``NRestarts``); ``None`` sem a unit lida."""
+    from hefesto_dualsense4unix.utils.identidade import HEFESTO
+
+    try:
+        feito = subprocess.run(
+            ["systemctl", "--user", "show", HEFESTO.unit_daemon, "--property=NRestarts",
+             "--value"],
+            capture_output=True, text=True, check=False, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    valor = feito.stdout.strip()
+    if not valor.isdigit():
+        return None
+    voltas = int(valor)
+    if voltas == 0:
+        return ("[ OK ]", "o serviço não reiniciou sozinho")
+    return ("[INFO]", f"o serviço reiniciou sozinho {voltas} {'vez' if voltas == 1 else 'vezes'}")
+
+
 def _print_bloco_registro() -> int:
-    """O registro próprio do serviço. Devolve a gravidade do bloco."""
+    """O registro próprio do serviço e as voltas sozinho dele. Devolve a gravidade do bloco."""
     from hefesto_dualsense4unix.utils.logging_config import caminho_do_registro
 
     console.print("\n== registro do serviço ==")
     linhas = _linhas_do_registro(caminho_do_registro())
+    voltas = _linha_das_voltas_sozinho()
+    if voltas is not None:
+        linhas.append(voltas)
     for tag, mensagem in linhas:
         console.print(f"{tag} ", end="")
         console.print(mensagem, soft_wrap=True, highlight=False, markup=False)

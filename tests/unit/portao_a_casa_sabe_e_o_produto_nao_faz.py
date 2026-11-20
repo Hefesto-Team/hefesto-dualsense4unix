@@ -305,15 +305,15 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_FAKE": (
         "Sobe o daemon com controle de mentira (`HEFESTO_DUALSENSE4UNIX_FAKE` em "
-        "`src/hefesto_dualsense4unix/daemon/main.py:18` e "
-        "`daemon_main` em `src/hefesto_dualsense4unix/daemon/main.py:132`). É a "
+        "`src/hefesto_dualsense4unix/daemon/main.py:19` e "
+        "`daemon_main` em `src/hefesto_dualsense4unix/daemon/main.py:134`). É a "
         "chave que permite a suíte inteira rodar sem aparelho na mesa. Ligá-la "
         "em produção seria o defeito, não a cura. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT": (
         "Diz ao controle de mentira se ele deve fingir cabo ou Bluetooth "
         "(`HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT` em "
-        "`src/hefesto_dualsense4unix/daemon/main.py:21`). Irmã da chave FAKE e sem sentido fora "
+        "`src/hefesto_dualsense4unix/daemon/main.py:22`). Irmã da chave FAKE e sem sentido fora "
         "do controle de mentira — é "
         "instrumento de ensaio. MEDIDO em 12/08/2026."
     ),
@@ -341,7 +341,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "sob si; em produção a raiz é fixa. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_FORMAT": (
-        "Formato do log (`log_fmt` em `src/hefesto_dualsense4unix/utils/logging_config.py:535`). "
+        "Formato do log (`log_fmt` em `src/hefesto_dualsense4unix/utils/logging_config.py:553`). "
         "Chave de "
         "diagnóstico de "
         "quem lê log, não superfície de produto — não muda o que o aparelho faz. "
@@ -349,7 +349,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL": (
         "Verbosidade do log (`level_name` em "
-        "`src/hefesto_dualsense4unix/utils/logging_config.py:534`). Mesma "
+        "`src/hefesto_dualsense4unix/utils/logging_config.py:552`). Mesma "
         "família da "
         "anterior: instrumento de quem investiga um defeito, e o caminho "
         "publicado para investigar é o `doctor`, não esta chave. MEDIDO em "
@@ -365,7 +365,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_NICE": (
         "Prioridade de escalonamento do processo do daemon "
-        "(`nice_level` em `src/hefesto_dualsense4unix/daemon/main.py:106`). "
+        "(`nice_level` em `src/hefesto_dualsense4unix/daemon/main.py:108`). "
         "Ajuste de operação, não escolha publicada: a unit é quem decidiria "
         "isso, e decide por outros meios. MEDIDO em 12/08/2026."
     ),
@@ -389,7 +389,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_POLL_HZ": (
         "Frequência do laço de poll (`HEFESTO_DUALSENSE4UNIX_POLL_HZ` em "
-        "`src/hefesto_dualsense4unix/daemon/main.py:118`). Já é escolha "
+        "`src/hefesto_dualsense4unix/daemon/main.py:120`). Já é escolha "
         "publicada "
         "por OUTRA porta — `--poll-hz` do subcomando `daemon start` "
         "(`poll_hz` em `src/hefesto_dualsense4unix/cli/app.py:335`). A env é o atalho de ensaio "
@@ -400,7 +400,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS": (
         "Quantos milissegundos seguram o PS para contar como pressão longa "
         "(`HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS` em "
-        "`src/hefesto_dualsense4unix/daemon/main.py:120`). Calibração de gesto; afinada por quem "
+        "`src/hefesto_dualsense4unix/daemon/main.py:122`). Calibração de gesto; afinada por quem "
         "mede, não "
         "escolhida por quem usa. MEDIDO em 12/08/2026."
     ),
@@ -679,9 +679,9 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "Liga/desliga o teclado emulado (`HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION` em "
-        "`src/hefesto_dualsense4unix/daemon/main.py:123`). É feature "
+        "`src/hefesto_dualsense4unix/daemon/main.py:125`). É feature "
         "de quem usa e "
-        "o próprio comentário de `src/hefesto_dualsense4unix/daemon/main.py:122-122` "
+        "o próprio comentário de `src/hefesto_dualsense4unix/daemon/main.py:124-124` "
         "(`keyboard_emulation_enabled`) escreve a "
         "precedência: default < esta env "
         "< o `keyboard_emulation.flag`, que é a decisão de quem usa. MEDIDO em "
@@ -788,7 +788,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "utils/session.py::save_keyboard_emulation",
         "MEDIDO em 12/08/2026: a env é o degrau do MEIO de uma precedência de "
-        "três, escrita em `src/hefesto_dualsense4unix/daemon/main.py:122-122` "
+        "três, escrita em `src/hefesto_dualsense4unix/daemon/main.py:124-124` "
         "(`keyboard_emulation_enabled`) "
         "— default da dataclass "
         "(True) < "
