@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1276169,
+      "piso": 1276269,
       "por_item": {
-        "docs": 107638,
+        "docs": 107642,
         "scripts": 114898,
         "src": 323731,
-        "tests": 729902
+        "tests": 729998
       },
-      "razao": "tamanho: +1518 linhas (1274651 -> 1276169), pagas por Origem: D-1911-A-GRAVACAO-QUE-FUNDE-SEGURA-A-TRAVA, D-1911-A-GUARDA-VELHA-NAO-RESSUSCITA-O-MAPA, D-1911-A-QUEDA-NATIVA-DEIXA-A-PILHA, D-1911-O-CONTROLE-CUJA-LEITURA-MORREU-SE-REABRE, D-1911-O-ESTADO-SE-GRAVA-INTEIRO; registrado no fecho, topo 1fbcdf06b866",
+      "razao": "tamanho: +100 linhas (1276169 -> 1276269), pagas por Origem: D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS; registrado no fecho, topo b4a83985ed7c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2115,6 +2115,12 @@
           "de": 1274651,
           "para": 1276169,
           "razao": "tamanho: +1518 linhas (1274651 -> 1276169), pagas por Origem: D-1911-A-GRAVACAO-QUE-FUNDE-SEGURA-A-TRAVA, D-1911-A-GUARDA-VELHA-NAO-RESSUSCITA-O-MAPA, D-1911-A-QUEDA-NATIVA-DEIXA-A-PILHA, D-1911-O-CONTROLE-CUJA-LEITURA-MORREU-SE-REABRE, D-1911-O-ESTADO-SE-GRAVA-INTEIRO; registrado no fecho, topo 1fbcdf06b866"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1276169,
+          "para": 1276269,
+          "razao": "tamanho: +100 linhas (1276169 -> 1276269), pagas por Origem: D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS; registrado no fecho, topo b4a83985ed7c"
         }
       ],
       "unidade": "linhas",
