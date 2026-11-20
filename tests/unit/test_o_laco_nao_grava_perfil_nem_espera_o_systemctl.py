@@ -451,6 +451,8 @@ class _Grafo:
                 do_modulo = self.funcoes.get(f"{modulo}.{alvo.attr}")
                 if do_modulo is not None:
                     return [do_modulo]
+                if not modulo.startswith("hefesto_dualsense4unix"):
+                    return []
         candidatas = [g for g in self.por_nome[alvo.attr] if g.classe is not None]
         if alvo.attr in _GENERICOS or len(candidatas) != 1:
             return []
