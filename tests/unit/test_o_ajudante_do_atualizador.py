@@ -292,12 +292,34 @@ def test_o_dkms_recusa_o_fonte_de_outro_dono(lar: Lar) -> None:
 
 
 PACOTE_DO_MANGOHUD = (
+    (".", 0o755, b"", ""), ("usr/", 0o755, b"", ""), ("usr/bin/", 0o755, b"", ""),
+    ("usr/bin/mangoplot", 0o755, b"#!/usr/bin/python3\n", ""),
     ("usr/bin/mangohud", 0o755, b"#!/bin/sh\n", ""),
-    ("usr/lib/mangohud/lib64/libMangoHud.so", 0o644, b"ELF64", ""),
-    ("usr/lib/mangohud/lib32/libMangoHud.so", 0o644, b"ELF32", ""),
-    ("usr/lib/mangohud/x86_64", 0o777, b"", "lib64"),
+    ("usr/lib/", 0o755, b"", ""), ("usr/lib/mangohud/", 0o755, b"", ""),
+    ("usr/lib/mangohud/lib32/", 0o755, b"", ""),
+    ("usr/lib/mangohud/lib32/libMangoHud.so", 0o755, b"ELF32", ""),
+    ("usr/lib/mangohud/lib32/libMangoHud_opengl.so", 0o755, b"ELF32", ""),
+    ("usr/lib/mangohud/lib32/libMangoHud_shim.so", 0o755, b"ELF32", ""),
+    ("usr/lib/mangohud/lib64/", 0o755, b"", ""),
+    ("usr/lib/mangohud/lib64/libMangoHud.so", 0o755, b"ELF64", ""),
+    ("usr/lib/mangohud/lib64/libMangoHud_opengl.so", 0o755, b"ELF64", ""),
+    ("usr/lib/mangohud/lib64/libMangoHud_shim.so", 0o755, b"ELF64", ""),
+    ("usr/share/", 0o755, b"", ""), ("usr/share/man/", 0o755, b"", ""),
+    ("usr/share/man/man1/", 0o755, b"", ""),
+    ("usr/share/man/man1/mangohud.1", 0o644, b".TH\n", ""),
+    ("usr/share/icons/", 0o755, b"", ""), ("usr/share/icons/hicolor/", 0o755, b"", ""),
+    ("usr/share/icons/hicolor/scalable/", 0o755, b"", ""),
+    ("usr/share/icons/hicolor/scalable/apps/", 0o755, b"", ""),
+    ("usr/share/icons/hicolor/scalable/apps/io.github.flightlessmango.mangohud.svg", 0o644,
+     b"<svg/>", ""),
+    ("usr/share/vulkan/", 0o755, b"", ""), ("usr/share/vulkan/implicit_layer.d/", 0o755, b"", ""),
     ("usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json", 0o644, b"{}", ""),
+    ("usr/share/vulkan/implicit_layer.d/MangoHud.x86.json", 0o644, b"{}", ""),
+    ("usr/share/doc/", 0o755, b"", ""), ("usr/share/doc/mangohud/", 0o755, b"", ""),
     ("usr/share/doc/mangohud/MangoHud.conf.example", 0o644, b"fps\n", ""),
+    ("usr/share/doc/mangohud/presets.conf.example", 0o644, b"[1]\n", ""),
+    ("usr/share/metainfo/", 0o755, b"", ""),
+    ("usr/share/metainfo/io.github.flightlessmango.mangohud.metainfo.xml", 0o644, b"<x/>", ""),
 )
 
 
@@ -305,15 +327,20 @@ def _tar_do_mangohud(lar: Lar, nome: str = "MangoHud-0.8.5.r0.tar.gz",
                      membros: tuple[tuple[str, int, bytes, str], ...] = PACOTE_DO_MANGOHUD,
                      ) -> Path:
     """O tarball como a release o publica: o ``mangohud-setup.sh`` e o ``MangoHud-package.tar``
-    com os destinos; o setup de mentira anota quando roda."""
+    com os destinos, na forma medida no ``MangoHud-0.8.4.r0.g992103e.tar.gz`` de 20/11/2026 (a
+    pasta ``.``, as pastas, o ícone e o metainfo; nenhum link); o setup de mentira anota quando
+    roda. O caminho que termina em ``/`` (e o ``.``) é pasta."""
     pasta = lar.casa / ".cache" / "hefesto-dualsense4unix" / "atualizador" / "mangohud"
     pasta.mkdir(parents=True, exist_ok=True)
     interno = io.BytesIO()
     with tarfile.open(fileobj=interno, mode="w") as pacote:
         for caminho, modo, dado, alvo in membros:
-            info = tarfile.TarInfo(f"./{caminho}")
+            info = tarfile.TarInfo("." if caminho == "." else f"./{caminho.rstrip('/')}")
             info.mode = modo
-            if alvo:
+            if caminho == "." or caminho.endswith("/"):
+                info.type = tarfile.DIRTYPE
+                pacote.addfile(info)
+            elif alvo:
                 info.type, info.linkname = tarfile.SYMTYPE, alvo
                 pacote.addfile(info)
             else:

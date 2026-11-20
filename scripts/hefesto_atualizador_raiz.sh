@@ -546,11 +546,20 @@ _instalar_o_tar_do_mangohud() {
         || { _erro "sem o destino do MangoHud"; return 1; }
     python3 -I - "$1" "${DESTINO_DO_MANGOHUD}" <<'MANGOHUD' || return 1
 import os, posixpath, stat, sys, tarfile
+os.umask(0o022)
 origem, destino = sys.argv[1], os.path.realpath(sys.argv[2])
+ICONE = "usr/share/icons/hicolor/scalable/apps"
 PASTAS = ("usr/bin", "usr/lib/mangohud", "usr/share/vulkan/implicit_layer.d",
-          "usr/share/doc/mangohud", "usr/share/man/man1")
-ARQUIVOS = ("usr/bin/mangohud", "usr/bin/mangoplot", "usr/share/man/man1/mangohud.1")
+          "usr/share/doc/mangohud", "usr/share/man/man1", ICONE, "usr/share/metainfo")
+ARQUIVOS = ("usr/bin/mangohud", "usr/bin/mangoplot", "usr/share/man/man1/mangohud.1",
+            f"{ICONE}/io.github.flightlessmango.mangohud.svg",
+            "usr/share/metainfo/io.github.flightlessmango.mangohud.metainfo.xml")
 CAMADA = "usr/share/vulkan/implicit_layer.d/MangoHud."
+LIGACOES = (("x86_64", "lib64"), ("x86_64-linux-gnu", "lib64"), ("lib64/x86_64", "."),
+            ("lib64/x86_64-linux-gnu", "."), ("i686", "lib32"), ("i386-linux-gnu", "lib32"),
+            ("i686-linux-gnu", "lib32"), ("tls/x86_64", "../lib64"), ("tls/i686", "../lib32"))
+DA_FABRICA = (("i386-linux-gnu", "../lib32"), ("i686-linux-gnu", "../lib32"),
+             ("x86_64-linux-gnu", "../lib64"), ("tls", "../tls"))
 
 def recusa(porque):
     sys.exit(f"o pacote do MangoHud fica de fora: {porque}")
@@ -559,6 +568,8 @@ def dentro(nome, pasta):
     return nome == pasta or nome.startswith(pasta + "/")
 
 def nome_limpo(bruto):
+    if bruto in (".", "./"):
+        return ""
     nome = bruto[2:] if bruto.startswith("./") else bruto
     nome = nome.rstrip("/")
     if not nome or nome.startswith("/") or ".." in nome.split("/") or posixpath.normpath(nome) != nome:
@@ -585,7 +596,7 @@ try:
                 if membro.mode & (stat.S_ISUID | stat.S_ISGID | stat.S_ISVTX):
                     recusa(f"bit especial em {nome}")
                 if membro.isdir():
-                    if not pasta_de_caminho(nome):
+                    if nome and not pasta_de_caminho(nome):
                         recusa(f"pasta fora da lista: {nome}")
                     continue
                 if not na_lista(nome):
@@ -618,6 +629,24 @@ try:
                 if raiz:
                     os.lchown(novo, 0, 0)
                 os.replace(novo, final)
+    ident = ""
+    if os.path.isfile(os.path.join(destino, "etc/os-release")):
+        with open(os.path.join(destino, "etc/os-release"), encoding="utf-8") as dado:
+            ident = next((x[3:].strip().strip('"') for x in dado if x.startswith("ID=")), "")
+    de_fabrica = "lib64" if "arch" in ident else "lib32"
+    base = os.path.join(destino, "usr/lib/mangohud")
+    os.makedirs(os.path.join(base, "tls"), exist_ok=True)
+    dono = os.path.realpath(base)
+    for nome, alvo in (("lib", de_fabrica), *LIGACOES,
+                      *((f"{de_fabrica}/{n}", a) for n, a in DA_FABRICA)):
+        final = os.path.join(base, nome)
+        pai = os.path.realpath(os.path.dirname(final))
+        if os.path.lexists(final) or not os.path.isdir(pai) \
+                or not (pai == dono or pai.startswith(dono + "/")):
+            continue
+        os.symlink(alvo, final)
+        if raiz:
+            os.lchown(final, 0, 0)
 except (OSError, tarfile.TarError) as erro:
     recusa(str(erro))
 MANGOHUD
