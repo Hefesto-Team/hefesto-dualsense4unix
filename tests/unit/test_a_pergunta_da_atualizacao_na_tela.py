@@ -484,21 +484,18 @@ def test_so_a_espera_que_a_steam_segura_oferece_fechar_e_continuar(registro: lis
     assert (at._runtime() / at.PEDIDO_DE_FECHAR_A_STEAM).exists()
 
 
-def test_o_fim_que_pede_reinicio_oferece_reiniciar_agora(monkeypatch: pytest.MonkeyPatch) -> None:
-    """D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO: o fim diz e oferece «Reiniciar agora»."""
-    fim = {**_andamento("pronta"), "fase": at.FIM}
-    assert "Reiniciar agora" not in tela.html_do_andamento(fim, rodando=False)
-    corpo = tela.html_do_andamento(fim, rodando=False, pede_reinicio="O sistema pede o reinício")
-    assert tela.REINICIE in corpo and 'data-gesto="atualizacoes-reiniciar-o-computador"' in corpo
-    assert "Reiniciar agora" not in tela.html_do_andamento(
-        fim, rodando=True, pede_reinicio="O sistema pede o reinício")
-    from hefesto_dualsense4unix.app.actions import daemon_actions as da
+def test_o_fim_que_pede_reinicio_oferece_reiniciar_o_computador() -> None:
+    """D-1911-A-FILA-DIZ-QUE-PEDE-REINICIO: o fim diz e oferece «Reiniciar o computador».
 
-    chamadas: list[tuple[list[str], Any]] = []
-    monkeypatch.setattr(gestos.subprocess, "run", lambda argv, **k: chamadas.append(
-        (argv, k.get("timeout"))) or type("R", (), {"returncode": 0, "stderr": ""})())
-    _gesto("atualizacoes-reiniciar-o-computador")
-    assert chamadas == [(["systemctl", "reboot"], da.PRAZO_DE_DESLIGAR_A_MAQUINA_S)]
+    O clique e a pergunta: ``test_o_reiniciar_o_computador_pede_confirmacao``."""
+    botao = 'data-gesto="atualizacoes-reiniciar-o-computador"'
+    fim = {**_andamento("pronta"), "fase": at.FIM}
+    assert botao not in tela.html_do_andamento(fim, rodando=False)
+    corpo = tela.html_do_andamento(fim, rodando=False, pede_reinicio="O sistema pede o reinício")
+    assert tela.REINICIE in corpo and f'{tela.ROTULO_DO_REINICIO}</button>' in corpo
+    assert botao in corpo and "Reiniciar agora" not in corpo
+    assert botao not in tela.html_do_andamento(
+        fim, rodando=True, pede_reinicio="O sistema pede o reinício")
 
 
 def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,

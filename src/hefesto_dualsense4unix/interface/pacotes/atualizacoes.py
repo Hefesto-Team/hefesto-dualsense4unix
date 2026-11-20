@@ -131,6 +131,22 @@ def _andamento_a_mostrar(andamento: dict[str, Any], rodando: bool, agora: float)
     return not andamento.get("visto") and agora - fim < VALIDADE_DO_FIM_S
 
 
+def _o_reinicio(andamento: dict[str, Any], rodando: bool) -> str:
+    """O porquê de o computador pedir o reinício no fim da fila; vazio com a fila viva."""
+    return "" if rodando else curas_da_casa.pede_reinicio(
+        trocou_em=at.trocou_o_que_pede_reinicio(andamento))
+
+
+def _a_pergunta_do_reinicio_aberta() -> bool:
+    """A pergunta do reinício está na tela agora, sobre um fim que ainda pede o reinício."""
+    if TELA["vista"] != "reiniciar":
+        return False
+    andamento = at.ler_o_andamento()
+    rodando = at.em_curso()
+    return _andamento_a_mostrar(andamento, rodando, time.time()) and tela.oferece_o_reinicio(
+        andamento, rodando=rodando, pede_reinicio=_o_reinicio(andamento, rodando))
+
+
 def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
     """O HTML da caixa agora, ou vazio: a caixa fechada."""
     momento = time.time() if agora is None else agora
@@ -141,14 +157,16 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
         return tela.html_do_registro(_o_registro())
     if _andamento_a_mostrar(andamento, rodando, momento) \
             and not (espera and TELA["vista"] in ("pergunta", "voltar")):
+        reinicio = _o_reinicio(andamento, rodando)
+        if TELA["vista"] == "reiniciar" and tela.oferece_o_reinicio(
+                andamento, rodando=rodando, pede_reinicio=reinicio):
+            return tela.html_da_pergunta_do_reinicio()
         TELA["vista"] = "andamento"
-        reinicio = "" if rodando else curas_da_casa.pede_reinicio(
-            trocou_em=at.trocou_o_que_pede_reinicio(andamento))
         return tela.html_do_andamento(andamento, rodando=rodando,
                                       parando=rodando and at.parada_pedida(),
                                       pede_reinicio=reinicio,
                                       fecha_a_steam=espera and _a_steam_segura(andamento, ctx))
-    if TELA["vista"] == "andamento":
+    if TELA["vista"] in ("andamento", "reiniciar"):
         TELA["vista"] = ""
     if not TELA["vista"] and not TELA["perguntou"] and at.hora_da_pergunta(momento):
         TELA["perguntou"] = True
@@ -251,7 +269,7 @@ def lista(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 @gesto("*", "atualizacoes-fechar")
 def fechar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O fechar: esconde o andamento (a fila segue) ou fecha a pergunta; o fim visto não volta."""
-    if TELA["vista"] in ("andamento", "registro"):
+    if TELA["vista"] in ("andamento", "registro", "reiniciar"):
         andamento = at.ler_o_andamento()
         TELA["escondida"] = _inicio(andamento)
         if not at.em_curso():
@@ -433,10 +451,30 @@ def fechar_a_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _repintar()
 
 
-@gesto("*", "atualizacoes-reiniciar-o-computador", grava="reinicia o computador")
+@gesto("*", "atualizacoes-reiniciar-o-computador")
+def perguntar_o_reinicio(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Reiniciar o computador»: só abre a pergunta; quem reinicia é o «Reiniciar» da pergunta."""
+    TELA["vista"] = "reiniciar"
+    _repintar()
+
+
+@gesto("*", "atualizacoes-nao-reiniciar")
+def nao_reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Agora não» da pergunta do reinício: a caixa volta ao fim como estava."""
+    if TELA["vista"] == "reiniciar":
+        TELA["vista"] = "andamento"
+    _repintar()
+
+
+@gesto("*", "atualizacoes-confirmar-o-reinicio", grava="reinicia o computador")
 def reiniciar_o_computador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Reiniciar» da pergunta: reinicia só com a pergunta aberta, e a desarma antes."""
     from hefesto_dualsense4unix.app.actions.daemon_actions import prazo_do_systemctl
 
+    if not _a_pergunta_do_reinicio_aberta():
+        raise ValueError("reiniciar: a pergunta do reinício não está aberta")
+    TELA["vista"] = "andamento"
+    _repintar()
     feito = subprocess.run(["systemctl", "reboot"], check=False, capture_output=True,
                            text=True, timeout=prazo_do_systemctl(["reboot"]))
     if feito.returncode != 0:

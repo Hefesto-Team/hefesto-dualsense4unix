@@ -32,6 +32,9 @@ DICA_DO_REGISTRO = "O registro desta atualização"
 DICA_DO_JOGO = "Espera o jogo fechar"
 DICA_DA_FILA = "Espera a atualização em curso"
 PARADA, PARANDO, REINICIE = "Parada", "Parando…", "Reinicie o computador para concluir"
+ROTULO_DO_REINICIO = "Reiniciar o computador"
+PERGUNTA_DO_REINICIO = "Reiniciar o computador agora?"
+O_QUE_O_REINICIO_FECHA = "O que estiver aberto fecha."
 GLIFO_DA_REINSTALACAO = "↻"
 ATUALIZADO, NOVA_VERSAO, ESPERANDO, APLICANDO, FALHOU, NA_FILA, A_REVISAR, SEM_REDE = (
     "Atualizado", "Nova versão", "Esperando", "Aplicando", "Falhou", "Na fila", "A revisar",
@@ -477,6 +480,24 @@ def _linha_do_andamento(peca: dict[str, Any], *, parada: bool = False) -> str:
     return _linha(peca, classe, estado, meio, "", dica)
 
 
+def oferece_o_reinicio(andamento: dict[str, Any], *, rodando: bool, pede_reinicio: str) -> bool:
+    """O fim da fila que pede o reinício traz o «Reiniciar o computador»; a fila viva ou parada,
+    não."""
+    return bool(pede_reinicio) and not rodando and andamento.get("fase") != "parado"
+
+
+def html_da_pergunta_do_reinicio() -> str:
+    """A pergunta do «Reiniciar o computador»: só o «Reiniciar» da pergunta reinicia."""
+    return (f'<div class="tn-cx" role="dialog" aria-modal="true" '
+            f'aria-label="{ROTULO_DO_REINICIO}">'
+            f'<div class="tn-topo"><span class="tn-tit">{PERGUNTA_DO_REINICIO}</span></div>'
+            f'<div class="tn-corpo"><span>{O_QUE_O_REINICIO_FECHA}</span></div>'
+            '<div class="tn-rod"><button class="btn empurra" '
+            'data-gesto="atualizacoes-nao-reiniciar">Agora não</button>'
+            '<button class="btn borda-vermelha" '
+            'data-gesto="atualizacoes-confirmar-o-reinicio">Reiniciar</button></div></div>')
+
+
 def html_do_andamento(andamento: dict[str, Any], *, rodando: bool, parando: bool = False,
                       pede_reinicio: str = "", fecha_a_steam: bool = False) -> str:
     """O total, uma linha por peça e o reinício do serviço; o rodapé muda com a fila."""
@@ -503,10 +524,10 @@ def html_do_andamento(andamento: dict[str, Any], *, rodando: bool, parando: bool
     if parada:
         botoes.append(f'<button class="btn{empurra}" data-gesto="atualizacoes-continuar">'
                       'Continuar</button>')
-    elif pede_reinicio and not rodando:
+    elif oferece_o_reinicio(andamento, rodando=rodando, pede_reinicio=pede_reinicio):
         botoes.append(f'<button class="btn borda-vermelha{empurra}" '
                       f'data-gesto="atualizacoes-reiniciar-o-computador"{_dica(pede_reinicio)}>'
-                      'Reiniciar agora</button>')
+                      f'{ROTULO_DO_REINICIO}</button>')
     if rodando:
         botoes.append(f'<button class="btn borda-vermelha{empurra}" '
                       f'data-gesto="atualizacoes-parar"{" disabled" if parando else ""}>'

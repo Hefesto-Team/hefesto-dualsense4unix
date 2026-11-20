@@ -64,6 +64,10 @@ ATOS: dict[Chave, str] = {
         "tela: do registro de volta ao andamento; nada se grava",
     ("*", "atualizacoes-registro-copiar"):
         "ato: põe o registro na área de transferência; nada se grava",
+    ("*", "atualizacoes-reiniciar-o-computador"):
+        "tela: abre a pergunta do reinício; quem reinicia é o «Reiniciar» da pergunta, que declara",
+    ("*", "atualizacoes-nao-reiniciar"):
+        "tela: fecha a pergunta do reinício e a caixa volta ao fim; nada se grava",
     ("calibrar-sensores.html", "calibrar-sinal"):
         "ato: lê o giro da peça por 3 s e diz se o sentido bateu; nada se grava "
         "(A-CALIBRAR-MEDE-O-QUE-A-MIRA-USA-01)",
