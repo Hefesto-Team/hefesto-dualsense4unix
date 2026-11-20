@@ -181,7 +181,8 @@ class Reinstalacao:
 
 @dataclass(frozen=True)
 class Peca:
-    """Uma peça de fora. ``volta`` 2: a tela a mostra, e o motor ainda não a sobe."""
+    """Uma peça de fora. ``volta`` 2: a tela a mostra, e o motor ainda não a sobe. ``trocar``: a
+    troca que espera o reinício do serviço (a fila a faz logo antes dele, com os dados da peça)."""
 
     id: str
     nome: str
@@ -198,6 +199,7 @@ class Peca:
     reinstalacao: Reinstalacao | None = None
     anterior: Callable[[], dict[str, Any] | None] | None = None
     steam_fechada: bool = False
+    trocar: Callable[[dict[str, Any]], None] | None = None
 
 
 def pecas() -> list[Peca]:
@@ -1114,6 +1116,7 @@ def rodar(
 
         adiadas: list[tuple[Peca, EsperaError, _Vez]] = []
         reiniciadas: set[str] = set()
+        por_trocar: dict[str, tuple[Peca, _Vez]] = {}
 
         def _fechar_a_steam_da_fila() -> None:
             if not fechou and steam_aberta() and fechar_a_steam():
@@ -1125,6 +1128,10 @@ def rodar(
                 _fechar_a_steam_da_fila()
             espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, jogo_aberto, vez,
                                    maquina=maquina, inibidor=inibidor)
+            linha = andamento.peca(peca.id)
+            if peca.trocar is not None and linha.get("selo") == PRONTA \
+                    and linha.get("fazer") == SUBIR:
+                por_trocar[peca.id] = (peca, vez)
             if vez.dados.get("reiniciou") and andamento.peca(peca.id).get("selo") == PRONTA:
                 reiniciadas.update(_prontas(andamento))
                 reinicio = andamento.dado["reinicio"]
@@ -1132,6 +1139,26 @@ def rodar(
                 reinicio["pct"], reinicio["selo"] = 100, PRONTA
                 andamento.gravar()
             return espera
+
+        def _trocar_antes_do_reinicio() -> None:
+            """A troca das peças que esperam o reinício, logo antes dele; a que falha volta."""
+            for ident, (peca, vez) in list(por_trocar.items()):
+                del por_trocar[ident]
+                linha = andamento.peca(ident)
+                linha["selo"] = APLICANDO
+                andamento.gravar()
+                try:
+                    if peca.trocar is not None:
+                        peca.trocar(vez.dados)
+                except Exception as erro:
+                    motivo = str(erro) or type(erro).__name__
+                    linha["etapas"]["aplicar"], linha["selo"], linha["motivo"] = \
+                        "erro", FALHOU, motivo
+                    _devolver_a_anterior(ident, vez.antes)
+                    _anotar(f"{ident}: a troca antes do reinício falhou: {motivo}")
+                else:
+                    linha["selo"] = PRONTA
+                andamento.gravar()
 
         def _vez_nova(ident: str) -> _Vez:
             dados: dict[str, Any] = {} if corte is None else {"corte": corte}
@@ -1167,9 +1194,10 @@ def rodar(
                 espera = _rodar(peca, vez)
                 if espera is not None:
                     adiadas.append((peca, espera, vez))
-            if adiadas and _prontas(andamento) - reiniciadas:
+            if adiadas and (_prontas(andamento) - reiniciadas or por_trocar):
                 if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
                     raise FilaParadaError
+                _trocar_antes_do_reinicio()
                 _rodar_o_servico(andamento, reiniciar, reabrir)
                 reiniciadas = _prontas(andamento)
             _recolher_o_pedido_de_tentar()
@@ -1212,12 +1240,19 @@ def rodar(
                 raise FilaParadaError
             andamento.dado["fase"], andamento.dado["fim_em"] = FIM, agora()
             andamento.gravar()
+            trocadas = set(por_trocar)
+            _trocar_antes_do_reinicio()
+            reiniciadas -= trocadas
             if _prontas(andamento) - reiniciadas:
                 _rodar_o_servico(andamento, reiniciar, reabrir)
             elif not reiniciadas:
                 andamento.dado["reinicio"]["selo"] = ATUALIZADA
         except FilaParadaError:
             _devolver_a_steam(fechou, reabrir_a_steam)
+            for ident, (_peca, vez) in por_trocar.items():
+                andamento.peca(ident)["selo"] = FILA
+                _devolver_a_anterior(ident, vez.antes)
+                _anotar(f"{ident}: a fila parou antes da troca; fica como estava")
             andamento.dado["fase"], andamento.dado["fim_em"] = PARADO, agora()
             for linha in andamento.dado["pecas"]:
                 if linha.get("selo") in EM_CURSO:

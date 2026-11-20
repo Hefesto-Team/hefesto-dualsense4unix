@@ -1037,21 +1037,45 @@ def _voltar_as_de_antes(pacotes: dict[str, Any]) -> tuple[int, str]:
     return _pip("install", *alvo)
 
 
+def _a_volta(pacotes: dict[str, Any]) -> str:
+    """Volta às rodas de antes e confere que o produto sobe: a frase do que se viu."""
+    rc, ultima = _voltar_as_de_antes(pacotes)
+    if rc != 0:
+        return f"e não voltou: {ultima}"
+    motivo = _o_produto_sobe()
+    return "voltou às versões de antes" if not motivo else \
+        f"voltou às versões de antes, e o Hefesto não sobe com as de antes ({motivo})"
+
+
+def _canonico(nome: str) -> str:
+    return re.sub(r"[-_.]+", "-", nome).lower()
+
+
 def _instalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
+    """As rodas novas ficam prontas no cache, uma por biblioteca; a troca na venv é a da fila,
+    logo antes do reinício (:func:`_trocar_o_python`)."""
+    prontas = {(_canonico(r.name.split("-")[0]), r.name.split("-")[1])
+               for r in _pasta_do_python().glob("*.whl") if r.name.count("-") >= 2}
+    for nome, (_v, nova) in sorted((dados.get("pacotes") or {}).items()):
+        if (_canonico(nome), str(nova)) not in prontas:
+            raise EtapaFalhouError(f"a roda de {nome} {nova} não ficou pronta")
+    passo.fracao(1.0)
+
+
+def _trocar_o_python(dados: dict[str, Any]) -> None:
+    """A troca das rodas na venv, logo antes do reinício do serviço: o pip que falha no meio e o
+    produto que não sobe voltam às de antes, e a volta também se prova."""
     pacotes = dados.get("pacotes") or {}
     if not pacotes:
         return
     alvo = [f"{n}=={u}" for n, (_v, u) in sorted(pacotes.items())]
     rc, ultima = _instalar_rodas(_pasta_do_python(), alvo)
     if rc != 0:
-        raise EtapaFalhouError(ultima or "o pip não instalou")
-    passo.fracao(0.8)
+        raise EtapaFalhouError(f"o pip não instalou ({ultima or rc}); {_a_volta(pacotes)}")
     motivo = _o_produto_sobe()
     if motivo:
-        rc, ultima = _voltar_as_de_antes(pacotes)
-        volta = "voltou às versões de antes" if rc == 0 else f"e não voltou: {ultima}"
-        raise EtapaFalhouError(f"o Hefesto não sobe com as versões novas ({motivo}); {volta}")
-    passo.fracao(1.0)
+        raise EtapaFalhouError(f"o Hefesto não sobe com as versões novas ({motivo}); "
+                               f"{_a_volta(pacotes)}")
 
 
 def _rodas_de_agora() -> dict[str, str]:
@@ -1097,12 +1121,22 @@ def _reinstalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
 
 
 def _voltar_o_python(anterior: dict[str, Any]) -> None:
+    """Volta às rodas de antes, prova que o produto sobe e reinicia o serviço; a versão recusada
+    de cada biblioteca não se oferece de novo (a seguinte, sim)."""
+    from hefesto_dualsense4unix.app.actions.atualizador import _reiniciar_o_servico
+
     pacotes = (anterior.get("dados") or {}).get("pacotes") or {}
     if not pacotes:
         raise EtapaFalhouError("sem versão anterior")
     rc, ultima = _voltar_as_de_antes(pacotes)
     if rc != 0:
         raise EtapaFalhouError(ultima or "o pip não voltou")
+    _anotar_as_que_nao_montam({n: (str(u), "voltou a pedido") for n, (_v, u) in pacotes.items()})
+    motivo = _o_produto_sobe()
+    if motivo:
+        raise EtapaFalhouError(f"voltou, e o Hefesto não sobe ({motivo})")
+    if not _reiniciar_o_servico():
+        _anotar("python: voltou, e o serviço não reiniciou")
 
 
 def _versao_do_pyproject(texto: str) -> str:
@@ -1601,7 +1635,8 @@ def registro() -> list[Peca]:
              _voltar_a_gdk, reinstalacao=Reinstalacao(_baixar_a_gdk, _reinstalar_a_gdk)),
         Peca("python", "Python", "As bibliotecas do Hefesto", "O serviço e a janela",
              versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python,
-             reinstalacao=Reinstalacao(_baixar_de_novo_o_python, _reinstalar_o_python)),
+             reinstalacao=Reinstalacao(_baixar_de_novo_o_python, _reinstalar_o_python),
+             trocar=_trocar_o_python),
         Peca("nvidia", "Driver Nvidia", "O driver da placa de vídeo", "No próximo início",
              versoes_da_nvidia, _do_apt("nvidia", "baixar"), _do_apt("nvidia", "instalar"),
              _limpar, reinstalacao=_reinstalacao_do_apt("nvidia", None)),
