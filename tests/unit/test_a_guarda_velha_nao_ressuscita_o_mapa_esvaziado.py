@@ -77,7 +77,8 @@ def _no_disco(casa: Path) -> dict[str, Any]:
 
 
 def _guardas(casa: Path) -> list[str]:
-    return sorted(p.name for p in casa.iterdir() if p.name != "maquina.json")
+    fora = {"maquina.json", "maquina.json.lock"}
+    return sorted(p.name for p in casa.iterdir() if p.name not in fora)
 
 
 @pytest.mark.parametrize("secao", maquina.SECOES_DESTE_COMPUTADOR)

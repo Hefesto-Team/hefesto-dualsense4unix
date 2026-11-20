@@ -121,7 +121,8 @@ def _no_disco(casa: Path, nome: str = "maquina.json") -> dict[str, Any]:
 
 
 def _guardas(casa: Path) -> list[str]:
-    return sorted(p.name for p in casa.iterdir() if p.name != "maquina.json")
+    fora = {"maquina.json", "maquina.json.lock"}
+    return sorted(p.name for p in casa.iterdir() if p.name not in fora)
 
 
 def test_o_mapa_sem_placa_feito_antes_da_renumeracao_fica_e_os_lugares_andam(

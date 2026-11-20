@@ -2025,6 +2025,9 @@ def mudar_o_perfil(
     laço do serviço a chama por `asyncio.to_thread`. Devolve o perfil que vale, se gravou e o
     `extra`.
     """
+    _reject_traversal(nome)
+    _maybe_seed_presets()
+    _talvez_semear_jogos()
     alvo = _arquivo_para_carregar(nome)
     with _trava_do_perfil(alvo):
         perfil = Profile.model_validate(_ler_o_cru(alvo))
@@ -2087,9 +2090,6 @@ def arquivo_do_perfil(identifier: str, directory: Path | None = None) -> Path | 
 
 
 def _arquivo_para_carregar(identifier: str) -> Path:
-    _reject_traversal(identifier)
-    _maybe_seed_presets()
-    _talvez_semear_jogos()
     alvo = arquivo_do_perfil(identifier, profiles_dir(ensure=True))
     if alvo is None:
         raise FileNotFoundError(f"perfil não encontrado: {identifier}")
@@ -2098,6 +2098,9 @@ def _arquivo_para_carregar(identifier: str) -> Path:
 
 def load_profile(identifier: str) -> Profile:
     """Carrega perfil por slug direto ou por display name."""
+    _reject_traversal(identifier)
+    _maybe_seed_presets()
+    _talvez_semear_jogos()
     return _read_profile(_arquivo_para_carregar(identifier))
 
 
