@@ -43,7 +43,10 @@ from hefesto_dualsense4unix.daemon.subsystems.diario_do_corpo import (
     RECUSA_ECONOMIA,
     RECUSA_FORCA_ZERO,
     RECUSA_JOGO_NO_ENDPOINT,
+    RECUSA_RADIO_CEDE,
     RECUSA_SEM_APARELHO,
+    RECUSA_SEM_ENDPOINT,
+    DesfechoDoCorpo,
     DiarioDoCorpo,
 )
 from hefesto_dualsense4unix.daemon.subsystems.intensidade_da_cena import IntensidadeDaCena
@@ -3590,6 +3593,7 @@ class ToqueDeFora:
     pelo_motor: bool
     tocado_ate: float = 0.0
     motor_escrito: float = -1.0
+    nos_lados: bool = False
 
 
 class FonteDeFora:
@@ -3608,6 +3612,8 @@ class FonteDeFora:
         radio_cede: Callable[[str], bool] = lambda uniq: False,
         tocar_haptica: Callable[[str, Any, str], object] = lambda uniq, amostras, lado: False,
         motores: Callable[[str, int, int], object] = lambda uniq, fraco, forte: False,
+        tocar_lados: Callable[[str, int, int], object] = lambda uniq, esquerdo, direito: False,
+        desfecho_do_corpo: Callable[[str], str | None] = lambda uniq: None,
         tocar_som: Callable[[str, Any], object] = lambda uniq, recorte: False,
         relogio: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -3618,6 +3624,8 @@ class FonteDeFora:
         self.radio_cede = radio_cede
         self.tocar_haptica = tocar_haptica
         self.motores = motores
+        self.tocar_lados = tocar_lados
+        self.desfecho_do_corpo = desfecho_do_corpo
         self.tocar_som = tocar_som
         self._vivos: dict[tuple[str, str, str], list[PedidoVivo]] = {}
         self._vencedor: dict[tuple[str, str, str], tuple[str, float]] = {}
@@ -3855,6 +3863,8 @@ class FonteDeFora:
                 del self.toques[chave]
                 if toque.pelo_motor:
                     self.motores(uniq, 0, 0)
+                if toque.nos_lados:
+                    self._levar_nos_lados(uniq, agora)
                 continue
             if self._segura_a_troca(uniq, "haptica", lado, toque.origem, agora):
                 continue
@@ -3902,7 +3912,33 @@ class FonteDeFora:
         de_ms = (toque.tocado_ate - toque.inicio) * 1000.0
         amostras = amostras_de(toque.padrao, de_ms, quantas, toque.forca, toque.bpm)
         toque.tocado_ate += quantas / TAXA_DE_FORA
-        self.tocar_haptica(uniq, amostras, lado)
+        motivo = getattr(self.tocar_haptica(uniq, amostras, lado), "motivo", None)
+        if motivo == RECUSA_RADIO_CEDE:
+            toque.pelo_motor = True
+            self.contadores["pelo_motor"] += 1
+            return self._levar(uniq, lado, toque, agora)
+        if motivo == RECUSA_JOGO_NO_ENDPOINT:
+            toque.nos_lados = True
+            return self._levar_nos_lados(uniq, agora)
+        if toque.nos_lados:
+            toque.nos_lados = False
+            self._levar_nos_lados(uniq, agora)
+        return 1
+
+    def _levar_nos_lados(self, uniq: str, agora: float) -> int:
+        """O envelope dos toques de ``uniq`` que o jogo tirou do PCM fino, no nível de cada motor
+        do tocador do aparelho, onde ele soma ao que o jogo toca sem apagar o rumble dele."""
+        esquerdo = direito = 0
+        for (dono, lado), toque in self.toques.items():
+            if dono != uniq or not toque.nos_lados:
+                continue
+            nivel = round(255 * toque.forca * envelope_de(
+                toque.padrao, (agora - toque.inicio) * 1000.0, toque.bpm))
+            if lado != LADO_DIREITO:
+                esquerdo = max(esquerdo, nivel)
+            if lado != LADO_ESQUERDO:
+                direito = max(direito, nivel)
+        self.tocar_lados(uniq, esquerdo, direito)
         return 1
 
 
@@ -3969,10 +4005,12 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
             return False
         return bool(quem._o_radio_cede(chave))
 
-    def tocar_haptica(uniq: str, amostras: Any, lado: str) -> bool:
+    def tocar_haptica(uniq: str, amostras: Any, lado: str) -> DesfechoDoCorpo:
         quem = falante()
-        return bool(quem is not None and quem.tocar_o_corpo(
-            uniq, amostras, lado, fonte=FONTE_DE_FORA))
+        if quem is None:
+            return DesfechoDoCorpo(RECUSA_SEM_APARELHO)
+        desfecho: DesfechoDoCorpo = quem.tocar_o_corpo(uniq, amostras, lado, fonte=FONTE_DE_FORA)
+        return desfecho
 
     def motores(uniq: str, fraco: int, forte: int) -> bool:
         quem = falante()
@@ -3987,6 +4025,17 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
         escrever = getattr(controle, "set_rumble_for", None)
         return bool(callable(escrever) and escrever(uniq, fraco, forte))
 
+    def tocar_lados(uniq: str, esquerdo: int, direito: int) -> bool:
+        quem = falante()
+        return bool(quem is not None and quem.levar_os_lados(uniq, esquerdo, direito))
+
+    def desfecho_do_corpo(uniq: str) -> str | None:
+        alvo = norm_mac(uniq)
+        if any(c.externo and norm_mac(c.uniq) == alvo for c in controles_do_daemon(daemon)):
+            return RECUSA_SEM_ENDPOINT
+        quem = falante()
+        return RECUSA_SEM_APARELHO if quem is None else quem.o_que_recusa_o_corpo(uniq).motivo
+
     def tocar_som(uniq: str, recorte: Any) -> bool:
         quem = falante()
         return bool(quem is not None and quem.tocar_o_estalo(uniq, recorte))
@@ -3996,6 +4045,8 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
     fonte.radio_cede = radio_cede
     fonte.tocar_haptica = tocar_haptica
     fonte.motores = motores
+    fonte.tocar_lados = tocar_lados
+    fonte.desfecho_do_corpo = desfecho_do_corpo
     fonte.tocar_som = tocar_som
     return fonte
 

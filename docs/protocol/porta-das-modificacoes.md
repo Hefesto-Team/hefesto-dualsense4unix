@@ -51,7 +51,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `mira.peso` | `{uniq\|"todos", ganho (0,3 a 1), ate_ms (até 10000)}` | `escrever:mira` | `{status}` |
 | `mira.ligada` | `{uniq\|"todos", ligada: true\|false}` | `escrever:mira` | `{status, ligada}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
 | `vibracao.escala` | `{uniq, escala (0 a 1)}` | `escrever:vibracao` | `{status, escala}` |
-| `corpo.ligar` | `{uniq, som_no_corpo? (0 a 1), gatilhos?: {tipo, forca (0 a 1)}, ate_ms (1 a 10000)}` | `escrever:corpo` | `{status}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
+| `corpo.ligar` | `{uniq, som_no_corpo? (0 a 1), gatilhos?: {tipo, forca (0 a 1)}, ate_ms (1 a 10000)}` | `escrever:corpo` | `{status, corpo?, motivo?}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?, linhas?, presentes?, situacao?, leituras?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
@@ -93,7 +93,11 @@ valendo: no corpo vale o mais forte, e nos motores fica o padrão do perfil, com
 toca na soltura do gatilho e a `pancada_do_lado` com o estalo do som, como no perfil. Toca só com um jogo aberto; na
 Bateria longa o corpo não toca e os motores descem à força da economia. No Modo Nativo e no Steam Input o jogo fala
 direto com o controle: o pedido recusa (`-32011`, com `{canal: "corpo", modo}`), e o que já estava pedido cala ali.
-Vale por controle, de um a quatro, no cabo e no rádio.
+Vale por controle, de um a quatro, no cabo e no rádio. Com `som_no_corpo` pedido, a resposta diz o desfecho de agora
+em `corpo`: `tocando`, ou `cedeu` com o `motivo` (`sem_aparelho`, `forca_zero`, `sem_endpoint`, `jogo_no_endpoint`,
+`radio_cede`; o Pro e o 8BitDo respondem `sem_endpoint`). O toque de padrão registrado (`haptica.tocar`) honra a <!-- ref-externa: método da porta das extensões, não do daemon -->
+mesma recusa: o rádio sem fatia livre cai no motor, o jogo no endpoint cai no nível de cada motor do tocador do
+aparelho, que soma ao rumble do jogo e nunca o apaga, e a Força em 0 não cai em caminho nenhum.
 
 Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,

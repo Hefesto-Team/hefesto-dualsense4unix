@@ -2090,7 +2090,12 @@ class Porta:
         """O ``corpo.ligar {uniq, som_no_corpo?, gatilhos?: {tipo, forca}, ate_ms}``: o Som no
         corpo e o padrão dos motores no L2 e no R2 do tato vivo, num controle, até ``ate_ms``; o
         pedido se renova pedindo de novo, e o vazio solta. O que o perfil liga segue valendo, e
-        o mais forte vale; no Modo Nativo e no Steam Input o jogo fala direto com o controle."""
+        o mais forte vale; no Modo Nativo e no Steam Input o jogo fala direto com o controle.
+
+        Com o Som no corpo pedido, a resposta diz o desfecho de agora em ``corpo``: ``tocando``, ou
+        ``cedeu`` com o ``motivo`` (``sem_aparelho``, ``forca_zero``, ``sem_endpoint``,
+        ``jogo_no_endpoint``, ``radio_cede``). O Modo Nativo e o Steam Input recusam com
+        ``CODE_O_JOGO_ESCREVE``."""
         from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
             PedidoDoCorpo,
             o_modo_cala_a_extensao,
@@ -2126,11 +2131,15 @@ class Porta:
             fonte.corpo.pedir(_origem(sessao), uniq, pedido, ate_ms)
         except ValueError as exc:
             raise RecusaError(CODE_INVALID_PARAMS, f"corpo.ligar: {exc}") from exc
+        resposta: dict[str, Any] = {"status": "ok"}
         if pedido.som_no_corpo > 0:
             self._anotar_a_escrita(sessao.mod_id, "haptica", uniq)
+            motivo = fonte.desfecho_do_corpo(uniq)
+            resposta.update({"corpo": "tocando"} if motivo is None else {
+                "corpo": "cedeu", "motivo": motivo})
         if pedido.tipo is not None:
             self._anotar_a_escrita(sessao.mod_id, "vibracao", uniq)
-        return {"status": "ok"}
+        return resposta
 
     def _soltar_os_ajustes(self, mod_id: str) -> None:
         PESO_DA_MIRA.soltar(mod_id)

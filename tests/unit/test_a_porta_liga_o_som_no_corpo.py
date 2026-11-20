@@ -349,7 +349,7 @@ def test_a_porta_leva_o_pedido_ao_tato_vivo_por_controle() -> None:
         ]
 
     *respostas, vistos = _pela_porta(fonte, roteiro, ["escrever:corpo"])
-    assert [r.get("result") for r in respostas[:2]] == [{"status": "ok"}] * 2
+    assert [r.get("result") for r in respostas[:2]] == [{"status": "ok", "corpo": "tocando"}] * 2
     assert [r["error"]["code"] for r in respostas[2:]] == [CODE_INVALID_PARAMS] * 4
     assert vistos == [None, tv.PedidoDoCorpo(0.6, "tranco", 0.5), tv.PedidoDoCorpo(0.4)]
 
@@ -385,5 +385,6 @@ def test_a_extensao_que_fecha_a_conexao_solta_o_corpo() -> None:
     async def roteiro(pedir: Callable[..., Any]) -> dict[str, Any]:
         return await pedir("corpo.ligar", {"uniq": P[3], "som_no_corpo": 1, "ate_ms": 5000})
 
-    assert _pela_porta(fonte, roteiro, ["escrever:corpo"])["result"] == {"status": "ok"}
+    resposta = _pela_porta(fonte, roteiro, ["escrever:corpo"])
+    assert resposta["result"] == {"status": "ok", "corpo": "tocando"}
     assert fonte.corpo.de(P[3]) is None, "a extensão saiu e o corpo pedido ficou"

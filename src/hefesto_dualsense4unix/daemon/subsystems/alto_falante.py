@@ -1367,14 +1367,9 @@ class AltoFalanteSubsystem:
         tocador.levar_os_lados(esquerdo, direito, sink=sink, dono=chave)
         return True
 
-    def tocar_o_corpo(
-        self, uniq: str, amostras: Any, lado: str = "centro", *, fonte: str = ""
-    ) -> DesfechoDoCorpo:
-        """Um pedaço da ``fonte`` do corpo no tocador do aparelho de ``uniq``, no ``lado``.
-
-        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva. Cada fonte soma
-        na própria fila. O desfecho é verdadeiro quando tocou e traz o motivo quando recusou.
-        """
+    def o_que_recusa_o_corpo(self, uniq: str) -> DesfechoDoCorpo:
+        """Se o corpo tocaria agora no aparelho de ``uniq``, e o motivo quando não: o mesmo que
+        :meth:`tocar_o_corpo` decide, sem tocar."""
         chave = self._chave_do_rumble(uniq)
         if chave is None:
             return DesfechoDoCorpo(RECUSA_SEM_APARELHO)
@@ -1383,6 +1378,20 @@ class AltoFalanteSubsystem:
             return DesfechoDoCorpo(falta)
         if self._o_radio_cede(chave):
             return DesfechoDoCorpo(RECUSA_RADIO_CEDE)
+        return TOCOU
+
+    def tocar_o_corpo(
+        self, uniq: str, amostras: Any, lado: str = "centro", *, fonte: str = ""
+    ) -> DesfechoDoCorpo:
+        """Um pedaço da ``fonte`` do corpo no tocador do aparelho de ``uniq``, no ``lado``.
+
+        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva. Cada fonte soma
+        na própria fila. O desfecho é verdadeiro quando tocou e traz o motivo quando recusou.
+        """
+        recusa = self.o_que_recusa_o_corpo(uniq)
+        chave = self._chave_do_rumble(uniq)
+        if not recusa or chave is None:
+            return recusa
         alvo = self._o_tocador_de(chave)
         if alvo is None:
             return DesfechoDoCorpo(RECUSA_SEM_ENDPOINT)
