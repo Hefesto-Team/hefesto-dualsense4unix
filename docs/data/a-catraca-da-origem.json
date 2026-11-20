@@ -256,17 +256,17 @@
       "universo": 437
     },
     "tamanho": {
-      "data": "2026-11-19",
+      "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1274651,
+      "piso": 1276169,
       "por_item": {
-        "docs": 107180,
+        "docs": 107638,
         "scripts": 114898,
-        "src": 323553,
-        "tests": 729020
+        "src": 323731,
+        "tests": 729902
       },
-      "razao": "tamanho: +681 linhas (1273970 -> 1274651), pagas por Origem: D-1911-A-REGRA-DO-NO-SO-FECHA-COM-O-BROKER-DE-PE, D-1911-A-VENV-DOENTE-SE-RECRIA-COM-O-MOTIVO, D-1911-O-INSTALL-E-O-UNINSTALL-RECUSAM-ROOT, D-1911-O-SUDO-SEM-SENHA-SE-AVISA-E-SE-RECUSA; registrado no fecho, topo 4a11a8982313",
+      "razao": "tamanho: +1518 linhas (1274651 -> 1276169), pagas por Origem: D-1911-A-GRAVACAO-QUE-FUNDE-SEGURA-A-TRAVA, D-1911-A-GUARDA-VELHA-NAO-RESSUSCITA-O-MAPA, D-1911-A-QUEDA-NATIVA-DEIXA-A-PILHA, D-1911-O-CONTROLE-CUJA-LEITURA-MORREU-SE-REABRE, D-1911-O-ESTADO-SE-GRAVA-INTEIRO; registrado no fecho, topo 1fbcdf06b866",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2109,10 +2109,16 @@
           "de": 1273970,
           "para": 1274651,
           "razao": "tamanho: +681 linhas (1273970 -> 1274651), pagas por Origem: D-1911-A-REGRA-DO-NO-SO-FECHA-COM-O-BROKER-DE-PE, D-1911-A-VENV-DOENTE-SE-RECRIA-COM-O-MOTIVO, D-1911-O-INSTALL-E-O-UNINSTALL-RECUSAM-ROOT, D-1911-O-SUDO-SEM-SENHA-SE-AVISA-E-SE-RECUSA; registrado no fecho, topo 4a11a8982313"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1274651,
+          "para": 1276169,
+          "razao": "tamanho: +1518 linhas (1274651 -> 1276169), pagas por Origem: D-1911-A-GRAVACAO-QUE-FUNDE-SEGURA-A-TRAVA, D-1911-A-GUARDA-VELHA-NAO-RESSUSCITA-O-MAPA, D-1911-A-QUEDA-NATIVA-DEIXA-A-PILHA, D-1911-O-CONTROLE-CUJA-LEITURA-MORREU-SE-REABRE, D-1911-O-ESTADO-SE-GRAVA-INTEIRO; registrado no fecho, topo 1fbcdf06b866"
         }
       ],
       "unidade": "linhas",
-      "universo": 3545
+      "universo": 3552
     }
   }
 }
