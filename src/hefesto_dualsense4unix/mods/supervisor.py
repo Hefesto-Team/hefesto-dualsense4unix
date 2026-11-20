@@ -113,7 +113,7 @@ COBERTOS_NA_CAIXA: tuple[str, ...] = ("/etc/machine-id",)
 PASTA_DOS_PROGRAMAS = "/opt"
 
 DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
-    "bluetooth": ("/run/dbus",),
+    "bluetooth": ("/run/dbus", "/sys/class/bluetooth", "/sys/bus/hid/devices"),
     "aparelhos": ("/run/udev",),
 }
 
@@ -202,6 +202,7 @@ class _Vigiada:
     escritor: _EscritorDoDiario | None = None
     manifesto: Manifesto | None = None
     aparelhos: tuple[str, ...] = ()
+    pela_porta: frozenset[str] = frozenset()
     aparelho_novo: bool = False
     aparelho_em_laco: bool = False
     aceitos: tuple[str, ...] = ()
@@ -507,12 +508,14 @@ def comando_na_caixa(
     pasta: str | None = None,
     ocupada: Callable[[int, bool], bool] | None = None,
     aparelhos: tuple[str, ...] = (),
+    pela_porta: tuple[str, ...] = (),
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
     Entra só :data:`ENTRAM_NA_CAIXA` (:func:`_o_que_entra`), com :data:`COBERTOS_NA_CAIXA`
     vazios; o ``/var``, o ``/sys``, a ``HOME`` e os diretórios de execução nascem vazios, e o
-    ``/dev`` e o ``/sys`` só trazem os ``aparelhos`` (:func:`aparelhos_que_casam`). O
+    ``/dev`` só traz os ``aparelhos`` (:func:`aparelhos_que_casam`), e o ``/sys`` só eles e os
+    ``pela_porta`` (:func:`pastas_pela_porta`). O
     ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a modificação abriu. Dentro
     do ``pasta`` (:func:`linha_do_pasta`) o ``bwrap`` devolve o ``uid`` e o ``gid`` de quem roda:
     o barramento do sistema recusa quem diz 0 com a credencial de outro.
@@ -538,7 +541,9 @@ def comando_na_caixa(
         nos = [no for no in aparelhos if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no]
         for no in nos:
             argv += ["--dev-bind-try", no, no]
-        argv += _o_sys_dos_aparelhos(nos)
+        argv += _o_sys_dos_aparelhos(
+            [*nos, *(no for no in pela_porta
+                     if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no)])
     for caminho in _devolvidos(manifesto, entram):
         argv += ["--ro-bind", caminho, caminho]
     comando = _executavel_a_vista(comando, entram, argv)
@@ -684,12 +689,13 @@ def _e_entrada_de_gente(classe: str, onde: Path) -> bool:
 
 
 def _casam(manifesto: Manifesto, aceitos: Collection[str], sys_raiz: Path, *,
-           so_os_da_caixa: bool, classes: tuple[str, ...] = tuple(_NOS_POR_CLASSE)
-           ) -> dict[str, Path]:
+           so_os_da_caixa: bool, classes: tuple[str, ...] = tuple(_NOS_POR_CLASSE),
+           so_pela_porta: bool = False) -> dict[str, Path]:
     if "aparelhos" not in manifesto.permissoes:
         return {}
     pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos
                if not (so_os_da_caixa and a.pela_porta)
+               and not (so_pela_porta and not a.pela_porta)
                and f"{a.classe}:{a.vid}:{a.pid}" in aceitos}
     nos: dict[str, Path] = {}
     for classe, achar in _NOS_POR_CLASSE.items():
@@ -718,6 +724,16 @@ def nos_pela_porta(manifesto: Manifesto, aceitos: Collection[str],
     """Os nós ``hidraw`` e ``tty`` dos aparelhos declarados e aceitos ligados agora, com a pasta
     do ``/sys`` de cada um: só eles saem pela porta, nunca o ``usb`` cru."""
     return _casam(manifesto, aceitos, sys_raiz, so_os_da_caixa=False, classes=CLASSES_PELA_PORTA)
+
+
+def pastas_pela_porta(manifesto: Manifesto, aceitos: Collection[str],
+                      sys_raiz: Path = Path("/sys")) -> dict[str, str]:
+    """Os nós dos aparelhos declarados ``pela_porta`` e aceitos ligados agora, com a pasta do
+    aparelho de cada um (:func:`_o_aparelho_do_sys`): o nó fica fora da caixa, e o ``/sys`` dele
+    entra, para a extensão o achar."""
+    casam = _casam(manifesto, aceitos, sys_raiz, so_os_da_caixa=False,
+                   classes=CLASSES_PELA_PORTA, so_pela_porta=True)
+    return {no: _o_aparelho_do_sys(os.path.realpath(onde))[0] for no, onde in casam.items()}
 
 
 def abrir_o_aparelho(manifesto: Manifesto, no: Any, aceitos: Collection[str],
@@ -1059,13 +1075,24 @@ def _o_que_entra(entram: Sequence[str]) -> list[str]:
     return argv
 
 
+def _o_aparelho_do_sys(real: str) -> tuple[str, bool]:
+    """A pasta do aparelho dono de ``real`` (a pasta de um nó no ``/sys``) e se o aparelho é USB:
+    o aparelho USB inteiro; fora do USB (o HID do rádio), a pasta dona da classe do nó, e nunca um
+    balde inteiro de ``/sys/devices`` (o ``/dev/null`` traz só a pasta dele)."""
+    pasta = real
+    while pasta not in ("/sys/devices", os.path.dirname(pasta)):
+        if os.path.isfile(os.path.join(pasta, "idVendor")):
+            return pasta, True
+        pasta = os.path.dirname(pasta)
+    dono = os.path.dirname(os.path.dirname(real))
+    balde = os.path.dirname(dono) in ("/sys", "/sys/devices", "/sys/devices/virtual")
+    return (real if balde else dono), False
+
+
 def _o_sys_dos_aparelhos(nos: Sequence[str]) -> list[str]:
-    """Do ``/sys``, só o aparelho de cada nó e os dois links que o acham
-    (``/sys/dev/char/<maior>:<menor>`` e ``/sys/class/<classe>/<nó>``). O aparelho é a pasta USB
-    inteira; fora do USB (o HID do rádio), a pasta dona da classe do nó, e nunca um balde
-    inteiro de ``/sys/devices`` (o ``/dev/null`` traz só a pasta dele)."""
-    argv: list[str] = []
-    for no in nos:
+    """Do ``/sys``, só o aparelho de cada nó (:func:`_o_sys_dos_achados`)."""
+    achados: list[tuple[str, str]] = []
+    for no in dict.fromkeys(nos):
         try:
             numero = os.stat(no).st_rdev
         except OSError as exc:
@@ -1073,16 +1100,41 @@ def _o_sys_dos_aparelhos(nos: Sequence[str]) -> list[str]:
             continue
         liga = f"/sys/dev/char/{os.major(numero)}:{os.minor(numero)}"
         real = os.path.realpath(liga)
-        if not real.startswith("/sys/devices/"):
+        if real.startswith("/sys/devices/"):
+            achados.append((liga, real))
+    return _o_sys_dos_achados(achados)
+
+
+def _o_sys_dos_achados(achados: Sequence[tuple[str, str]]) -> list[str]:
+    """O aparelho de cada ``(link, pasta do nó)`` e os links que o acham: o
+    ``/sys/dev/char/<maior>:<menor>``, o ``/sys/class/<classe>/<nó>`` e, no USB, o
+    ``/sys/bus/usb/devices/<aparelho>``.
+
+    O aparelho USB vem pelo hub dele, vivo, com os outros aparelhos do hub cobertos: o que sai do
+    USB e volta na mesma porta (o ``RESET;`` do adaptador) segue à vista da caixa. Fora do USB
+    vem a pasta de :func:`_o_aparelho_do_sys`.
+    """
+    donos = [(liga, real, *_o_aparelho_do_sys(real)) for liga, real in achados]
+    usb = {pasta for _, _, pasta, e_usb in donos if e_usb}
+    argv: list[str] = []
+    for hub in sorted({os.path.dirname(p) for p in usb}, key=lambda p: p.count("/")):
+        try:
+            filhos = sorted(os.listdir(hub))
+        except OSError as exc:
+            logger.info("mods_aparelho_saiu_antes_da_caixa", no=hub, err=str(exc))
             continue
-        pasta = real
-        while pasta != "/sys/devices" and not os.path.isfile(os.path.join(pasta, "idVendor")):
-            pasta = os.path.dirname(pasta)
-        dono = os.path.dirname(os.path.dirname(real))
-        balde = os.path.dirname(dono) in ("/sys", "/sys/devices", "/sys/devices/virtual")
-        topo = pasta if pasta != "/sys/devices" else (real if balde else dono)
+        argv += ["--ro-bind", hub, hub]
+        for filho in (os.path.join(hub, f) for f in filhos):
+            if (os.path.isfile(os.path.join(filho, "idVendor"))
+                    and not any(_sob(p, (filho,)) for p in usb)):
+                argv += ["--tmpfs", filho]
+    for pasta in dict.fromkeys(p for _, _, p, e_usb in donos if not e_usb):
+        argv += ["--ro-bind", pasta, pasta]
+    for liga, real, _pasta, _e_usb in donos:
         classe = f"/sys/class/{os.path.basename(os.path.dirname(real))}/{os.path.basename(real)}"
-        argv += ["--ro-bind", topo, topo, "--symlink", real, liga, "--symlink", real, classe]
+        argv += ["--symlink", real, liga, "--symlink", real, classe]
+    for pasta in sorted(usb):
+        argv += ["--symlink", pasta, f"/sys/bus/usb/devices/{os.path.basename(pasta)}"]
     return argv
 
 
@@ -1330,7 +1382,9 @@ class Supervisor:
         """O aparelho declarado que entrou depois da abertura reabre a caixa, que o receba.
 
         Duas voltas seguidas com o nó novo: o que só sai (e volta com o mesmo nó) não reabre
-        nada, porque o nó da caixa segue o número. O declarado ``pela_porta`` nunca reabre. A
+        nada, porque o nó da caixa segue o número. O declarado ``pela_porta`` reabre só quando o
+        aparelho dele não estava no ``/sys`` da caixa: o que volta do ``RESET;`` na mesma porta
+        segue à vista pelo hub (:func:`_o_sys_dos_achados`). A
         segunda reabertura antes de :data:`JANELA_DO_LACO_DOS_APARELHOS_S` não sai: o aparelho
         que renasce com outro nó a cada abertura viraria laço.
         """
@@ -1342,7 +1396,9 @@ class Supervisor:
                     or vigiada.aparelho_em_laco):
                 continue
             agora = await asyncio.to_thread(aparelhos_que_casam, manifesto, vigiada.aceitos)
+            pela_porta = await asyncio.to_thread(pastas_pela_porta, manifesto, vigiada.aceitos)
             novos = set(agora) - set(vigiada.aparelhos)
+            novos |= {no for no, pasta in pela_porta.items() if pasta not in vigiada.pela_porta}
             if not novos:
                 vigiada.aparelho_novo = False
             elif not vigiada.aparelho_novo:
@@ -1611,6 +1667,8 @@ class Supervisor:
         lida = self._registro_lido.get(manifesto.id)
         vigiada.aceitos = tuple(lida.aparelhos_aceitos or []) if lida is not None else ()
         vigiada.aparelhos = aparelhos_que_casam(manifesto, vigiada.aceitos) if self.bwrap else ()
+        pela_porta = pastas_pela_porta(manifesto, vigiada.aceitos) if self.bwrap else {}
+        vigiada.pela_porta = frozenset(pela_porta.values())
         vigiada.aparelho_novo = False
         if self.bwrap:
             argv = comando_na_caixa(
@@ -1626,6 +1684,7 @@ class Supervisor:
                 pasta=pasta,
                 ocupada=ocupada,
                 aparelhos=vigiada.aparelhos,
+                pela_porta=tuple(pela_porta),
             )
         else:
             argv = comando
@@ -1873,6 +1932,7 @@ __all__ = [
     "ocupada_na_casa",
     "parar_o_grupo",
     "pastas_dos_jogos",
+    "pastas_pela_porta",
     "rede_propria_da_caixa",
     "supervisor_do_servico",
     "ultima_linha_do_diario",

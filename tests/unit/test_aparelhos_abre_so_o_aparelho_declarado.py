@@ -580,6 +580,7 @@ def _vigia_de_mentira(manifesto: Manifesto, aparelhos: tuple[str, ...]
     vigiada = sup._Vigiada("exemplo", processo=Processo(),  # type: ignore[arg-type]
                            manifesto=manifesto, aparelhos=aparelhos,
                            aceitos=tuple(_aceitos(manifesto)))
+    vigiada.pela_porta = frozenset(sup.pastas_pela_porta(manifesto, vigiada.aceitos).values())
     supervisor._vigiadas = {"exemplo": vigiada}
 
     async def comecar(entrada: Any) -> None:
@@ -597,6 +598,8 @@ def test_o_reset_do_adaptador_pela_porta_nunca_reabre_a_caixa(
     real = sup.aparelhos_que_casam
     monkeypatch.setattr(sup, "aparelhos_que_casam",
                         lambda m, aceitos, *a: real(m, aceitos, sys_))
+    pastas = sup.pastas_pela_porta
+    monkeypatch.setattr(sup, "pastas_pela_porta", lambda m, aceitos, *a: pastas(m, aceitos, sys_))
     _no_de_mentira(sys_, "hidraw20", _E429)
     manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
     supervisor, _vigiada, reabertas = _vigia_de_mentira(manifesto, ())

@@ -72,9 +72,13 @@ permissões que a pessoa aceitou.
        `/bin`, `/sbin` e `/lib*` quando o alvo também entra, além do código, dos dados e da porta;
        `/var`, `/sys`, `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nem o diário do
        sistema, nem socket de `/run`, nem o endereço de controle ou de placa de rede alcança a
-       extensão; medido em 19/11/2026). Volta só o que a permissão pede: o `/run/dbus` com
-       `bluetooth`, o `/run/udev`, os nós dos aparelhos declarados e, do `/sys`, só a pasta de cada
-       um com `aparelhos`, o `/run/systemd/resolve` (e o alvo do `/etc/resolv.conf`) com rede;
+       extensão; medido em 19/11/2026). Volta só o que a permissão pede: o `/run/dbus`, o
+       `/sys/class/bluetooth` e os nomes de `/sys/bus/hid/devices` com `bluetooth`; o `/run/udev`,
+       os nós dos aparelhos declarados e, do `/sys`, cada aparelho declarado (também o
+       `pela_porta`, cujo nó fica fora) com `aparelhos`: o USB vem pelo hub, vivo, com os outros
+       aparelhos do hub cobertos, para o adaptador que sai do USB e volta na mesma porta seguir à
+       vista (medido em 20/11/2026 com a Lovense); o `/run/systemd/resolve` (e o alvo do
+       `/etc/resolv.conf`) com rede;
      - o executável que mora fora da lista (o `python3` de um venv) roda pelo alvo real; o que mora
        no `/opt` leva a pasta do programa;
      - a caixa do leitor e do fixador do lançador cobre o `/run` inteiro; os discos seguem à vista,
