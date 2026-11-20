@@ -756,6 +756,59 @@ def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:
     return achados
 
 
+_BARRAMENTO_USB = 3
+_TECLA_A = 30
+
+
+def _bits_de(texto: str) -> int:
+    """O mapa de bits de ``capabilities/key``: palavras de ``unsigned long`` em hex, a de cima
+    primeiro."""
+    import ctypes
+
+    largura = ctypes.sizeof(ctypes.c_ulong) * 8
+    palavras = texto.split()
+    try:
+        return sum(int(p, 16) << (largura * n) for n, p in enumerate(reversed(palavras)))
+    except ValueError:
+        return 0
+
+
+def _nao_e_aparelho_de_verdade(no: Path) -> bool:
+    """O nó que o kernel marca como soldado na máquina (``removable`` = ``fixed``) ou que nasceu em
+    ``/sys/devices/virtual`` (um remapeador ou um ``uinput`` se diz USB sem ser)."""
+    try:
+        pasta = (no / "device").resolve()
+    except OSError:
+        return False
+    if "virtual" in pasta.parts:
+        return True
+    for dir_ in (pasta, *list(pasta.parents)[:6]):
+        if (dir_ / "idVendor").exists():
+            return _ler_do_sys(dir_ / "removable") == "fixed"
+    return False
+
+
+def acionadores_possiveis(raiz: Any = None) -> list[AparelhoDeEntrada]:
+    """Um nó por aparelho USB removível que tem tecla de teclado, sem abrir nenhum (só ``/sys``).
+
+    Fica o aparelho que é teclado (``KEY_A`` no mapa de teclas) no barramento USB e fora do que o
+    kernel marca como soldado ou virtual; o mouse, a webcam, os botões do sistema, o touchpad e o
+    controle de jogo não têm a tecla. Os nós do mesmo caminho físico (um teclado tem vários
+    ``eventN``) viram uma linha só, a do primeiro com a tecla."""
+    base = Path(RAIZ_DAS_ENTRADAS if raiz is None else raiz)
+    grupos: dict[str, AparelhoDeEntrada] = {}
+    for a in aparelhos_de_entrada(base):
+        dentro = base / a.evento / "device"
+        if _bits_de(_ler_do_sys(dentro / "id" / "bustype")) != _BARRAMENTO_USB:
+            continue
+        if not _bits_de(_ler_do_sys(dentro / "capabilities" / "key")) >> _TECLA_A & 1:
+            continue
+        if _nao_e_aparelho_de_verdade(base / a.evento):
+            continue
+        grupos.setdefault(a.fisico.rsplit("/input", 1)[0] or a.evento, a)
+    return list(grupos.values())
+
+
 class AcionadorDeclarado(BaseModel):
     """Um aparelho de entrada que vira fonte de botões de um controle (a linha dele na Conexões).
 

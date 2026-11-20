@@ -2690,6 +2690,29 @@ def _os_acionadores_declarados(declaracao: Any, lugares: list[dict[str, Any]]
     return linhas
 
 
+def _os_acionadores_nao_declarados(declaracao: Any, lugares: list[dict[str, Any]]
+                                   ) -> list[dict[str, Any]]:
+    """A linha de cada aparelho de entrada USB presente que ainda não está no `maquina.json`,
+    com o nome que o próprio aparelho diz, ao lado dos declarados."""
+    from hefesto_dualsense4unix.utils.maquina import acionadores_possiveis
+
+    declarados = getattr(declaracao, "acionadores", None)
+    if not lugares:
+        return []
+    return [{"id": a.chave, "chave": a.chave, "tipo": TIPO_ENTRADA, "lugar": lugares[0]["id"],
+             "nome": a.nome, "rotulo": ACIONADOR_SEM_NOME, "controle": "", "fixo": True,
+             "esperando": False, "teclas": []}
+            for a in acionadores_possiveis(_RAIZ_DAS_ENTRADAS)
+            if not isinstance(declarados, dict) or a.chave not in declarados]
+
+
+def _os_acionadores(declaracao: Any, lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Os acionadores da cena: os declarados e, ao lado, os aparelhos USB presentes ainda sem
+    declaração."""
+    return (_os_acionadores_declarados(declaracao, lugares)
+            + _os_acionadores_nao_declarados(declaracao, lugares))
+
+
 def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]]:
     """Os controles na mesa, pelo plástico; o que o acionador já declarou entra mesmo fora."""
     quem: list[tuple[str, str]] = []
@@ -4717,7 +4740,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     pedindo = _quem_pede_para_parear(central, lugares, aparelhos_bz)
     proposta = _a_proposta_da_cena(central.get("proposta"), aparelhos)
     lugares = _na_ordem_do_usuario(lugares)
-    aparelhos += _os_acionadores_declarados(declaracao_viva, lugares)
+    aparelhos += _os_acionadores(declaracao_viva, lugares)
     buscas: dict[str, object] = {
         nome_do_jogador.mac(m.get("destino")): (
             str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
