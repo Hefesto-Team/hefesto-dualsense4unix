@@ -9,7 +9,8 @@ tocador é dublê.
 MORDIDAS: ignorar o retorno de ``tocar_haptica`` em ``FonteDeFora._levar`` reprova a queda no
 motor e nos lados; cair por ``levar_o_rumble`` reprova a queda do jogo no endpoint; tratar a
 ``forca_zero`` como queda reprova a Força 0; tirar o zero de ``_levar_nos_lados`` ao fim do toque
-deixa o motor preso; tirar o ``desfecho_do_corpo`` da resposta reprova a porta.
+deixa o motor preso; tirar o ``desfecho_do_corpo`` da resposta reprova a porta; um par só por
+tocador em ``AltoFalanteSubsystem.levar_os_lados`` deixa o toque apagar o padrão do gatilho.
 """
 from __future__ import annotations
 
@@ -140,6 +141,24 @@ def test_ao_fim_do_toque_o_nivel_dos_lados_volta_a_zero_e_o_outro_lado_segue(
     assert tocador.lados[-1] == (0, 255), "o lado que acabou segurou o outro, ou ficou preso"
     cena.andar(0.6, 1.2)
     assert tocador.lados[-1] == (0, 0), "o motor ficou preso depois do último toque"
+
+
+def test_o_toque_nos_lados_soma_ao_padrao_do_gatilho_e_nao_o_apaga(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-1911-O-TOQUE-DA-EXTENSAO-HONRA-A-RECUSA-DO-CORPO: nos lados, cada fonte no seu par."""
+    cena = _Cena(monkeypatch, conexoes={P[0]: mesa_mod.CABO})
+    tocador = cena.tocadores[P[0]]
+    cena.mesa.alto._aparelhos_com_jogo = frozenset({cena.mesa.alto._aparelho_de[P[0]]})
+    gatilho = tv.saida_dos_padroes(cena.mesa.daemon)
+    cena.tocar(P[0], tv.LADO_DIREITO, ate_s=0.3)
+    gatilho(P[0], 0, 120)
+    cena.andar(0.0, 0.2)
+    assert tocador.lados[-1] == (120, 255), "o toque apagou o padrão do gatilho, ou o contrário"
+    cena.andar(0.3, 0.5)
+    assert tocador.lados[-1] == (120, 0), "o fim do toque calou o padrão do gatilho"
+    gatilho(P[0], 0, 0)
+    assert tocador.lados[-1] == (0, 0)
 
 
 @pytest.mark.parametrize("quando", ["forca_zero", "nativo"])

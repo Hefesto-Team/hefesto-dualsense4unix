@@ -810,6 +810,8 @@ class AltoFalanteSubsystem:
         self._sem_rota_antes: frozenset[str] = frozenset()
         self._saida_devolvida: dict[str, tuple[str, bool]] = {}
         self._nos_que_tocam: set[str] = set()
+        self._lados_por_fonte: dict[str, dict[str, tuple[int, int, float]]] = {}
+        self._trava_dos_lados = threading.Lock()
         self._governador_injetado = governador
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
@@ -1361,14 +1363,27 @@ class AltoFalanteSubsystem:
             return padroes_de_vibracao.ROTA_MOTOR
         return padroes_de_vibracao.ROTA_AUDIO
 
-    def levar_os_lados(self, uniq: str, esquerdo: int, direito: int) -> bool:
-        """O nível de cada motor no tocador do aparelho de ``uniq``, somado ao que já toca."""
+    def levar_os_lados(self, uniq: str, esquerdo: int, direito: int, *, fonte: str = "") -> bool:
+        """O nível de cada motor no tocador do aparelho de ``uniq``, somado ao que já toca.
+
+        Cada ``fonte`` (o padrão do gatilho, o toque de uma extensão) tem o seu par, que vale o
+        prazo dos lados do tocador; em cada lado vale o mais forte: uma fonte não apaga a outra.
+        """
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import VALIDADE_DOS_LADOS_S
+
         chave = self._chave_do_rumble(uniq)
         if chave is None or self._o_que_falta_ao_audio(chave) is not None:
             return False
         alvo = self._o_tocador_de(chave)
         if alvo is None:
             return False
+        agora = time.monotonic()
+        with self._trava_dos_lados:
+            pares = {f: p for f, p in self._lados_por_fonte.get(chave, {}).items() if p[2] > agora}
+            pares[fonte] = (esquerdo, direito, agora + VALIDADE_DOS_LADOS_S)
+            self._lados_por_fonte[chave] = pares
+            esquerdo = max(p[0] for p in pares.values())
+            direito = max(p[1] for p in pares.values())
         tocador, sink = alvo
         tocador.levar_os_lados(esquerdo, direito, sink=sink, dono=chave)
         return True
@@ -2255,7 +2270,7 @@ class AltoFalanteSubsystem:
             )
             if som_toca:
                 tocam.add(uniq)
-            lendo =endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
+            lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
             frente_toca = self._a_frente_toca(lendo)
             if (
                 lendo

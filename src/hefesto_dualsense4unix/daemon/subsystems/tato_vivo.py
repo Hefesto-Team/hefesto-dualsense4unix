@@ -4027,7 +4027,8 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
 
     def tocar_lados(uniq: str, esquerdo: int, direito: int) -> bool:
         quem = falante()
-        return bool(quem is not None and quem.levar_os_lados(uniq, esquerdo, direito))
+        return bool(quem is not None and quem.levar_os_lados(
+            uniq, esquerdo, direito, fonte=FONTE_DE_FORA))
 
     def desfecho_do_corpo(uniq: str) -> str | None:
         alvo = norm_mac(uniq)
