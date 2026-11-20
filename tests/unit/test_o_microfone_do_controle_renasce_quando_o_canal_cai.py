@@ -182,6 +182,16 @@ def test_o_servidor_reiniciado_leva_o_modulo_e_a_volta_o_devolve(mundo: _Mundo) 
     assert mundo.reerguer() == [], "o canal que já voltou não volta de novo"
 
 
+def test_o_cabo_e_o_radio_voltam_juntos_depois_do_reinicio(mundo: _Mundo) -> None:
+    """D-1911-O-MICROFONE-RENASCE-QUANDO-O-CANAL-CAI: cada canal volta, no cabo e no rádio."""
+    cabo, radio = mundo.abrir(P[0]), mundo.abrir(P[1], fonte=None)
+    mundo.servidor.reiniciar()
+    assert sorted(mundo.reerguer()) == sorted(P), "um dos canais ficou de fora da volta"
+    assert cabo.no_ar() is True and radio.no_ar() is True
+    assert mundo.servidor.carregados == 4
+    assert len(mundo.alimentadores) == 2, "o canal do rádio ganhou alimentador, ou o cabo perdeu"
+
+
 def test_o_servidor_mudo_e_nao_sei_e_nada_se_refaz(mundo: _Mundo) -> None:
     """D-1911-O-MICROFONE-RENASCE-QUANDO-O-CANAL-CAI: sem resposta do servidor nada é pedido."""
     canal = mundo.abrir(P[0])
