@@ -1203,6 +1203,24 @@ def _o_que_se_guarda(prof: Any) -> tuple[Any, ...]:
             sequencias)
 
 
+def _com_o_teclado_ligado(prof: Any) -> Any:
+    """O perfil com `teclado_emulado: true` quando alguma ação é tecla e ele não tem opinião.
+
+    Tecla é `KEY_*` (com combinação) ou as teclas do analógico (`__WASD__`, `__SETAS__`). Quem
+    desligou o teclado à mão no perfil (`false`) continua desligado.
+    """
+    if prof.teclado_emulado is not None:
+        return prof
+
+    def e_tecla(valor: str) -> bool:
+        return valor in acoes.TECLAS_DO_ANALOGICO or all(
+            parte.startswith("KEY_") for parte in valor.split("+"))
+
+    if any(e_tecla(v) for v in (prof.button_actions or {}).values()):
+        return prof.model_copy(update={"teclado_emulado": True})
+    return prof
+
+
 @gesto(PAGINA, "mapa-guardar", grava="gravar_e_reaplicar")
 def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Guardar»: grava o perfil em edição. O molde e o novo viram perfil em «Meus perfis»."""
@@ -1224,7 +1242,7 @@ def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         novo = _aplicar_as_edicoes(prof, edicoes, fabrica, _peca_do_vale_para(ctx))
         if _o_que_se_guarda(novo) == _o_que_se_guarda(prof):
             raise RuntimeError(f"não havia o que guardar: o perfil “{nome}” já faz isto.")
-        perfil.gravar_e_reaplicar(novo, ctx, p)
+        perfil.gravar_e_reaplicar(_com_o_teclado_ligado(novo), ctx, p)
         estado["edicoes"] = {}
         return _repinta(ctx)
     if not edicoes and chave == NOVO:
@@ -1238,7 +1256,7 @@ def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             enabled=True, speed=getattr(molde, "velocidade", 8),
             scroll_speed=getattr(molde, "rolagem", 1))
         novo = novo.model_copy(update={"mouse": mouse})
-    perfil.gravar_e_reaplicar(novo, ctx, p)
+    perfil.gravar_e_reaplicar(_com_o_teclado_ligado(novo), ctx, p)
     _largar()
     _estado()["chave"] = f"{PERFIL}{novo.name}"
     return _repinta(ctx)

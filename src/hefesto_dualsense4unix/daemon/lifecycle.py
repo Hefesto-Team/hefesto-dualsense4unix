@@ -711,6 +711,8 @@ class Daemon:
     _arranjo_lido_no_arme: tuple[Any, tuple[Any, ...]] | None = None
     _teclado_so_no_jogo: bool = False
     _teclado_sempre: bool = False
+    _teclado_de_fabrica: bool | None = None
+    _teclado_forcado_pelo_perfil: bool = False
     _estava_no_jogo: bool = False
     _suppress_manual_ts: float = field(default=float("-inf"))
     _suppress_from_profile: bool = False
@@ -1376,13 +1378,12 @@ class Daemon:
            outra. O ``enabled`` do perfil segue valendo na ATIVAÇÃO de um perfil
            que diz Navegação (:meth:`apply_profile_mouse`), e enquanto o usuário
            estiver na Navegação.
-        2. **key_bindings** e **button_actions** — o teclado virtual recebe o
+        2. **teclado_emulado** — `schema.resolver_teclado_emulado` é a
+           precedência PURA da T14 (24/08/2026). Roda ANTES das tabelas, para o
+           device de teclado já estar de pé quando as tabelas chegarem; é o mesmo
+           caminho da ativação (:meth:`_ligar_o_teclado_do_perfil`).
+        3. **key_bindings** e **button_actions** — o teclado virtual recebe o
            que o usuário escreveu, com os mesmos `botoes_calados`.
-        3. **teclado_emulado** — `schema.resolver_teclado_emulado` é a
-           precedência PURA da T14 (24/08/2026), escrita, testada e até hoje
-           **sem um único chamador de ativação real**. Ligá-la aqui é o lugar
-           certo: é o único ponto do produto em que o teclado emulado tem
-           contexto.
         4. **supressão** — ``set_emulation_suppressed(False)``, o que o PS + R3
            já faz. É a supressão que gateia o dispatch de mouse/teclado no laço do poll:
            sem derrubá-la a ponte sobe MUDA. O ``suppress_desktop_emulation`` do
@@ -1393,7 +1394,7 @@ class Daemon:
         O TECLADO NÃO É RELIGADO PELA ENTRADA
         (D-2909-A-NAVEGACAO-NAO-RELIGA-O-TECLADO): ele tem uma lista dona dele
         (a «Função do teclado» da aba Navegação), e o «Desativado» da lista é
-        escolha legítima. O item 3 acima segue a precedência da T14.
+        escolha legítima. O item 2 acima segue a precedência da T14.
 
         O TECLADO NÃO PERSISTE AQUI (``persist=False``), e é o contrário do que
         o PS + R3 fazia até hoje: gravar o valor RESOLVIDO em
@@ -1450,28 +1451,17 @@ class Daemon:
             and getattr(self, "_mouse_device", None) is not None
         )
 
-        if tabelas is not None:
-            self._aplicar_as_tabelas(tabelas, relatorio)
-        else:
-            relatorio["keyboard"] = "ignorado_sem_perfil"
-
         try:
-            from hefesto_dualsense4unix.profiles.schema import (
-                resolver_teclado_emulado,
-            )
-            from hefesto_dualsense4unix.utils.session import (
-                load_keyboard_preference,
-            )
-
-            flag = load_keyboard_preference()
-            if flag is None:
-                flag = bool(self.config.keyboard_emulation_enabled)
-            desejado = resolver_teclado_emulado(profile, bool(flag))
-            self.set_keyboard_emulation(bool(desejado), persist=False)
+            self._ligar_o_teclado_do_perfil(profile, sempre=True)
             relatorio["teclado_emulado"] = APLICADO
         except Exception as exc:
             relatorio["teclado_emulado"] = "falhou"
             logger.warning("arranjo_do_desktop_teclado_falhou", err=str(exc))
+
+        if tabelas is not None:
+            self._aplicar_as_tabelas(tabelas, relatorio)
+        else:
+            relatorio["keyboard"] = "ignorado_sem_perfil"
 
         try:
             self.set_emulation_suppressed(False)
@@ -1496,6 +1486,50 @@ class Daemon:
                 arranjo=arranjo,
             )
         return relatorio
+
+    def _flag_global_do_teclado(self) -> bool:
+        """A «Função do teclado» da máquina: o arquivo da sessão, ou o que a config trouxe do boot.
+
+        O valor da config é lido uma vez, antes de qualquer perfil mexer nele: o perfil que liga ou
+        desliga o teclado muda `config.keyboard_emulation_enabled`, e o perfil seguinte, sem
+        opinião, precisa ver o global e não o rastro do anterior.
+        """
+        from hefesto_dualsense4unix.utils.session import load_keyboard_preference
+
+        flag = load_keyboard_preference()
+        if flag is not None:
+            return bool(flag)
+        if self._teclado_de_fabrica is None:
+            self._teclado_de_fabrica = bool(self.config.keyboard_emulation_enabled)
+        return self._teclado_de_fabrica
+
+    def _ligar_o_teclado_do_perfil(
+        self, profile: Any | None, *, sempre: bool = False
+    ) -> bool | None:
+        """O teclado virtual segue o `teclado_emulado` do perfil, pela precedência da T14.
+
+        `schema.resolver_teclado_emulado`: o perfil com opinião vence a «Função do teclado» da
+        máquina. A ativação, o `profile.reaplicar` e o arranjo do desktop chegam aqui pelo mesmo
+        caminho. O device que nasce aqui recebe na hora as `key_bindings` do perfil, porque o
+        gerente as aplica antes de saber se ele existe. Perfil sem opinião não toca no teclado,
+        salvo para devolvê-lo ao global quando o perfil anterior o forçou; `sempre` é o arranjo,
+        que decide a cada entrada. A opinião não vira preferência da máquina (`persist=False`).
+        Devolve o estado pedido, ou `None` quando o perfil não pediu nada.
+        """
+        from hefesto_dualsense4unix.profiles.schema import resolver_teclado_emulado
+
+        opina = getattr(profile, "teclado_emulado", None) is not None
+        if not (sempre or opina or self._teclado_forcado_pelo_perfil):
+            return None
+        desejado = resolver_teclado_emulado(profile, self._flag_global_do_teclado())
+        self._teclado_forcado_pelo_perfil = opina
+        antes = self._keyboard_device
+        if not sempre and desejado == (antes is not None):
+            return desejado
+        self.set_keyboard_emulation(desejado, persist=False)
+        if not sempre and desejado and antes is None and self._keyboard_device is not None:
+            self._aplicar_as_tabelas(profile, None)
+        return desejado
 
     def _devolver_as_tabelas_do_perfil(self) -> None:
         """Saindo do `desktop` para o gamepad, o teclado volta à tabela do perfil ativo.
@@ -1675,10 +1709,10 @@ class Daemon:
         escolha atravesse restart/reboot — era exatamente o que faltava, já que
         o default da config é True e voltava a valer a cada boot.
 
-        NÃO carimba `_emu_manual_ts` (diferente de `set_mouse_emulation`): não há
-        applier de perfil para o teclado, então o carimbo só serviria para
-        congelar por 30 s a aplicação de modo/mouse de perfil por causa de um
-        toggle que nada tem a ver com eles.
+        NÃO carimba `_emu_manual_ts` (diferente de `set_mouse_emulation`): o perfil chega ao
+        teclado por :meth:`_ligar_o_teclado_do_perfil`, sem lock de 30 s, então o carimbo só
+        serviria para congelar a aplicação de modo/mouse de perfil por causa de um toggle que
+        nada tem a ver com eles.
 
         Desligar aqui tira também o teclado virtual do sistema (L3/R3) e as três
         regiões do touchpad — quem chama pela interface tem de dizer isso a quem usa.
@@ -2166,6 +2200,11 @@ class Daemon:
 
         with contextlib.suppress(Exception):
             trocar_a_tabela_no_jogo(self, profile)
+        if profile is not None:
+            try:
+                self._ligar_o_teclado_do_perfil(profile)
+            except Exception as exc:
+                logger.warning("teclado_do_perfil_falhou", err=str(exc))
 
         now = time.monotonic()
         if origin == "manual":
