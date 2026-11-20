@@ -803,8 +803,12 @@ class AltoFalanteSubsystem:
         fonte_de_controles: Any = None,
         daemon: Any = None,
         governador: Any = None,
+        rota_de_saida: Any = None,
     ) -> None:
         self._daemon: Any = daemon
+        self._rota_de_saida_injetada = rota_de_saida
+        self._sem_rota_antes: frozenset[str] = frozenset()
+        self._saida_devolvida: dict[str, str] = {}
         self._governador_injetado = governador
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
@@ -2830,6 +2834,43 @@ class AltoFalanteSubsystem:
     def _anotar_o_pc_inteiro(self, alvos: Any) -> None:
         self._pc_inteiro_no_controle = self._quem_pediu_o_pc_inteiro(alvos)
 
+    def _rota_de_saida(self) -> Any:
+        if self._rota_de_saida_injetada is not None:
+            return self._rota_de_saida_injetada
+        from hefesto_dualsense4unix.app.audio_saida import RotaDeSaida
+
+        return RotaDeSaida()
+
+    def _cuidar_da_saida_padrao(self, gerenciador: Any, alvos: list[Any]) -> None:
+        """O som do PC não fica num nó sem destino, e volta ao nó quando o controle volta.
+
+        O nó de um controle que saiu (ou do rádio sem ponte, visto assim em duas voltas seguidas)
+        não leva som a lugar nenhum: se a saída padrão é ele, devolve-a à saída de antes. Na volta
+        do controle a saída padrão que se devolveu, se ninguém a mudou, volta ao nó dele.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
+
+        na_lista = {str(getattr(c, "uniq", "") or "") for c in alvos}
+        sem_rota = {u for u in gerenciador.nos if u not in na_lista} | {
+            u for u in self._no_radio
+            if u in na_lista and not any(_mesmo_controle(u, p) for p in self._pontes)
+        }
+        confirmados = sem_rota & self._sem_rota_antes
+        self._sem_rota_antes = frozenset(sem_rota)
+        if not confirmados and not self._saida_devolvida:
+            return
+        rota = self._rota_de_saida()
+        for uniq in sorted(confirmados - set(self._saida_devolvida)):
+            devolvida = rota.devolver_a_saida_de_um_no(nome_do_sink(uniq))
+            if devolvida:
+                self._saida_devolvida[uniq] = devolvida
+                logger.info("som_saida_devolvida", saida=devolvida)
+        for uniq, devolvida in list(self._saida_devolvida.items()):
+            if uniq in na_lista and uniq not in sem_rota:
+                del self._saida_devolvida[uniq]
+                if rota.repor_no_controle(nome_do_sink(uniq), devolvida):
+                    logger.info("som_saida_reposta_no_controle")
+
     def _reconciliar(self, gerenciador: Any) -> None:
         """Uma varredura: quem está na lista ganha nó e rota, quem saiu perde só a rota.
 
@@ -2848,6 +2889,7 @@ class AltoFalanteSubsystem:
             ("pc_inteiro", self._anotar_o_pc_inteiro),
             ("pontes", self._casar_as_pontes),
             ("nos", gerenciador.reconciliar),
+            ("saida_padrao", functools.partial(self._cuidar_da_saida_padrao, gerenciador)),
         ):
             with passos.isolado(f"som.{nome}"):
                 passo(alvos)

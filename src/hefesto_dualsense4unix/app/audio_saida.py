@@ -523,6 +523,35 @@ class RotaDeSaida:
         self._gravar_memoria("")
         return True
 
+    def devolver_a_saida_de_um_no(self, sink_do_no: str) -> str:
+        """A saída padrão está no nó de um controle que ficou sem rota: devolve-a e diz a que sink.
+
+        Vai ao sink guardado, se ele ainda vive; sem ele, à primeira saída que não é de controle
+        nem desta casa. ``""`` quando a saída padrão não é esse nó (de outra fonte, não se toca)
+        ou não há para onde devolver.
+        """
+        if not sink_do_no or self._padrao() != sink_do_no:
+            return ""
+        guardado = self._ler_memoria()
+        if self.voltar_ao_anterior():
+            return guardado
+        lista_viva = self._runner(["pactl", "list", "sinks", "short"])
+        for nome in nomes_de_sinks(lista_viva):
+            if nome == sink_do_no or nome.lower().startswith("hefesto"):
+                continue
+            if not e_saida_de_controle(nome, lista_viva) and self._trocar(nome):
+                return nome
+        return ""
+
+    def repor_no_controle(self, sink_do_no: str, devolvida: str) -> bool:
+        """O controle voltou: a saída padrão que ele deixou volta ao nó dele, se ninguém a mudou."""
+        if not sink_do_no or not devolvida or self._padrao() != devolvida:
+            return False
+        return self.mandar_para_o_controle(sink_do_no)
+
+    def _padrao(self) -> str:
+        return sink_padrao_da_saida(self._runner(["pactl", "get-default-sink"]))
+
     def _trocar(self, sink: str) -> bool:
         """`pactl set-default-sink` e a CONFERÊNCIA de que pegou."""
         self._runner(["pactl", "set-default-sink", sink])

@@ -38,6 +38,7 @@ class _Gerenciador:
 
     def __init__(self) -> None:
         self.voltas = 0
+        self.nos: dict[str, Any] = {}
 
     def reconciliar(self, _alvos: Any) -> None:
         self.voltas += 1
