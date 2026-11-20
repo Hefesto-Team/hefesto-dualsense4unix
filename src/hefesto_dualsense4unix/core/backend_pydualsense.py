@@ -798,11 +798,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                         self._last_out_report, self._last_write_at = out, now
                         _o_quadro_saiu(self, out, escrito)
                 self._dormir_a_volta(acordar, lidos=bool(lidos))
-            except OSError:
+            except (OSError, AttributeError) as exc:
                 self.connected = False
-                break
-            except AttributeError:
-                self.connected = False
+                self._dizer_a_saida_da_volta(exc)
                 break
             except Exception as exc:
                 self.connected = False
@@ -813,6 +811,27 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     err=str(exc),
                 )
                 break
+
+    def _dizer_a_saida_da_volta(self, exc: BaseException) -> None:
+        """A volta que sai por erro, com o nó no disco e sem fecho, diz ``report_thread_saiu``.
+
+        O fecho (o sinal baixado, o ``_no_c`` recusado) e o nó que saiu (``POLLHUP``, o nó fora
+        do disco) seguem calados: a volta seguinte do ``connect()`` reabre o controle.
+        """
+        caminho = getattr(self, "_pinned_path", None)
+        if (
+            self._fechando
+            or isinstance(exc, _NoSaiuError)
+            or not isinstance(caminho, bytes)
+            or not os.path.exists(caminho)
+        ):
+            return
+        logger.warning(
+            "report_thread_saiu",
+            path=caminho,
+            tipo=type(exc).__name__,
+            errno=getattr(exc, "errno", None),
+        )
 
     def _dormir_a_volta(self, acordar: threading.Event | None, *, lidos: bool) -> None:
         """O fim da passada: espera o prazo da volta OU a mudança da saída.
@@ -2372,7 +2391,7 @@ class PyDualSenseController(IController):
             self._close_handles(keep=want_keys)
             existing = set(self._handles)
             trocar = {
-                key for key in existing if self._o_no_mudou_locked(key, caminho_pedido[key])
+                key for key in existing if self._o_handle_se_troca_locked(key, caminho_pedido[key])
             }
 
         pedidos = [
@@ -2401,7 +2420,7 @@ class PyDualSenseController(IController):
             dup: pydualsense | None = None
             antigo: pydualsense | None = None
             with self._io_lock:
-                if key in trocar and self._o_no_mudou_locked(key, abertura.path):
+                if key in trocar and self._o_handle_se_troca_locked(key, abertura.path):
                     antigo = self._handles[key]
                     self._handles[key] = handle
                 elif key in self._handles:
@@ -5444,6 +5463,19 @@ class PyDualSenseController(IController):
         """O posto de `key` espera pela peça porque a peça está trocando de transporte?"""
         return key not in self._handles and self._troca_valida_locked(self._key_to_uniq(key))
 
+    def _o_handle_se_troca_locked(self, key: str, pedido: bytes) -> bool:
+        """O handle de `key` se troca na volta: o nó mudou, ou a leitura dele morreu sem fecho."""
+        return self._o_no_mudou_locked(key, pedido) or self._a_leitura_morreu_locked(key)
+
+    def _a_leitura_morreu_locked(self, key: str) -> bool:
+        """A volta do handle de `key` saiu (``connected`` falso) sem ninguém o estar fechando."""
+        handle = self._handles.get(key)
+        return (
+            handle is not None
+            and getattr(handle, "connected", True) is False
+            and not getattr(handle, "_fechando", False)
+        )
+
     def _o_no_mudou_locked(self, key: str, pedido: bytes) -> bool:
         """A key segue na mesa, mas por OUTRO nó — o handle aberto é de um nó morto."""
         atual = getattr(self._handles.get(key), "_pinned_path", None)
@@ -6167,6 +6199,10 @@ def _forca_do_gatilho(handle: Any, bloco: bytes | bytearray | list[int]) -> byte
     return rep.escalar_o_bloco_do_gatilho(bytes(bloco), rep.resto_do_software(escala))
 
 
+class _NoSaiuError(OSError):
+    """O nó do controle saiu do disco (``POLLERR``, ``POLLHUP``, ``POLLNVAL`` na leitura)."""
+
+
 class _DispositivoPorFd:
     """O `hidapi.Device` do handle de controle sobre o fd que o broker passou por SCM_RIGHTS.
 
@@ -6200,7 +6236,7 @@ class _DispositivoPorFd:
             if not eventos:
                 return None
             if eventos[0][1] & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
-                raise OSError("Failed to read from HID device: o nó saiu")
+                raise _NoSaiuError("Failed to read from HID device: o nó saiu")
         return os.read(fd, length) or None
 
     def write(self, data: bytes) -> int:
