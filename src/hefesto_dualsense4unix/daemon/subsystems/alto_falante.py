@@ -819,6 +819,7 @@ class AltoFalanteSubsystem:
         self._so_efeitos_vivos: dict[str, bool] = {}
         self._pc_inteiro_no_controle: frozenset[str] = frozenset()
         self._store: Any = None
+        self._passos: Any = None
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
@@ -2712,10 +2713,8 @@ class AltoFalanteSubsystem:
         if gerenciador is None:
             return
         while not self._parar.is_set():
-            try:
+            with self._passos_da_volta().isolado("som.volta"):
                 self._reconciliar(gerenciador)
-            except Exception as exc:
-                logger.debug("som_reconciliacao_falhou", err=str(exc))
             if self._esperar_a_mesa_do_som(gerenciador):
                 return
 
@@ -2804,21 +2803,54 @@ class AltoFalanteSubsystem:
         )
         return True
 
-    def _reconciliar(self, gerenciador: Any) -> None:
-        """Uma varredura: quem está na lista ganha nó e rota, quem saiu perde só a rota."""
+    def _passos_da_volta(self) -> Any:
+        """O isolador de passo do laço do daemon, sobre o store dele: um dono só."""
+        if self._passos is None:
+            from hefesto_dualsense4unix.daemon.lifecycle import _PassosDoLaco
+            from hefesto_dualsense4unix.daemon.state_store import StateStore
+
+            self._passos = _PassosDoLaco(self._store if self._store is not None else StateStore())
+        return self._passos
+
+    def _marcar_os_do_radio(self, alvos: Any) -> None:
         from hefesto_dualsense4unix.integrations.alto_falante_bt import e_radio
 
-        alvos = self.alvos(list(self._fonte()))
         self._no_radio = frozenset(
             str(getattr(c, "uniq", "") or "")
             for c in alvos
             if e_radio(str(getattr(c, "transporte", "") or ""))
         )
+
+    def _anotar_o_que_a_volta_viu(self, _alvos: Any) -> None:
         self._o_que_a_volta_viu = self._o_que_a_mesa_do_som_diz()
+
+    def _anotar_as_placas(self, _alvos: Any) -> None:
         self._placas_vistas = self._as_placas_de_agora()
+
+    def _anotar_o_pc_inteiro(self, alvos: Any) -> None:
         self._pc_inteiro_no_controle = self._quem_pediu_o_pc_inteiro(alvos)
-        self._casar_as_pontes(alvos)
-        gerenciador.reconciliar(alvos)
+
+    def _reconciliar(self, gerenciador: Any) -> None:
+        """Uma varredura: quem está na lista ganha nó e rota, quem saiu perde só a rota.
+
+        Cada passo tem o seu isolamento: o que falha não cala os seguintes, e vai ao diário.
+        """
+        passos = self._passos_da_volta()
+        alvos = None
+        with passos.isolado("som.alvos"):
+            alvos = self.alvos(list(self._fonte()))
+        if alvos is None:
+            return
+        for nome, passo in (
+            ("no_radio", self._marcar_os_do_radio),
+            ("mesa_do_som", self._anotar_o_que_a_volta_viu),
+            ("placas", self._anotar_as_placas),
+            ("pc_inteiro", self._anotar_o_pc_inteiro),
+            ("pontes", self._casar_as_pontes),
+            ("nos", gerenciador.reconciliar),
+        ):
+            with passos.isolado(f"som.{nome}"):
+                passo(alvos)
 
 
 __all__ = [

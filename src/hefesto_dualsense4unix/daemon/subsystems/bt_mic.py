@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -423,6 +424,8 @@ class BtMicSubsystem:
         self._pedidor_anterior: Any = None
         self._dizedor_anterior: tuple[Any, Any, Any] | None = None
         self._numerador_anterior: Any = None
+        self._store: Any = None
+        self._passos: Any = None
         self._ouvinte_anterior: Any = None
         self._backend: Any = None
         self._canais_do_cabo: dict[str, str] = {}
@@ -731,6 +734,7 @@ class BtMicSubsystem:
         self._config = getattr(ctx, "config", None)
         self._backend = getattr(ctx, "controller", None)
         self._laco = asyncio.get_running_loop()
+        self._store = getattr(ctx, "store", None)
         if self._thread is not None and self._thread.is_alive():
             return
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
@@ -830,30 +834,57 @@ class BtMicSubsystem:
         self._ouvinte_anterior = None
 
 
-    def _loop(self) -> None:
-        gerenciador = self._gerenciador
-        if gerenciador is None:
-            return
+    def _passos_da_volta(self) -> Any:
+        """O isolador de passo do laço do daemon, sobre o store dele: um dono só."""
+        if self._passos is None:
+            from hefesto_dualsense4unix.daemon.lifecycle import _PassosDoLaco
+            from hefesto_dualsense4unix.daemon.state_store import StateStore
+
+            self._passos = _PassosDoLaco(self._store if self._store is not None else StateStore())
+        return self._passos
+
+    def _reconciliar_as_pontes(self, gerenciador: Any, nos: Any) -> None:
+        gerenciador.reconciliar(self.alvos(nos))
+        for uniq in getattr(gerenciador, "pontes", None) or ():
+            RELOGIO.marcar(uniq, MICROFONE)
+
+    def _volta(self, gerenciador: Any) -> None:
+        """Uma volta, cada passo com o seu isolamento: o que falha não cala os seguintes.
+
+        Sem a lista dos nós, os passos que a recebem ficam de fora: a lista vazia faria esquecer
+        e fechar todo controle.
+        """
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             nos_dualsense_bluetooth,
         )
 
+        passos = self._passos_da_volta()
+        nos = None
+        with passos.isolado("bt_mic.nos"):
+            nos = nos_dualsense_bluetooth()
+        da_volta: tuple[tuple[str, Callable[..., object], bool], ...] = (
+            ("esquecer", self._esquecer_quem_saiu_da_mesa, True),
+            ("desmarcados", self._soltar_os_que_o_usuario_desmarcou, False),
+            ("cabo", self._reconciliar_o_cabo, True),
+            ("pontes", partial(self._reconciliar_as_pontes, gerenciador), True),
+            ("espera", self._refazer_quem_esperava_o_canal, False),
+            ("palavra", self._aplicar_a_palavra_do_usuario, False),
+            ("orfaos", self._varrer_os_orfaos, True),
+            ("canais_velhos", self._renomear_os_canais_velhos, False),
+            ("fonte_padrao", self._devolver_a_fonte_padrao, False),
+        )
+        for nome, passo, recebe_os_nos in da_volta:
+            if recebe_os_nos and nos is None:
+                continue
+            with passos.isolado(f"bt_mic.{nome}"):
+                passo(nos) if recebe_os_nos else passo()
+
+    def _loop(self) -> None:
+        gerenciador = self._gerenciador
+        if gerenciador is None:
+            return
         while not self._parar.is_set():
-            try:
-                nos = nos_dualsense_bluetooth()
-                self._esquecer_quem_saiu_da_mesa(nos)
-                self._soltar_os_que_o_usuario_desmarcou()
-                self._reconciliar_o_cabo(nos)
-                gerenciador.reconciliar(self.alvos(nos))
-                for uniq in getattr(gerenciador, "pontes", None) or ():
-                    RELOGIO.marcar(uniq, MICROFONE)
-                self._refazer_quem_esperava_o_canal()
-                self._aplicar_a_palavra_do_usuario()
-                self._varrer_os_orfaos(nos)
-                self._renomear_os_canais_velhos()
-                self._devolver_a_fonte_padrao()
-            except Exception as exc:
-                logger.debug("bt_mic_reconciliacao_falhou", err=str(exc))
+            self._volta(gerenciador)
             if self._dormir(gerenciador):
                 return
 
