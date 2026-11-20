@@ -13,7 +13,8 @@ aqui: ele abriria os nós da máquina. Por isso a lista dos caminhos é igual à
 sem caminho reprova.
 
 MORDIDA: tirar a guarda de um nome reprova com o nome dito: o ``sem_ativar`` da porta
-(``org.freedesktop.Notifications`` e ``org.freedesktop.systemd1``), o ``NO_AUTO_START`` do Gio
+(``org.freedesktop.Notifications``, ``org.freedesktop.systemd1`` e o inibidor da fila no
+``org.freedesktop.login1``), o ``NO_AUTO_START`` do Gio
 (``org.bluez`` e ``org.freedesktop.NetworkManager``), o ``sessao_ainda_nao_subiu`` do ``abrir``
 (``org.freedesktop.portal``) ou o ``NameHasOwner`` da bandeja (``org.kde``).
 """
@@ -27,6 +28,7 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.app.actions import atualizador
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import desktop_notifications as avisos
 from hefesto_dualsense4unix.integrations import diario_do_radio, faixa_do_wifi
@@ -109,6 +111,7 @@ def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Barr
     avisos.reset_once_cache()
     vivo = Barramento(tmp_path)
     monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", vivo.endereco)
+    monkeypatch.setenv("DBUS_SYSTEM_BUS_ADDRESS", vivo.endereco)
     monkeypatch.setenv("PATH", f"{vivo.binarios}{os.pathsep}{os.environ['PATH']}")
     try:
         yield vivo
@@ -154,11 +157,17 @@ def _a_bandeja(_barramento: Barramento, _pasta: Path) -> None:
     assert avisos.statusnotifierwatcher_available() is False
 
 
+def _o_inibidor_da_fila(_barramento: Barramento, _pasta: Path) -> None:
+    with atualizador.segurar_o_desligar("a prova de boot"):
+        pass
+
+
 _CAMINHOS: dict[str, Callable[[Barramento, Path], None]] = {
     "org.bluez": _o_dono_do_radio,
     "org.freedesktop.NetworkManager": _a_faixa_do_wifi,
     "org.freedesktop.Notifications": _o_aviso_da_subida,
     "org.freedesktop.impl": _a_captura_que_assinou,
+    "org.freedesktop.login1": _o_inibidor_da_fila,
     "org.freedesktop.portal": _a_captura_que_assinou,
     "org.freedesktop.systemd1": _o_aviso_da_subida,
     "org.kde": _a_bandeja,
