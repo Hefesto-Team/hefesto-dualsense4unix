@@ -125,7 +125,7 @@ def test_ocupada_na_casa_ve_quem_escuta_no_loopback() -> None:
 def test_sem_o_pasta_ou_sem_rede_a_linha_e_a_de_antes(curto: Path) -> None:
     casa = _caixa(curto, _lovense(), ["true"], pasta=None)
     assert casa[0].endswith("bwrap") and "--unshare-net" not in casa
-    assert "--unshare-user" not in casa
+    assert "--uid" not in casa and "--gid" not in casa
     nenhuma = _caixa(curto, _manifesto(["rede:nenhuma"]), ["true"], pasta=_PASTA_DE_MENTIRA)
     assert nenhuma[0].endswith("bwrap") and "--unshare-net" in nenhuma
 

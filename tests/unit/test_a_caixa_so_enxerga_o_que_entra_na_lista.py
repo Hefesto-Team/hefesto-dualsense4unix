@@ -297,12 +297,9 @@ def ler(p):
             return f.read()
     except OSError:
         return b''
-guardados = []
 for linha in sys.stdin:
     pedido = linha.split()
-    if pedido[:1] == ['segurar']:
-        guardados.append(os.open(pedido[1], os.O_RDONLY | os.O_DIRECTORY))
-    elif pedido[:1] == ['fugir']:
+    if pedido[:1] == ['fugir']:
         if os.fork() == 0:
             os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
             time.sleep(600)
@@ -322,10 +319,13 @@ for linha in sys.stdin:
 
 
 def _caixa_no_hub(hub: Path, e429: Path, retrato: sup.RetratoDosHubs,
-                  hid: dict[str, str]) -> subprocess.Popen[str]:
+                  hid: dict[str, str], *, fecha: bool = True) -> subprocess.Popen[str]:
     """A caixa pela linha do produto (o hub vivo e a pasta sintética do HID), no /sys forjado."""
     real = next(e429.glob("*/*/hidraw/*"))
-    argv = [shutil.which("bwrap") or "bwrap", *sup._o_que_entra(sup.ENTRAM_NA_CAIXA),
+    bwrap = shutil.which("bwrap") or "bwrap"
+    fechada = ["--unshare-user", "--disable-userns"] if fecha and sup.bwrap_fecha_o_userns(
+        bwrap) else []
+    argv = [bwrap, *fechada, *sup._o_que_entra(sup.ENTRAM_NA_CAIXA),
             "--unshare-pid", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/sys",
             *sup._o_sys_dos_achados([("/sys/dev/char/240:7", str(real))], retrato),
             *sup.a_pasta_do_hid(hid), "--die-with-parent", "--new-session"]
@@ -401,8 +401,10 @@ def test_a_pasta_do_hid_leva_so_o_radio_e_o_declarado(tmp_path: Path) -> None:
 class _Vigia:
     """O supervisor do produto vigiando uma caixa de verdade sobre o /sys forjado."""
 
-    def __init__(self, curto: Path, cascata: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    def __init__(self, curto: Path, cascata: str, monkeypatch: pytest.MonkeyPatch,
+                 *, fecha: bool = True) -> None:
         exigir_caixa_do_bwrap()
+        self.fecha = fecha
         self.sys_ = curto / "sys"
         self.hub = self.sys_ / "devices" / "usb3" / cascata
         self.bus = self.sys_ / "bus" / "hid" / "devices"
@@ -460,7 +462,8 @@ class _Vigia:
         self.vigiada.hid = sup.hid_da_caixa(self.manifesto, self.vigiada.aceitos)
         self.vigiada.pela_porta = frozenset(
             sup.pastas_pela_porta(self.manifesto, self.vigiada.aceitos).values())
-        self.caixa = _caixa_no_hub(self.hub, self.e429, self.vigiada.retrato, self.vigiada.hid)
+        self.caixa = _caixa_no_hub(self.hub, self.e429, self.vigiada.retrato, self.vigiada.hid,
+                                   fecha=self.fecha)
         self.vigiada.processo = self.caixa  # type: ignore[assignment]
 
     def fechar(self) -> None:
@@ -506,13 +509,25 @@ def test_a_vigia_cobre_o_irmao_por_dentro_sem_reabrir(
         vigia.fechar()
 
 
-@pytest.mark.parametrize("como", ["fugir", "segurar", "hub", "falha"])
-def test_a_caixa_reabre_quando_a_cobertura_nao_vale(
-        curto: Path, monkeypatch: pytest.MonkeyPatch, como: str) -> None:
-    """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: a caixa reabre quando um processo da caixa
-    mora noutro espaço de montagem, quando segura o irmão aberto antes da cobertura, quando o
-    hub sai e quando a mudança por dentro falha; a nova caixa não mostra o irmão."""
-    vigia = _Vigia(curto, "3-1", monkeypatch)
+class _Diario:
+    def __init__(self) -> None:
+        self.linhas: list[tuple[str, dict[str, Any]]] = []
+
+    def __getattr__(self, _nivel: str) -> Any:
+        return lambda evento, **campos: self.linhas.append((evento, campos))
+
+
+@pytest.mark.parametrize(("como", "motivo"), [
+    ("fugir", "escape"), ("hub", "hub_saiu"), ("falha", "cobertura_falhou")])
+def test_a_caixa_reabre_quando_a_cobertura_nao_vale_e_diz_por_que(
+        curto: Path, monkeypatch: pytest.MonkeyPatch, como: str, motivo: str) -> None:
+    """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: a caixa reabre, com o motivo no diário do
+    serviço, quando um processo da caixa mora noutro espaço de montagem (o bwrap sem
+    --disable-userns), quando o hub sai e quando a mudança por dentro falha; a nova caixa não
+    mostra o irmão."""
+    vigia = _Vigia(curto, "3-1", monkeypatch, fecha=como != "fugir")
+    diario = _Diario()
+    monkeypatch.setattr(sup, "logger", diario)
     try:
         vigia.volta()
         assert vigia.caixa is not None
@@ -521,18 +536,48 @@ def test_a_caixa_reabre_quando_a_cobertura_nao_vale(
         if como == "falha":
             monkeypatch.setattr(sup, "POR_DENTRO_DA_CAIXA", curto / "nao-existe.py")
         _irmao(vigia.hub, "3-1.3", "0003:054C:0CE6.0020", vigia.bus)
-        if como == "segurar":
-            _ver(vigia.caixa, f"segurar {vigia.hub / '3-1.3'}")
         if como == "hub":
             shutil.rmtree(vigia.hub)
             asyncio.run(vigia.supervisor._conferir_os_aparelhos())
-            assert vigia.reabertas == ["exemplo"]
-            return
-        visto = vigia.volta()
+        else:
+            visto = vigia.volta()
+            assert (visto["vizinhos"], visto["uniq"]) == ([], 0), visto
         assert vigia.reabertas == ["exemplo"], como
-        assert (visto["vizinhos"], visto["uniq"]) == ([], 0), visto
+        assert ("mods_caixa_reabre", {"mod": "exemplo", "motivo": motivo}) in diario.linhas
     finally:
         vigia.fechar()
+
+
+_TENTA_O_USERNS = r"""
+import os
+try:
+    os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
+    print('abriu')
+except OSError as exc:
+    print(exc.errno)
+"""
+
+
+def test_a_caixa_nasce_sem_poder_abrir_espaco_de_usuario(curto: Path) -> None:
+    """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: pela linha do produto, com o bwrap que
+    aceita --disable-userns, a extensão não abre espaço de usuário (nem de montagem) próprio."""
+    exigir_caixa_do_bwrap()
+    bwrap = shutil.which("bwrap") or "bwrap"
+    if not sup.bwrap_fecha_o_userns(bwrap):
+        pytest.skip("o bwrap desta máquina não aceita --disable-userns")
+    for pedidas in (("aparelhos", "bluetooth", "rede:internet"), ("rede:nenhuma",)):
+        fonte, dados, casa = (curto / f"{p}-{len(pedidas)}" for p in ("fonte", "dados", "casa"))
+        for pasta in (fonte, dados, casa):
+            pasta.mkdir()
+        argv = sup.comando_na_caixa(
+            bwrap=bwrap, comando=[sys.executable, "-c", _TENTA_O_USERNS], codigo=fonte,
+            dados=dados, porta=curto / "porta.sock", manifesto=_manifesto(*pedidas), casa=casa,
+            execucao=())
+        (curto / "porta.sock").touch()
+        feito = subprocess.run(argv, capture_output=True, text=True, timeout=60, check=False)
+        assert feito.stdout.strip() != "abriu", pedidas
+        assert feito.returncode == 0, feito.stderr[-300:]
+        assert "--disable-userns" in argv[:argv.index("--")]
 
 
 def test_o_uevent_do_aparelho_usb_acorda_a_vigia_na_hora(monkeypatch: pytest.MonkeyPatch) -> None:

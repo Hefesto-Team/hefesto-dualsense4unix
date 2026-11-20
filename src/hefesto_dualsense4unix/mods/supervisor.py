@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import ctypes
 import errno
+import functools
 import json
 import os
 import re
@@ -20,6 +21,7 @@ import secrets
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import threading
@@ -541,6 +543,8 @@ def comando_na_caixa(
     argv = [bwrap]
     if propria:
         argv += ["--unshare-user", "--uid", str(os.getuid()), "--gid", str(os.getgid())]
+    if bwrap_fecha_o_userns(bwrap):
+        argv += [*([] if propria else ["--unshare-user"]), "--disable-userns"]
     argv += _o_que_entra(entram)
     for coberto in COBERTOS_NA_CAIXA:
         if os.path.isfile(coberto):
@@ -1205,39 +1209,35 @@ def _os_da_caixa(pid: int) -> list[int]:
     return caixa
 
 
-def _ligado_a(pid: int) -> list[str]:
-    """Os caminhos que ``pid`` segura: cada fd, a pasta, a raiz e cada arquivo mapeado."""
-    caminhos: list[str] = []
-    with contextlib.suppress(OSError):
-        for fd in os.listdir(f"/proc/{pid}/fd"):
-            with contextlib.suppress(OSError):
-                caminhos.append(os.readlink(f"/proc/{pid}/fd/{fd}"))
-    for link in ("cwd", "root"):
-        with contextlib.suppress(OSError):
-            caminhos.append(os.readlink(f"/proc/{pid}/{link}"))
-    with contextlib.suppress(OSError):
-        caminhos += [linha.split(None, 5)[5] for linha in
-                     Path(f"/proc/{pid}/maps").read_text(encoding="utf-8").splitlines()
-                     if len(linha.split(None, 5)) == 6]
-    return caminhos
-
-
-def a_caixa_escapa(pid: int, dentro: int, cobertos: Collection[str]) -> str | None:
-    """Por que a cobertura feita no espaço de montagem de ``dentro`` não vale para a caixa de
-    ``pid``; ``None`` quando vale. Não vale quando um processo da caixa mora noutro espaço de
-    montagem (a montagem não chega nele) ou segura algo de ``cobertos`` aberto antes da
-    montagem."""
+def a_caixa_escapa(pid: int, dentro: int) -> bool:
+    """Algum processo da caixa de ``pid`` mora noutro espaço de montagem que o de ``dentro``: a
+    cobertura feita ali não chega nele. É a reserva do ``bwrap`` sem ``--disable-userns``
+    (:func:`bwrap_fecha_o_userns`); a caixa que não se lê conta como escape."""
     try:
         montagem = os.readlink(f"/proc/{dentro}/ns/mnt")
-    except OSError as exc:
-        return f"a caixa não se lê: {exc.strerror}"
+    except OSError:
+        return True
     for processo in _os_da_caixa(pid):
         with contextlib.suppress(OSError):
             if os.readlink(f"/proc/{processo}/ns/mnt") != montagem:
-                return "um processo da caixa mora noutro espaço de montagem"
-        if any(_sob(caminho, tuple(cobertos)) for caminho in _ligado_a(processo)):
-            return "um processo da caixa segura o aparelho coberto"
-    return None
+                return True
+    return False
+
+
+@functools.lru_cache(maxsize=4)
+def bwrap_fecha_o_userns(bwrap: str) -> bool:
+    """O ``bwrap`` aceita ``--disable-userns`` (0.8.0 em diante) e não é setuid: a caixa nasce
+    sem poder abrir espaço de usuário, e com ele um espaço de montagem que a cobertura por dentro
+    não alcança. O setuid fica fora porque nele o ``--unshare-user`` que a opção pede pode
+    falhar."""
+    try:
+        if os.stat(bwrap).st_mode & stat.S_ISUID:
+            return False
+        ajuda = subprocess.run([bwrap, "--help"], capture_output=True, text=True, check=False)
+    except OSError as exc:
+        logger.info("mods_bwrap_sem_ajuda", bwrap=bwrap, err=str(exc))
+        return False
+    return "--disable-userns" in ajuda.stdout + ajuda.stderr
 
 
 async def mudar_por_dentro_da_caixa(pid: int, pedido: dict[str, Any]) -> dict[str, Any] | None:
@@ -1598,10 +1598,10 @@ class Supervisor:
             for mod_id, vigiada in list(self._vigiadas.items()):
                 await self._conferir_uma(mod_id, vigiada)
 
-    async def _mudar_por_dentro(self, mod_id: str, vigiada: _Vigiada) -> bool:
-        """Cobre os irmãos à vista e refaz os links do HID na caixa aberta; ``False`` quando a
-        caixa tem de reabrir: o hub saiu, a mudança falhou ou a caixa escapa da cobertura
-        (:func:`a_caixa_escapa`)."""
+    async def _mudar_por_dentro(self, mod_id: str, vigiada: _Vigiada) -> str | None:
+        """Cobre os irmãos à vista e refaz os links do HID na caixa aberta; devolve o motivo de
+        reabrir (``hub_saiu``, ``cobertura_falhou``, ``escape``: :func:`a_caixa_escapa`), ou
+        ``None`` quando a caixa segue aberta."""
         manifesto, processo = vigiada.manifesto, vigiada.processo
         assert manifesto is not None and processo is not None
         irmaos, sairam = ((await asyncio.to_thread(irmaos_a_vista, vigiada.retrato))
@@ -1610,13 +1610,12 @@ class Supervisor:
         ligar = {nome: alvo for nome, alvo in hid.items() if vigiada.hid.get(nome) != alvo}
         desligar = sorted(set(vigiada.hid) - set(hid))
         if sairam:
-            logger.warning("mods_hub_da_caixa_saiu", mod=mod_id, quantos=len(sairam))
-            return False
+            return "hub_saiu"
         if not (irmaos or ligar or desligar):
-            return True
+            return None
         dentro = await asyncio.to_thread(a_extensao_na_caixa, processo.pid)
         if dentro is None:
-            return True
+            return None
         inicio = time.monotonic()
         resposta = await mudar_por_dentro_da_caixa(dentro, {
             "cobrir": sorted(irmaos), "pasta_dos_links": PASTA_DO_HID if hid or desligar else "",
@@ -1625,17 +1624,15 @@ class Supervisor:
                 or set(resposta.get("cobertos", [])) != set(irmaos)):
             logger.warning("mods_por_dentro_falhou", mod=mod_id,
                            falhas=(resposta or {}).get("falhas"))
-            return False
+            return "cobertura_falhou"
         vigiada.retrato.update(irmaos)
         vigiada.hid = hid
         if irmaos:
-            motivo = await asyncio.to_thread(a_caixa_escapa, processo.pid, dentro, list(irmaos))
             logger.info("mods_irmao_coberto", mod=mod_id, quantos=len(irmaos),
                         ms=round((time.monotonic() - inicio) * 1000, 1))
-            if motivo is not None:
-                logger.warning("mods_caixa_escapa", mod=mod_id, motivo=motivo)
-                return False
-        return True
+            if await asyncio.to_thread(a_caixa_escapa, processo.pid, dentro):
+                return "escape"
+        return None
 
     async def _conferir_uma(self, mod_id: str, vigiada: _Vigiada) -> None:
         manifesto = vigiada.manifesto
@@ -1643,9 +1640,9 @@ class Supervisor:
         if (manifesto is None or not self.bwrap or processo is None
                 or processo.returncode is not None):
             return
-        if not await self._mudar_por_dentro(mod_id, vigiada):
+        if (motivo := await self._mudar_por_dentro(mod_id, vigiada)) is not None:
+            logger.warning("mods_caixa_reabre", mod=mod_id, motivo=motivo)
             if (entrada := self._registro_lido.get(mod_id)) is not None:
-                logger.warning("mods_caixa_reabre", mod=mod_id)
                 await self._comecar(entrada)
             return
         if not manifesto.aparelhos or vigiada.aparelho_em_laco:
@@ -2182,6 +2179,7 @@ __all__ = [
     "abrir_o_aparelho",
     "aparelhos_que_casam",
     "avisar_o_grupo_da_extensao",
+    "bwrap_fecha_o_userns",
     "colecoes_de_aplicacao",
     "comando_na_caixa",
     "diario_da_extensao",

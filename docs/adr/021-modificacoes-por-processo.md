@@ -88,13 +88,17 @@ permissões que a pessoa aceitou.
        declarado) e cobre por dentro, sem reabrir, o que a caixa não cobre: um processo à parte
        entra no espaço de montagem da extensão e no de usuário dono dele (`NS_GET_USERNS`, sem
        privilégio na máquina) e monta um `tmpfs` só de leitura por cima; a mesma vigia refaz a
-       pasta sintética do HID. A caixa reabre só de reserva: quando a mudança falha, quando o
-       hub sai, ou quando um processo da caixa mora noutro espaço de montagem ou segura o
-       aparelho aberto antes da cobertura (fd, pasta, mapa). Medido em 20/11/2026: liga A, liga
-       B, tira A, religa A e o rádio que sai e volta, nenhuma reabertura (com a reabertura eram
-       três para os quatro primeiros), cerca de 15 ms do aparelho nascer à cobertura; quatro
-       `RESET;` seguidos, nenhuma. Limite: a extensão que corre essa janela e guarda o fd do
-       aparelho na fila de um socket segue lendo aquele aparelho; o `/run/systemd/resolve` (e o
+       pasta sintética do HID. Com o `bwrap` 0.8.0 ou mais novo, e não setuid, a caixa nasce com
+       `--unshare-user --disable-userns`: a extensão não abre espaço de usuário, e com ele um de
+       montagem que a cobertura não alcançaria. A caixa reabre só de reserva, com o motivo no
+       diário do serviço (`mods_caixa_reabre`): `cobertura_falhou`, `hub_saiu` e `escape` (no
+       `bwrap` sem a opção, um processo da caixa noutro espaço de montagem). Medido em
+       20/11/2026: liga A, liga B, tira A, religa A e o rádio que sai e volta, nenhuma
+       reabertura (com a reabertura eram três para os quatro primeiros), cerca de 15 ms do
+       aparelho nascer à cobertura; quatro `RESET;` seguidos, nenhuma. Limite: nesses cerca de
+       15 ms a extensão vê o aparelho novo, e a que abre a pasta dele na janela e guarda o fd
+       segue lendo aquele aparelho depois da cobertura (o fd guardado na fila de um socket nem
+       aparece no `/proc`, e a varredura não fecharia o caso); o `/run/systemd/resolve` (e o
        alvo do
        `/etc/resolv.conf`) com rede;
      - o executável que mora fora da lista (o `python3` de um venv) roda pelo alvo real; o que mora
