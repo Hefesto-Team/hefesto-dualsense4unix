@@ -59,6 +59,7 @@ import asyncio
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
@@ -1343,9 +1344,27 @@ class _DaemonDoLaco:
         self._voltas = voltas
         self._hidraw_broker_executor = ThreadPoolExecutor(max_workers=1)
         self._mesa = mesa
+        self._esvaziou_na_volta: int | None = None
 
     def _is_stopping(self) -> bool:
-        return self.voltas >= self._voltas
+        """Para depois das voltas pedidas, da mesa quieta (troca em fundo acabada e regra do udev
+        rodada) e de mais uma volta, a que lê o que a mesa deixou."""
+        return (
+            self.voltas >= self._voltas
+            and not getattr(self, "_trocas_em_fundo", None)
+            and self._esvaziou_na_volta is not None
+            and self.voltas > self._esvaziou_na_volta
+        )
+
+    async def esperar_a_troca_em_fundo(self) -> None:
+        """O evento que a volta espera: a troca em fundo (o `Disconnect` no fio) acabar, em 10 s."""
+        em_fundo = list(getattr(self, "_trocas_em_fundo", None) or ())
+        if em_fundo:
+            await asyncio.wait(em_fundo, timeout=10.0)
+        if getattr(self, "_trocas_em_fundo", None) or self._mesa.kernel._probes_pendentes:
+            self._esvaziou_na_volta = None
+        elif self._esvaziou_na_volta is None:
+            self._esvaziou_na_volta = self.voltas
 
     def _arm_input_grace(self) -> None:
         return None
@@ -1361,6 +1380,7 @@ class _DaemonDoLaco:
 
 
 @pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("atraso_do_fio", [0.0, 0.02], ids=["fio-rapido", "fio-20ms"])
 @pytest.mark.parametrize("quantos", [1, 2])
 @pytest.mark.parametrize(
     ("vao", "handles_atrasam"),
@@ -1373,9 +1393,23 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
     quantos: int,
     vao: bool,
     handles_atrasam: bool,
+    atraso_do_fio: float,
 ) -> None:
-    """Ponta a ponta no `reconnect_loop`: com um controle só, a mesa fica vazia no vão."""
+    """D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS
+
+    O laço só para com a troca em fundo acabada.
+
+    Ponta a ponta no `reconnect_loop`: com um controle só, a mesa fica vazia no vão; o `fio-20ms`
+    atrasa o `Disconnect` no fio, e a prova é o mesmo resultado com ele.
+    """
     mesa = montar(monkeypatch, tmp_path, ("bt", "bt")[:quantos])
+    derrubar = oce.derrubar_o_radio
+
+    def _derrubar_no_fio_lento(uniq: str, leitor: Any = None) -> tuple[bool, str]:
+        time.sleep(atraso_do_fio)
+        return derrubar(uniq, leitor=leitor)
+
+    monkeypatch.setattr(oce, "derrubar_o_radio", _derrubar_no_fio_lento)
     mesa.kernel.regra_atrasa = vao
     mesa.kernel.handles_atrasam = handles_atrasam
     reaplicados: list[str | None] = []
@@ -1411,6 +1445,8 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
         estado["armada"] = mesa.kernel._probes_pendentes
         if daemon_.voltas == 1:
             mesa.kernel.conectar(UNIQS[0], "usb")
+        if daemon_.voltas >= daemon_._voltas:
+            await daemon_.esperar_a_troca_em_fundo()
         return True
 
     esperas_offline: list[float] = []

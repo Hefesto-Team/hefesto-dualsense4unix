@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import errno
 import os
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -628,11 +629,13 @@ INTERFACE_DO_GADGET = "/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0"
 
 
 class ClienteDeMentira:
-    def __init__(self) -> None:
+    def __init__(self, atraso_s: float = 0.0) -> None:
         self.desmontados: list[str] = []
         self.fechado = False
+        self.atraso_s = atraso_s
 
     def desmontar_pad_usb(self, gadget: str) -> bool:
+        time.sleep(self.atraso_s)
         self.desmontados.append(gadget)
         return True
 
@@ -659,6 +662,7 @@ class EnsaioDoGadget:
         self.falta: list[str] = []
         self.jogo: socket.socket | None = None
         self.ioctl_erro: int | None = None
+        self.atraso_da_descida_s = 0.0
 
         def pedir(serial: str, descritor: bytes, identidade: str, par: tuple[int, int]) -> Any:
             self.pedidos.append((serial, descritor, identidade))
@@ -667,7 +671,7 @@ class EnsaioDoGadget:
             jogo.settimeout(2.0)
             self.jogo = jogo
             os.set_blocking(nosso.fileno(), False)
-            cliente = ClienteDeMentira()
+            cliente = ClienteDeMentira(self.atraso_da_descida_s)
             self.clientes.append(cliente)
             return uhid_gamepad._GadgetDoPad(
                 cliente=cliente, fd=nosso.detach(), gadget=f"hefesto-pad-{len(self.pedidos) - 1}",
@@ -811,15 +815,23 @@ class TestOVpadNasceNoGadget:
         finally:
             pad.stop()
 
+    @pytest.mark.parametrize(
+        "atraso_da_descida_s", [0.0, 0.05], ids=["descida-rapida", "descida-50ms"]
+    )
     def test_sem_o_ioctl_o_contrato_vai_ao_doctor_e_o_vpad_nasce_uhid(
-        self, ensaio: EnsaioDoGadget
+        self, ensaio: EnsaioDoGadget, atraso_da_descida_s: float
     ) -> None:
+        """D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS
+
+        A descida ao broker se espera.
+        """
         ensaio.ioctl_erro = errno.ENOTTY
+        ensaio.atraso_da_descida_s = atraso_da_descida_s
         pad = ensaio.pad()
         try:
             assert pad.start() is True
             assert pad._gadget is None
-            assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
+            assert ensaio.esperar(lambda: ensaio.clientes[0].desmontados == ["hefesto-pad-0"])
             assert pad_usb.CONTRATO_DO_IOCTL in pad_usb.contrato_que_faltou_ao_montar()
         finally:
             pad.stop()

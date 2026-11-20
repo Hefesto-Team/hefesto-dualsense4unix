@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import threading
+import time
 from collections.abc import Iterator, Sequence
 from types import SimpleNamespace
 from typing import Any
@@ -257,6 +258,45 @@ def _gesto_com_o_laco(ensaio: MesaDosAtalhos, gesto: Any) -> None:
         await tarefa
 
     asyncio.run(_junto())
+
+
+def _o_broker_atrasa(monkeypatch: pytest.MonkeyPatch, segundos: float) -> None:
+    """A leitura que o secundário pede ao fio do broker chega `segundos` depois do pedido."""
+    from hefesto_dualsense4unix.integrations import hidraw_broker_client as hbc
+
+    real = hbc.broker_call_nonblocking
+
+    def _atrasada(daemon: Any, call: Any) -> None:
+        def _depois() -> object:
+            time.sleep(segundos)
+            return call()
+
+        real(daemon, _depois)
+
+    monkeypatch.setattr(hbc, "broker_call_nonblocking", _atrasada)
+
+
+ATRASOS_DO_BROKER = pytest.mark.parametrize(
+    "atraso_do_broker_s", [0.0, 0.03], ids=["broker-rapido", "broker-30ms"]
+)
+
+
+def _tiques_ate_vestirem(
+    ensaio: MesaDosAtalhos, mascara: str, quem: Sequence[str] = (P2, P3), teto_s: float = 10.0,
+) -> None:
+    """Três tiques e, se algum secundário ainda não veste a máscara, tiques até vestir (teto real).
+
+    O vpad do secundário só nasce depois de uma leitura que corre no fio do broker; contar tiques
+    é contar o que o teste não espera.
+    """
+    for _ in range(3):
+        ensaio.tique(0.0)
+    fim = time.monotonic() + teto_s
+    while time.monotonic() < fim and any(
+        em.mascara_vestida(ensaio.daemon, uniq) != mascara for uniq in quem
+    ):
+        time.sleep(0.005)
+        ensaio.tique(0.0)
 
 
 def armar_o_ato_do_daemon(
@@ -642,18 +682,20 @@ class TestOPsL3NaEsperaAndaOModoDeTodos:
         luz: list[Any] = armar_o_ato_do_daemon(ensaio, monkeypatch).luz
         return luz
 
+    @ATRASOS_DO_BROKER
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
     def test_o_ps_l3_do_p2_na_espera_anda_o_modo_de_todos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
+        atraso_do_broker_s: float,
     ) -> None:
         ensaio = montar_atalhos(monkeypatch, kernel, 3, transporte)
+        _o_broker_atrasa(monkeypatch, atraso_do_broker_s)
         luz = self._preparar(ensaio, monkeypatch)
         _fora_dentro_do_prazo(ensaio, P1)
         assert em.mascara_vestida(ensaio.daemon, P2) == "dualsense"
 
         _gesto_com_o_laco(ensaio, build_next_mask_callback(ensaio.daemon))  # type: ignore[arg-type]
-        for _ in range(3):
-            ensaio.tique(0.0)
+        _tiques_ate_vestirem(ensaio, "xbox")
 
         assert getattr(ensaio.daemon._gamepad_device, "flavor", None) == "xbox"
         assert em.mascara_vestida(ensaio.daemon, P2) == "xbox", "o P2 ficou no modo velho"
@@ -664,18 +706,24 @@ class TestOPsL3NaEsperaAndaOModoDeTodos:
         assert ensaio.dono_do_vpad_do_p1() is None, "o P2 passou a dirigir o boneco 1"
         ensaio.o_jogo_segue_a_tela()
 
+    @ATRASOS_DO_BROKER
     def test_tres_apertos_do_p2_andam_o_ciclo_inteiro(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+        atraso_do_broker_s: float,
     ) -> None:
+        """D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS
+
+        O ciclo espera os secundários vestirem.
+        """
         ensaio = montar_atalhos(monkeypatch, kernel, 3)
+        _o_broker_atrasa(monkeypatch, atraso_do_broker_s)
         luz = self._preparar(ensaio, monkeypatch)
         _fora_dentro_do_prazo(ensaio, P1)
 
         vestiu = []
-        for _ in range(3):
+        for modo in ("xbox", "nintendo", "dualsense"):
             _gesto_com_o_laco(ensaio, build_next_mask_callback(ensaio.daemon))  # type: ignore[arg-type]
-            for _ in range(3):
-                ensaio.tique(0.0)
+            _tiques_ate_vestirem(ensaio, modo)
             vestiu.append(em.mascara_vestida(ensaio.daemon, P2))
 
         assert vestiu == ["xbox", "nintendo", "dualsense"], f"o ciclo andou {vestiu}"
