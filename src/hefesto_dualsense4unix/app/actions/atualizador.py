@@ -625,9 +625,14 @@ def falta_energia(raiz: Path | None = None) -> str:
 
 
 def _livre_em(caminho: Path) -> int | None:
+    """Os bytes livres para quem não é root; ``None`` sem a pasta (sem partição EFI, por exemplo)
+    e com a leitura que falha, que fica no registro."""
+    if not caminho.is_dir():
+        return None
     try:
         dado = os.statvfs(caminho)
-    except OSError:
+    except OSError as erro:
+        _anotar(f"fila: o espaço livre em {caminho} não se lê: {erro}")
         return None
     return dado.f_bavail * dado.f_frsize
 
