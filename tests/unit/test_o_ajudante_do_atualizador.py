@@ -470,9 +470,11 @@ def test_a_subida_do_apt_nao_troca_os_backports_da_casa(lar: Lar, grupo: str) ->
     feito = lar.rodar("apt-instalar", grupo)
     assert feito.returncode == 0, feito.stderr
     ordem = _ordem(lar)
-    assert ordem[0] == "apt-mark hold bluez xdg-desktop-portal-cosmic", ordem
+    segura = "bluez xdg-desktop-portal-cosmic" + (
+        " linux-system76 nvidia-driver-595 libnvidia-gl-595" if grupo == "sistema" else "")
+    assert ordem[0] == f"apt-mark hold {segura}", ordem
     assert ordem[1].startswith("apt-get")
-    assert ordem[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic", ordem
+    assert ordem[-1] == f"apt-mark unhold {segura}", ordem
     assert not any("pipewire" in x for x in ordem), "o que já estava segurado não se solta"
 
 
@@ -480,7 +482,8 @@ def test_a_subida_que_falha_solta_os_da_casa_igual(lar: Lar) -> None:
     lar.duble("apt-get", "exit 100")
     feito = lar.rodar("apt-instalar", "sistema")
     assert feito.returncode != 0
-    assert _ordem(lar)[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic"
+    assert _ordem(lar)[-1] == ("apt-mark unhold bluez xdg-desktop-portal-cosmic linux-system76 "
+                               "nvidia-driver-595 libnvidia-gl-595")
 
 
 def test_sem_a_lista_dos_sufixos_nenhum_pacote_sobe(lar: Lar) -> None:
@@ -718,8 +721,8 @@ def test_o_dpkg_interrompido_se_conserta_antes_da_subida(lar: Lar, marca: str) -
     reparo = next(i for i, x in enumerate(lidas) if x.startswith("apt-get") and "-f install" in x)
     simulacao = next(i for i, x in enumerate(lidas) if x.startswith("apt-get -s"))
     subida = next(i for i, x in enumerate(lidas) if x.endswith("full-upgrade"))
-    assert lidas.index("apt-mark hold bluez xdg-desktop-portal-cosmic") < conserto \
-        < reparo < simulacao < subida, lidas
+    segura = next(i for i, x in enumerate(lidas) if x.startswith("apt-mark hold "))
+    assert segura < conserto < reparo < simulacao < subida, lidas
     assert "parou no meio" in feito.stdout
 
 
@@ -768,7 +771,7 @@ def test_a_trava_ocupada_sai_com_codigo_proprio_e_vira_espera(
         feito = lar.rodar("apt-instalar", "sistema")
     assert feito.returncode == pa.RC_TRAVA_OCUPADA
     assert pa.OUTRO_INSTALADOR in feito.stderr
-    assert "apt-mark unhold bluez xdg-desktop-portal-cosmic" in lar.lidas()
+    assert lar.lidas()[-1].startswith("apt-mark unhold bluez xdg-desktop-portal-cosmic")
 
     monkeypatch.setattr(pa, "AJUDANTE", lar.base / "chamadas.log")
     monkeypatch.setattr(pa, "_comando", lambda *_a, **_k: (feito.returncode, feito.stderr))
@@ -777,3 +780,29 @@ def test_a_trava_ocupada_sai_com_codigo_proprio_e_vira_espera(
     monkeypatch.setattr(pa, "_comando", lambda *_a, **_k: (100, "E: trava"))
     with pytest.raises(pa.RaizSaiuError):
         pa._raiz("apt-instalar", "sistema", passo=at.Passo())
+
+
+@pytest.mark.parametrize("apt_falha", [False, True])
+def test_os_pacotes_do_sistema_nao_levam_o_kernel_nem_a_nvidia(lar: Lar, apt_falha: bool) -> None:
+    """D-1911-O-SISTEMA-NAO-LEVA-KERNEL-NEM-NVIDIA: o kernel e a Nvidia ficam segurados durante a
+    subida do sistema e se soltam no fim, também com o apt falhando."""
+    if apt_falha:
+        lar.duble("apt-get", 'case "$*" in *full-upgrade*) exit 100;; esac; exit 0')
+    feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode == (100 if apt_falha else 0), feito.stderr
+    lidas = lar.lidas()
+    segura = next(x for x in lidas if x.startswith("apt-mark hold "))
+    for pacote in ("linux-system76", "nvidia-driver-595", "libnvidia-gl-595"):
+        assert f" {pacote}" in f" {segura} ", segura
+    subida = next(i for i, x in enumerate(lidas) if x.endswith("full-upgrade"))
+    assert lidas.index(segura) < subida
+    solta = [x for x in lidas[subida:] if x.startswith("apt-mark unhold ")]
+    assert solta and set(solta[0].split()[2:]) == set(segura.split()[2:]), (segura, solta)
+    assert not (lar.estado / "segurados-pelo-ajudante").exists()
+
+
+def test_o_grupo_kernel_e_o_nvidia_nao_se_seguram(lar: Lar) -> None:
+    for grupo in ("kernel", "nvidia"):
+        assert lar.rodar("apt-instalar", grupo).returncode == 0
+    segurados = " ".join(x for x in lar.lidas() if x.startswith("apt-mark hold "))
+    assert "linux-system76" not in segurados and "nvidia-driver" not in segurados

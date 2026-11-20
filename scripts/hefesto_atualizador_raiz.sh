@@ -158,6 +158,7 @@ _e_so_do_dono() {
 }
 
 SEGURADOS=()
+TAMBEM_SEGURAR=()
 
 _registro_do_hold() { printf '%s/segurados-pelo-ajudante\n' "${ESTADO}"; }
 
@@ -212,6 +213,7 @@ _segurar_os_da_casa() {
     mapfile -t da_casa < <(_instalados | awk -F'\t' -v lista="$(printf '%s\n' "${sufixos[@]}")" '
         BEGIN { n = split(lista, s, "\n") }
         $2 ~ /^ii/ { for (i = 1; i <= n; i++) if (s[i] != "" && index($3, s[i])) { print $1; break } }')
+    da_casa+=("${TAMBEM_SEGURAR[@]}")
     [[ "${#da_casa[@]}" -gt 0 ]] || return 0
     local segurados_antes
     segurados_antes="$(apt-mark showhold 2>/dev/null)" \
@@ -230,7 +232,7 @@ _segurar_os_da_casa() {
     [[ -z "${ESTADO}" ]] || printf '%s\n' "${SEGURADOS[@]}" > "$(_registro_do_hold)" \
         || _recusar "não registrei o que vou segurar"
     apt-mark hold "${SEGURADOS[@]}" >/dev/null || _recusar "não segurei os pacotes da casa: ${SEGURADOS[*]}"
-    printf 'fora da subida (da casa): %s\n' "${SEGURADOS[*]}"
+    printf 'fora da subida: %s\n' "${SEGURADOS[*]}"
 }
 
 _metas_do_kernel() {
@@ -278,6 +280,9 @@ verbo_apt_lista() {
 _apt_do_grupo() {
     local grupo="$1"; shift
     _grupo_valido "${grupo}"
+    if [[ "${grupo}" == "sistema" ]]; then
+        mapfile -t TAMBEM_SEGURAR < <(_pacotes_do_grupo kernel; _pacotes_do_grupo nvidia)
+    fi
     _segurar_os_da_casa
     _dpkg_inteiro
     [[ $# -gt 0 ]] || _gravar_os_orfaos_de_antes
