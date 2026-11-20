@@ -793,7 +793,7 @@ def os_estados_do_andamento(pagina):
         ("Pede reinício", tela.html_do_andamento(
             fim, rodando=False, pede_reinicio="A atualização trocou o kernel")),
         ("A pergunta do reinício", tela.html_da_pergunta_do_reinicio()),
-        ("Registro",tela.html_do_registro(
+        ("Registro", tela.html_do_registro(
             "2026-11-19 03:45:02 fila: a Steam fechou para a fila\n"
             "2026-11-19 03:45:40 proton: reinstalado\n2026-11-19 04:10:11 fila: a Steam reabriu\n")),
     ]
