@@ -71,6 +71,19 @@ class _GravacaoLenta:
         self._monkeypatch.setattr(loader, "save_profile", lento)
         self._monkeypatch.setattr(manager, "save_profile", lento)
 
+    def ligar_no_ciclo(self) -> None:
+        """O ciclo ler-mudar-gravar do perfil dorme ``DORME_S`` antes da trava do arquivo."""
+        from hefesto_dualsense4unix.profiles import manager
+
+        real = loader.mudar_o_perfil
+
+        def lento(*args: Any, **kwargs: Any) -> Any:
+            self.fios.append(threading.current_thread().name)
+            time.sleep(DORME_S)
+            return real(*args, **kwargs)
+
+        self._monkeypatch.setattr(manager, "_mudar_no_arquivo", lento)
+
 
 @pytest.fixture
 def gravacao_lenta(monkeypatch: pytest.MonkeyPatch) -> _GravacaoLenta:
@@ -215,7 +228,7 @@ def test_o_handler_que_grava_deixa_o_laco_atender_outro_ipc(
     MORDIDA: tire o ``asyncio.to_thread`` do handler e o ``daemon.status`` espera ``DORME_S``.
     """
     servidor = _servidor(tmp_path)
-    gravacao_lenta.ligar()
+    gravacao_lenta.ligar_no_ciclo()
 
     gasto, corria, corpo = asyncio.run(
         _o_status_durante(servidor, servidor._handlers[pedido](dict(params))))
