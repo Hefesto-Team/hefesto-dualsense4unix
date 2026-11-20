@@ -609,16 +609,16 @@ def _ler(caminho: Path) -> str:
 
 
 def falta_energia(raiz: Path | None = None) -> str:
-    """O porquê de esperar a tomada, ou vazio. Conta só a bateria do computador (a do controle e
-    a do mouse dizem ``scope`` ``Device``); sem bateria, ou com a fonte ligada, não falta."""
+    """O porquê de esperar a tomada, ou vazio. Conta só a bateria e a fonte do computador (as de
+    um aparelho, como o controle, o mouse ou a mesa digitalizadora, dizem ``scope`` ``Device``);
+    sem bateria, ou com a fonte ligada, não falta."""
     cargas: list[int] = []
     for fonte in sorted((ENERGIA if raiz is None else raiz).glob("*")):
-        tipo = _ler(fonte / "type")
-        if tipo != "Battery":
+        if _ler(fonte / "scope") == "Device":
+            continue
+        if _ler(fonte / "type") != "Battery":
             if _ler(fonte / "online") == "1":
                 return ""
-            continue
-        if _ler(fonte / "scope") == "Device":
             continue
         if _ler(fonte / "status") in ("Charging", "Full"):
             return ""

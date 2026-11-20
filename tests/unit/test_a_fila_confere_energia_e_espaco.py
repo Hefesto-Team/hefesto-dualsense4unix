@@ -8,7 +8,8 @@ espaço livre e o inibidor do logind são dublês; o ajudante roda sem root, com
 AS MORDIDAS (feitas na sprint, com a cura devolvida e o md5 conferido): a conferência da tomada
 arrancada reprova o caso da bateria; a do disco, o caso do ``/boot``; o ``with`` do inibidor
 arrancado reprova o caso do inibidor; o ``main`` sem ligar a máquina reprova o caso do
-``--rodar``; o ``_apt`` sem a unidade própria reprova o caso do ajudante.
+``--rodar``; o ``_apt`` sem a unidade própria reprova o caso do ajudante. Em 20/11/2026: o
+``scope`` ``Device`` contado só na bateria reprova o caso da fonte de um aparelho.
 """
 from __future__ import annotations
 
@@ -115,6 +116,8 @@ def test_so_a_bateria_do_controle_ou_a_tomada_nao_seguram(energia: Path) -> None
     _fonte(energia, "BAT0", type="Battery", status="Discharging", capacity="80")
     assert at.falta_energia() == ""
     (energia / "BAT0" / "capacity").write_text("20\n", encoding="utf-8")
+    assert at.falta_energia() == "ligue na tomada: a bateria está em 20%"
+    _fonte(energia, "wacom_ac", type="Mains", scope="Device", online="1")
     assert at.falta_energia() == "ligue na tomada: a bateria está em 20%"
     _fonte(energia, "ucsi-source-psy-USBC000:001", type="USB", online="1")
     assert at.falta_energia() == ""
