@@ -61,7 +61,23 @@ from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
 
 Origem = Literal["oficial", "comunidade", "local"]
 
-CHAVES_OFICIAIS: tuple[str, ...] = ()
+LISTA_DE_QUEM_ASSINA = "assets/assinaturas/quem-assina"
+
+
+def chaves_da_lista(relativo: str = LISTA_DE_QUEM_ASSINA) -> tuple[str, ...]:
+    """As linhas do ``allowed_signers`` que a instalação carrega; nenhuma sem a lista."""
+    from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+
+    caminho = encontrar_arquivo_do_repo(relativo)
+    try:
+        texto = caminho.read_text(encoding="utf-8") if caminho is not None else ""
+    except OSError:
+        return ()
+    return tuple(x.strip() for x in texto.splitlines()
+                 if x.strip() and not x.lstrip().startswith("#"))
+
+
+CHAVES_OFICIAIS: tuple[str, ...] = chaves_da_lista()
 
 PRAZO_PARA_PARAR_S = 5.0
 
@@ -527,21 +543,42 @@ def origem_da_tag(pasta: Path, ref: str | None, chaves: Sequence[str]) -> Origem
     tipo = _git(["cat-file", "-t", f"refs/tags/{ref}"], cwd=pasta)
     if tipo.returncode != 0 or tipo.stdout.strip() != "tag":
         return "comunidade"
+    if not _assinado(pasta, chaves, "verify-tag", ref):
+        return "comunidade"
+    da_tag = _git(["rev-parse", f"refs/tags/{ref}^{{commit}}"], cwd=pasta).stdout.strip()
+    cabeca = _git(["rev-parse", "HEAD"], cwd=pasta).stdout.strip()
+    return "oficial" if da_tag and da_tag == cabeca else "comunidade"
+
+
+def _assinado(pasta: Path, chaves: Sequence[str], verbo: str, alvo: str) -> bool:
+    """O ``git verify-tag`` ou ``verify-commit`` de ``alvo`` confere com uma das ``chaves``."""
+    if not chaves or not alvo:
+        return False
     with tempfile.TemporaryDirectory(prefix="hefesto-chaves-") as tmp:
         lista = Path(tmp) / "allowed_signers"
         lista.write_text("\n".join(chaves) + "\n", encoding="utf-8")
         gnupg = Path(tmp) / "gnupg"
         gnupg.mkdir(mode=0o700)
         conferida = _git(
-            ["-c", f"gpg.ssh.allowedSignersFile={lista}", "verify-tag", ref],
+            ["-c", f"gpg.ssh.allowedSignersFile={lista}", "-c", "gpg.minTrustLevel=fully",
+             verbo, alvo],
             cwd=pasta,
             extra={"GNUPGHOME": str(gnupg)},
         )
-    if conferida.returncode != 0:
-        return "comunidade"
-    da_tag = _git(["rev-parse", f"refs/tags/{ref}^{{commit}}"], cwd=pasta).stdout.strip()
-    cabeca = _git(["rev-parse", "HEAD"], cwd=pasta).stdout.strip()
-    return "oficial" if da_tag and da_tag == cabeca else "comunidade"
+    return conferida.returncode == 0
+
+
+def _de_fabrica(entrada: Entrada) -> bool:
+    """A instalada é uma das que a lista de fábrica traz de um endereço."""
+    from hefesto_dualsense4unix.mods import de_fabrica_por_endereco as fabrica
+
+    try:
+        lista = fabrica.ler(fabrica.ARQUIVO)
+    except InstalacaoRecusadaError:
+        return False
+    return entrada.origem != "local" and any(
+        item.id == entrada.id and fabrica._o_mesmo(item.endereco, entrada.endereco)
+        for item in lista)
 
 
 def _commit_da_pasta(pasta: Path) -> str:
@@ -729,11 +766,13 @@ def instalar(
             )
             commit = _commit_da_pasta(pasta_local)
             tipo = "local"
+            assinado = False
             endereco = str(pasta_local.resolve())
         else:
             conferir_a_cifra(origem)
             commit = _clonar(origem, ref, baixada)
             tipo = origem_da_tag(baixada, ref, chaves)
+            assinado = _assinado(baixada, chaves, "verify-commit", commit)
             endereco = origem
             shutil.rmtree(baixada / ".git", ignore_errors=True)
         try:
@@ -769,6 +808,12 @@ def instalar(
                     f"remova «{antiga}» antes, se quiser.")
         anotar_o_gesto(lg, "instalar" if anterior is None else "atualizar",
                        [manifesto.id, *a_substituir])
+        if anterior is not None and tipo != "local" and not assinado and _de_fabrica(anterior):
+            motivo = f"A versão {manifesto.versao} não traz a assinatura do Hefesto."
+            esperando = _marcar_a_espera(lg, manifesto, commit, motivo)
+            if not sozinha:
+                raise InstalacaoRecusadaError(motivo)
+            return Resultado(esperando, manifesto, novas, trocou=False)
         if sozinha and anterior is not None:
             motivo = _o_que_segura_a_atualizacao(lg, anterior, tipo, manifesto, a_substituir)
             if motivo:
@@ -1331,6 +1376,7 @@ __all__ = [
     "DIARIO_DOS_GESTOS",
     "DIARIO_DO_PREPARO",
     "INTERVALO_DA_ATUALIZACAO_S",
+    "LISTA_DE_QUEM_ASSINA",
     "PRAZO_DO_PREPARO_S",
     "PRAZO_PARA_PARAR_S",
     "AvisoParaVerError",
@@ -1342,6 +1388,7 @@ __all__ = [
     "anotar_o_gesto",
     "atualizar",
     "aviso_por_ver",
+    "chaves_da_lista",
     "commit_novo",
     "commit_remoto",
     "conferir_a_cifra",
