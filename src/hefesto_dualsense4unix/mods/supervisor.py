@@ -1340,7 +1340,7 @@ class Supervisor:
         intervalo = max(float(entrada.intervalo_da_atualizacao_s), self.piso_da_atualizacao_s)
         self._proxima_conferencia[entrada.id] = time.monotonic() + intervalo
         try:
-            novo = await asyncio.to_thread(commit_novo, entrada)
+            novo = await asyncio.to_thread(commit_novo, entrada, lugares=self.lugares)
             if novo is None:
                 return False
             feito = await asyncio.to_thread(

@@ -417,6 +417,24 @@ FRASE_DO_PRAZO = (
     "O download da extensão passou de {minutos} minutos. "
     "Confira a internet e tente de novo.")
 
+FRASE_SEM_CIFRA = (
+    "O endereço precisa ser https ou ssh: em http o código pode ser trocado no caminho.")
+
+_ESQUEMAS_COM_CIFRA = frozenset({"https", "ssh", "git+ssh", "ssh+git", "file"})
+
+_TRANSPORTE_DO_GIT = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*::")
+
+
+def conferir_a_cifra(endereco: str) -> None:
+    """Recusa com :data:`FRASE_SEM_CIFRA` o endereço que o git buscaria sem cifra ou por um
+    programa: passam só ``https://``, ssh (``ssh://`` e ``usuário@host:caminho``), ``file://`` e
+    o caminho de uma pasta."""
+    esquema, separador, _ = endereco.partition("://")
+    if _TRANSPORTE_DO_GIT.match(endereco) or (
+            separador and esquema.lower() not in _ESQUEMAS_COM_CIFRA):
+        raise InstalacaoRecusadaError(FRASE_SEM_CIFRA)
+
+
 _CAUSAS_DO_GIT: tuple[tuple[tuple[str, ...], str], ...] = (
     (("remote branch",), FRASE_SEM_VERSAO),
     (("permission denied", "authentication failed", "could not read username",
@@ -471,6 +489,7 @@ def commit_remoto(endereco: str, ref: str | None) -> str | None:
     roda ou passa do prazo é recusa. Nos dois, quem pergunta tenta de novo depois, e a
     extensão instalada fica como está.
     """
+    conferir_a_cifra(endereco)
     padroes = (
         [f"refs/tags/{ref}", f"refs/tags/{ref}^{{}}", f"refs/heads/{ref}"] if ref else ["HEAD"]
     )
@@ -712,6 +731,7 @@ def instalar(
             tipo = "local"
             endereco = str(pasta_local.resolve())
         else:
+            conferir_a_cifra(origem)
             commit = _clonar(origem, ref, baixada)
             tipo = origem_da_tag(baixada, ref, chaves)
             endereco = origem
@@ -958,6 +978,15 @@ def _marcar_a_espera(lg: Lugares, manifesto: Manifesto, commit: str, motivo: str
     return entrada
 
 
+def _anotar_o_motivo(lg: Lugares, mod_id: str, motivo: str) -> None:
+    """Grava na linha da extensão o motivo de não se atualizar; o código e a chave ficam."""
+    registro = ler_registro(lg.registro)
+    entrada = registro.get(mod_id)
+    if entrada is not None and entrada.motivo_da_espera != motivo:
+        entrada.motivo_da_espera = motivo
+        gravar_registro(lg.registro, registro)
+
+
 def _religar_a_que_seguia(lg: Lugares, mod_id: str) -> None:
     """Desfaz o ``desligar`` (ou a marca da troca) do instalar que não chegou a trocar o código."""
     registro = ler_registro(lg.registro)
@@ -1049,13 +1078,19 @@ def atualizar(
     )
 
 
-def commit_novo(entrada: Entrada) -> str | None:
+def commit_novo(entrada: Entrada, *, lugares: Lugares | None = None) -> str | None:
     """O commit do endereço quando ele é outro que o instalado e o que já espera.
 
     ``None`` sem novidade ou para a origem «local», que nunca pergunta ao git; o git que
-    não responde (sem rede) é recusa, para quem pergunta tentar de novo mais cedo.
+    não responde (sem rede) é recusa, para quem pergunta tentar de novo mais cedo. O endereço
+    sem cifra também é ``None``, sem perguntar: a recusa fica no ``motivo_da_espera``.
     """
     if entrada.origem == "local":
+        return None
+    try:
+        conferir_a_cifra(entrada.endereco)
+    except InstalacaoRecusadaError as exc:
+        _anotar_o_motivo(lugares or Lugares.do_xdg(), entrada.id, exc.frase)
         return None
     remoto = commit_remoto(entrada.endereco, entrada.ref)
     if not remoto:
@@ -1309,6 +1344,7 @@ __all__ = [
     "aviso_por_ver",
     "commit_novo",
     "commit_remoto",
+    "conferir_a_cifra",
     "conferir_remocao",
     "desligar",
     "esperar_parar",
