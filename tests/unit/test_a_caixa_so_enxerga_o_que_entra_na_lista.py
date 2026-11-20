@@ -10,9 +10,11 @@ import asyncio
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -73,7 +75,8 @@ def _manifesto(*permissoes: str, aparelhos: tuple[dict[str, object], ...] = ()) 
 def _do_computador(bluetooth: bool) -> tuple[list[str], bool]:
     classe = Path("/sys/class/bluetooth")
     hci = sorted(p.name for p in classe.iterdir() if ":" not in p.name) if classe.is_dir() else []
-    return (hci, any(Path("/sys/bus/hid/devices").glob("*"))) if bluetooth else ([], False)
+    radio = any(p.name.startswith("0005:") for p in Path("/sys/bus/hid/devices").glob("*"))
+    return (hci, radio) if bluetooth else ([], False)
 
 
 def _de_dentro(base: Path, manifesto: Manifesto) -> dict[str, object]:
@@ -217,6 +220,7 @@ def _vigia(manifesto: Manifesto, sys_: Path, monkeypatch: pytest.MonkeyPatch
     supervisor.bwrap = "/usr/bin/bwrap"
     supervisor._registro_lido = {"exemplo": object()}  # type: ignore[dict-item]
     supervisor._reaberta_pelo_aparelho = {}
+    supervisor._vez_da_vigia = asyncio.Lock()
     vigiada = sup._Vigiada("exemplo", processo=Processo(),  # type: ignore[arg-type]
                            manifesto=manifesto, aceitos=aceitos)
 
@@ -285,7 +289,7 @@ def _irmao(hub: Path, nome: str, hid: str, bus: Path) -> None:
 
 
 _OLHA_OS_IRMAOS = r"""
-import glob, json, os, sys
+import glob, json, os, sys, time
 hub, e429 = sys.argv[1], sys.argv[2]
 def ler(p):
     try:
@@ -293,136 +297,273 @@ def ler(p):
             return f.read()
     except OSError:
         return b''
-for _ in sys.stdin:
+guardados = []
+for linha in sys.stdin:
+    pedido = linha.split()
+    if pedido[:1] == ['segurar']:
+        guardados.append(os.open(pedido[1], os.O_RDONLY | os.O_DIRECTORY))
+    elif pedido[:1] == ['fugir']:
+        if os.fork() == 0:
+            os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNS)
+            time.sleep(600)
+            os._exit(0)
+        time.sleep(0.2)
     uniq = sum(l.startswith(b'HID_UNIQ=02:fe') for u in glob.glob('/sys/bus/hid/devices/*/uevent')
                for l in ler(u).splitlines())
     print(json.dumps({
         'vizinhos': sorted(f for f in os.listdir(hub)
-                         if os.path.join(hub, f) != e429 and ler(os.path.join(hub, f, 'idVendor'))),
+                           if os.path.join(hub, f) != e429
+                           and ler(os.path.join(hub, f, 'idVendor'))),
         'uniq': uniq,
+        'hid': sorted(os.path.basename(p) for p in glob.glob('/sys/bus/hid/devices/*')),
         'hidraw': sorted(os.path.basename(p) for p in glob.glob(e429 + '/*/*/hidraw/*'))}),
         flush=True)
 """
 
 
-def test_o_irmao_que_o_hub_vivo_mostra_entra_na_vigia_e_a_nova_caixa_o_cobre(curto: Path) -> None:
+def _caixa_no_hub(hub: Path, e429: Path, retrato: sup.RetratoDosHubs,
+                  hid: dict[str, str]) -> subprocess.Popen[str]:
+    """A caixa pela linha do produto (o hub vivo e a pasta sintética do HID), no /sys forjado."""
+    real = next(e429.glob("*/*/hidraw/*"))
+    argv = [shutil.which("bwrap") or "bwrap", *sup._o_que_entra(sup.ENTRAM_NA_CAIXA),
+            "--unshare-pid", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/sys",
+            *sup._o_sys_dos_achados([("/sys/dev/char/240:7", str(real))], retrato),
+            *sup.a_pasta_do_hid(hid), "--die-with-parent", "--new-session"]
+    comando = sup._executavel_a_vista(
+        [sys.executable, "-c", _OLHA_OS_IRMAOS, str(hub), str(e429)], sup.ENTRAM_NA_CAIXA, argv)
+    caixa = subprocess.Popen([*argv, "--", *comando], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _ver(caixa)
+    return caixa
+
+
+def _ver(caixa: subprocess.Popen[str], pedido: str = "") -> dict[str, Any]:
+    assert caixa.stdin is not None and caixa.stdout is not None
+    caixa.stdin.write(pedido + "\n")
+    caixa.stdin.flush()
+    linha = caixa.stdout.readline()
+    assert linha, caixa.stderr.read()[-400:] if caixa.stderr else ""
+    visto: dict[str, Any] = json.loads(linha)
+    return visto
+
+
+def test_o_irmao_que_o_hub_vivo_mostra_entra_na_vigia(curto: Path) -> None:
     """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: o controle ligado depois e o coberto que
-    sai e volta aparecem pelo hub vivo (com o endereço pelo link do HID); a vigia os acha, a caixa
-    nova os cobre, e quatro RESET; seguidos do adaptador nunca entram na vigia."""
+    sai e volta aparecem pelo hub vivo; a vigia acha os dois, e quatro RESET; seguidos do
+    adaptador nunca entram na vigia."""
     exigir_caixa_do_bwrap()
     hub = curto / "sys" / "devices" / "usb3" / "3-1"
     bus = curto / "bus-hid"
     bus.mkdir()
     _irmao(hub, "3-1.2", "0003:054C:0CE6.0002", bus)
-
-    def abrir(retrato: sup.RetratoDosHubs) -> subprocess.Popen[str]:
-        real = next(hub.glob("3-1.4/*/*/hidraw/*"))
-        argv = [shutil.which("bwrap") or "bwrap", *sup._o_que_entra(sup.ENTRAM_NA_CAIXA),
-                "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/sys",
-                *sup._o_sys_dos_achados([("/sys/dev/char/240:7", str(real))], retrato),
-                "--ro-bind", str(bus), "/sys/bus/hid/devices"]
-        comando = sup._executavel_a_vista(
-            [sys.executable, "-c", _OLHA_OS_IRMAOS, str(hub), str(hub / "3-1.4")],
-            sup.ENTRAM_NA_CAIXA, argv)
-        return subprocess.Popen([*argv, "--", *comando], stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-    def ver(caixa: subprocess.Popen[str]) -> dict[str, object]:
-        assert caixa.stdin is not None and caixa.stdout is not None
-        caixa.stdin.write("\n")
-        caixa.stdin.flush()
-        linha = caixa.stdout.readline()
-        assert linha, caixa.stderr.read()[-400:] if caixa.stderr else ""
-        visto: dict[str, object] = json.loads(linha)
-        return visto
-
     _usb(hub, "3-1.4", "0003:1A86:E429.0001", "hidraw7")
     retrato: sup.RetratoDosHubs = {}
-    with abrir(retrato) as caixa:
-        assert ver(caixa) == {"vizinhos": [], "uniq": 0, "hidraw": ["hidraw7"]}
+    with _caixa_no_hub(hub, hub / "3-1.4", retrato, {}) as caixa:
         _irmao(hub, "3-1.3", "0003:054C:0CE6.0003", bus)
         _irmao(hub, "3-1.2", "0003:054C:0CE6.0004", bus)
-        assert ver(caixa) == {"vizinhos": ["3-1.2", "3-1.3"], "uniq": 2, "hidraw": ["hidraw7"]}
-        assert sup.irmaos_a_vista(retrato) == [str(hub / "3-1.2"), str(hub / "3-1.3")]
+        assert _ver(caixa)["vizinhos"] == ["3-1.2", "3-1.3"]
+        irmaos, sairam = sup.irmaos_a_vista(retrato)
+        assert (sorted(irmaos), sairam) == ([str(hub / "3-1.2"), str(hub / "3-1.3")], [])
         caixa.communicate("", timeout=60)
     retrato = {}
-    with abrir(retrato) as caixa:
-        assert ver(caixa) == {"vizinhos": [], "uniq": 0, "hidraw": ["hidraw7"]}
+    with _caixa_no_hub(hub, hub / "3-1.4", retrato, {}) as caixa:
         for numero in range(8, 12):
             shutil.rmtree(hub / "3-1.4")
             _usb(hub, "3-1.4", f"0003:1A86:E429.{numero:04d}", f"hidraw{numero}")
-            assert sup.irmaos_a_vista(retrato) == [], "o RESET; na mesma porta não reabre"
-            assert ver(caixa) == {"vizinhos": [], "uniq": 0, "hidraw": [f"hidraw{numero}"]}
+            assert sup.irmaos_a_vista(retrato) == ({}, []), "o RESET; na mesma porta não entra"
+            assert _ver(caixa)["hidraw"] == [f"hidraw{numero}"]
         caixa.communicate("", timeout=60)
 
 
-def _hub_com_o_adaptador(sys_: Path, hub: Path) -> tuple[Path, Path]:
-    bus = sys_ / "bus-hid"
-    bus.mkdir(parents=True)
-    _irmao(hub, f"{hub.name}.2", "0003:054C:0CE6.0002", bus)
-    (sys_ / "class" / "hidraw").mkdir(parents=True)
-    return bus, hub / f"{hub.name}.4"
+_DA_MAQUINA = ("0003:046D:C52B.0001", "0018:04F3:3125.0002", "0005:054C:0CE6.0003",
+               "0003:1A86:E429.0004")
+
+
+def test_a_pasta_do_hid_leva_so_o_radio_e_o_declarado(tmp_path: Path) -> None:
+    """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: com bluetooth, a pasta sintética leva os
+    HID do rádio (0005) e os do VID:PID declarado e aceito; o teclado e o touchpad ficam fora."""
+    devices = tmp_path / "bus" / "hid" / "devices"
+    devices.mkdir(parents=True)
+    for nome in _DA_MAQUINA:
+        (devices / nome).symlink_to(f"../../../devices/x/{nome}")
+    pedido = _manifesto("aparelhos", "bluetooth", aparelhos=(_E429,))
+    aceitos = aparelhos_do_sim(pedido)
+    assert sup.hid_da_caixa(pedido, aceitos, tmp_path) == {
+        nome: f"../../../devices/x/{nome}" for nome in _DA_MAQUINA[2:]}
+    assert list(sup.hid_da_caixa(pedido, (), tmp_path)) == [_DA_MAQUINA[2]]
+    assert sup.hid_da_caixa(_manifesto("aparelhos", aparelhos=(_E429,)), aceitos, tmp_path) == {}
+    assert sup.a_caixa_quer_saber({"ACTION": "add", "SUBSYSTEM": "usb", "DEVTYPE": "usb_device"})
+    assert sup.a_caixa_quer_saber({"ACTION": "remove", "SUBSYSTEM": "hid"})
+    assert not sup.a_caixa_quer_saber({"ACTION": "add", "SUBSYSTEM": "usb",
+                                       "DEVTYPE": "usb_interface"})
+
+
+class _Vigia:
+    """O supervisor do produto vigiando uma caixa de verdade sobre o /sys forjado."""
+
+    def __init__(self, curto: Path, cascata: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        exigir_caixa_do_bwrap()
+        self.sys_ = curto / "sys"
+        self.hub = self.sys_ / "devices" / "usb3" / cascata
+        self.bus = self.sys_ / "bus" / "hid" / "devices"
+        self.bus.mkdir(parents=True)
+        self.e429 = self.hub / f"{self.hub.name}.4"
+        (self.sys_ / "class" / "hidraw").mkdir(parents=True)
+        _irmao(self.hub, f"{self.hub.name}.2", "0005:054C:0CE6.0002", self.bus)
+        self.ligar(7)
+        self.manifesto = _manifesto("aparelhos", "bluetooth", aparelhos=(_E429,))
+        aceitos = tuple(aparelhos_do_sim(self.manifesto))
+        real_pp, real_hid = sup.pastas_pela_porta, sup.hid_da_caixa
+        monkeypatch.setattr(sup, "pastas_pela_porta", lambda m, a, *_: real_pp(m, a, self.sys_))
+        monkeypatch.setattr(sup, "aparelhos_que_casam", lambda *_: ())
+        monkeypatch.setattr(sup, "hid_da_caixa", lambda m, a, *_: real_hid(m, a, self.sys_))
+        self.reabertas: list[str] = []
+        self.supervisor = sup.Supervisor.__new__(sup.Supervisor)
+        self.supervisor.bwrap = "/usr/bin/bwrap"
+        self.supervisor._registro_lido = {"exemplo": object()}  # type: ignore[dict-item]
+        self.supervisor._reaberta_pelo_aparelho = {}
+        self.supervisor._vez_da_vigia = asyncio.Lock()
+        self.vigiada = sup._Vigiada("exemplo", manifesto=self.manifesto, aceitos=aceitos)
+        self.supervisor._vigiadas = {"exemplo": self.vigiada}
+
+        async def comecar(_entrada: object) -> None:
+            self.reabertas.append("exemplo")
+            self.abrir()
+
+        self.supervisor._comecar = comecar  # type: ignore[method-assign]
+        self.caixa: subprocess.Popen[str] | None = None
+        self.abrir()
+
+    def ligar(self, numero: int) -> None:
+        """O adaptador liga (ou volta do RESET;) na mesma porta; o novo nasce ao lado antes de o
+        velho sair, porque o kernfs nunca repete o ``inode``."""
+        ao_lado = self.hub.parent / "ao-lado-do-adaptador"
+        _usb(ao_lado, self.e429.name, f"0003:1A86:E429.{numero:04d}", f"hidraw{numero}")
+        if self.e429.exists():
+            shutil.rmtree(self.e429)
+            for velho in (self.sys_ / "class" / "hidraw").iterdir():
+                velho.unlink()
+            for velho in self.bus.glob("*E429*"):
+                velho.unlink()
+        (ao_lado / self.e429.name).rename(self.e429)
+        ao_lado.rmdir()
+        no = next(self.e429.glob(f"*/*/hidraw/hidraw{numero}"))
+        (self.sys_ / "class" / "hidraw" / f"hidraw{numero}").symlink_to(no)
+        (self.bus / f"0003:1A86:E429.{numero:04d}").symlink_to(no.parents[1])
+
+    def abrir(self) -> None:
+        self.fechar()
+        if not self.e429.exists():
+            self.vigiada.processo = None
+            return
+        self.vigiada.retrato = {}
+        self.vigiada.hid = sup.hid_da_caixa(self.manifesto, self.vigiada.aceitos)
+        self.vigiada.pela_porta = frozenset(
+            sup.pastas_pela_porta(self.manifesto, self.vigiada.aceitos).values())
+        self.caixa = _caixa_no_hub(self.hub, self.e429, self.vigiada.retrato, self.vigiada.hid)
+        self.vigiada.processo = self.caixa  # type: ignore[assignment]
+
+    def fechar(self) -> None:
+        if self.caixa is not None:
+            self.caixa.kill()
+            self.caixa.communicate(timeout=60)
+            self.caixa = None
+
+    def volta(self, pedido: str = "") -> dict[str, Any]:
+        asyncio.run(self.supervisor._conferir_os_aparelhos())
+        assert self.caixa is not None
+        return _ver(self.caixa, pedido)
 
 
 @pytest.mark.parametrize("cascata", ["3-1", "3-1/3-1.1"])
-def test_a_vigia_reabre_pelo_irmao_e_nunca_pelo_reset(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cascata: str) -> None:
+def test_a_vigia_cobre_o_irmao_por_dentro_sem_reabrir(
+        curto: Path, monkeypatch: pytest.MonkeyPatch, cascata: str) -> None:
     """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: no hub do adaptador (também o segundo hub
-    da cascata), o irmão ligado depois e o que sai e volta reabrem a caixa na primeira volta,
-    também com a vigia do aparelho em laço; o hub que sai, uma vez; quatro RESET; seguidos,
-    nenhuma."""
-    sys_ = tmp_path / "sys"
-    hub = sys_ / "devices" / "usb3" / cascata
-    bus, e429 = _hub_com_o_adaptador(sys_, hub)
+    da cascata), liga A, liga B, tira A, religa A, o rádio sai e volta e o adaptador faz quatro
+    RESET;: a caixa nunca mostra irmão nem endereço, a pasta do HID segue o rádio, e nada
+    reabre."""
+    vigia = _Vigia(curto, cascata, monkeypatch)
+    nome = vigia.hub.name
+    try:
+        visto = vigia.volta()
+        assert (visto["hid"], visto["hidraw"]) == (
+            ["0003:1A86:E429.0007", f"0005:054C:0CE6.0002-{nome}.2"], ["hidraw7"])
+        for numero in range(8, 12):
+            vigia.ligar(numero)
+            assert vigia.volta()["hidraw"] == [f"hidraw{numero}"]
+        passos = [lambda: _irmao(vigia.hub, f"{nome}.1", "0003:054C:0CE6.0010", vigia.bus),
+                  lambda: _irmao(vigia.hub, f"{nome}.3", "0003:054C:0CE6.0011", vigia.bus),
+                  lambda: shutil.rmtree(vigia.hub / f"{nome}.1"),
+                  lambda: _irmao(vigia.hub, f"{nome}.1", "0003:054C:0CE6.0012", vigia.bus),
+                  lambda: _irmao(vigia.hub, f"{nome}.2", "0005:054C:0CE6.0013", vigia.bus)]
+        for passo in passos:
+            passo()
+            visto = vigia.volta()
+            assert (visto["vizinhos"], visto["uniq"], visto["hidraw"]) == ([], 0, ["hidraw11"])
+        assert visto["hid"] == ["0003:1A86:E429.0011", f"0005:054C:0CE6.0013-{nome}.2"]
+        assert vigia.reabertas == [], "cobrir por dentro não reabre a caixa"
+    finally:
+        vigia.fechar()
 
-    def ligar(numero: int) -> None:
-        if e429.exists():
-            shutil.rmtree(e429)
-            for velho in (sys_ / "class" / "hidraw").iterdir():
-                velho.unlink()
-        no = _usb(hub, e429.name, f"0003:1A86:E429.{numero:04d}", f"hidraw{numero}")
-        (sys_ / "class" / "hidraw" / f"hidraw{numero}").symlink_to(no)
 
-    ligar(7)
-    manifesto = _manifesto("aparelhos", aparelhos=(_E429,))
-    supervisor, reabertas = _vigia(manifesto, sys_, monkeypatch)
-    vigiada = supervisor._vigiadas["exemplo"]
+@pytest.mark.parametrize("como", ["fugir", "segurar", "hub", "falha"])
+def test_a_caixa_reabre_quando_a_cobertura_nao_vale(
+        curto: Path, monkeypatch: pytest.MonkeyPatch, como: str) -> None:
+    """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: a caixa reabre quando um processo da caixa
+    mora noutro espaço de montagem, quando segura o irmão aberto antes da cobertura, quando o
+    hub sai e quando a mudança por dentro falha; a nova caixa não mostra o irmão."""
+    vigia = _Vigia(curto, "3-1", monkeypatch)
+    try:
+        vigia.volta()
+        assert vigia.caixa is not None
+        if como == "fugir":
+            _ver(vigia.caixa, "fugir")
+        if como == "falha":
+            monkeypatch.setattr(sup, "POR_DENTRO_DA_CAIXA", curto / "nao-existe.py")
+        _irmao(vigia.hub, "3-1.3", "0003:054C:0CE6.0020", vigia.bus)
+        if como == "segurar":
+            _ver(vigia.caixa, f"segurar {vigia.hub / '3-1.3'}")
+        if como == "hub":
+            shutil.rmtree(vigia.hub)
+            asyncio.run(vigia.supervisor._conferir_os_aparelhos())
+            assert vigia.reabertas == ["exemplo"]
+            return
+        visto = vigia.volta()
+        assert vigia.reabertas == ["exemplo"], como
+        assert (visto["vizinhos"], visto["uniq"]) == ([], 0), visto
+    finally:
+        vigia.fechar()
 
-    def retratar() -> None:
-        vigiada.retrato = {}
-        for real in e429.glob("*/*/hidraw/*"):
-            sup._o_sys_dos_achados([("/sys/dev/char/240:7", str(real))], vigiada.retrato)
 
-    comecar = supervisor._comecar
+def test_o_uevent_do_aparelho_usb_acorda_a_vigia_na_hora(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: o aparelho USB que entra acorda a vigia
+    pelo uevent, sem esperar a volta; a interface USB não acorda."""
+    from hefesto_dualsense4unix.daemon.subsystems import ouvido_do_usb
 
-    async def comecar_e_retratar(entrada: object) -> None:
-        await comecar(entrada)
-        retratar()
+    de_fora, do_kernel = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+    monkeypatch.setattr(ouvido_do_usb, "abrir_o_netlink", lambda: do_kernel)
+    supervisor = sup.Supervisor.__new__(sup.Supervisor)
+    acordou: list[str] = []
 
-    supervisor._comecar = comecar_e_retratar  # type: ignore[method-assign]
-    retratar()
+    async def conferir() -> None:
+        acordou.append("vigia")
 
-    def voltas(n: int) -> None:
-        async def rodar() -> None:
-            for _ in range(n):
-                await supervisor._conferir_os_aparelhos()
-        asyncio.run(rodar())
+    supervisor._conferir_os_aparelhos = conferir  # type: ignore[method-assign]
 
-    voltas(3)
-    for numero in range(8, 12):
-        ligar(numero)
-        voltas(3)
-    assert reabertas == [], "o RESET; na mesma porta não reabre a caixa"
-    _irmao(hub, f"{hub.name}.3", "0003:054C:0CE6.0003", bus)
-    voltas(1)
-    assert reabertas == ["exemplo"], "o irmão ligado depois reabre na primeira volta"
-    _irmao(hub, f"{hub.name}.2", "0003:054C:0CE6.0004", bus)
-    vigiada.aparelho_em_laco = True
-    voltas(1)
-    assert reabertas == ["exemplo"] * 2, "o coberto que sai e volta reabre, também em laço"
-    voltas(3)
-    assert reabertas == ["exemplo"] * 2
-    shutil.rmtree(hub)
-    voltas(3)
-    assert reabertas == ["exemplo"] * 3, "o hub que sai leva a montagem: a caixa reabre"
-    assert sup.irmaos_a_vista({}) == []
+    async def rodar() -> None:
+        ouvido = asyncio.create_task(supervisor._ouvir_o_barramento())
+        de_fora.send(b"add@/devices/usb3/3-1/3-1:1.0\0ACTION=add\0SUBSYSTEM=usb\0"
+                     b"DEVTYPE=usb_interface\0")
+        de_fora.send(b"add@/devices/usb3/3-1/3-1.3\0ACTION=add\0SUBSYSTEM=usb\0"
+                     b"DEVTYPE=usb_device\0")
+        for _ in range(100):
+            if acordou:
+                break
+            await asyncio.sleep(0.01)
+        ouvido.cancel()
+        await asyncio.gather(ouvido, return_exceptions=True)
+
+    do_kernel.setblocking(False)
+    asyncio.run(rodar())
+    de_fora.close()
+    assert acordou == ["vigia"]

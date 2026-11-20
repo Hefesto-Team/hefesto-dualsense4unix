@@ -72,20 +72,30 @@ permissões que a pessoa aceitou.
        `/bin`, `/sbin` e `/lib*` quando o alvo também entra, além do código, dos dados e da porta;
        `/var`, `/sys`, `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nem o diário do
        sistema, nem socket de `/run`, nem o endereço de controle ou de placa de rede alcança a
-       extensão; medido em 19/11/2026). Volta só o que a permissão pede: o `/run/dbus`, o
-       `/sys/class/bluetooth` e os nomes de `/sys/bus/hid/devices` com `bluetooth` (os links
-       apontam para fora da caixa: o nome, com o barramento e o VID:PID de cada HID, se lê; o
-       `uevent` e o `HID_UNIQ` dos outros, não; medido em 20/11/2026); o `/run/udev`,
+       extensão; medido em 19/11/2026). Volta só o que a permissão pede: com `bluetooth`, o
+       `/run/dbus`, o `/sys/class/bluetooth` e uma pasta sintética no lugar de
+       `/sys/bus/hid/devices`, só com os links dos HID do rádio (barramento `0005`) e os do
+       VID:PID declarado e aceito (o teclado, o mouse e o controle pelo cabo ficam fora; os links
+       apontam para fora da caixa, e o `uevent` e o `HID_UNIQ` dos outros não se leem; medido em
+       20/11/2026); o `/run/udev`,
        os nós dos aparelhos declarados e, do `/sys`, cada aparelho declarado (também o
        `pela_porta`, cujo nó fica fora) com `aparelhos`: o USB vem pelo hub, vivo, com os outros
        aparelhos do hub cobertos, para o adaptador que sai do USB e volta na mesma porta seguir à
        vista (medido em 20/11/2026 com a Lovense). O hub vivo mostraria o aparelho ligado depois
-       da abertura e o coberto que sai e volta (a montagem que o cobria sai com o nó que morreu);
-       a vigia confere a cada volta os filhos de cada hub (o `inode` do coberto, que o kernfs
-       nunca repete, e o VID:PID do declarado) e reabre a caixa na primeira volta em que o hub
-       mostra o que a caixa não cobre, ou quando o hub sai (a caixa perdeu a montagem dele); o
-       `RESET;` do declarado na mesma porta não reabre (medido em 20/11/2026: quatro seguidos,
-       nenhuma reabertura); o `/run/systemd/resolve` (e o alvo do
+       da abertura e o coberto que sai e volta (a montagem que o cobria sai com o nó que morreu).
+       A vigia, acordada pelo uevent do kernel (e a cada volta do registro, de reserva), confere
+       os filhos de cada hub (o `inode` do coberto, que o kernfs nunca repete, e o VID:PID do
+       declarado) e cobre por dentro, sem reabrir, o que a caixa não cobre: um processo à parte
+       entra no espaço de montagem da extensão e no de usuário dono dele (`NS_GET_USERNS`, sem
+       privilégio na máquina) e monta um `tmpfs` só de leitura por cima; a mesma vigia refaz a
+       pasta sintética do HID. A caixa reabre só de reserva: quando a mudança falha, quando o
+       hub sai, ou quando um processo da caixa mora noutro espaço de montagem ou segura o
+       aparelho aberto antes da cobertura (fd, pasta, mapa). Medido em 20/11/2026: liga A, liga
+       B, tira A, religa A e o rádio que sai e volta, nenhuma reabertura (com a reabertura eram
+       três para os quatro primeiros), cerca de 15 ms do aparelho nascer à cobertura; quatro
+       `RESET;` seguidos, nenhuma. Limite: a extensão que corre essa janela e guarda o fd do
+       aparelho na fila de um socket segue lendo aquele aparelho; o `/run/systemd/resolve` (e o
+       alvo do
        `/etc/resolv.conf`) com rede;
      - o executável que mora fora da lista (o `python3` de um venv) roda pelo alvo real; o que mora
        no `/opt` leva a pasta do programa;

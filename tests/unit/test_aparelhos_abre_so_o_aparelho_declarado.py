@@ -209,6 +209,7 @@ def test_o_aparelho_que_entra_depois_reabre_a_caixa(monkeypatch: pytest.MonkeyPa
     supervisor.bwrap = "/usr/bin/bwrap"
     supervisor._registro_lido = {"exemplo": object()}  # type: ignore[dict-item]
     supervisor._reaberta_pelo_aparelho = {}
+    supervisor._vez_da_vigia = asyncio.Lock()
     vigiada = sup._Vigiada("exemplo", processo=Processo(),  # type: ignore[arg-type]
                            manifesto=manifesto, aparelhos=("/dev/hidraw3",))
     supervisor._vigiadas = {"exemplo": vigiada}
@@ -577,6 +578,7 @@ def _vigia_de_mentira(manifesto: Manifesto, aparelhos: tuple[str, ...]
     supervisor.bwrap = "/usr/bin/bwrap"
     supervisor._registro_lido = {"exemplo": object()}  # type: ignore[dict-item]
     supervisor._reaberta_pelo_aparelho = {}
+    supervisor._vez_da_vigia = asyncio.Lock()
     vigiada = sup._Vigiada("exemplo", processo=Processo(),  # type: ignore[arg-type]
                            manifesto=manifesto, aparelhos=aparelhos,
                            aceitos=tuple(_aceitos(manifesto)))

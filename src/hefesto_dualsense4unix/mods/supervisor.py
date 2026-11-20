@@ -113,7 +113,7 @@ COBERTOS_NA_CAIXA: tuple[str, ...] = ("/etc/machine-id",)
 PASTA_DOS_PROGRAMAS = "/opt"
 
 DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
-    "bluetooth": ("/run/dbus", "/sys/class/bluetooth", "/sys/bus/hid/devices"),
+    "bluetooth": ("/run/dbus", "/sys/class/bluetooth"),
     "aparelhos": ("/run/udev",),
 }
 
@@ -122,6 +122,16 @@ DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
 NOS_QUE_A_CAIXA_ACEITA: tuple[str, ...] = ("/dev/hidraw", "/dev/tty", "/dev/bus/usb/")
 
 RetratoDosHubs = dict[str, int | tuple[str, str]]
+
+PASTA_DO_HID = "/sys/bus/hid/devices"
+
+SINTETICA_COM_A_PERMISSAO: dict[str, str] = {"bluetooth": PASTA_DO_HID}
+
+BARRAMENTO_DO_RADIO = "0005"
+
+POR_DENTRO_DA_CAIXA = Path(__file__).with_name("por_dentro_da_caixa.py")
+
+PRAZO_POR_DENTRO_S = 5.0
 
 JANELA_DO_LACO_DOS_APARELHOS_S = 60.0
 
@@ -209,6 +219,7 @@ class _Vigiada:
     aparelho_em_laco: bool = False
     aceitos: tuple[str, ...] = ()
     retrato: RetratoDosHubs = field(default_factory=dict)
+    hid: dict[str, str] = field(default_factory=dict)
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -513,14 +524,15 @@ def comando_na_caixa(
     aparelhos: tuple[str, ...] = (),
     pela_porta: tuple[str, ...] = (),
     retrato: RetratoDosHubs | None = None,
+    hid: dict[str, str] | None = None,
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
-    Entra só :data:`ENTRAM_NA_CAIXA` (:func:`_o_que_entra`), com :data:`COBERTOS_NA_CAIXA`
-    vazios; o ``/var``, o ``/sys``, a ``HOME`` e os diretórios de execução nascem vazios, e o
-    ``/dev`` só traz os ``aparelhos`` (:func:`aparelhos_que_casam`), o ``/sys`` só eles e os
-    ``pela_porta`` (:func:`pastas_pela_porta`), e o ``retrato`` recebe os hubs vivos
-    (:func:`_o_sys_dos_achados`). O ``--unshare-pid`` leva junto TUDO o que a modificação abriu.
+    Entra só :data:`ENTRAM_NA_CAIXA`, com :data:`COBERTOS_NA_CAIXA` vazios; o ``/var``, o
+    ``/sys``, a ``HOME`` e a execução nascem vazios; o ``/dev`` traz só os ``aparelhos``, o
+    ``/sys`` só eles e os ``pela_porta``, e o ``retrato`` recebe os hubs vivos
+    (:func:`_o_sys_dos_achados`); o :data:`PASTA_DO_HID` leva só ``hid`` (:func:`hid_da_caixa`).
+    O ``--unshare-pid`` leva junto TUDO o que a modificação abriu.
     Dentro do ``pasta`` (:func:`linha_do_pasta`) o ``bwrap`` devolve o ``uid`` e o ``gid`` de
     quem roda: o barramento do sistema recusa quem diz 0 com a credencial de outro.
     """
@@ -550,6 +562,8 @@ def comando_na_caixa(
                      if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no)], retrato)
     for caminho in _devolvidos(manifesto, entram):
         argv += ["--ro-bind", caminho, caminho]
+    if PASTA_DO_HID in _sinteticas(manifesto):
+        argv += a_pasta_do_hid(hid_da_caixa(manifesto, ()) if hid is None else hid)
     comando = _executavel_a_vista(comando, entram, argv)
     argv += [
         "--ro-bind", str(codigo), str(codigo),
@@ -1110,29 +1124,143 @@ def _ids_do_usb(pasta: str) -> tuple[str, str]:
     return (_ler(Path(pasta) / "idVendor").lower(), _ler(Path(pasta) / "idProduct").lower())
 
 
-def irmaos_a_vista(retrato: RetratoDosHubs) -> list[str]:
-    """Os aparelhos USB dos hubs vivos que a caixa não cobre: o ligado depois da abertura e o
-    coberto que saiu e voltou (a montagem que o cobria sai com o nó que morreu); e o hub que
-    saiu, cuja montagem a caixa perdeu.
+def _filhos_do_hub_vivo(hub: str) -> dict[str, int] | None:
+    with contextlib.suppress(OSError):
+        return _aparelhos_do_hub(hub)
+    return None
+
+
+def irmaos_a_vista(retrato: RetratoDosHubs) -> tuple[dict[str, int], list[str]]:
+    """Os aparelhos USB dos hubs vivos que a caixa não cobre, com o ``inode`` de cada um (o ligado
+    depois da abertura e o coberto que saiu e voltou: a montagem sai com o nó que morreu), e os
+    hubs que saíram, cuja montagem a caixa perdeu.
 
     ``retrato`` vem de :func:`_o_sys_dos_achados`: o coberto segue coberto enquanto o ``inode`` é o
     mesmo; o declarado à vista segue aceito enquanto o VID:PID é o mesmo (o ``RESET;`` volta na
     mesma porta), ou enquanto ainda nasce sem ele.
     """
-    a_vista: list[str] = []
+    a_vista: dict[str, int] = {}
+    sairam: list[str] = []
     for hub in sorted({os.path.dirname(p) for p in retrato}):
-        try:
-            filhos = _aparelhos_do_hub(hub)
-        except OSError:
-            a_vista.append(hub)
+        filhos = _filhos_do_hub_vivo(hub)
+        if filhos is None:
+            sairam.append(hub)
             continue
         for filho, inode in filhos.items():
             visto = retrato.get(filho)
             aceito = (_ids_do_usb(filho) in (visto, ("", "")) if isinstance(visto, tuple)
                       else visto == inode)
             if not aceito:
-                a_vista.append(filho)
-    return a_vista
+                a_vista[filho] = inode
+    return a_vista, sairam
+
+
+def hid_da_caixa(manifesto: Manifesto, aceitos: Collection[str],
+                 sys_raiz: Path = Path("/sys")) -> dict[str, str]:
+    """Os links que a pasta sintética :data:`PASTA_DO_HID` leva, com o alvo de cada um: com
+    ``bluetooth``, os HID do rádio (barramento :data:`BARRAMENTO_DO_RADIO`) e os do VID:PID
+    declarado e aceito; nenhum outro nome, nem o do teclado ou do controle pelo cabo."""
+    if PASTA_DO_HID not in _sinteticas(manifesto):
+        return {}
+    declarados = {(a.vid, a.pid) for a in manifesto.aparelhos
+                  if "aparelhos" in manifesto.permissoes
+                  and f"{a.classe}:{a.vid}:{a.pid}" in aceitos}
+    links: dict[str, str] = {}
+    with contextlib.suppress(OSError), os.scandir(sys_raiz / "bus" / "hid" / "devices") as itens:
+        for item in sorted(itens, key=lambda i: i.name):
+            partes = item.name.split(".", 1)[0].split(":")
+            if len(partes) != 3:
+                continue
+            ids = (partes[1][-4:].lower(), partes[2][-4:].lower())
+            if partes[0][-4:] == BARRAMENTO_DO_RADIO or ids in declarados:
+                with contextlib.suppress(OSError):
+                    links[item.name] = os.readlink(item.path)
+    return links
+
+
+def a_pasta_do_hid(hid: dict[str, str]) -> list[str]:
+    """A pasta sintética :data:`PASTA_DO_HID` na linha do ``bwrap``, com os links ``hid``."""
+    argv = ["--dir", PASTA_DO_HID]
+    for nome, alvo in sorted(hid.items()):
+        argv += ["--symlink", alvo, f"{PASTA_DO_HID}/{nome}"]
+    return argv
+
+
+def a_caixa_quer_saber(campos: dict[str, str]) -> bool:
+    """Um aparelho USB inteiro entrou, ou um HID entrou ou saiu: a vigia confere na hora."""
+    acao, sistema = campos.get("ACTION"), campos.get("SUBSYSTEM")
+    return ((sistema == "usb" and campos.get("DEVTYPE") == "usb_device" and acao == "add")
+            or (sistema == "hid" and acao in ("add", "remove")))
+
+
+def _os_da_caixa(pid: int) -> list[int]:
+    """Os processos que descendem de ``pid`` e moram num espaço de PID mais fundo: a caixa."""
+    fundo = len(_campo(pid, "NSpid"))
+    fila, caixa = _filhos(pid), []
+    while fila:
+        atual = fila.pop(0)
+        if len(_campo(atual, "NSpid")) > fundo:
+            caixa.append(atual)
+        fila += _filhos(atual)
+    return caixa
+
+
+def _ligado_a(pid: int) -> list[str]:
+    """Os caminhos que ``pid`` segura: cada fd, a pasta, a raiz e cada arquivo mapeado."""
+    caminhos: list[str] = []
+    with contextlib.suppress(OSError):
+        for fd in os.listdir(f"/proc/{pid}/fd"):
+            with contextlib.suppress(OSError):
+                caminhos.append(os.readlink(f"/proc/{pid}/fd/{fd}"))
+    for link in ("cwd", "root"):
+        with contextlib.suppress(OSError):
+            caminhos.append(os.readlink(f"/proc/{pid}/{link}"))
+    with contextlib.suppress(OSError):
+        caminhos += [linha.split(None, 5)[5] for linha in
+                     Path(f"/proc/{pid}/maps").read_text(encoding="utf-8").splitlines()
+                     if len(linha.split(None, 5)) == 6]
+    return caminhos
+
+
+def a_caixa_escapa(pid: int, dentro: int, cobertos: Collection[str]) -> str | None:
+    """Por que a cobertura feita no espaço de montagem de ``dentro`` não vale para a caixa de
+    ``pid``; ``None`` quando vale. Não vale quando um processo da caixa mora noutro espaço de
+    montagem (a montagem não chega nele) ou segura algo de ``cobertos`` aberto antes da
+    montagem."""
+    try:
+        montagem = os.readlink(f"/proc/{dentro}/ns/mnt")
+    except OSError as exc:
+        return f"a caixa não se lê: {exc.strerror}"
+    for processo in _os_da_caixa(pid):
+        with contextlib.suppress(OSError):
+            if os.readlink(f"/proc/{processo}/ns/mnt") != montagem:
+                return "um processo da caixa mora noutro espaço de montagem"
+        if any(_sob(caminho, tuple(cobertos)) for caminho in _ligado_a(processo)):
+            return "um processo da caixa segura o aparelho coberto"
+    return None
+
+
+async def mudar_por_dentro_da_caixa(pid: int, pedido: dict[str, Any]) -> dict[str, Any] | None:
+    """Roda :data:`POR_DENTRO_DA_CAIXA` no espaço de montagem de ``pid`` com ``pedido``; a
+    resposta, ou ``None`` quando ele não respondeu no :data:`PRAZO_POR_DENTRO_S`."""
+    processo = await asyncio.create_subprocess_exec(
+        sys.executable, "-I", "-S", str(POR_DENTRO_DA_CAIXA), str(pid),
+        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL)
+    try:
+        saida, _ = await asyncio.wait_for(processo.communicate(json.dumps(pedido).encode()),
+                                          PRAZO_POR_DENTRO_S)
+    except TimeoutError:
+        processo.kill()
+        await processo.wait()
+        logger.warning("mods_por_dentro_sem_resposta", pid=pid)
+        return None
+    try:
+        resposta: dict[str, Any] = json.loads(saida)
+    except ValueError:
+        logger.warning("mods_por_dentro_resposta_torta", pid=pid, saida=saida[-200:])
+        return None
+    return resposta
 
 
 def _o_sys_dos_aparelhos(nos: Sequence[str], retrato: RetratoDosHubs | None = None) -> list[str]:
@@ -1187,6 +1315,12 @@ def _o_sys_dos_achados(achados: Sequence[tuple[str, str]],
     for pasta in sorted(usb):
         argv += ["--symlink", pasta, f"/sys/bus/usb/devices/{os.path.basename(pasta)}"]
     return argv
+
+
+def _sinteticas(manifesto: Manifesto) -> list[str]:
+    """As pastas sintéticas que a permissão pede (:data:`SINTETICA_COM_A_PERMISSAO`)."""
+    return [pasta for permissao, pasta in SINTETICA_COM_A_PERMISSAO.items()
+            if permissao in manifesto.permissoes]
 
 
 def _devolvidos(manifesto: Manifesto, entram: Sequence[str]) -> list[str]:
@@ -1322,6 +1456,8 @@ class Supervisor:
         self._proxima_conferencia: dict[str, float] = {}
         self._registro_lido: dict[str, Entrada] = {}
         self._atualizando: asyncio.Task[bool] | None = None
+        self._ouvido: asyncio.Task[None] | None = None
+        self._vez_da_vigia = asyncio.Lock()
 
     def estado_de(self, mod_id: str) -> EstadoDaModificacao | None:
         return self._estados.get(mod_id)
@@ -1355,6 +1491,7 @@ class Supervisor:
     async def iniciar(self) -> None:
         await self.reconciliar()
         self._laco = asyncio.create_task(self._vigiar_o_registro(), name="mods-registro")
+        self._ouvido = asyncio.create_task(self._ouvir_o_barramento(), name="mods-barramento")
         fila = self.bus.subscribe(EventTopic.ACESSORIOS_GESTO)
         self._ouvinte_do_parar = asyncio.create_task(
             self._ouvir_o_parar(fila), name="mods-parar-curto"
@@ -1364,7 +1501,8 @@ class Supervisor:
         laco, self._laco = self._laco, None
         ouvinte, self._ouvinte_do_parar = self._ouvinte_do_parar, None
         atualizando, self._atualizando = self._atualizando, None
-        for tarefa in (laco, ouvinte, atualizando, *self._parar_curtos):
+        ouvido, self._ouvido = self._ouvido, None
+        for tarefa in (laco, ouvinte, atualizando, ouvido, *self._parar_curtos):
             if tarefa is not None:
                 tarefa.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -1429,46 +1567,106 @@ class Supervisor:
             await self._conferir_os_aparelhos()
             self._talvez_atualizar()
 
-    async def _conferir_os_aparelhos(self) -> None:
-        """O aparelho declarado que entrou depois da abertura reabre a caixa, que o receba.
+    async def _ouvir_o_barramento(self) -> None:
+        """Cada aparelho USB que entra e cada HID que entra ou sai acorda a vigia na hora
+        (:meth:`_conferir_os_aparelhos`); sem o uevent do kernel, fica a volta do registro."""
+        from hefesto_dualsense4unix.daemon.subsystems.ouvido_do_usb import (
+            abrir_o_netlink,
+            eventos_de,
+        )
+        sock = abrir_o_netlink()
+        if sock is None:
+            return
+        laco = asyncio.get_running_loop()
+        try:
+            while True:
+                campos = eventos_de(await laco.sock_recv(sock, 1 << 16))
+                if a_caixa_quer_saber(campos):
+                    await self._conferir_os_aparelhos()
+        finally:
+            sock.close()
 
-        Duas voltas seguidas com o nó novo: o que só sai (e volta com o mesmo nó) não reabre
-        nada. O declarado ``pela_porta`` reabre só quando o aparelho dele não estava no ``/sys``
-        da caixa (o ``RESET;`` volta à vista pelo hub). A segunda reabertura antes de
-        :data:`JANELA_DO_LACO_DOS_APARELHOS_S` não sai. O aparelho que o hub vivo mostra e a caixa
-        não cobre (:func:`irmaos_a_vista`) reabre na primeira volta, sem a janela do laço.
+    async def _conferir_os_aparelhos(self) -> None:
+        """A caixa aberta segue o que o ``/sys`` mostra, e a cada volta só um passa por aqui.
+
+        Por dentro, sem reabrir (:meth:`_mudar_por_dentro`): cobre o aparelho que o hub vivo
+        mostra e refaz a pasta sintética do HID. Se não dá, reabre. O declarado que entrou
+        depois reabre em duas voltas seguidas com o nó novo; o ``pela_porta``, só fora do
+        ``/sys`` da caixa; a segunda antes de :data:`JANELA_DO_LACO_DOS_APARELHOS_S` não sai.
         """
-        for mod_id, vigiada in list(self._vigiadas.items()):
-            manifesto = vigiada.manifesto
-            processo = vigiada.processo
-            if (manifesto is None or not self.bwrap or processo is None
-                    or processo.returncode is not None or not manifesto.aparelhos):
-                continue
-            if (vigiada.retrato
-                    and (irmaos := await asyncio.to_thread(irmaos_a_vista, vigiada.retrato))
-                    and (entrada := self._registro_lido.get(mod_id)) is not None):
-                logger.warning("mods_irmao_a_vista_reabre", mod=mod_id, quantos=len(irmaos))
+        async with self._vez_da_vigia:
+            for mod_id, vigiada in list(self._vigiadas.items()):
+                await self._conferir_uma(mod_id, vigiada)
+
+    async def _mudar_por_dentro(self, mod_id: str, vigiada: _Vigiada) -> bool:
+        """Cobre os irmãos à vista e refaz os links do HID na caixa aberta; ``False`` quando a
+        caixa tem de reabrir: o hub saiu, a mudança falhou ou a caixa escapa da cobertura
+        (:func:`a_caixa_escapa`)."""
+        manifesto, processo = vigiada.manifesto, vigiada.processo
+        assert manifesto is not None and processo is not None
+        irmaos, sairam = ((await asyncio.to_thread(irmaos_a_vista, vigiada.retrato))
+                          if vigiada.retrato else ({}, []))
+        hid = await asyncio.to_thread(hid_da_caixa, manifesto, vigiada.aceitos)
+        ligar = {nome: alvo for nome, alvo in hid.items() if vigiada.hid.get(nome) != alvo}
+        desligar = sorted(set(vigiada.hid) - set(hid))
+        if sairam:
+            logger.warning("mods_hub_da_caixa_saiu", mod=mod_id, quantos=len(sairam))
+            return False
+        if not (irmaos or ligar or desligar):
+            return True
+        dentro = await asyncio.to_thread(a_extensao_na_caixa, processo.pid)
+        if dentro is None:
+            return True
+        inicio = time.monotonic()
+        resposta = await mudar_por_dentro_da_caixa(dentro, {
+            "cobrir": sorted(irmaos), "pasta_dos_links": PASTA_DO_HID if hid or desligar else "",
+            "ligar": ligar, "desligar": desligar})
+        if (resposta is None or resposta.get("falhas")
+                or set(resposta.get("cobertos", [])) != set(irmaos)):
+            logger.warning("mods_por_dentro_falhou", mod=mod_id,
+                           falhas=(resposta or {}).get("falhas"))
+            return False
+        vigiada.retrato.update(irmaos)
+        vigiada.hid = hid
+        if irmaos:
+            motivo = await asyncio.to_thread(a_caixa_escapa, processo.pid, dentro, list(irmaos))
+            logger.info("mods_irmao_coberto", mod=mod_id, quantos=len(irmaos),
+                        ms=round((time.monotonic() - inicio) * 1000, 1))
+            if motivo is not None:
+                logger.warning("mods_caixa_escapa", mod=mod_id, motivo=motivo)
+                return False
+        return True
+
+    async def _conferir_uma(self, mod_id: str, vigiada: _Vigiada) -> None:
+        manifesto = vigiada.manifesto
+        processo = vigiada.processo
+        if (manifesto is None or not self.bwrap or processo is None
+                or processo.returncode is not None):
+            return
+        if not await self._mudar_por_dentro(mod_id, vigiada):
+            if (entrada := self._registro_lido.get(mod_id)) is not None:
+                logger.warning("mods_caixa_reabre", mod=mod_id)
                 await self._comecar(entrada)
-                continue
-            if vigiada.aparelho_em_laco:
-                continue
-            agora = await asyncio.to_thread(aparelhos_que_casam, manifesto, vigiada.aceitos)
-            pela_porta = await asyncio.to_thread(pastas_pela_porta, manifesto, vigiada.aceitos)
-            novos = set(agora) - set(vigiada.aparelhos)
-            novos |= {no for no, pasta in pela_porta.items() if pasta not in vigiada.pela_porta}
-            if not novos:
-                vigiada.aparelho_novo = False
-            elif not vigiada.aparelho_novo:
-                vigiada.aparelho_novo = True
-            elif (entrada := self._registro_lido.get(mod_id)) is not None:
-                antes = self._reaberta_pelo_aparelho.get(mod_id)
-                if antes is not None and time.monotonic() - antes < JANELA_DO_LACO_DOS_APARELHOS_S:
-                    vigiada.aparelho_em_laco = True
-                    logger.warning("mods_aparelho_em_laco", mod=mod_id, nos=sorted(novos))
-                    continue
-                self._reaberta_pelo_aparelho[mod_id] = time.monotonic()
-                logger.info("mods_aparelho_novo_reabre", mod=mod_id, nos=sorted(novos))
-                await self._comecar(entrada)
+            return
+        if not manifesto.aparelhos or vigiada.aparelho_em_laco:
+            return
+        agora = await asyncio.to_thread(aparelhos_que_casam, manifesto, vigiada.aceitos)
+        pela_porta = await asyncio.to_thread(pastas_pela_porta, manifesto, vigiada.aceitos)
+        novos = set(agora) - set(vigiada.aparelhos)
+        novos |= {no for no, pasta in pela_porta.items() if pasta not in vigiada.pela_porta}
+        if not novos:
+            vigiada.aparelho_novo = False
+        elif not vigiada.aparelho_novo:
+            vigiada.aparelho_novo = True
+        elif (entrada := self._registro_lido.get(mod_id)) is not None:
+            antes = self._reaberta_pelo_aparelho.get(mod_id)
+            if antes is not None and time.monotonic() - antes < JANELA_DO_LACO_DOS_APARELHOS_S:
+                vigiada.aparelho_em_laco = True
+                logger.warning("mods_aparelho_em_laco", mod=mod_id, nos=sorted(novos))
+                return
+            self._reaberta_pelo_aparelho[mod_id] = time.monotonic()
+            logger.info("mods_aparelho_novo_reabre", mod=mod_id, nos=sorted(novos))
+            await self._comecar(entrada)
 
     def _talvez_atualizar(self) -> None:
         """Abre a conferência da primeira extensão do git cujo intervalo passou.
@@ -1728,6 +1926,7 @@ class Supervisor:
         vigiada.pela_porta = frozenset(pela_porta.values())
         vigiada.aparelho_novo = False
         vigiada.retrato = {}
+        vigiada.hid = hid_da_caixa(manifesto, vigiada.aceitos) if self.bwrap else {}
         if self.bwrap:
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
@@ -1744,6 +1943,7 @@ class Supervisor:
                 aparelhos=vigiada.aparelhos,
                 pela_porta=tuple(pela_porta),
                 retrato=vigiada.retrato,
+                hid=vigiada.hid,
             )
         else:
             argv = comando
@@ -1971,10 +2171,13 @@ __all__ = [
     "JANELA_DO_LACO_DOS_APARELHOS_S",
     "NOS_QUE_A_CAIXA_ACEITA",
     "PASTA_DA_CAIXA",
+    "PASTA_DO_HID",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
     "Supervisor",
+    "a_caixa_escapa",
+    "a_caixa_quer_saber",
     "a_extensao_na_caixa",
     "abrir_o_aparelho",
     "aparelhos_que_casam",
@@ -1985,8 +2188,10 @@ __all__ = [
     "frase_da_rede",
     "frase_do_pedido",
     "frase_dos_aparelhos",
+    "hid_da_caixa",
     "irmaos_a_vista",
     "linha_do_pasta",
+    "mudar_por_dentro_da_caixa",
     "nome_no_sys",
     "nos_pela_porta",
     "ocupada_na_casa",
