@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,11 @@ from hefesto_dualsense4unix.mods.instalador import (
     manifesto_instalado,
 )
 from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 curto, lar = _base.curto, _base.lar
 _git, _chave = _base._git, _base._chave
@@ -111,3 +117,13 @@ def test_as_chaves_oficiais_sao_as_da_lista_que_a_instalacao_carrega() -> None:
     lista = Path(__file__).resolve().parents[2] / "assets" / "assinaturas" / "quem-assina"
     linhas = [x.strip() for x in lista.read_text(encoding="utf-8").splitlines() if x.strip()]
     assert tuple(linhas) == instalador.CHAVES_OFICIAIS and linhas
+
+
+def test_a_lista_de_quem_assina_viaja_no_pacote() -> None:
+    """D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO: a lista vai no pacote."""
+    raiz = Path(__file__).resolve().parents[2]
+    alvos = tomllib.loads((raiz / "pyproject.toml").read_text(encoding="utf-8"))[
+        "tool"]["hatch"]["build"]["targets"]
+    lista = instalador.LISTA_DE_QUEM_ASSINA
+    assert alvos["wheel"]["shared-data"].get(lista) == f"share/hefesto-dualsense4unix/{lista}"
+    assert lista in alvos["sdist"]["only-include"]

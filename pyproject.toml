@@ -113,11 +113,13 @@ include = [
 "assets/proton-pin.conf" = "share/hefesto-dualsense4unix/assets/proton-pin.conf"
 "docs/data/proton-qualificacao.csv" = "share/hefesto-dualsense4unix/docs/data/proton-qualificacao.csv"
 "docs/data/cores-do-dualsense.csv" = "share/hefesto-dualsense4unix/docs/data/cores-do-dualsense.csv"
+# As chaves que conferem o commit da extensão de fábrica (`mods/instalador.py:chaves_da_lista`).
+"assets/assinaturas/quem-assina" = "share/hefesto-dualsense4unix/assets/assinaturas/quem-assina"
 
 # O sdist leva só o que está listado: sem a lista ele levaria arquivo local que só o
 # `.git/info/exclude` ou o ignore global escondem. Sem `tests/`: a suíte é do repositório.
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "assets/profiles_default/freestyle.json", "assets/estilos_de_jogo/acao.json", "assets/estilos_de_jogo/aventura.json", "assets/estilos_de_jogo/corrida.json", "assets/estilos_de_jogo/esportes.json", "assets/estilos_de_jogo/fallback.json", "assets/estilos_de_jogo/fps.json", "assets/estilos_de_jogo/navegacao.json", "assets/estilos_de_jogo/point_and_click.json", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "assets/proton-pin.conf", "docs/data/proton-qualificacao.csv", "docs/data/cores-do-dualsense.csv", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
+only-include = ["src", "assets/profiles_default/freestyle.json", "assets/estilos_de_jogo/acao.json", "assets/estilos_de_jogo/aventura.json", "assets/estilos_de_jogo/corrida.json", "assets/estilos_de_jogo/esportes.json", "assets/estilos_de_jogo/fallback.json", "assets/estilos_de_jogo/fps.json", "assets/estilos_de_jogo/navegacao.json", "assets/estilos_de_jogo/point_and_click.json", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "assets/proton-pin.conf", "docs/data/proton-qualificacao.csv", "docs/data/cores-do-dualsense.csv", "assets/assinaturas/quem-assina", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
 
 [tool.ruff]
 line-length = 100
