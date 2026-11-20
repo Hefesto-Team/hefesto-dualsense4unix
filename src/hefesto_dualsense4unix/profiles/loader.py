@@ -1932,7 +1932,16 @@ def _avisa_perfil_invalido(path: Path, exc: BaseException) -> None:
 
 
 _Assinatura = tuple[int, int, int]
-_BASES_LIDAS: dict[str, tuple[_Assinatura, dict[str, Any]]] = {}
+
+
+class _BasesDoFio(threading.local):
+    """A base de cada perfil por fio: a leitura de outro fio não esconde a gravação de fora."""
+
+    def __init__(self) -> None:
+        self.por_arquivo: dict[str, tuple[_Assinatura, dict[str, Any]]] = {}
+
+
+_BASES_LIDAS = _BasesDoFio()
 
 
 def _assinatura(estado: os.stat_result) -> _Assinatura:
@@ -1940,8 +1949,8 @@ def _assinatura(estado: os.stat_result) -> _Assinatura:
 
 
 def _guardar_a_base(path: Path, assinatura: _Assinatura, cru: dict[str, Any]) -> None:
-    """O que este processo leu ou gravou por último em ``path``, com a assinatura do arquivo."""
-    _BASES_LIDAS[os.path.realpath(path)] = (assinatura, cru)
+    """O que este fio leu ou gravou por último em ``path``, com a assinatura do arquivo."""
+    _BASES_LIDAS.por_arquivo[os.path.realpath(path)] = (assinatura, cru)
 
 
 def _ler_o_cru(path: Path) -> dict[str, Any]:
@@ -1980,11 +1989,11 @@ def _sobre_o_que_esta_no_disco(
 ) -> Profile:
     """O perfil inteiro de quem leu antes de outro processo gravar, refeito sobre o disco.
 
-    A base é o que este processo leu ou gravou por último em ``path``; se a assinatura (inode,
+    A base é o que este fio leu ou gravou por último em ``path``; se a assinatura (inode,
     mtime e tamanho) do arquivo mudou desde então, só o que mudou da base para ``profile`` vai
     por cima do que está no disco. Sob a trava do perfil.
     """
-    lida = _BASES_LIDAS.get(os.path.realpath(path))
+    lida = _BASES_LIDAS.por_arquivo.get(os.path.realpath(path))
     if lida is None or anterior is None:
         return profile
     assinatura, base = lida
