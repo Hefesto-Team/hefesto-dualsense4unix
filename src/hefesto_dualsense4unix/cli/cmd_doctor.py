@@ -507,7 +507,7 @@ def _linhas_do_registro(atual: Path) -> list[tuple[str, str]]:
 
 
 def _linha_das_voltas_sozinho() -> tuple[str, str] | None:
-    """Quantas vezes o systemd reergueu o serviço (``NRestarts``); ``None`` sem a unit lida."""
+    """Quantas vezes o systemd reergueu o serviço (``NRestarts``); ``None`` sem o número."""
     from hefesto_dualsense4unix.utils.identidade import HEFESTO
 
     try:
