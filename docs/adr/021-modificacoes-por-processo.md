@@ -73,11 +73,19 @@ permissões que a pessoa aceitou.
        `/var`, `/sys`, `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nem o diário do
        sistema, nem socket de `/run`, nem o endereço de controle ou de placa de rede alcança a
        extensão; medido em 19/11/2026). Volta só o que a permissão pede: o `/run/dbus`, o
-       `/sys/class/bluetooth` e os nomes de `/sys/bus/hid/devices` com `bluetooth`; o `/run/udev`,
+       `/sys/class/bluetooth` e os nomes de `/sys/bus/hid/devices` com `bluetooth` (os links
+       apontam para fora da caixa: o nome, com o barramento e o VID:PID de cada HID, se lê; o
+       `uevent` e o `HID_UNIQ` dos outros, não; medido em 20/11/2026); o `/run/udev`,
        os nós dos aparelhos declarados e, do `/sys`, cada aparelho declarado (também o
        `pela_porta`, cujo nó fica fora) com `aparelhos`: o USB vem pelo hub, vivo, com os outros
        aparelhos do hub cobertos, para o adaptador que sai do USB e volta na mesma porta seguir à
-       vista (medido em 20/11/2026 com a Lovense); o `/run/systemd/resolve` (e o alvo do
+       vista (medido em 20/11/2026 com a Lovense). O hub vivo mostraria o aparelho ligado depois
+       da abertura e o coberto que sai e volta (a montagem que o cobria sai com o nó que morreu);
+       a vigia confere a cada volta os filhos de cada hub (o `inode` do coberto, que o kernfs
+       nunca repete, e o VID:PID do declarado) e reabre a caixa na primeira volta em que o hub
+       mostra o que a caixa não cobre, ou quando o hub sai (a caixa perdeu a montagem dele); o
+       `RESET;` do declarado na mesma porta não reabre (medido em 20/11/2026: quatro seguidos,
+       nenhuma reabertura); o `/run/systemd/resolve` (e o alvo do
        `/etc/resolv.conf`) com rede;
      - o executável que mora fora da lista (o `python3` de um venv) roda pelo alvo real; o que mora
        no `/opt` leva a pasta do programa;

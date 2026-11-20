@@ -121,6 +121,8 @@ DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
 
 NOS_QUE_A_CAIXA_ACEITA: tuple[str, ...] = ("/dev/hidraw", "/dev/tty", "/dev/bus/usb/")
 
+RetratoDosHubs = dict[str, int | tuple[str, str]]
+
 JANELA_DO_LACO_DOS_APARELHOS_S = 60.0
 
 PASTA_DA_CAIXA: tuple[str, ...] = (
@@ -206,6 +208,7 @@ class _Vigiada:
     aparelho_novo: bool = False
     aparelho_em_laco: bool = False
     aceitos: tuple[str, ...] = ()
+    retrato: RetratoDosHubs = field(default_factory=dict)
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -509,16 +512,17 @@ def comando_na_caixa(
     ocupada: Callable[[int, bool], bool] | None = None,
     aparelhos: tuple[str, ...] = (),
     pela_porta: tuple[str, ...] = (),
+    retrato: RetratoDosHubs | None = None,
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
     Entra só :data:`ENTRAM_NA_CAIXA` (:func:`_o_que_entra`), com :data:`COBERTOS_NA_CAIXA`
     vazios; o ``/var``, o ``/sys``, a ``HOME`` e os diretórios de execução nascem vazios, e o
-    ``/dev`` só traz os ``aparelhos`` (:func:`aparelhos_que_casam`), e o ``/sys`` só eles e os
-    ``pela_porta`` (:func:`pastas_pela_porta`). O
-    ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a modificação abriu. Dentro
-    do ``pasta`` (:func:`linha_do_pasta`) o ``bwrap`` devolve o ``uid`` e o ``gid`` de quem roda:
-    o barramento do sistema recusa quem diz 0 com a credencial de outro.
+    ``/dev`` só traz os ``aparelhos`` (:func:`aparelhos_que_casam`), o ``/sys`` só eles e os
+    ``pela_porta`` (:func:`pastas_pela_porta`), e o ``retrato`` recebe os hubs vivos
+    (:func:`_o_sys_dos_achados`). O ``--unshare-pid`` leva junto TUDO o que a modificação abriu.
+    Dentro do ``pasta`` (:func:`linha_do_pasta`) o ``bwrap`` devolve o ``uid`` e o ``gid`` de
+    quem roda: o barramento do sistema recusa quem diz 0 com a credencial de outro.
     """
     entram = ENTRAM_NA_CAIXA
     propria = pasta is not None and manifesto.rede != "nenhuma"
@@ -543,7 +547,7 @@ def comando_na_caixa(
             argv += ["--dev-bind-try", no, no]
         argv += _o_sys_dos_aparelhos(
             [*nos, *(no for no in pela_porta
-                     if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no)])
+                     if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no)], retrato)
     for caminho in _devolvidos(manifesto, entram):
         argv += ["--ro-bind", caminho, caminho]
     comando = _executavel_a_vista(comando, entram, argv)
@@ -1089,7 +1093,49 @@ def _o_aparelho_do_sys(real: str) -> tuple[str, bool]:
     return (real if balde else dono), False
 
 
-def _o_sys_dos_aparelhos(nos: Sequence[str]) -> list[str]:
+_NOME_DO_USB = re.compile(r"\d+-\d+(?:\.\d+)*")
+
+
+def _aparelhos_do_hub(hub: str) -> dict[str, int]:
+    """Os aparelhos USB filhos de ``hub``, com o ``inode`` que a listagem dá: pelo nome que o
+    kernel dá (``3-1.4``) ou pelo ``idVendor``, também o que ainda nasce; nunca a interface
+    (``3-1:1.0``) nem um link. Levanta ``OSError`` quando o hub saiu."""
+    with os.scandir(hub) as filhos:
+        return {f.path: f.inode() for f in sorted(filhos, key=lambda f: f.name)
+                if not f.is_symlink() and (_NOME_DO_USB.fullmatch(f.name)
+                                           or os.path.isfile(os.path.join(f.path, "idVendor")))}
+
+
+def _ids_do_usb(pasta: str) -> tuple[str, str]:
+    return (_ler(Path(pasta) / "idVendor").lower(), _ler(Path(pasta) / "idProduct").lower())
+
+
+def irmaos_a_vista(retrato: RetratoDosHubs) -> list[str]:
+    """Os aparelhos USB dos hubs vivos que a caixa não cobre: o ligado depois da abertura e o
+    coberto que saiu e voltou (a montagem que o cobria sai com o nó que morreu); e o hub que
+    saiu, cuja montagem a caixa perdeu.
+
+    ``retrato`` vem de :func:`_o_sys_dos_achados`: o coberto segue coberto enquanto o ``inode`` é o
+    mesmo; o declarado à vista segue aceito enquanto o VID:PID é o mesmo (o ``RESET;`` volta na
+    mesma porta), ou enquanto ainda nasce sem ele.
+    """
+    a_vista: list[str] = []
+    for hub in sorted({os.path.dirname(p) for p in retrato}):
+        try:
+            filhos = _aparelhos_do_hub(hub)
+        except OSError:
+            a_vista.append(hub)
+            continue
+        for filho, inode in filhos.items():
+            visto = retrato.get(filho)
+            aceito = (_ids_do_usb(filho) in (visto, ("", "")) if isinstance(visto, tuple)
+                      else visto == inode)
+            if not aceito:
+                a_vista.append(filho)
+    return a_vista
+
+
+def _o_sys_dos_aparelhos(nos: Sequence[str], retrato: RetratoDosHubs | None = None) -> list[str]:
     """Do ``/sys``, só o aparelho de cada nó (:func:`_o_sys_dos_achados`)."""
     achados: list[tuple[str, str]] = []
     for no in dict.fromkeys(nos):
@@ -1102,32 +1148,37 @@ def _o_sys_dos_aparelhos(nos: Sequence[str]) -> list[str]:
         real = os.path.realpath(liga)
         if real.startswith("/sys/devices/"):
             achados.append((liga, real))
-    return _o_sys_dos_achados(achados)
+    return _o_sys_dos_achados(achados, retrato)
 
 
-def _o_sys_dos_achados(achados: Sequence[tuple[str, str]]) -> list[str]:
+def _o_sys_dos_achados(achados: Sequence[tuple[str, str]],
+                       retrato: RetratoDosHubs | None = None) -> list[str]:
     """O aparelho de cada ``(link, pasta do nó)`` e os links que o acham: o
     ``/sys/dev/char/<maior>:<menor>``, o ``/sys/class/<classe>/<nó>`` e, no USB, o
     ``/sys/bus/usb/devices/<aparelho>``.
 
     O aparelho USB vem pelo hub dele, vivo, com os outros aparelhos do hub cobertos: o que sai do
     USB e volta na mesma porta (o ``RESET;`` do adaptador) segue à vista da caixa. Fora do USB
-    vem a pasta de :func:`_o_aparelho_do_sys`.
+    vem a pasta de :func:`_o_aparelho_do_sys`. ``retrato`` recebe, de cada filho dos hubs, o
+    ``inode`` do coberto e o VID:PID do que fica à vista: a vigia (:func:`irmaos_a_vista`) reabre
+    a caixa quando o hub mostra o que a caixa não cobre.
     """
     donos = [(liga, real, *_o_aparelho_do_sys(real)) for liga, real in achados]
     usb = {pasta for _, _, pasta, e_usb in donos if e_usb}
     argv: list[str] = []
     for hub in sorted({os.path.dirname(p) for p in usb}, key=lambda p: p.count("/")):
         try:
-            filhos = sorted(os.listdir(hub))
+            filhos = _aparelhos_do_hub(hub)
         except OSError as exc:
             logger.info("mods_aparelho_saiu_antes_da_caixa", no=hub, err=str(exc))
             continue
         argv += ["--ro-bind", hub, hub]
-        for filho in (os.path.join(hub, f) for f in filhos):
-            if (os.path.isfile(os.path.join(filho, "idVendor"))
-                    and not any(_sob(p, (filho,)) for p in usb)):
+        for filho, inode in filhos.items():
+            declarado = any(_sob(p, (filho,)) for p in usb)
+            if not declarado:
                 argv += ["--tmpfs", filho]
+            if retrato is not None:
+                retrato[filho] = _ids_do_usb(filho) if declarado else inode
     for pasta in dict.fromkeys(p for _, _, p, e_usb in donos if not e_usb):
         argv += ["--ro-bind", pasta, pasta]
     for liga, real, _pasta, _e_usb in donos:
@@ -1382,18 +1433,24 @@ class Supervisor:
         """O aparelho declarado que entrou depois da abertura reabre a caixa, que o receba.
 
         Duas voltas seguidas com o nó novo: o que só sai (e volta com o mesmo nó) não reabre
-        nada, porque o nó da caixa segue o número. O declarado ``pela_porta`` reabre só quando o
-        aparelho dele não estava no ``/sys`` da caixa: o que volta do ``RESET;`` na mesma porta
-        segue à vista pelo hub (:func:`_o_sys_dos_achados`). A
-        segunda reabertura antes de :data:`JANELA_DO_LACO_DOS_APARELHOS_S` não sai: o aparelho
-        que renasce com outro nó a cada abertura viraria laço.
+        nada. O declarado ``pela_porta`` reabre só quando o aparelho dele não estava no ``/sys``
+        da caixa (o ``RESET;`` volta à vista pelo hub). A segunda reabertura antes de
+        :data:`JANELA_DO_LACO_DOS_APARELHOS_S` não sai. O aparelho que o hub vivo mostra e a caixa
+        não cobre (:func:`irmaos_a_vista`) reabre na primeira volta, sem a janela do laço.
         """
         for mod_id, vigiada in list(self._vigiadas.items()):
             manifesto = vigiada.manifesto
             processo = vigiada.processo
             if (manifesto is None or not self.bwrap or processo is None
-                    or processo.returncode is not None or not manifesto.aparelhos
-                    or vigiada.aparelho_em_laco):
+                    or processo.returncode is not None or not manifesto.aparelhos):
+                continue
+            if (vigiada.retrato
+                    and (irmaos := await asyncio.to_thread(irmaos_a_vista, vigiada.retrato))
+                    and (entrada := self._registro_lido.get(mod_id)) is not None):
+                logger.warning("mods_irmao_a_vista_reabre", mod=mod_id, quantos=len(irmaos))
+                await self._comecar(entrada)
+                continue
+            if vigiada.aparelho_em_laco:
                 continue
             agora = await asyncio.to_thread(aparelhos_que_casam, manifesto, vigiada.aceitos)
             pela_porta = await asyncio.to_thread(pastas_pela_porta, manifesto, vigiada.aceitos)
@@ -1670,6 +1727,7 @@ class Supervisor:
         pela_porta = pastas_pela_porta(manifesto, vigiada.aceitos) if self.bwrap else {}
         vigiada.pela_porta = frozenset(pela_porta.values())
         vigiada.aparelho_novo = False
+        vigiada.retrato = {}
         if self.bwrap:
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
@@ -1685,6 +1743,7 @@ class Supervisor:
                 ocupada=ocupada,
                 aparelhos=vigiada.aparelhos,
                 pela_porta=tuple(pela_porta),
+                retrato=vigiada.retrato,
             )
         else:
             argv = comando
@@ -1926,6 +1985,7 @@ __all__ = [
     "frase_da_rede",
     "frase_do_pedido",
     "frase_dos_aparelhos",
+    "irmaos_a_vista",
     "linha_do_pasta",
     "nome_no_sys",
     "nos_pela_porta",
