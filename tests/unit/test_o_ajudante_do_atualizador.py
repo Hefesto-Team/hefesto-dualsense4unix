@@ -12,7 +12,8 @@ reprova o caso do fonte; o MangoHud instalado sem conferir o digest reprova o ca
 a subida do apt sem segurar os pacotes da casa reprova o caso dos backports; o voltar do kernel
 sem o registro (o de antes, que ia ao «oldkern» de qualquer jeito) reprova o caso do kernel; o
 registro que não se apaga reprova a segunda volta; o voltar do MangoHud que troca as duas versões
-reprova a segunda volta dele.
+reprova a segunda volta dele. Em 20/11/2026: o hold dos da casa e o dpkg do conserto sem a saída
+da espera reprovam o caso de quem esbarra na trava; o apt sem essa saída, o caso da trava ocupada.
 """
 from __future__ import annotations
 
@@ -780,6 +781,48 @@ def test_a_trava_ocupada_sai_com_codigo_proprio_e_vira_espera(
     monkeypatch.setattr(pa, "_comando", lambda *_a, **_k: (100, "E: trava"))
     with pytest.raises(pa.RaizSaiuError):
         pa._raiz("apt-instalar", "sistema", passo=at.Passo())
+
+
+def _esbarra_na_trava(lar: Lar, quem: str, trava: Path) -> None:
+    """O ``apt-mark`` e o ``dpkg`` de verdade não esperam a trava de outro instalador: saem com
+    erro enquanto a trava está presa."""
+    presa = lar.bin / "trava-presa"
+    presa.write_text("#!/usr/bin/env python3\nimport fcntl, os, struct, sys\n"
+                     "fd = os.open(sys.argv[1], os.O_RDONLY)\n"
+                     "pedido = struct.pack('@hhqqi', fcntl.F_WRLCK, 0, 0, 0, 0)\n"
+                     "tipo = struct.unpack('@hhqqi', fcntl.fcntl(fd, fcntl.F_GETLK, pedido))[0]\n"
+                     "sys.exit(0 if tipo != fcntl.F_UNLCK else 1)\n", encoding="utf-8")
+    presa.chmod(0o755)
+    esbarra = f'"{presa}" "{trava}" && {{ echo "E: Could not get lock {trava}" >&2; exit 100; }}'
+    if quem == "apt-mark":
+        lar.duble("apt-mark", f'[ "$1" = showhold ] && {{ cat "{lar.segurados}"; exit 0; }}\n'
+                              f'{esbarra}\nexit 0')
+    else:
+        real = shutil.which("dpkg") or "/usr/bin/dpkg"
+        lar.duble("dpkg", f'case "$1" in --audit) cat "{lar.auditoria}"; exit 0;;'
+                          f' --force-confdef) {esbarra}; exit 0;; esac\nexec "{real}" "$@"')
+
+
+@pytest.mark.parametrize("quem", ["apt-mark", "dpkg"])
+def test_quem_esbarra_na_trava_de_outro_instalador_tambem_espera(lar: Lar, quem: str) -> None:
+    """D-1911-O-APT-CONSERTA-O-DPKG-E-ESPERA-A-TRAVA: segurar e consertar também esperam.
+
+    O ``apt-mark hold`` dos da casa vem antes de todo apt, e o ``dpkg --configure -a`` do conserto
+    não tem prazo de trava: com outro instalador na trava, os dois saem com o código da espera."""
+    import fcntl
+
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    trava = lar.dpkg / "lock-frontend"
+    trava.write_text("", encoding="utf-8")
+    lar.auditoria.write_text("meio configurado\n", encoding="utf-8")
+    _esbarra_na_trava(lar, quem, trava)
+    with trava.open("r+") as f:
+        fcntl.lockf(f, fcntl.LOCK_EX)
+        feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode == pa.RC_TRAVA_OCUPADA, feito.stderr
+    assert pa.OUTRO_INSTALADOR in feito.stderr
+    assert not [x for x in lar.lidas() if x.endswith("full-upgrade")]
 
 
 @pytest.mark.parametrize("apt_falha", [False, True])

@@ -100,6 +100,12 @@ sys.exit(1)
 TRAVA
 }
 
+_sair_se_outro_instala() {
+    _trava_ocupada || return 0
+    _erro "outro instalador está usando o sistema de pacotes"
+    exit "${RC_TRAVA_OCUPADA}"
+}
+
 DPKG_CONFERIDO=""
 
 _dpkg_interrompido() {
@@ -111,6 +117,7 @@ _consertar_o_dpkg() {
     local rc=0
     DPKG_CONFERIDO=1
     _na_unidade dpkg --force-confdef --force-confold --configure -a || rc=1
+    [[ "${rc}" -eq 0 ]] || _sair_se_outro_instala
     _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" --no-install-recommends -f install || rc=1
     return "${rc}"
 }
@@ -130,10 +137,7 @@ _apt() {
     _na_unidade apt-get -y -o APT::Status-Fd=1 -o "DPkg::Lock::Timeout=${PRAZO_DA_TRAVA_DO_DPKG_S}" \
         -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
     local rc=$?
-    if [[ "${rc}" -eq "${RC_APT_FALHOU}" ]] && _trava_ocupada; then
-        _erro "outro instalador está usando o sistema de pacotes"
-        exit "${RC_TRAVA_OCUPADA}"
-    fi
+    [[ "${rc}" -ne "${RC_APT_FALHOU}" ]] || _sair_se_outro_instala
     return "${rc}"
 }
 
@@ -180,7 +184,8 @@ _tomar_a_vez_do_hold() {
     _pasta_do_estado
     exec 8>"${ESTADO}/hold.trava"
     flock -w 600 8 || _recusar "outro ajudante segura os pacotes da casa agora"
-    _soltar_o_que_o_registro_guarda || _recusar "o que um ajudante que saiu no meio segurou não se soltou"
+    _soltar_o_que_o_registro_guarda || { _sair_se_outro_instala
+        _recusar "o que um ajudante que saiu no meio segurou não se soltou"; }
 }
 
 _soltar_o_hold_orfao() {
@@ -231,7 +236,8 @@ _segurar_os_da_casa() {
     trap 'exit 130' INT TERM HUP
     [[ -z "${ESTADO}" ]] || printf '%s\n' "${SEGURADOS[@]}" > "$(_registro_do_hold)" \
         || _recusar "não registrei o que vou segurar"
-    apt-mark hold "${SEGURADOS[@]}" >/dev/null || _recusar "não segurei os pacotes da casa: ${SEGURADOS[*]}"
+    apt-mark hold "${SEGURADOS[@]}" >/dev/null || { _sair_se_outro_instala
+        _recusar "não segurei os pacotes da casa: ${SEGURADOS[*]}"; }
     printf 'fora da subida: %s\n' "${SEGURADOS[*]}"
 }
 
