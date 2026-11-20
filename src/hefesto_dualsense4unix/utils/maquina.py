@@ -1,6 +1,7 @@
 """``maquina.json`` — o que a MESA é, declarado por quem a montou."""
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import os
@@ -11,6 +12,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final, Literal, NamedTuple
 
+from filelock import FileLock, Timeout
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -1547,6 +1549,25 @@ def _o_caminho_vira_no(numero: str, porta: dict[str, Any]) -> None:
     porta.pop("caminho")
 
 
+def _trava_entre_processos(*, esperar: bool = True) -> contextlib.AbstractContextManager[object]:
+    """O ``FileLock`` de ``maquina.json.lock``: o ciclo ler-fundir-gravar de um processo inteiro.
+
+    O serviço e a janela gravam o mesmo documento; a trava de fio (``MAQUINA_FILE_LOCK``) entra
+    por dentro desta. Sem ``esperar``, a trava ocupada levanta ``filelock.Timeout`` na hora.
+    """
+    caminho = caminho_da_maquina()
+    trava = FileLock(str(caminho.with_name(caminho.name + ".lock")))
+    return trava.acquire(blocking=esperar)
+
+
+def _no_laco_asyncio() -> bool:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
+
+
 def caminho_da_maquina() -> Path:
     """Path do ``maquina.json`` — import LAZY de ``config_dir``.
 
@@ -1665,9 +1686,9 @@ def gravar_rascunho_da_mesa(declaracao: Mapping[str, Any]) -> bool:
 def gravar_maquina_com_descartes(
     declaracao: Mapping[str, Any], *, substituir: Sequence[str] = ()
 ) -> ResultadoDaGravacao:
-    """Funde a declaração PARCIAL no documento do disco."""
+    """Funde a declaração PARCIAL no documento do disco, sob a trava entre processos."""
     MaquinaConfig.model_validate(dict(declaracao))
-    with MAQUINA_FILE_LOCK:
+    with _trava_entre_processos(), MAQUINA_FILE_LOCK:
         try:
             bruto = _ler_o_documento_ou_levantar() or {}
         except _DocumentoIlegivelError as exc:
@@ -2028,14 +2049,19 @@ def _o_computador_que_ainda_vale(computador: Any) -> dict[str, Any] | None:
 
 
 def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
-    """:func:`migrar_o_documento` e :func:`conferir_a_placa` na leitura, e o arquivo regravado."""
+    """:func:`migrar_o_documento` e :func:`conferir_a_placa` na leitura, e o arquivo regravado.
+
+    A regravação relê e grava sob a trava entre processos. Dentro do laço asyncio, nenhuma
+    espera pela trava de outro (``D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO``): ocupada, a
+    leitura devolve o migrado sem gravar, e a próxima leitura fora do laço grava.
+    """
     placa = placa_daqui()
     migrado, _ = conferir_a_placa(migrar_o_documento(bruto), placa)
     migrado, guardas = devolver_a_guarda_da_renumeracao(migrado, placa)
     if migrado == bruto and not guardas.aposentadas:
         return bruto
     try:
-        with MAQUINA_FILE_LOCK:
+        with _trava_entre_processos(esperar=not _no_laco_asyncio()), MAQUINA_FILE_LOCK:
             agora = _ler_documento()
             if agora is None or agora.get(VERSION_FIELD) != MAQUINA_SCHEMA_VERSION:
                 return migrado
@@ -2050,6 +2076,8 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
                     _guardar_o_de_outra_placa(de_outra_placa)
                 _escrever(migrado)
             _marcar_as_guardas(guardas)
+    except Timeout:
+        logger.debug("maquina_migracao_espera_a_trava_de_outro")
     except Exception as exc:
         logger.warning("maquina_migracao_nao_gravou", err=str(exc)[:200])
     return migrado

@@ -27,13 +27,13 @@ import sys
 import tempfile
 import threading
 import time
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from filelock import FileLock
 from pydantic import ValidationError
@@ -87,6 +87,11 @@ def _reject_traversal(identifier: str) -> None:
 
 def _lock_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + LOCK_SUFFIX)
+
+
+def _trava_do_perfil(path: Path) -> FileLock:
+    """O ``FileLock`` do arquivo do perfil entre processos; no mesmo fio, a trava reentra."""
+    return FileLock(str(_lock_path(path)), is_singleton=True)
 
 
 SEED_MARKER_NAME = ".seeded_presets"
@@ -1926,10 +1931,99 @@ def _avisa_perfil_invalido(path: Path, exc: BaseException) -> None:
     )
 
 
+_Assinatura = tuple[int, int, int]
+_BASES_LIDAS: dict[str, tuple[_Assinatura, dict[str, Any]]] = {}
+
+
+def _assinatura(estado: os.stat_result) -> _Assinatura:
+    return estado.st_ino, estado.st_mtime_ns, estado.st_size
+
+
+def _guardar_a_base(path: Path, assinatura: _Assinatura, cru: dict[str, Any]) -> None:
+    """O que este processo leu ou gravou por último em ``path``, com a assinatura do arquivo."""
+    _BASES_LIDAS[os.path.realpath(path)] = (assinatura, cru)
+
+
+def _ler_o_cru(path: Path) -> dict[str, Any]:
+    """O JSON do perfil, sem trava, e a base dele guardada com a assinatura do mesmo arquivo."""
+    with path.open("rb") as arquivo:
+        assinatura = _assinatura(os.fstat(arquivo.fileno()))
+        cru = json.loads(arquivo.read().decode("utf-8"))
+    if isinstance(cru, dict):
+        _guardar_a_base(path, assinatura, cru)
+    return cru  # type: ignore[no-any-return]
+
+
 def _read_profile(path: Path) -> Profile:
     with _trava_da_leitura(path):
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = _ler_o_cru(path)
     return Profile.model_validate(raw)
+
+
+def _refazer_a_mudanca(base: object, novo: object, disco: object) -> object:
+    """O ``disco`` com o que mudou de ``base`` para ``novo``, campo a campo, em profundidade."""
+    if not (isinstance(base, dict) and isinstance(novo, dict) and isinstance(disco, dict)):
+        return novo
+    saida = dict(disco)
+    for chave in base.keys() | novo.keys():
+        if chave not in novo:
+            saida.pop(chave, None)
+        elif chave not in base or chave not in disco:
+            saida[chave] = novo[chave]
+        elif base[chave] != novo[chave]:
+            saida[chave] = _refazer_a_mudanca(base[chave], novo[chave], disco[chave])
+    return saida
+
+
+def _sobre_o_que_esta_no_disco(
+    path: Path, profile: Profile, anterior: bytes | None, *, enxuto: bool
+) -> Profile:
+    """O perfil inteiro de quem leu antes de outro processo gravar, refeito sobre o disco.
+
+    A base é o que este processo leu ou gravou por último em ``path``; se a assinatura (inode,
+    mtime e tamanho) do arquivo mudou desde então, só o que mudou da base para ``profile`` vai
+    por cima do que está no disco. Sob a trava do perfil.
+    """
+    lida = _BASES_LIDAS.get(os.path.realpath(path))
+    if lida is None or anterior is None:
+        return profile
+    assinatura, base = lida
+    try:
+        if _assinatura(os.stat(path)) == assinatura:
+            return profile
+        disco = Profile.model_validate(json.loads(anterior))
+        de_antes = Profile.model_validate(base)
+    except OSError:
+        return profile
+    except _PROFILE_DECODE_ERRORS:
+        return profile
+    payload = _payload_do_perfil_de_jogo if enxuto else _payload_do_perfil
+    refeito = _refazer_a_mudanca(payload(de_antes), payload(profile), payload(disco))
+    logger.info("profile_refeito_sobre_o_disco", nome=profile.name, path=str(path))
+    return Profile.model_validate(refeito)
+
+
+_Extra = TypeVar("_Extra")
+
+
+def mudar_o_perfil(
+    nome: str, mudar: Callable[[Profile], tuple[Profile | None, _Extra]]
+) -> tuple[Profile, bool, _Extra]:
+    """O dono do ciclo ler-mudar-gravar do perfil: relê do disco, aplica e grava sob a trava.
+
+    A trava é a do arquivo, entre processos: o serviço e a janela não perdem o que o outro
+    gravou. `mudar` devolve `(None, extra)` quando não há o que gravar. Lê e grava o disco: o
+    laço do serviço a chama por `asyncio.to_thread`. Devolve o perfil que vale, se gravou e o
+    `extra`.
+    """
+    alvo = _arquivo_para_carregar(nome)
+    with _trava_do_perfil(alvo):
+        perfil = Profile.model_validate(_ler_o_cru(alvo))
+        novo, extra = mudar(perfil)
+        if novo is None:
+            return perfil, False, extra
+        save_profile(novo)
+    return novo, True, extra
 
 
 def _trava_da_leitura(path: Path) -> contextlib.AbstractContextManager[object]:
@@ -1983,15 +2077,19 @@ def arquivo_do_perfil(identifier: str, directory: Path | None = None) -> Path | 
     return None
 
 
-def load_profile(identifier: str) -> Profile:
-    """Carrega perfil por slug direto ou por display name."""
+def _arquivo_para_carregar(identifier: str) -> Path:
     _reject_traversal(identifier)
     _maybe_seed_presets()
     _talvez_semear_jogos()
     alvo = arquivo_do_perfil(identifier, profiles_dir(ensure=True))
     if alvo is None:
         raise FileNotFoundError(f"perfil não encontrado: {identifier}")
-    return _read_profile(alvo)
+    return alvo
+
+
+def load_profile(identifier: str) -> Profile:
+    """Carrega perfil por slug direto ou por display name."""
+    return _read_profile(_arquivo_para_carregar(identifier))
 
 
 def perfil_em_disco(identifier: str) -> Profile | None:
@@ -2478,15 +2576,16 @@ def save_profile(
 ) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
 
-    Não arquiva a versão de antes quando é BYTE A BYTE a que vai para o
-    disco: a gravação que não mudou nada não gasta as vagas do histórico.
-
+    Não arquiva a versão de antes quando é BYTE A BYTE a que vai para o disco.
     ``enxuto=True`` grava só nome, alvo e prioridade (a forma do perfil de jogo
     semeado): o que o perfil não diz, herda do padrão do computador.
+    O perfil lido antes de outro processo gravar o arquivo não apaga o que o outro
+    gravou: a mudança se refaz sobre o disco (:func:`_sobre_o_que_esta_no_disco`).
     """
     path = _profile_path(profile)
-    with FileLock(str(_lock_path(path))):
+    with _trava_do_perfil(path):
         anterior = _bytes_se_existe(path)
+        profile = _sobre_o_que_esta_no_disco(path, profile, anterior, enxuto=enxuto)
         profile = _com_as_datas(profile, anterior, origem, enxuto=enxuto)
         payload = (
             _payload_do_perfil_de_jogo(profile) if enxuto else _payload_do_perfil(profile)
@@ -2499,6 +2598,7 @@ def save_profile(
             else None
         )
         _atomic_write_json(path, payload)
+        _guardar_a_base(path, _assinatura(os.stat(path)), json.loads(novos))
     _registrar_gravacao(profile, path, anterior, backup, origem, novos, igual=igual)
     return path
 

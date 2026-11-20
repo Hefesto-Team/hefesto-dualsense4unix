@@ -31,6 +31,9 @@ from hefesto_dualsense4unix.profiles.loader import (
     perfis_para_consulta,
     save_profile,
 )
+from hefesto_dualsense4unix.profiles.loader import (
+    mudar_o_perfil as _mudar_no_arquivo,
+)
 from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from hefesto_dualsense4unix.profiles.schema import (
     CONFIRMADA_POR_ESCOLHA,
@@ -1878,18 +1881,14 @@ _Extra = TypeVar("_Extra")
 def mudar_o_perfil(
     nome: str, mudar: Callable[[Profile], tuple[Profile | None, _Extra]]
 ) -> tuple[Profile, bool, _Extra]:
-    """Lê `nome`, aplica `mudar` e grava o perfil que ele devolve, sob uma trava só no processo.
+    """O :func:`loader.mudar_o_perfil` (a trava do arquivo, entre processos) sob a do processo.
 
-    `mudar` devolve `(None, extra)` quando não há o que gravar. Lê e grava o disco: o laço do
-    serviço a chama por `asyncio.to_thread`. Devolve o perfil que vale, se gravou e o `extra`.
+    A trava do processo é a de :func:`sob_a_trava_do_perfil`. `mudar` devolve `(None, extra)`
+    quando não há o que gravar. Lê e grava o disco: o laço do serviço a chama por
+    `asyncio.to_thread`. Devolve o perfil que vale, se gravou e o `extra`.
     """
     with _TRAVA_DA_MUDANCA_NO_PERFIL:
-        perfil = load_profile(nome)
-        novo, extra = mudar(perfil)
-        if novo is None:
-            return perfil, False, extra
-        save_profile(novo)
-        return novo, True, extra
+        return _mudar_no_arquivo(nome, mudar)
 
 
 def perfil_do_appid(

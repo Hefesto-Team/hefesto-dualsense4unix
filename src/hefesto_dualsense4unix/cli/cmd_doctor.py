@@ -472,6 +472,7 @@ def _print_bloco_entrada() -> int:
 
 
 _AVISOS_DO_REGISTRO = 5
+_PRAZO_DO_SYSTEMCTL_S = 5
 _LARGURA_DA_LINHA_DO_REGISTRO = 200
 _LINHA_DE_AVISO = re.compile(
     r"\[(?:warning|error|critical)\s*\]|\"level\": \"(?:warning|error|critical)\""
@@ -513,10 +514,10 @@ def _linha_das_voltas_sozinho() -> tuple[str, str] | None:
         feito = subprocess.run(
             ["systemctl", "--user", "show", HEFESTO.unit_daemon, "--property=NRestarts",
              "--value"],
-            capture_output=True, text=True, check=False, timeout=5,
+            capture_output=True, text=True, check=False, timeout=_PRAZO_DO_SYSTEMCTL_S,
         )
-    except (OSError, subprocess.SubprocessError):
-        return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        return ("[INFO]", f"as voltas sozinho do serviço não se leem ({type(exc).__name__})")
     valor = feito.stdout.strip()
     if not valor.isdigit():
         return None
