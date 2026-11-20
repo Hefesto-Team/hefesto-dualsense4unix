@@ -68,11 +68,15 @@ permissões que a pessoa aceitou.
        fica de fora, e a extensão abre. Dentro do `pasta` o `bwrap` devolve o `uid` e o `gid` de quem
        roda: com o `uid` 0 do espaço de usuário do `pasta`, o barramento do sistema recusava o BlueZ
        (medido em 14/11/2026). Sem o `pasta`, a caixa fica no espaço de rede da casa;
-     - `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nenhum socket de `/run`, como o do
-       broker ou o do docker, atende de dentro); volta por cima só o que a permissão pede: o
-       `/run/dbus` com `bluetooth`, o `/run/udev` e só os nós dos aparelhos declarados com `aparelhos`, o
-       `/run/systemd/resolve` (e o alvo do `/etc/resolv.conf`) com rede;
-     - o executável que mora sob uma raiz escondida (o `python3` de um venv) roda pelo alvo real;
+     - só entra o que está na lista: `/usr`, `/etc` (com o `/etc/machine-id` vazio) e os links de
+       `/bin`, `/sbin` e `/lib*` quando o alvo também entra, além do código, dos dados e da porta;
+       `/var`, `/sys`, `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nem o diário do
+       sistema, nem socket de `/run`, nem o endereço de controle ou de placa de rede alcança a
+       extensão; medido em 19/11/2026). Volta só o que a permissão pede: o `/run/dbus` com
+       `bluetooth`, o `/run/udev`, os nós dos aparelhos declarados e, do `/sys`, só a pasta de cada
+       um com `aparelhos`, o `/run/systemd/resolve` (e o alvo do `/etc/resolv.conf`) com rede;
+     - o executável que mora fora da lista (o `python3` de um venv) roda pelo alvo real; o que mora
+       no `/opt` leva a pasta do programa;
      - a caixa do leitor e do fixador do lançador cobre o `/run` inteiro; os discos seguem à vista,
        porque o leitor lê a biblioteca de jogos no disco em que estiver;
      - com `jogos`, cada pasta `steamapps` das bibliotecas da Steam aparece só de leitura, e o

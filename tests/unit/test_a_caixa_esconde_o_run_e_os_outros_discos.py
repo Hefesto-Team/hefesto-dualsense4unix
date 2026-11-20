@@ -73,7 +73,6 @@ def run_e_mnt_de_mentira(curto: Path, monkeypatch: pytest.MonkeyPatch):  # type:
     ouvinte = socket.socket(socket.AF_UNIX)
     ouvinte.bind(str(run / "hidraw" / "broker.sock"))
     ouvinte.listen(1)
-    monkeypatch.setattr(sup, "ESCONDIDAS_NA_CAIXA", (*sup.ESCONDIDAS_NA_CAIXA, str(run), str(mnt)))
     monkeypatch.setattr(censo, "_execucao_escondida", lambda real=censo._execucao_escondida:
                         (*real(), str(run)))
     try:
@@ -144,23 +143,22 @@ def test_volta_so_o_que_a_permissao_pede(curto: Path) -> None:
     argv = _caixa(curto, _manifesto("rede:nenhuma"), ["true"])
     for flag in ("--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try", "--unshare-pid"):
         assert flag in argv
-    tmpfs = [argv[i + 1] for i, a in enumerate(argv) if a == "--tmpfs"]
-    for raiz in ("/run", "/mnt", "/home"):
-        if os.path.isdir(raiz) and not os.path.islink(raiz):
-            assert raiz in tmpfs
-    assert "/var/run" not in tmpfs or not os.path.islink("/var/run")
+    montadas = [argv[i + 1] for i, a in enumerate(argv) if a in ("--ro-bind", "--bind")]
+    assert "/" not in montadas
+    da_caixa = {str(curto / "fonte"), str(curto / "dados"), str(curto / "porta.sock")}
+    assert not any(c == raiz or c.startswith(f"{raiz}/") for c in set(montadas) - da_caixa
+                   for raiz in ("/run", "/var", "/mnt", "/media", "/srv", "/home"))
 
 
-def test_o_executavel_sob_uma_raiz_escondida_roda_pelo_alvo_real(tmp_path: Path) -> None:
+def test_o_executavel_fora_da_lista_roda_pelo_alvo_real(tmp_path: Path) -> None:
     alvo = tmp_path / "real-python"
     alvo.touch()
     link = tmp_path / "venv" / "python3"
     link.parent.mkdir()
     link.symlink_to(alvo)
     argv: list[str] = []
-    feito = sup._executavel_a_vista([str(link), "-I"], (str(tmp_path / "venv"),), argv)
-    assert feito == [str(alvo), "-I"] and argv == []
-    argv = []
-    feito = sup._executavel_a_vista([str(link)], (str(tmp_path),), argv)
+    feito = sup._executavel_a_vista([str(link), "-I"], (str(tmp_path),), argv)
+    assert feito == [str(link), "-I"] and argv == []
+    feito = sup._executavel_a_vista([str(link)], ("/usr",), argv)
     assert feito == [str(alvo)] and argv == ["--ro-bind", str(alvo), str(alvo)]
-    assert sup._executavel_a_vista(["python3"], (str(tmp_path),), argv) == ["python3"]
+    assert sup._executavel_a_vista(["python3"], ("/usr",), argv) == ["python3"]

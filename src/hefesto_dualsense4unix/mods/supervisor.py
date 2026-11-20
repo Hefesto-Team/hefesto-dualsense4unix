@@ -105,7 +105,12 @@ ESPERA_DA_VIGIA_S = 1.0
 
 FALTA_O_BWRAP = "Falta o bwrap: a extensão não abre sem a caixa."
 
-ESCONDIDAS_NA_CAIXA: tuple[str, ...] = ("/run", "/var/run", "/mnt", "/media", "/srv", "/home")
+ENTRAM_NA_CAIXA: tuple[str, ...] = (
+    "/usr", "/etc", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32")
+
+COBERTOS_NA_CAIXA: tuple[str, ...] = ("/etc/machine-id",)
+
+PASTA_DOS_PROGRAMAS = "/opt"
 
 DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
     "bluetooth": ("/run/dbus",),
@@ -505,34 +510,38 @@ def comando_na_caixa(
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
-    Os ``tmpfs`` vêm antes das pastas montadas por cima deles: a ``HOME`` e os diretórios de
-    execução nascem vazios, e o ``/dev`` só traz os ``aparelhos`` (:func:`aparelhos_que_casam`).
-    O ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a
-    modificação abriu (medido em 10/10/2026). Dentro do ``pasta`` (:func:`linha_do_pasta`) o
-    ``uid`` seria 0, e o barramento do sistema recusa quem diz 0 com a credencial de outro: o
-    ``bwrap`` devolve o ``uid`` e o ``gid`` de quem roda (medido em 14/11/2026).
+    Entra só :data:`ENTRAM_NA_CAIXA` (:func:`_o_que_entra`), com :data:`COBERTOS_NA_CAIXA`
+    vazios; o ``/var``, o ``/sys``, a ``HOME`` e os diretórios de execução nascem vazios, e o
+    ``/dev`` e o ``/sys`` só trazem os ``aparelhos`` (:func:`aparelhos_que_casam`). O
+    ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a modificação abriu. Dentro
+    do ``pasta`` (:func:`linha_do_pasta`) o ``bwrap`` devolve o ``uid`` e o ``gid`` de quem roda:
+    o barramento do sistema recusa quem diz 0 com a credencial de outro.
     """
-    escondidas = _escondidas()
+    entram = ENTRAM_NA_CAIXA
     propria = pasta is not None and manifesto.rede != "nenhuma"
     argv = [bwrap]
     if propria:
         argv += ["--unshare-user", "--uid", str(os.getuid()), "--gid", str(os.getgid())]
+    argv += _o_que_entra(entram)
+    for coberto in COBERTOS_NA_CAIXA:
+        if os.path.isfile(coberto):
+            argv += ["--ro-bind", "/dev/null", coberto]
     argv += [
-        "--ro-bind", "/", "/",
         "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try",
         "--proc", "/proc",
-        "--tmpfs", "/tmp",
+        "--tmpfs", "/tmp", "--dir", "/var", "--tmpfs", "/sys",
     ]
-    for coberta in (*escondidas, str(casa), *map(str, execucao)):
+    for coberta in (str(casa), *map(str, execucao)):
         argv += ["--tmpfs", coberta]
     argv += ["--dev", "/dev"]
     if "aparelhos" in manifesto.permissoes:
-        for no in aparelhos:
-            if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no:
-                argv += ["--dev-bind-try", no, no]
-    for caminho in _devolvidos(manifesto, escondidas):
+        nos = [no for no in aparelhos if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no]
+        for no in nos:
+            argv += ["--dev-bind-try", no, no]
+        argv += _o_sys_dos_aparelhos(nos)
+    for caminho in _devolvidos(manifesto, entram):
         argv += ["--ro-bind", caminho, caminho]
-    comando = _executavel_a_vista(comando, escondidas, argv)
+    comando = _executavel_a_vista(comando, entram, argv)
     argv += [
         "--ro-bind", str(codigo), str(codigo),
         "--bind", str(dados), str(dados),
@@ -1037,34 +1046,74 @@ def frase_da_rede(manifesto: Manifesto) -> str:
     return " ".join(frase)
 
 
-def _escondidas() -> tuple[str, ...]:
-    """As raízes que a caixa cobre com ``tmpfs``: o link (``/var/run``) já cai com o alvo."""
-    return tuple(p for p in ESCONDIDAS_NA_CAIXA if os.path.isdir(p) and not os.path.islink(p))
+def _o_que_entra(entram: Sequence[str]) -> list[str]:
+    """As raízes que existem entram como estão; a que é link entra como link, e só quando o
+    alvo resolvido mora numa raiz que entra de verdade."""
+    reais = [p for p in entram if os.path.isdir(p) and not os.path.islink(p)]
+    argv: list[str] = []
+    for raiz in reais:
+        argv += ["--ro-bind", raiz, raiz]
+    for raiz in entram:
+        if os.path.islink(raiz) and _sob(os.path.realpath(raiz), reais):
+            argv += ["--symlink", os.readlink(raiz), raiz]
+    return argv
 
 
-def _devolvidos(manifesto: Manifesto, escondidas: Sequence[str]) -> list[str]:
-    """O que volta por cima dos ``tmpfs``: o barramento com ``bluetooth``, o DNS com rede."""
+def _o_sys_dos_aparelhos(nos: Sequence[str]) -> list[str]:
+    """Do ``/sys``, só o aparelho de cada nó e os dois links que o acham
+    (``/sys/dev/char/<maior>:<menor>`` e ``/sys/class/<classe>/<nó>``). O aparelho é a pasta USB
+    inteira; fora do USB (o HID do rádio), a pasta dona da classe do nó, e nunca um balde
+    inteiro de ``/sys/devices`` (o ``/dev/null`` traz só a pasta dele)."""
+    argv: list[str] = []
+    for no in nos:
+        try:
+            numero = os.stat(no).st_rdev
+        except OSError as exc:
+            logger.info("mods_aparelho_saiu_antes_da_caixa", no=no, err=str(exc))
+            continue
+        liga = f"/sys/dev/char/{os.major(numero)}:{os.minor(numero)}"
+        real = os.path.realpath(liga)
+        if not real.startswith("/sys/devices/"):
+            continue
+        pasta = real
+        while pasta != "/sys/devices" and not os.path.isfile(os.path.join(pasta, "idVendor")):
+            pasta = os.path.dirname(pasta)
+        dono = os.path.dirname(os.path.dirname(real))
+        balde = os.path.dirname(dono) in ("/sys", "/sys/devices", "/sys/devices/virtual")
+        topo = pasta if pasta != "/sys/devices" else (real if balde else dono)
+        classe = f"/sys/class/{os.path.basename(os.path.dirname(real))}/{os.path.basename(real)}"
+        argv += ["--ro-bind", topo, topo, "--symlink", real, liga, "--symlink", real, classe]
+    return argv
+
+
+def _devolvidos(manifesto: Manifesto, entram: Sequence[str]) -> list[str]:
+    """O que volta do que não entra: o barramento com ``bluetooth``, o DNS com rede."""
     caminhos = [c for permissao, lista in DEVOLVIDO_COM_A_PERMISSAO.items()
                 if permissao in manifesto.permissoes for c in lista]
     if manifesto.rede != "nenhuma":
         caminhos += list(DEVOLVIDO_COM_A_REDE)
         resolv = os.path.realpath("/etc/resolv.conf")
-        if _escondido(resolv, escondidas) and not _escondido(resolv, DEVOLVIDO_COM_A_REDE):
+        if not _sob(resolv, entram) and not _sob(resolv, DEVOLVIDO_COM_A_REDE):
             caminhos.append(resolv)
     return [c for c in dict.fromkeys(caminhos) if os.path.exists(c)]
 
 
-def _escondido(caminho: str, escondidas: Sequence[str]) -> bool:
-    return any(caminho == raiz or caminho.startswith(f"{raiz}/") for raiz in escondidas)
+def _sob(caminho: str, raizes: Sequence[str]) -> bool:
+    return any(caminho == raiz or caminho.startswith(f"{raiz}/") for raiz in raizes)
 
 
-def _executavel_a_vista(comando: list[str], escondidas: Sequence[str],
+def _executavel_a_vista(comando: list[str], entram: Sequence[str],
                         argv: list[str]) -> list[str]:
-    """O executável sob uma raiz escondida (o ``python3`` de um venv) roda pelo alvo real."""
-    if not comando or not comando[0].startswith("/") or not _escondido(comando[0], escondidas):
+    """O executável fora das raízes que entram (o ``python3`` de um venv) roda pelo alvo real;
+    o alvo que também fica fora entra sozinho, ou com a pasta dele no ``/opt``."""
+    if not comando or not comando[0].startswith("/") or _sob(comando[0], entram):
         return comando
     real = os.path.realpath(comando[0])
-    if _escondido(real, escondidas):
+    if _sob(real, (PASTA_DOS_PROGRAMAS,)):
+        programa = os.path.relpath(real, PASTA_DOS_PROGRAMAS).split(os.sep)[0]
+        pasta = os.path.join(PASTA_DOS_PROGRAMAS, programa)
+        argv += ["--ro-bind", pasta, pasta]
+    elif not _sob(real, entram):
         argv += ["--ro-bind", real, real]
     return [real, *comando[1:]]
 
@@ -1789,10 +1838,11 @@ __all__ = [
     "A_REDE_INCLUI_A_INTERNET",
     "A_REDE_INCLUI_A_MAQUINA",
     "CLASSES_PELA_PORTA",
+    "COBERTOS_NA_CAIXA",
     "DEVOLVIDO_COM_A_PERMISSAO",
     "DEVOLVIDO_COM_A_REDE",
     "DIARIO_DA_MODIFICACAO",
-    "ESCONDIDAS_NA_CAIXA",
+    "ENTRAM_NA_CAIXA",
     "ESPERAS_PARA_VOLTAR",
     "ESPERA_DA_PODA_S",
     "ESPERA_DA_VIGIA_S",

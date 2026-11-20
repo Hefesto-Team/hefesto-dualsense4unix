@@ -157,7 +157,7 @@ da regra 5.
 | `pactl subscribe` | só escuta; o `pipewire-pulse` já estava de pé 19 ms antes | sim; sem som, o Hefesto segue sem ele | o Hefesto | nada | morre com a unit |
 | `parec` | abre o microfone do controle | sim, se houver controle | o Hefesto; o nó fica aberto | nada | morre com a unit |
 | `pw-loopback`, `pw-record` | nós `hefesto-*` no grafo de som | idem | aparecem na lista de fluxos do sistema, com o nome | nada | morrem com a unit |
-| `bwrap` da extensão | sandbox, com `/home` e `/run/user/<uid>` em `tmpfs` | sim, se a extensão estiver ligada | a extensão; o barramento da sessão não entra na sandbox | nada | morre com o serviço (`setsid` e `PR_SET_PDEATHSIG`) |
+| `bwrap` da extensão | sandbox que só enxerga `/usr`, `/etc` e o que a extensão pede; `/home`, `/var` e `/run` vazios | sim, se a extensão estiver ligada | a extensão; o barramento da sessão não entra na sandbox | nada | morre com o serviço (`setsid` e `PR_SET_PDEATHSIG`) |
 
 ### O que o inventário de 05/11 não listava
 
