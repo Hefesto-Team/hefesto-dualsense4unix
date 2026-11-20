@@ -1197,13 +1197,14 @@ def a_caixa_quer_saber(campos: dict[str, str]) -> bool:
             or (sistema == "hid" and acao in ("add", "remove")))
 
 
-def _os_da_caixa(pid: int) -> list[int]:
-    """Os processos que descendem de ``pid`` e moram num espaço de PID mais fundo: a caixa."""
-    fundo = len(_campo(pid, "NSpid"))
+def _os_da_caixa(pid: int, dentro: int) -> list[int]:
+    """Os processos que descendem de ``pid`` e moram no espaço de PID de ``dentro``, ou num mais
+    fundo: a caixa. O ``bwrap`` de fora e o ``pasta``, cada um no seu espaço, não contam."""
+    fundo = len(_campo(dentro, "NSpid"))
     fila, caixa = _filhos(pid), []
     while fila:
         atual = fila.pop(0)
-        if len(_campo(atual, "NSpid")) > fundo:
+        if len(_campo(atual, "NSpid")) >= fundo:
             caixa.append(atual)
         fila += _filhos(atual)
     return caixa
@@ -1217,7 +1218,7 @@ def a_caixa_escapa(pid: int, dentro: int) -> bool:
         montagem = os.readlink(f"/proc/{dentro}/ns/mnt")
     except OSError:
         return True
-    for processo in _os_da_caixa(pid):
+    for processo in _os_da_caixa(pid, dentro):
         with contextlib.suppress(OSError):
             if os.readlink(f"/proc/{processo}/ns/mnt") != montagem:
                 return True

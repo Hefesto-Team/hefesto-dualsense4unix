@@ -90,7 +90,8 @@ permissões que a pessoa aceitou.
        privilégio na máquina) e monta um `tmpfs` só de leitura por cima; a mesma vigia refaz a
        pasta sintética do HID. Com o `bwrap` 0.8.0 ou mais novo, e não setuid, a caixa nasce com
        `--unshare-user --disable-userns`: a extensão não abre espaço de usuário, e com ele um de
-       montagem que a cobertura não alcançaria. A caixa reabre só de reserva, com o motivo no
+       montagem que a cobertura não alcançaria (também dentro do `pasta`, com rede, DNS e a
+       cobertura de pé; medido em 20/11/2026 com o `pasta` de 20/02/2024). A caixa reabre só de reserva, com o motivo no
        diário do serviço (`mods_caixa_reabre`): `cobertura_falhou`, `hub_saiu` e `escape` (no
        `bwrap` sem a opção, um processo da caixa noutro espaço de montagem). Medido em
        20/11/2026: liga A, liga B, tira A, religa A e o rádio que sai e volta, nenhuma

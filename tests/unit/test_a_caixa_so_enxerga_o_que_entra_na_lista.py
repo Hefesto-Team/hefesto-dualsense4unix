@@ -319,8 +319,10 @@ for linha in sys.stdin:
 
 
 def _caixa_no_hub(hub: Path, e429: Path, retrato: sup.RetratoDosHubs,
-                  hid: dict[str, str], *, fecha: bool = True) -> subprocess.Popen[str]:
-    """A caixa pela linha do produto (o hub vivo e a pasta sintética do HID), no /sys forjado."""
+                  hid: dict[str, str], *, fecha: bool = True,
+                  por_fora: bool = False) -> subprocess.Popen[str]:
+    """A caixa pela linha do produto (o hub vivo e a pasta sintética do HID), no /sys forjado.
+    ``por_fora`` a abre dentro de outro espaço de usuário e de PID, como o ``pasta`` faz."""
     real = next(e429.glob("*/*/hidraw/*"))
     bwrap = shutil.which("bwrap") or "bwrap"
     fechada = ["--unshare-user", "--disable-userns"] if fecha and sup.bwrap_fecha_o_userns(
@@ -331,7 +333,8 @@ def _caixa_no_hub(hub: Path, e429: Path, retrato: sup.RetratoDosHubs,
             *sup.a_pasta_do_hid(hid), "--die-with-parent", "--new-session"]
     comando = sup._executavel_a_vista(
         [sys.executable, "-c", _OLHA_OS_IRMAOS, str(hub), str(e429)], sup.ENTRAM_NA_CAIXA, argv)
-    caixa = subprocess.Popen([*argv, "--", *comando], stdin=subprocess.PIPE,
+    fora = ["unshare", "--user", "--map-current-user", "--pid", "--fork"] if por_fora else []
+    caixa = subprocess.Popen([*fora, *argv, "--", *comando], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     _ver(caixa)
     return caixa
@@ -402,9 +405,9 @@ class _Vigia:
     """O supervisor do produto vigiando uma caixa de verdade sobre o /sys forjado."""
 
     def __init__(self, curto: Path, cascata: str, monkeypatch: pytest.MonkeyPatch,
-                 *, fecha: bool = True) -> None:
+                 *, fecha: bool = True, por_fora: bool = False) -> None:
         exigir_caixa_do_bwrap()
-        self.fecha = fecha
+        self.fecha, self.por_fora = fecha, por_fora
         self.sys_ = curto / "sys"
         self.hub = self.sys_ / "devices" / "usb3" / cascata
         self.bus = self.sys_ / "bus" / "hid" / "devices"
@@ -463,7 +466,7 @@ class _Vigia:
         self.vigiada.pela_porta = frozenset(
             sup.pastas_pela_porta(self.manifesto, self.vigiada.aceitos).values())
         self.caixa = _caixa_no_hub(self.hub, self.e429, self.vigiada.retrato, self.vigiada.hid,
-                                   fecha=self.fecha)
+                                   fecha=self.fecha, por_fora=self.por_fora)
         self.vigiada.processo = self.caixa  # type: ignore[assignment]
 
     def fechar(self) -> None:
@@ -478,14 +481,15 @@ class _Vigia:
         return _ver(self.caixa, pedido)
 
 
-@pytest.mark.parametrize("cascata", ["3-1", "3-1/3-1.1"])
+@pytest.mark.parametrize(("cascata", "por_fora"), [
+    ("3-1", False), ("3-1/3-1.1", False), ("3-1", True)])
 def test_a_vigia_cobre_o_irmao_por_dentro_sem_reabrir(
-        curto: Path, monkeypatch: pytest.MonkeyPatch, cascata: str) -> None:
+        curto: Path, monkeypatch: pytest.MonkeyPatch, cascata: str, por_fora: bool) -> None:
     """D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA: no hub do adaptador (também o segundo hub
-    da cascata), liga A, liga B, tira A, religa A, o rádio sai e volta e o adaptador faz quatro
-    RESET;: a caixa nunca mostra irmão nem endereço, a pasta do HID segue o rádio, e nada
-    reabre."""
-    vigia = _Vigia(curto, cascata, monkeypatch)
+    da cascata, e com a caixa dentro de outro espaço de PID, como no ``pasta``), liga A, liga B,
+    tira A, religa A, o rádio sai e volta e o adaptador faz quatro RESET;: a caixa nunca mostra
+    irmão nem endereço, a pasta do HID segue o rádio, e nada reabre."""
+    vigia = _Vigia(curto, cascata, monkeypatch, por_fora=por_fora)
     nome = vigia.hub.name
     try:
         visto = vigia.volta()
