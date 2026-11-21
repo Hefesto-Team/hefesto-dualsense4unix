@@ -193,6 +193,10 @@ def test_o_dono_da_janela_e_a_lib_dos_dois_roteiros() -> None:
     assert lib.count("--fechar-steam") == 1 and lib.count("--reabrir-steam") == 1
     janela = uninstall.index("\nfechar_a_steam_uma_vez\n")
     fim = uninstall.index("\nreabrir_a_steam_se_fechei\n")
+    reabre_se_morrer = uninstall.index(
+        "trap '_cleanup_sudo_keepalive; reabrir_a_steam_se_fechei' EXIT\n")
+    assert reabre_se_morrer < janela < fim < uninstall.index(
+        "\ntrap _cleanup_sudo_keepalive EXIT\n", fim)
     for passo in ('bash "${DISABLE_STEAM_INPUT_SCRIPT}" --apply',
                   'python3 "${PROTON_PIN_PY}" --unlock',
                   'python3 "${LAUNCH_STRIP_PY}" --strip --stop-steam'):
