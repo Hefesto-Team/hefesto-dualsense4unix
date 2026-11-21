@@ -1074,9 +1074,9 @@ GESTO_DA_CHAVE_DA_EXTENSAO = "chave-da-modificacao"
 DICA_DA_CHAVE_LIGADA = "Ligada. Desligar põe todos os aparelhos a zero e os deixa assim."
 DICA_DA_CHAVE_DESLIGADA = "Desligada: todos os aparelhos ficam a zero. Ligar volta a agir."
 PALAVRA_DO_ESTADO = {"ligado": "Ligado", "procurando": "Procurando", "desligado": "Desligado",
-                     "falhou": "Falhou"}
+                     "falhou": "Falhou", "esperando": "Esperando o aceite"}
 COR_DO_ESTADO = {"ligado": "verde", "procurando": "amarelo", "desligado": "mudo",
-                 "falhou": "laranja"}
+                 "falhou": "laranja", "esperando": "laranja"}
 _TRACO_DO_ICONE = ('viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" '
                    'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"')
 ICONE_DO_TRANSPORTE = {
@@ -1873,7 +1873,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         if acoes or (gestao and gestao.aparelhos.grupo) or controles:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
                                          controles=cc, armada=armada, desligada=desligada,
-                                         pagina=aba_da_pagina, abas=abas, vereditos=vereditos)
+                                         pagina=aba_da_pagina, abas=abas, vereditos=vereditos,
+                                         estado=estado)
         else:
             ajustes = (_abas_das_opcoes(opcoes, aba, mod, aba_da_pagina, abas) if opcoes
                        else na_pagina or vazio)
@@ -2141,13 +2142,16 @@ def telas() -> str:
 
 
 class AcaoDaJanela(NamedTuple):
-    """Uma ação do manifesto: o botão que age na hora; com ``cartao``, ao pé daquele cartão."""
+    """Uma ação do manifesto: o botão que age na hora; com ``cartao``, ao pé daquele cartão.
+    ``pedida`` só aparece quando o estado a pede (:func:`acoes_que_aparecem`)."""
 
     id: str
     rotulo: str
     grupo: str = ""
     icone: str = ""
     cartao: str = ""
+    pedida: bool = False
+    dica: str = ""
 
 
 class Veredito(NamedTuple):
@@ -2294,24 +2298,63 @@ def valor_da_acao(mod: str, acao_id: str, alvo: str = "") -> str:
     return f"{mod}:{acao_id}" + (f":{alvo}" if alvo else "")
 
 
+CHAVE_DAS_ACOES = "acoes"  # (noqa-acento)
+TEXTO_AO_LADO = 120
+ESTILO_DO_TEXTO_AO_LADO = ("font-size:11.5px;color:var(--texto-suave);min-width:0;overflow:hidden;"
+                           "text-overflow:ellipsis;white-space:nowrap")
+
+
+def _acoes_pedidas(estado: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """As ações que o estado pede (``CHAVE_DAS_ACOES``): ``{}`` quando o estado não pede nada,
+    ``None`` quando o pedido veio torto."""
+    bruto = estado.get(CHAVE_DAS_ACOES) if estado else None
+    if bruto is None:
+        return {}
+    return bruto if isinstance(bruto, Mapping) else None
+
+
+def acoes_que_aparecem(acoes: Sequence[AcaoDaJanela],
+                       estado: Mapping[str, Any] | None) -> list[AcaoDaJanela]:
+    """As ações à vista: a ``pedida`` só quando o estado a pede; com as pedidas tortas, todas,
+    como antes de a ação ter condição."""
+    pedidas = _acoes_pedidas(estado)
+    return [a for a in acoes if not a.pedida or pedidas is None or a.id in pedidas]
+
+
+def textos_ao_lado(estado: Mapping[str, Any] | None) -> dict[str, str]:
+    """O texto que a extensão põe ao lado de cada botão, pelo id da ação, cortado em
+    ``TEXTO_AO_LADO`` letras; o que não é texto, ou é vazio, cai."""
+    pedidas = _acoes_pedidas(estado) or {}
+    return {str(k): t.strip()[:TEXTO_AO_LADO] for k, t in pedidas.items()
+            if isinstance(t, str) and t.strip()}
+
+
+def texto_ao_lado_html(texto: str) -> str:
+    """O texto ao lado do botão, escapado: o que vem da extensão nunca vira marcação."""
+    return f'<span style="{ESTILO_DO_TEXTO_AO_LADO}">{_e(texto)}</span>' if texto else ""
+
+
 def acao_html(mod: str, acao: AcaoDaJanela, *, alvo: str = "", em_curso: bool = False,
               forte: bool = False, armada: bool = False, desligada: bool = False,
-              veredito: Veredito | None = None) -> str:
+              veredito: Veredito | None = None, ao_lado: str = "") -> str:
     """Um botão de ação (:func:`valor_da_acao`). Enquanto a extensão não devolve o estado, ele diz
     «Em curso»; ``armada`` é o primeiro clique numa ação que pede o segundo: ele diz «Confirmar».
-    Com a chave da extensão desligada, ele fica à vista, apagado e sem gesto."""
+    Com a chave da extensão desligada, ele fica à vista, apagado e sem gesto. ``ao_lado`` é o
+    texto que a extensão publica para esta ação (:func:`texto_ao_lado_html`)."""
+    junto = texto_ao_lado_html(ao_lado)
     if desligada:
         return (f'<span class="btn mj-acao apagado{" forte" if forte else ""}" '
                 f'aria-disabled="true">{_icone_da_acao(acao.icone)}<span>{_e(acao.rotulo)}</span>'
-                "</span>")
+                f"</span>{junto}")
     v = valor_da_acao(mod, acao.id, alvo)
     classe = ("btn mj-acao" + (" forte" if forte else "") + (" em-curso" if em_curso else "")
               + (" armada" if armada else ""))
+    dica = f' data-dica="{_a(acao.dica)}"' if acao.dica else ""
     ocupado = ' aria-busy="true"' if em_curso else ""
     rotulo = EM_CURSO if em_curso else ROTULO_DE_CONFIRMAR if armada else _e(acao.rotulo)
-    return (f'<button class="{classe}" data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}"{ocupado}>'
-            f'{_icone_da_acao(acao.icone)}<span>{rotulo}</span></button>'
-            f"{veredito_html(veredito)}")
+    return (f'<button class="{classe}" data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}"'
+            f'{dica}{ocupado}>{_icone_da_acao(acao.icone)}<span>{rotulo}</span></button>'
+            f"{junto}{veredito_html(veredito)}")
 
 
 def armada_em(armada: Sequence[str], acao_id: str, alvo: str = "") -> bool:
@@ -2323,23 +2366,28 @@ def barra_de_acoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
                         em_curso: frozenset[tuple[str, str]] = frozenset(),
                         armada: Sequence[str] = (), desligada: bool = False,
                         vereditos: Mapping[str, Veredito] | None = None,
-                        forte: bool = True) -> str:
-    """As ações de uma aba, numa fileira; a primeira é a forte (sem ``forte``, nenhuma). Cada uma
-    leva ao lado o veredito da última resposta da extensão àquela ação."""
+                        forte: bool = True, estado: Mapping[str, Any] | None = None) -> str:
+    """As ações de uma aba, numa fileira; a primeira declarada é a forte (sem ``forte``, nenhuma).
+    Só as que o ``estado`` deixa aparecer (:func:`acoes_que_aparecem`) são desenhadas; cada uma
+    leva ao lado o texto que o estado publica para aquela ação e o veredito da última resposta."""
+    visiveis = acoes_que_aparecem(acoes, estado)
+    textos = textos_ao_lado(estado)
     return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=forte and n == 0,
                              armada=armada_em(armada, a.id), desligada=desligada,
-                             veredito=(vereditos or {}).get(a.id))
-                   for n, a in enumerate(acoes))
+                             veredito=(vereditos or {}).get(a.id), ao_lado=textos.get(a.id, ""))
+                   for n, a in enumerate(acoes) if a in visiveis)
 
 
 def acoes_dos_cartoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            armada: Sequence[str] = (), desligada: bool = False,
-                           vereditos: Mapping[str, Veredito] | None = None) -> dict[str, str]:
+                           vereditos: Mapping[str, Veredito] | None = None,
+                           estado: Mapping[str, Any] | None = None) -> dict[str, str]:
     """Os botões das ações com ``cartao``, pelo nome do cartão em que moram."""
     nomes = list(dict.fromkeys(a.cartao for a in acoes if a.cartao))
     return {n: barra_de_acoes_html(mod, [a for a in acoes if a.cartao == n], em_curso, armada,
-                                   desligada, vereditos, forte=False) for n in nomes}
+                                   desligada, vereditos, forte=False, estado=estado)
+            for n in nomes}
 
 
 def _aparelhos_geridos(estado: Mapping[str, Any] | None) -> list[dict[str, Any]]:
@@ -2730,7 +2778,8 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        controles: tuple[str, str] = ("", ""), armada: Sequence[str] = (),
                        desligada: bool = False, pagina: tuple[str, str] | None = None,
                        abas: Sequence[str] = (),
-                       vereditos: Mapping[str, Veredito] | None = None) -> str:
+                       vereditos: Mapping[str, Veredito] | None = None,
+                       estado: Mapping[str, Any] | None = None) -> str:
     """As abas do arranjo C: em cada uma, as ações (``#mod-acoes-<n>``), a lista dos aparelhos
     se a aba é a do ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se é a do
     ``grupo`` deles (``#mod-controles``; ``controles`` é o par aba e cartões) e as linhas das
@@ -2750,15 +2799,16 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
     da_pagina = pagina is not None and aba == pagina[0]
     aberta = aba if aba in por_aba or da_pagina else primeiro
     em_curso = gestao.em_curso if gestao else frozenset()
-    nos_cartoes = acoes_dos_cartoes_html(mod, acoes, em_curso, armada, desligada, vereditos)
+    nos_cartoes = acoes_dos_cartoes_html(mod, acoes, em_curso, armada, desligada, vereditos,
+                                         estado)
     telas = []
     for n, nome in enumerate(nomes):
         partes = []
         fileira = ""
         if acoes_da[nome]:
-            fileira = (f'<div class="mj-acoes" id="mod-acoes-{n}">'
-                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada, desligada, vereditos)}"
-                       "</div>")
+            barra = barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada, desligada,
+                                        vereditos, estado=estado)
+            fileira = f'<div class="mj-acoes" id="mod-acoes-{n}">{barra}</div>'
         lista = (f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>'
                  if gestao and gestao.aparelhos.grupo == nome else "")
         ccs = (f'<div class="mj-aps mj-ccs" id="mod-controles">{controles[1]}</div>'

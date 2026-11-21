@@ -94,7 +94,9 @@ PRAZO_DA_CAPTURA_SAIR_S = 2.0
 JOGOS_POR_LANCADOR = 5000
 
 ESTADOS_DO_ACESSORIO = ("ligado", "procurando", "desligado", "falhou")
+ESTADOS_DA_CONEXAO = (*ESTADOS_DO_ACESSORIO, "esperando")
 TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
+TEXTO_DA_ACAO = 120
 ITENS_DO_ESTADO = 32
 ESCOLHAS_DA_CONEXAO = 8
 LINHAS_DO_AGORA = 6
@@ -774,10 +776,11 @@ def _curto(valor: Any, onde: str, maximo: int) -> str:
     return valor.strip()
 
 
-def _estado_do_item(bruto: dict[str, Any], onde: str) -> str:
+def _estado_do_item(bruto: dict[str, Any], onde: str,
+                    aceitos: tuple[str, ...] = ESTADOS_DO_ACESSORIO) -> str:
     estado = bruto.get("estado", "ligado")
-    if estado not in ESTADOS_DO_ACESSORIO:
-        raise _recusa_do_estado(f"o estado de {onde} é um de {', '.join(ESTADOS_DO_ACESSORIO)}.")
+    if estado not in aceitos:
+        raise _recusa_do_estado(f"o estado de {onde} é um de {', '.join(aceitos)}.")
     return str(estado)
 
 
@@ -935,7 +938,7 @@ def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
         "id": _curto(bruto.get("id"), "o id da conexão", 40),
         "tipo": _curto(bruto.get("tipo"), "o tipo da conexão", 30),
         "transporte": transporte,
-        "estado": _estado_do_item(bruto, "uma conexão"),
+        "estado": _estado_do_item(bruto, "uma conexão", ESTADOS_DA_CONEXAO),
         "motivo": None if motivo in (None, "") else _curto(motivo, "o motivo da conexão", 120),
         **_escolhas_da_conexao(bruto),
     }
@@ -986,8 +989,9 @@ def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
     """``linhas`` (o pedaço «linhas» do «Agora»: até ``LINHAS_DO_AGORA`` pares ``{rotulo,
     valor}``, o resto cai), ``presentes`` (os nomes que o ``aparece_com`` de ``@presente`` lê, até
     ``ITENS_DO_ESTADO``), ``limiar`` (de 0 a 10, a linha tracejada do pedaço «clima»),
-    situação (a faixa do alto da janela) e ``leituras`` (o que cada sentido lê agora, até
-    ``ITENS_DO_ESTADO``); cada um só sai quando a extensão o manda."""
+    situação (a faixa do alto da janela), ``leituras`` (o que cada sentido lê agora, até
+    ``ITENS_DO_ESTADO``) e as ações pedidas (:func:`_acoes_do_estado`); cada um só sai quando a
+    extensão o manda."""
     saida: dict[str, Any] = {}
     if params.get("linhas") is not None:
         linhas = params["linhas"]
@@ -1015,7 +1019,19 @@ def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(leituras, list):
             raise _recusa_do_estado("as leituras são uma lista de {opcao, nivel, frase}.")
         saida["leituras"] = [_leitura_do_estado(x) for x in leituras[:ITENS_DO_ESTADO]]
+    if params.get("acoes") is not None:  # (noqa-acento)
+        saida["acoes"] = _acoes_do_estado(params["acoes"])  # (noqa-acento)
     return saida
+
+
+def _acoes_do_estado(bruto: Any) -> dict[str, str]:
+    """``{id da ação: texto}``: as ações ``pedida`` que aparecem agora e o texto ao lado de cada
+    botão. O texto vem de fora (o endereço de uma página, por exemplo) e se corta em
+    ``TEXTO_DA_ACAO`` letras em vez de recusar o estado inteiro."""
+    if not isinstance(bruto, dict) or not all(isinstance(t, str) for t in bruto.values()):
+        raise _recusa_do_estado("as ações do estado são um objeto {id da ação: texto}.")
+    return {_curto(k, "o id de uma ação do estado", 40): t[:TEXTO_DA_ACAO]
+            for k, t in list(bruto.items())[:ITENS_DO_ESTADO]}
 
 
 def _situacao_do_estado(bruto: Any) -> dict[str, Any]:

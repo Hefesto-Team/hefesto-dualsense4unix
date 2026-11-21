@@ -2945,9 +2945,11 @@ def _o_modo_de(manifesto: Any, valores: dict[str, Any]) -> str:
 
 def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
     """O ``acessorios.estado`` que a janela desenha: com a coluna «Agora», com aparelhos ou com
-    os controles deles, com a chave «Memória» ou com uma opção que aparece com ``@presente``."""
+    os controles deles, com a chave «Memória», com uma opção que aparece com ``@presente`` ou com
+    uma ação ``pedida``."""
     return (_AGORA.agora() if _MEXIDA.agora or manifesto.aparelhos_acoes
-            or manifesto.aparelhos_controles or _muda_com_o_estado(manifesto) else None)
+            or manifesto.aparelhos_controles or _muda_com_o_estado(manifesto)
+            or any(a.pedida for a in manifesto.acoes) else None)
 
 
 def _muda_com_o_estado(manifesto: Any) -> bool:
@@ -3048,7 +3050,8 @@ def _aba_dos_controles(manifesto: Any) -> str:
 
 
 def _acao_da_janela(a: Any) -> exp.AcaoDaJanela:
-    return exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "", a.cartao or "")
+    return exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "", a.cartao or "",
+                            a.pedida, a.dica or "")
 
 
 def _aparelhos_da_janela(manifesto: Any) -> exp.AparelhosDaJanela | None:
@@ -3121,10 +3124,10 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
                                                  tuple(manifesto.abas)).items():
             blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(
                 mod_id, acoes_da_aba, em_curso, _armada_de(mod_id), _MEXIDA.desligada,
-                _MEXIDA.vereditos)
+                _MEXIDA.vereditos, estado=estado)
         for cartao, botoes in exp.acoes_dos_cartoes_html(
                 mod_id, acoes, em_curso, _armada_de(mod_id), _MEXIDA.desligada,
-                _MEXIDA.vereditos).items():
+                _MEXIDA.vereditos, estado).items():
             blocos[f"#{exp.id_do_cartao(cartao)}"] = botoes
     blocos.update(_blocos_dos_sentidos(manifesto, estado))
     if manifesto.opcao_livre is not None:

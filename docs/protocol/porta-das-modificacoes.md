@@ -119,6 +119,12 @@ Também desde 16/11/2026, a `situacao`, `{estado, frase}`, que a faixa do alto d
 até 32 `{opcao, nivel, frase, cego}`, o que cada sentido lê agora, ao lado da opção `opcao` (o id de uma opção do manifesto, na forma de chave): `nivel` de 0 a 100 (ou
 nulo, sem medidor), `frase` até 60 letras e `cego` verdadeiro no sentido que não lê nada. Estado fora da forma, nível
 fora da faixa ou texto longo recusa o estado. O Hefesto de antes descarta os dois.
+Desde 20/11/2026, a conexão pode levar o `estado` `esperando` (só a conexão, nunca o aparelho): a linha espera um
+gesto de quem usa, como o aceite de uma página, e se pinta laranja, «Esperando o aceite», com o `motivo` na dica. E o
+estado pode levar `acoes`, `{id da ação: texto}`, até 32: as ações `pedida` do manifesto que aparecem agora, e o
+texto que vai ao lado de cada botão (vazio, nenhum). O texto vem de fora (o endereço de uma página, que pode ser a
+palavra `null`), corta-se em 120 letras sem recusar o estado e se mostra como texto, nunca como marcação; o
+`acoes` que não é objeto de textos recusa o estado.
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -703,13 +709,16 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar:acessorios.estado` (ou
 `ler:acessorios.gesto`): a resposta da extensão é o estado que a extensão devolve, e é ele que tira o «Em curso».
 
-- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?, responde?, cartao?}]`. O `id` é chave (até 32 letras minúsculas, números,
+- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?, responde?, cartao?, pedida?, dica?}]`. O `id` é chave (até 32 letras minúsculas, números,
   hífen e sublinhado), o `rotulo` tem até 30 letras, o `grupo` é a aba em que o botão mora (sem ele, a primeira) e o `icone`
   é `procurar`, `testar`, `esquecer`, `ligar` ou `atualizar`. Id repetido recusa o manifesto. Com `responde: true`
   (desde 16/11/2026, também nas `aparelhos_acoes`), o clique espera a resposta da extensão (ver `mods.acao` abaixo).
   O `cartao` (desde 16/11/2026, até 30 letras) põe o botão no pé do cartão de opções de mesmo nome, na aba do
   `grupo`, e não na barra da aba; o cartão que não aparece leva o botão junto, e o cartão de chaves que tem botão
   nunca vira a fileira de chaves. O `cartao` que nenhuma opção declara recusa o manifesto. A ação dos aparelhos não o declara.
+  Desde 20/11/2026, a ação pode levar `dica` (até 120 letras, o texto do ponteiro sobre o botão) e `pedida: true`: o
+  botão só aparece quando o `acoes` do estado nomeia a ação, com o texto dele ao lado. A `pedida` mora na barra da
+  aba: com `cartao`, ou numa ação dos aparelhos, recusa o manifesto.
 - **`aparelhos_acoes`**: `{grupo?, acoes: [{id, rotulo, icone?}]}` (de 1 a 6 ações), as ações de cada aparelho que a extensão
   devolve em `acessorios.estado` com `id`. A ação `ligar` é a chave do cartão (o clique pede o contrário do
   `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com

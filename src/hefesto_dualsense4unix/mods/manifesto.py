@@ -547,7 +547,10 @@ class Opcao(BaseModel):
 
 
 class Acao(BaseModel):
-    """Um botão da janela que AGE: o clique vai à extensão como o evento ``extensao.acao``."""
+    """Um botão da janela que AGE: o clique vai à extensão como o evento ``extensao.acao``.
+
+    ``pedida`` desenha o botão só quando o estado que a extensão publica o pede; ``dica`` é o
+    texto do ponteiro sobre o botão."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -557,6 +560,8 @@ class Acao(BaseModel):
     icone: Literal["procurar", "testar", "esquecer", "ligar", "atualizar"] | None = None
     responde: bool = False
     cartao: str | None = Field(default=None, min_length=1, max_length=30)
+    pedida: bool = False
+    dica: str | None = Field(default=None, min_length=1, max_length=120)
 
     @field_validator("id")
     @classmethod
@@ -583,6 +588,8 @@ class AcoesDosAparelhos(BaseModel):
         if any(a.grupo or a.cartao for a in self.acoes):
             raise ValueError(
                 "a ação do aparelho mora no cartão dele e não declara grupo nem cartao")
+        if any(a.pedida for a in self.acoes):
+            raise ValueError("a ação do aparelho aparece com o aparelho e não declara pedida")
         if len({a.id for a in self.acoes}) != len(self.acoes):
             raise ValueError("ação repetida nos aparelhos")
         return self
@@ -928,8 +935,8 @@ class Manifesto(BaseModel):
 
     def _conferir_as_acoes_e_o_livre(self) -> None:
         """As ações, os aparelhos geridos e o ``livre``: a permissão do estado, ids sem repetição,
-        o ``cartao`` da ação é o de uma opção, um ``livre`` só, e a lista sem ``grupo`` só onde a
-        coluna «Agora» mostra os aparelhos."""
+        o ``cartao`` da ação é o de uma opção e nunca o da ação ``pedida``, um ``livre`` só, e a
+        lista sem ``grupo`` só onde a coluna «Agora» mostra os aparelhos."""
         livres = [o.id for o in self.opcoes if o.tipo == "livre"]
         pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # (noqa-acento)
                                         ("aparelhos_acoes", self.aparelhos_acoes is not None),
@@ -947,6 +954,9 @@ class Manifesto(BaseModel):
         if sem_cartao is not None:
             raise ValueError(f"a ação {sem_cartao.id} mora no cartão «{sem_cartao.cartao}», que "
                              "nenhuma opção declara")
+        pedida = next((a for a in self.acoes if a.pedida and a.cartao), None)
+        if pedida is not None:
+            raise ValueError(f"a ação {pedida.id} é pedida e mora na barra da aba, sem cartao")
         geridos = self.aparelhos_acoes
         if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
             raise ValueError(
