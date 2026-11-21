@@ -53,6 +53,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar
 try:
     from .steam_launch_options import (
         add_appid_to_steam_input_allowlist,
+        discover_vdfs,
         parse_steam_input_allowlist,
         pastas_steamapps,
         remove_appid_from_steam_input_allowlist,
@@ -62,11 +63,28 @@ try:
 except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         add_appid_to_steam_input_allowlist,
+        discover_vdfs,
         parse_steam_input_allowlist,
         pastas_steamapps,
         remove_appid_from_steam_input_allowlist,
         steam_game_running,
         steam_running,
+    )
+
+try:
+    from ..utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
+    from ..utils.arquivo_de_terceiro import ler as ler_de_terceiro
+    from ..utils.arquivo_de_terceiro import podar as podar_de_terceiro
+except ImportError:  # pragma: no cover
+    sys.path.insert(1, str(Path(__file__).resolve().parents[2]))
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        escrever as escrever_de_terceiro,
+    )
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        ler as ler_de_terceiro,
+    )
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        podar as podar_de_terceiro,
     )
 
 if TYPE_CHECKING:
@@ -887,15 +905,18 @@ def remove_compat_tool_mapping(
     return "".join(out), reverted
 
 
-def _write_vdf_with_backup(vdf: Path, new_text: str) -> Path:
-    """Backup `.bak.hefesto-proton-<ts>` + escrita tmp+replace (padrão da casa)."""
-    backup = vdf.with_name(vdf.name + f".bak.hefesto-proton-{int(time.time())}")
-    shutil.copy2(vdf, backup)
-    tmp = vdf.with_name(vdf.name + ".hefesto-tmp")
-    tmp.write_text(new_text, encoding="utf-8")
-    shutil.copymode(vdf, tmp)
-    tmp.replace(vdf)
-    return backup
+def _ler_o_vdf(vdf: Path) -> str:
+    """O texto do ``config.vdf``; o que não se lê levanta ``OSError`` com o motivo em frase."""
+    leitura = ler_de_terceiro(vdf)
+    if leitura.texto is None:
+        raise OSError(leitura.motivo or f"{vdf.name} não existe")
+    return leitura.texto
+
+
+def _write_vdf_with_backup(vdf: Path, new_text: str) -> str:
+    """A cópia `.bak.hefesto-proton-<ts>` e a troca inteira, pelo dono dos arquivos de terceiro."""
+    backup = escrever_de_terceiro(vdf, new_text, familia="hefesto-proton")
+    return str(backup) if backup is not None else ""
 
 
 def _steam_gate() -> str | None:
@@ -1064,7 +1085,7 @@ def _lock_dentro_da_trava(
         dict.fromkeys([*_pinos_ja_usados(state), *migrar_de, tool_name])
     )
     try:
-        original = vdf.read_text(encoding="utf-8")
+        original = _ler_o_vdf(vdf)
         sem_entrada_nova: Collection[str] = ()
         if sem_entrada_de is not None:
             ja_no_mapa = extract_compat_tool_mapping(original)
@@ -1096,7 +1117,7 @@ def _lock_dentro_da_trava(
         _merge_lock_state(
             state, tool_name=tool_name, changes=changes, pinos_nossos=pinos_nossos
         )
-        result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
+        result["backup"] = _write_vdf_with_backup(vdf, new_text)
     except OSError as exc:
         result["reason"] = str(exc)
         return result
@@ -1305,7 +1326,7 @@ def unlock_games_from_pinned_proton(
     try:
         with _uma_trava_por_vez(state, ativa=not dry_run):
             try:
-                original = vdf.read_text(encoding="utf-8")
+                original = _ler_o_vdf(vdf)
                 new_text, reverted = remove_compat_tool_mapping(
                     original, tool_name=tool_name, changes=changes
                 )
@@ -1319,7 +1340,7 @@ def unlock_games_from_pinned_proton(
                 return result
             try:
                 if reverted:
-                    result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
+                    result["backup"] = _write_vdf_with_backup(vdf, new_text)
                 state.unlink(missing_ok=True)
             except OSError as exc:
                 result["reason"] = str(exc)
@@ -1377,7 +1398,7 @@ def destravar_um_jogo(
     try:
         with _uma_trava_por_vez(state, ativa=not dry_run):
             try:
-                original = vdf.read_text(encoding="utf-8")
+                original = _ler_o_vdf(vdf)
                 new_text, reverted = remove_compat_tool_mapping(
                     original, tool_name=tool_name, changes={alvo: changes[alvo]}
                 )
@@ -1391,7 +1412,7 @@ def destravar_um_jogo(
                 return result
             try:
                 if reverted:
-                    result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
+                    result["backup"] = _write_vdf_with_backup(vdf, new_text)
                 restante = {k: v for k, v in changes.items() if k != alvo}
                 tmp = state.with_name(state.name + ".tmp")
                 tmp.write_text(
@@ -2729,6 +2750,14 @@ def _cmd_apagar_as_sobras(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_podar_as_copias(args: argparse.Namespace) -> int:
+    vdfs = [*discover_vdfs(), args.config_vdf if args.config_vdf else default_config_vdf()]
+    apagadas = sum(podar_de_terceiro(vdf) for vdf in vdfs)
+    print(f"[proton-pin] cópias: {apagadas} cópia(s) velha(s) dos vdf saíram; ficam a primeira "
+          "e as cinco mais novas de cada família")
+    return 0
+
+
 def _cmd_manter(args: argparse.Namespace) -> int:
     """O vigia da Steam: atualiza o Proton, trava todo jogo, fixa os lançadores, apaga as sobras."""
     conf = _conf_ou_rc(args)
@@ -2775,6 +2804,10 @@ def _manter_a_steam(conf: dict[str, str], args: argparse.Namespace) -> int:
     vdf = args.config_vdf if args.config_vdf else raiz / "config" / "config.vdf"
     if not vdf.is_file():
         print(f"[proton-pin] manter: {vdf} ainda não existe — nada a travar")
+        return 0
+    ilegivel = ler_de_terceiro(vdf).motivo
+    if ilegivel:
+        print(f"[proton-pin] manter: {ilegivel} — nada a travar nele, o Hefesto não o toca")
         return 0
     appids = list_installed_appids()
     rc = _travar_e_contar(
@@ -2950,10 +2983,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
     compat = args.compat_dir if args.compat_dir else default_compat_dir()
     conf = conf_que_vale(_load_conf(args.conf), compat)
     vdf = args.config_vdf if args.config_vdf else default_config_vdf()
-    try:
-        text = vdf.read_text(encoding="utf-8")
-    except OSError:
-        text = ""
+    text = ler_de_terceiro(vdf, errors="replace").texto or ""
     report = proton_pin_report(
         conf,
         compat_dir=compat,
@@ -3012,6 +3042,12 @@ def main(argv: list[str] | None = None) -> int:
         help="apaga as versões do Proton deixadas para trás na Steam e no Heroic (Steam fechada)",
     )
     group.add_argument(
+        "--podar-as-copias",
+        action="store_true",
+        help="apaga as cópias velhas que o Hefesto deixou ao lado dos vdf da Steam "
+             "(ficam a primeira e as cinco mais novas de cada família)",
+    )
+    group.add_argument(
         "--lancadores",
         action="store_true",
         help="fixa no Proton fixado todo jogo dos lançadores que não são a Steam "
@@ -3067,6 +3103,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_atualizar(args)
         if args.apagar_as_sobras:
             return _cmd_apagar_as_sobras(args)
+        if args.podar_as_copias:
+            return _cmd_podar_as_copias(args)
         if args.lancadores:
             return _cmd_lancadores(args)
         if args.fora_do_pino is not None:

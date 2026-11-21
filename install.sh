@@ -3172,9 +3172,11 @@ fi
 readonly CAMADAS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
 readonly CAMADAS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${CAMADAS_SRC}" ]]; then
-    _faria "instalar o curador de camadas Vulkan em ${CAMADAS_TARGET}"
+    _faria "instalar o curador de camadas Vulkan em ${CAMADAS_TARGET}, com o dono dos arquivos de terceiro ao lado"
 elif [[ -f "${CAMADAS_SRC}" ]]; then
     install -Dm755 "${CAMADAS_SRC}" "${CAMADAS_TARGET}"
+    install -Dm644 "${ROOT_DIR}/src/hefesto_dualsense4unix/utils/arquivo_de_terceiro.py" \
+        "${CAMADAS_TARGET%/*}/arquivo_de_terceiro.py"
 else
     warn "camadas_vulkan.py ausente — as sobreposições Vulkan não vão sair no lançamento dos jogos"
 fi
@@ -3968,8 +3970,12 @@ if [[ "${NO_PROTON_PIN}" -eq 0 && "${DRY_RUN:-0}" -ne 1 && -f "${PROTON_PIN_PY}"
     # shellcheck disable=SC2086
     ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --apagar-as-sobras \
         || warn "as versões velhas do Proton ficaram por agora; o vigia da Steam as apaga depois"
+    # shellcheck disable=SC2086
+    ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --podar-as-copias \
+        || warn "as cópias velhas dos vdf ficaram por agora; a próxima escrita do Hefesto as poda"
 elif [[ "${DRY_RUN:-0}" -eq 1 && "${NO_PROTON_PIN}" -eq 0 ]]; then
     _faria "apontar para a mesma versão do Proton os jogos do Heroic (nativo e Flatpak) e os das extensões que dizem como fixar; o jogo que roda pelo Wine fica, e a aba Lançadores o mostra"
+    _faria "apagar as cópias velhas que o Hefesto deixou ao lado dos vdf da Steam (ficam a primeira e as cinco mais novas de cada família)"
 fi
 
 if [[ "${_steam_fechada_por_nos}" -eq 1 ]]; then

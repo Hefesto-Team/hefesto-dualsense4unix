@@ -223,6 +223,9 @@ def test_o_gancho_cura_de_verdade_um_prefixo_e_o_jogo_abre(tmp_path: Path) -> No
         .read_bytes()
     )
     alvo.chmod(0o755)
+    (binario / "arquivo_de_terceiro.py").write_bytes(
+        (RAIZ / "src" / "hefesto_dualsense4unix" / "utils" / "arquivo_de_terceiro.py").read_bytes()
+    )
 
     prefixo = tmp_path / "compatdata" / "222"
     (prefixo / "pfx").mkdir(parents=True)
@@ -261,6 +264,9 @@ def test_a_copia_avulsa_nao_finge_que_olhou(tmp_path: Path) -> None:
     avulso.parent.mkdir(parents=True)
     fonte = RAIZ / "src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
     avulso.write_bytes(fonte.read_bytes())
+    (avulso.parent / "arquivo_de_terceiro.py").write_bytes(
+        (RAIZ / "src/hefesto_dualsense4unix/utils/arquivo_de_terceiro.py").read_bytes()
+    )
 
     ambiente = dict(os.environ)
     ambiente.pop("PYTHONPATH", None)
@@ -324,6 +330,10 @@ def test_o_install_materializa_o_curador_sem_flag(tmp_path: Path) -> None:
         "a cópia instalada divergiu da fonte — a fonte da verdade tem de ser UMA"
     )
     assert "WARN:" not in saida.stderr
+    dono = RAIZ / "src/hefesto_dualsense4unix/utils/arquivo_de_terceiro.py"
+    assert (alvo.parent / "arquivo_de_terceiro.py").read_bytes() == dono.read_bytes(), (
+        "o curador instalado não acha o dono dos arquivos de terceiro ao lado"
+    )
 
     alvo.write_text("velho\n", encoding="utf-8")
     de_novo = subprocess.run(

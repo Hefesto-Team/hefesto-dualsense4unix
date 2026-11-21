@@ -84,6 +84,14 @@ except ImportError:  # pragma: no cover
         e_avaliador_do_install_script,
     )
 
+try:
+    from ..utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
+except ImportError:  # pragma: no cover
+    sys.path.insert(1, str(Path(__file__).resolve().parents[2]))
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        escrever as escrever_de_terceiro,
+    )
+
 WRAPPER_HOME_RELPATH = ".local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 
 MOTIVO_NAO_FIRMOU = "nao_firmou"
@@ -885,14 +893,7 @@ def apply_wrapper_to_all_games(
             continue
         if not dry_run:
             try:
-                backup = vdf.with_name(
-                    vdf.name + f".bak.hefesto-launch-{int(time.time())}"
-                )
-                shutil.copy2(vdf, backup)
-                tmp = vdf.with_name(vdf.name + ".hefesto-tmp")
-                tmp.write_text(new_text, encoding="utf-8")
-                shutil.copymode(vdf, tmp)
-                tmp.replace(vdf)
+                escrever_de_terceiro(vdf, new_text, familia="hefesto-launch", conferir=False)
             except OSError as exc:
                 result["errors"].append(
                     {"vdf": str(vdf), "appid": "", "reason": str(exc)}
@@ -974,14 +975,7 @@ def tirar_o_atalho_dos_jogos(
         tirados = sorted(a for a in alvo if antes.get(a) != depois.get(a))
         if not dry_run:
             try:
-                backup = vdf.with_name(
-                    vdf.name + f".bak.hefesto-launch-{int(time.time())}"
-                )
-                shutil.copy2(vdf, backup)
-                tmp = vdf.with_name(vdf.name + ".hefesto-tmp")
-                tmp.write_text(novo, encoding="utf-8")
-                shutil.copymode(vdf, tmp)
-                tmp.replace(vdf)
+                escrever_de_terceiro(vdf, novo, familia="hefesto-launch", conferir=False)
             except OSError as exc:
                 result["errors"].append(
                     {"vdf": str(vdf), "appid": "", "reason": str(exc)}
@@ -1883,12 +1877,7 @@ def process_vdf(vdf: Path, mode: str, *, dry_run: bool = False) -> tuple[int, st
     )
     if dry_run:
         return changed, diff
-    backup = vdf.with_name(vdf.name + f".bak.hefesto-launch-{int(time.time())}")
-    shutil.copy2(vdf, backup)
-    tmp = vdf.with_name(vdf.name + ".hefesto-tmp")
-    tmp.write_text(new_text, encoding="utf-8")
-    shutil.copymode(vdf, tmp)
-    tmp.replace(vdf)
+    escrever_de_terceiro(vdf, new_text, familia="hefesto-launch", conferir=False)
     _, resto = transform_vdf_text(vdf.read_text(encoding="utf-8"), mode)
     if resto:
         raise OSError(

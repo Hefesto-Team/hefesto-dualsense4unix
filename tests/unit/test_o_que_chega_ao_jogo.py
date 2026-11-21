@@ -59,6 +59,9 @@ def _instalar_o_curador(lar: Path) -> None:
     alvo.parent.mkdir(parents=True)
     alvo.write_bytes(FONTE_DO_CURADOR.read_bytes())
     alvo.chmod(0o755)
+    (alvo.parent / "arquivo_de_terceiro.py").write_bytes(
+        (RAIZ / "src" / "hefesto_dualsense4unix" / "utils" / "arquivo_de_terceiro.py").read_bytes()
+    )
 
 
 def _lancar(lar: Path, **extra: str) -> dict[str, str]:

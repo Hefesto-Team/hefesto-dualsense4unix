@@ -107,15 +107,15 @@ def test_a_releitura_que_desmente_a_escrita_fica_no_registro(
     """A Steam regravou logo depois da escrita: o relato e o doctor dizem que foi desfeita."""
     lar.steam_escreve(_vdf("algo velho %command%"))
     antes = lar.vdf.read_text(encoding="utf-8")
-    escreve = Path.write_text
+    troca = Path.replace
 
-    def steam_regrava(self: Path, dados: str, *args: object, **kw: object) -> int:
-        feito = escreve(self, dados, *args, **kw)  # type: ignore[arg-type]
-        if self.name == "localconfig.vdf":
-            escreve(self, antes, encoding="utf-8")
+    def steam_regrava(self: Path, alvo: str | Path) -> Path:
+        feito = troca(self, alvo)
+        if self.name.endswith(".hefesto-tmp") and Path(alvo).name == "localconfig.vdf":
+            Path(alvo).write_text(antes, encoding="utf-8")
         return feito
 
-    monkeypatch.setattr(Path, "write_text", steam_regrava)
+    monkeypatch.setattr(Path, "replace", steam_regrava)
     relato = lar.aplicar()
     monkeypatch.undo()
 

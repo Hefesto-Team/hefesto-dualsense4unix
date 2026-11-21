@@ -362,15 +362,15 @@ def test_vdf_que_a_steam_regravou_depois_da_escrita_nao_e_aplicado(
     vdf = _vdf_de_mentira(tmp_path)
     antes = vdf.read_text(encoding="utf-8")
     _tabela(tmp_path, **{APPID: OPCOES})
-    escreve = Path.write_text
+    troca = Path.replace
 
-    def steam_regrava(self: Path, dados: str, *args: object, **kw: object) -> int:
-        feito = escreve(self, dados, *args, **kw)  # type: ignore[arg-type]
-        if self.name == "localconfig.vdf":
-            escreve(self, antes, encoding="utf-8")
+    def steam_regrava(self: Path, alvo: str | Path) -> Path:
+        feito = troca(self, alvo)
+        if self.name.endswith(".hefesto-tmp") and Path(alvo).name == "localconfig.vdf":
+            Path(alvo).write_text(antes, encoding="utf-8")
         return feito
 
-    monkeypatch.setattr(Path, "write_text", steam_regrava)
+    monkeypatch.setattr(Path, "replace", steam_regrava)
     relato = opj.aplicar(vdfs=[vdf], config_home=tmp_path)
     monkeypatch.undo()
 

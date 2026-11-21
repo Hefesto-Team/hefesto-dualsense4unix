@@ -6,12 +6,20 @@ import contextlib
 import json
 import os
 import re
-import shutil
 import sys
 import time
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    from ..utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
+    from ..utils.arquivo_de_terceiro import ler as ler_de_terceiro
+except ImportError:  # pragma: no cover
+    from arquivo_de_terceiro import (  # type: ignore[no-redef]
+        escrever as escrever_de_terceiro,
+    )
+    from arquivo_de_terceiro import ler as ler_de_terceiro  # type: ignore[no-redef]
 
 _LIGADA = 0
 
@@ -50,8 +58,6 @@ CAMADAS_PRESERVADAS: tuple[tuple[str, str], ...] = (
 )
 
 ESTADO_BASENAME = "camadas-vulkan.json"
-
-_BACKUP_SUFIXO = ".bak.hefesto-camadas-"
 
 
 def desescapar(valor: str) -> str:
@@ -567,7 +573,9 @@ class Resultado:
 
 def _reescrever(registro: Path, alvos: dict[tuple[str, str], str]) -> None:
     """Troca o dword das entradas nomeadas em `alvos`, e em nenhuma outra."""
-    texto = registro.read_text(encoding="utf-8", errors="replace")
+    texto = ler_de_terceiro(registro, errors="surrogateescape").texto
+    if texto is None:
+        raise OSError(f"{registro.name} não se lê")
     saida: list[str] = []
     chave_atual: str | None = None
     quebra = "\r\n" if "\r\n" in texto else "\n"
@@ -591,11 +599,8 @@ def _reescrever(registro: Path, alvos: dict[tuple[str, str], str]) -> None:
             saida.append(linha)
             continue
         saida.append(f"{entrada.group('prefixo')}{novo}{entrada.group('sufixo')}")
-    backup = registro.with_name(f"{registro.name}{_BACKUP_SUFIXO}{int(time.time())}")
-    shutil.copy2(registro, backup)
-    tmp = registro.with_name(f"{registro.name}.hefesto-tmp")
-    tmp.write_text(quebra.join(saida), encoding="utf-8")
-    os.replace(tmp, registro)
+    escrever_de_terceiro(
+        registro, quebra.join(saida), familia="hefesto-camadas", errors="surrogateescape")
 
 
 def aplicar_no_prefixo(

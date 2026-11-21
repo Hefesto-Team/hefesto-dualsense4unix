@@ -104,9 +104,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import shutil
 import sys
-import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -141,6 +139,14 @@ except ImportError:  # pragma: no cover
         steam_running,
     )
     from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
+
+try:
+    from ..utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
+except ImportError:  # pragma: no cover
+    sys.path.insert(1, str(Path(__file__).resolve().parents[2]))
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        escrever as escrever_de_terceiro,
+    )
 
 CHAVE = "UseSteamControllerConfig"
 _CHAVE_MIN = CHAVE.lower()
@@ -674,14 +680,7 @@ def garantir_ponte(
             continue
         if not dry_run:
             try:
-                backup = vdf.with_name(
-                    vdf.name + f".bak.steam-input-ponte-{int(time.time())}"
-                )
-                shutil.copy2(vdf, backup)
-                tmp = vdf.with_name(vdf.name + ".hefesto-ponte-tmp")
-                tmp.write_text(novo, encoding="utf-8")
-                shutil.copymode(vdf, tmp)
-                tmp.replace(vdf)
+                escrever_de_terceiro(vdf, novo, familia="steam-input-ponte")
             except OSError as exc:
                 detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
                 houve_erro = True
@@ -896,14 +895,7 @@ def garantir_fora_da_lista_desligado(
     for vdf, novo, desligados in planos:
         if not dry_run:
             try:
-                backup = vdf.with_name(
-                    vdf.name + f".bak.steam-input-fora-da-lista-{int(time.time())}"
-                )
-                shutil.copy2(vdf, backup)
-                tmp = vdf.with_name(vdf.name + ".hefesto-fora-da-lista-tmp")
-                tmp.write_text(novo, encoding="utf-8")
-                shutil.copymode(vdf, tmp)
-                tmp.replace(vdf)
+                escrever_de_terceiro(vdf, novo, familia="steam-input-fora-da-lista")
             except OSError as exc:
                 detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
                 houve_erro = True

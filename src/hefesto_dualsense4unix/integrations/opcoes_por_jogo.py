@@ -112,6 +112,18 @@ except ImportError:  # pragma: no cover
     )
     from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
+try:
+    from ..utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
+    from ..utils.arquivo_de_terceiro import ler as ler_de_terceiro
+except ImportError:  # pragma: no cover
+    sys.path.insert(1, str(Path(__file__).resolve().parents[2]))
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        escrever as escrever_de_terceiro,
+    )
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        ler as ler_de_terceiro,
+    )
+
 TABELA_RELPATH = "hefesto-dualsense4unix/opcoes_por_jogo.txt"
 
 CABECALHO = """\
@@ -210,32 +222,61 @@ def parse(texto: str) -> dict[str, str]:
 
 def ler(config_home: Path | None = None) -> dict[str, str]:
     """A tabela do disco. Arquivo ausente ou ilegível = tabela vazia."""
-    try:
-        return parse(tabela_path(config_home).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+    return parse(ler_de_terceiro(tabela_path(config_home)).texto or "")
+
+
+class TabelaIlegivelError(ValueError):
+    """A tabela existe e não se lê: a escrita recusa, para não apagar o resto da tabela."""
+
+
+def _texto_para_escrever(config_home: Path | None) -> str:
+    leitura = ler_de_terceiro(tabela_path(config_home))
+    if leitura.ilegivel:
+        raise TabelaIlegivelError(f"{leitura.motivo}; o Hefesto não grava por cima da tabela")
+    return leitura.texto or CABECALHO
+
+
+def _com_a_linha(texto: str, appid: str, opcoes: str | None) -> str:
+    """O texto com a linha do jogo trocada (ou posta no fim, ou tirada), sem mexer no resto."""
+    saida: list[str] = []
+    achou = False
+    for linha in texto.splitlines(keepends=True):
+        if appid not in parse(linha):
+            saida.append(linha)
+            continue
+        if opcoes is not None and not achou:
+            saida.append(f"{appid}\t{opcoes}\n")
+        achou = True
+    if opcoes is not None and not achou:
+        if saida and not saida[-1].endswith("\n"):
+            saida[-1] += "\n"
+        saida.append(f"{appid}\t{opcoes}\n")
+    return "".join(saida)
 
 
 def gravar(tabela: dict[str, str], config_home: Path | None = None) -> Path:
     """Escreve a tabela inteira, com o cabeçalho. Devolve o caminho."""
     destino = tabela_path(config_home)
-    destino.parent.mkdir(parents=True, exist_ok=True)
     corpo = "".join(f"{a}\t{o}\n" for a, o in sorted(tabela.items(), key=lambda x: int(x[0])))
-    destino.write_text(CABECALHO + corpo, encoding="utf-8")
+    escrever_de_terceiro(destino, CABECALHO + corpo, familia="hefesto-tabela")
     return destino
 
 
 def definir(appid: int | str, opcoes: str, config_home: Path | None = None) -> str:
-    """Põe (ou troca) as opções de UM jogo. Devolve o valor guardado."""
+    """Põe (ou troca) as opções de UM jogo. Devolve o valor guardado.
+
+    Levanta ``TabelaIlegivelError`` se a tabela existe e não se lê; as outras linhas e os
+    comentários ficam como estão.
+    """
     chave = str(appid).strip()
     if not _APPID.match(chave):
         raise ValueError(f"appid inválido: {appid!r}")
     valor = opcoes.strip()
     if not valor:
         raise ValueError("opções vazias — para tirar o jogo da tabela, use `tirar`")
-    tabela = ler(config_home)
-    tabela[chave] = valor
-    gravar(tabela, config_home)
+    texto = _texto_para_escrever(config_home)
+    escrever_de_terceiro(
+        tabela_path(config_home), _com_a_linha(texto, chave, valor), familia="hefesto-tabela")
     return valor
 
 
@@ -246,11 +287,11 @@ def tirar(
 ) -> bool:
     """Tira um jogo da tabela e do registro. ``False`` quando ele já não estava lá."""
     chave = str(appid).strip()
-    tabela = ler(config_home)
-    if chave not in tabela:
+    texto = _texto_para_escrever(config_home)
+    if chave not in parse(texto):
         return False
-    del tabela[chave]
-    gravar(tabela, config_home)
+    escrever_de_terceiro(
+        tabela_path(config_home), _com_a_linha(texto, chave, None), familia="hefesto-tabela")
     registro = ler_registro(estado_home)
     if registro.pop(chave, None) is not None:
         gravar_registro(registro, estado_home)
@@ -729,9 +770,8 @@ def aplicar(
             aplicados.extend({"vdf": str(vdf), "appid": a, "reason": "dry-run"} for a in feitos)
             continue
         try:
-            backup = vdf.with_name(vdf.name + f".bak.hefesto-opcoes-{int(time.time())}")
-            backup.write_text(texto, encoding="utf-8", errors="surrogateescape")
-            vdf.write_text(novo, encoding="utf-8", errors="surrogateescape")
+            escrever_de_terceiro(
+                vdf, novo, familia="hefesto-opcoes", errors="surrogateescape", conferir=False)
             no_disco = vdf.read_text(encoding="utf-8", errors="surrogateescape")
         except OSError as exc:
             erros.append({"vdf": str(vdf), "appid": "", "reason": str(exc)})
@@ -919,8 +959,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[opcoes-por-jogo] tabela em {tabela_path()}")
         return 0
     if args.tirar:
-        print(f"[opcoes-por-jogo] {args.tirar}: "
-              + ("tirado" if tirar(args.tirar) else "não estava na tabela"))
+        try:
+            tirou = tirar(args.tirar)
+        except ValueError as exc:
+            print(f"[opcoes-por-jogo] recusado: {exc}", file=sys.stderr)
+            return 2
+        print(f"[opcoes-por-jogo] {args.tirar}: " + ("tirado" if tirou else "não estava na tabela"))
         return 0
     if args.conferir:
         print(json.dumps(conferir(vdfs=args.vdf), ensure_ascii=False, indent=2, sort_keys=True))

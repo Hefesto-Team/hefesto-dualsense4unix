@@ -21,6 +21,7 @@ from typing import Any, cast
 from hefesto_dualsense4unix.integrations.identidade_de_janela import (
     umu_por_chave_do_heroic,
 )
+from hefesto_dualsense4unix.utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
 
 NUNCA_ABERTO = "nunca_aberto"
 LIDO = "lido"
@@ -598,11 +599,8 @@ def _apontar_para(ferramenta: dict[str, object], pino_dir: Path) -> None:
 
 
 def _escrever_o_json(arquivo: Path, dado: object) -> None:
-    copia = arquivo.with_name(f"{arquivo.name}.bak.hefesto-proton-{int(time.time())}")
-    shutil.copy2(arquivo, copia)
-    temporario = arquivo.with_name(arquivo.name + ".tmp")
-    temporario.write_text(json.dumps(dado, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    temporario.replace(arquivo)
+    escrever_de_terceiro(
+        arquivo, json.dumps(dado, indent=2, ensure_ascii=False) + "\n", familia="hefesto-proton")
 
 
 def _fixar_o_padrao(arquivo: Path, pino_dir: Path, escrever: bool) -> int:
@@ -1940,11 +1938,7 @@ PORQUE_UMU_AVULSO = "o umu avulso escolhe o Proton a cada lançamento, pelo atal
 
 
 def _escrever_com_copia(arquivo: Path, texto: str) -> None:
-    copia = arquivo.with_name(f"{arquivo.name}.bak.hefesto-proton-{int(time.time())}")
-    shutil.copy2(arquivo, copia)
-    temporario = arquivo.with_name(arquivo.name + ".tmp")
-    temporario.write_text(texto, encoding="utf-8")
-    temporario.replace(arquivo)
+    escrever_de_terceiro(arquivo, texto, familia="hefesto-proton")
 
 
 BOTTLES_FLATPAK = "com.usebottles.bottles"
