@@ -51,12 +51,12 @@
       "data": "2026-11-21",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 951,
+      "piso": 950,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
         "app/actions/config/secao_orcamento.py": 1,
-        "app/actions/daemon_actions.py": 4,
+        "app/actions/daemon_actions.py": 3,
         "app/actions/home_actions.py": 2,
         "app/actions/profiles_actions.py": 2,
         "app/gui_prefs.py": 1,
@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1287454,
+      "piso": 1289754,
       "por_item": {
-        "docs": 107801,
+        "docs": 107808,
         "scripts": 115288,
-        "src": 326127,
-        "tests": 738238
+        "src": 326935,
+        "tests": 739723
       },
-      "razao": "tamanho: +875 linhas (1286579 -> 1287454), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO, D-2011-A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES, D-2011-O-LACO-DE-AUDIO-MORRE-COM-A-JANELA, D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG; registrado no fecho, topo 564f53118a39",
+      "razao": "tamanho: +2300 linhas (1287454 -> 1289754), pagas por Origem: D-0911-O-ATUALIZADOR-REINSTALA-A-PECA-EM-DIA, D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO, D-2011-A-CONEXOES-LISTA-O-ACIONADOR-USB-AINDA-NAO-DECLARADO, D-2011-A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES, D-2011-AS-ABAS-SO-DIZEM-O-QUE-ACONTECEU, D-2011-O-ACIONADOR-DESENHA-O-CONTROLE-DE-FORA-PELO-MODELO, D-2011-O-LACO-DE-AUDIO-MORRE-COM-A-JANELA, D-2011-O-PROCURAR-SO-MANDA-ADAPTADOR-QUE-O-BLUEZ-CONHECE, D-2011-O-REINICIAR-ESPERA-O-SERVICO-E-DIZ-O-QUE-FEZ, D-2011-O-SERVICO-IMPROVISADO-SO-SE-DIZ-COM-PROVA, D-2011-OS-BOTOES-DO-SERVICO-IMPROVISADO-CONFEREM-ANTES-DE-AGIR, D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG; registrado no fecho, topo 9157cc38f072",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2205,10 +2205,16 @@
           "de": 1286579,
           "para": 1287454,
           "razao": "tamanho: +875 linhas (1286579 -> 1287454), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO, D-2011-A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES, D-2011-O-LACO-DE-AUDIO-MORRE-COM-A-JANELA, D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG; registrado no fecho, topo 564f53118a39"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1287454,
+          "para": 1289754,
+          "razao": "tamanho: +2300 linhas (1287454 -> 1289754), pagas por Origem: D-0911-O-ATUALIZADOR-REINSTALA-A-PECA-EM-DIA, D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO, D-2011-A-CONEXOES-LISTA-O-ACIONADOR-USB-AINDA-NAO-DECLARADO, D-2011-A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES, D-2011-AS-ABAS-SO-DIZEM-O-QUE-ACONTECEU, D-2011-O-ACIONADOR-DESENHA-O-CONTROLE-DE-FORA-PELO-MODELO, D-2011-O-LACO-DE-AUDIO-MORRE-COM-A-JANELA, D-2011-O-PROCURAR-SO-MANDA-ADAPTADOR-QUE-O-BLUEZ-CONHECE, D-2011-O-REINICIAR-ESPERA-O-SERVICO-E-DIZ-O-QUE-FEZ, D-2011-O-SERVICO-IMPROVISADO-SO-SE-DIZ-COM-PROVA, D-2011-OS-BOTOES-DO-SERVICO-IMPROVISADO-CONFEREM-ANTES-DE-AGIR, D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG; registrado no fecho, topo 9157cc38f072"
         }
       ],
       "unidade": "linhas",
-      "universo": 3592
+      "universo": 3599
     }
   }
 }
