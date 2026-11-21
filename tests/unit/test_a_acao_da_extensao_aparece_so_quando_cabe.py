@@ -47,7 +47,7 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
 PAREAR = {"id": "parear", "rotulo": "Parear", "grupo": "Aparelhos", "icone": "procurar"}
 DICA = "Esta página passa a comandar os brinquedos"
 ACAO_DO_SITE = {"id": "aceitar", "rotulo": "Aceitar o site", "grupo": "Aparelhos", "pedida": True,
-           "dica": DICA}
+                "dica": DICA}
 ESPERA = {"id": "jogo", "tipo": "Jogo", "transporte": "local", "estado": "esperando",
           "motivo": "Uma página pediu para comandar: null"}
 BOTAO = 'data-v="toque:aceitar"'

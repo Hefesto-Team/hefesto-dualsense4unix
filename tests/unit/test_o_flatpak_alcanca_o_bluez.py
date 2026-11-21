@@ -168,6 +168,14 @@ def test_o_daemon_so_le_o_diario_do_root() -> None:
     assert set(_referencias("DIARIO_DO_ROOT")) == {
         ("integrations/diario_do_radio.py", "caminho_do_diario_do_root")
     }
+    assert set(_referencias("PASTA_DO_ROOT")) == {
+        ("integrations/diario_do_radio.py", "<módulo>"),
+        ("integrations/curas_da_casa.py", "o_legivel"),
+    }, (
+        "a pasta do root com nome ganhou outro usuário: fora do `DIARIO_DO_ROOT` e da "
+        "leitura do portal, o caminho escapa das réguas acima"
+    )
+    assert set(_referencias("o_legivel")) == {("integrations/curas_da_casa.py", "portal")}
 
 
 def _secao(pagina: str, titulo: str) -> str:
