@@ -143,6 +143,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     campo_do_controle,
     marca_do_aparelho,
 )
+from hefesto_dualsense4unix.integrations.filho_de_som import lancar_filho
 from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
     PID_DUALSENSE,
     VID_SONY,
@@ -1063,7 +1064,7 @@ class TocadorDoRumble:
         self.rotulo = rotulo_do_tocador(self.marca)
         self._ao_mudar = ao_mudar
         self._argv_de = argv_de or argv_do_tocador
-        self._lancar: Callable[..., Any] = lancar or subprocess.Popen
+        self._lancar: Callable[..., Any] = lancar or lancar_filho
         self._conferir = conferir or conferir_o_destino_do_tocador
         self._folga_s = float(folga_s)
         self._relogio = relogio

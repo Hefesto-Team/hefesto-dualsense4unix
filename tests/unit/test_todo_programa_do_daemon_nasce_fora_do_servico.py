@@ -40,19 +40,9 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
     "integrations/filho_de_som.py::lancar_filho": (
         "ajudante", 1,
         "o lançador único dos filhos de som, preso ao pai pelo PDEATHSIG: os leitores "
-        "(`parec`/`pw-record`) e os laços (`pw-loopback`)",
-    ),
-    "integrations/endpoint_de_haptica.py::TocadorDoRumble.__init__": (
-        "ajudante", 1,
-        "o `pw-cat` (ou o `pacat`) que toca o rumble do jogo como háptica no "
-        "endpoint de um lugar (D-2909-RUMBLE-VIRA-HAPTICA): alimentado pelo cano, "
-        "sai depois da folga de silêncio e com o `parar`",
-    ),
-    "integrations/transiente_do_jogo.py::TocadorDoEstalo.__init__": (
-        "ajudante", 1,
-        "o `pw-cat` (ou o `pacat`) que toca o estalo do tiro no nó de som de um "
-        "controle (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01): alimentado pelo cano, "
-        "sai depois da folga de silêncio e com o `parar`",
+        "(`parec`/`pw-record`), os laços (`pw-loopback`) e os tocadores da háptica (`pw-cat` ou "
+        "`pacat`, D-2909-RUMBLE-VIRA-HAPTICA e O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01), "
+        "alimentados pelo cano, que saem depois da folga de silêncio e com o `parar`",
     ),
     "integrations/microfone_filtrado.py::_lancar_processo": (
         "ajudante", 1,

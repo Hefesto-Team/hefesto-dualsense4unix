@@ -53,6 +53,7 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     RECUO_PROIBIDO_DO_OUVIDO,
     OrigemDoGravador,
 )
+from hefesto_dualsense4unix.integrations.filho_de_som import lancar_filho
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1106,7 +1107,7 @@ class TocadorDoEstalo:
         self.rotulo = rotulo_do_estalo(self.sink)
         self._o_jogo_toca = o_jogo_toca or o_jogo_toca_no_no
         self._argv_de = argv_de or montar_o_argv_do_estalo
-        self._lancar: Callable[..., Any] = lancar or subprocess.Popen
+        self._lancar: Callable[..., Any] = lancar or lancar_filho
         self._conferir = conferir or conferir_o_destino_do_estalo
         self._ao_mudar = ao_mudar
         self._folga_s = float(folga_s)
