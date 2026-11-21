@@ -134,3 +134,25 @@ def test_com_um_controle_e_leitura_rapida_nada_muda(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(backend_mod, "_read_feature_via_hidraw", _Ioctl())
     backend = _backend({"a": _Handle(b"/dev/hidraw3")})
     assert backend.read_calibration() == _CALIB
+
+
+@pytest.mark.parametrize(("antes", "depois"), [("radio", "cabo"), ("cabo", "radio")])
+def test_o_controle_que_troca_de_transporte_no_meio_nao_recebe_a_leitura_velha(
+    monkeypatch: pytest.MonkeyPatch, antes: str, depois: str
+) -> None:
+    """D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA: a troca de nó no meio devolve None; a seguinte lê o
+    nó novo, com a conferência do transporte novo."""
+    nos = {"radio": b"/dev/hidraw3", "cabo": b"/dev/hidraw7"}
+    ioctl = _Ioctl(preso=nos[antes].decode(), bt=True)
+    monkeypatch.setattr(backend_mod, "_read_feature_via_hidraw", ioctl)
+    backend = _backend({"a": _Handle(nos[antes], bt=antes == "radio")})
+    leitura, saida = _em_fio(lambda: backend.read_calibration())
+    assert ioctl.entrou.wait(_LIMITE_S)
+    assert _responde(backend.is_connected) is True
+    with backend._io_lock:
+        backend._handles["a"] = _Handle(nos[depois], bt=depois == "radio")
+    ioctl.solta.set()
+    leitura.join(_LIMITE_S)
+    assert saida == [None]
+    ioctl.preso = None
+    assert backend.read_calibration() == (_CALIB_BT if depois == "radio" else _CALIB)
