@@ -106,9 +106,9 @@ class _Ensaio:
             relogio=lambda: 10.0,
         )
 
-    def _achar(self) -> tj.FluxoDoJogo | None:
+    def _achar(self) -> tj.FluxoDoJogo | tj.SemFluxo:
         fluxos = ps.ler_fluxos("sink-inputs", lambda _argv: self.pactl)
-        return tj.fluxo_do_jogo(fluxos or (), {PID_DO_JOGO})
+        return tj.procurar_o_fluxo_do_jogo(fluxos or (), {PID_DO_JOGO})
 
     def _abrir(self, argv: list[str]) -> _Gravador:
         self.abertos.append(argv)
@@ -229,10 +229,11 @@ def test_o_no_de_nome_perdido_nao_casa_com_o_pedido_vazio() -> None:
 def test_o_fluxo_do_jogo_de_nome_perdido_e_achado_e_o_nosso_fica_fora(nome: str) -> None:
     nosso = _sink_input(300, 366, 76, nome="hefesto-tato-estalo-x", pid=PID_DO_JOGO)
     fluxos = ps.fluxos_do_texto(_pactl_do_jogo(nome, extra=(nosso,)))
-    achado = tj.fluxo_do_jogo(reversed(fluxos), {PID_DO_JOGO})
-    assert achado is not None and achado.serial in (719, 739, 794)
+    achado = tj.procurar_o_fluxo_do_jogo(reversed(fluxos), {PID_DO_JOGO})
+    assert isinstance(achado, tj.FluxoDoJogo) and achado.serial in (719, 739, 794)
     assert achado.nome == "" and achado.nome_perdido and achado.ident is not None
-    assert tj.fluxo_do_jogo(fluxos[3:], {PID_DO_JOGO}) is None, "o nosso nó virou o jogo"
+    sem_jogo = tj.procurar_o_fluxo_do_jogo(fluxos[3:], {PID_DO_JOGO})
+    assert isinstance(sem_jogo, tj.SemFluxo), "o nosso nó virou o jogo"
 
 
 @pytest.mark.parametrize("nome", NOMES)

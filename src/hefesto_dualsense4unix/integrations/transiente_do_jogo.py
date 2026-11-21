@@ -10,9 +10,9 @@ mais forte num canal do que no outro. Este módulo tem três peças:
   refratário. Sai ``(instante, lado, energia)``; o lado é a razão
   ``(R - L) / (R + L)`` do envelope na janela do estalo, e perto de zero é
   «centro».
-* :func:`fluxo_do_jogo` (pura): entre os fluxos que tocam, o do processo de
-  JOGO (os pids de :func:`quem_o_jogo_le.pids_de_jogo`), nunca o som do
-  sistema inteiro.
+* :func:`procurar_o_fluxo_do_jogo` (pura): entre os fluxos que tocam, o do
+  processo de JOGO (os pids de :func:`quem_o_jogo_le.pids_de_jogo`), nunca o som
+  do sistema inteiro, ou por que não há.
 * :class:`OuvidoDoJogo`: um gravador só para a máquina, que mira o fluxo do
   jogo e entrega os transientes numa fila. Só sobe quando quem o liga quer
   (a receita pede o lado do som e há jogo); sem fluxo de jogo, fica calado.
@@ -465,17 +465,6 @@ def _inteiro_da_propriedade(propriedades: Mapping[str, str], chave: str) -> int 
 def _pid_do_fluxo(propriedades: Mapping[str, str]) -> int | None:
     bruto = str(propriedades.get("application.process.id", "")).strip()
     return int(bruto) if bruto.isdigit() else None
-
-
-def fluxo_do_jogo(
-    fluxos: Iterable[Any],
-    pids: Iterable[int],
-    destinos: Mapping[str, str] | None = None,
-    padrao: str | None = None,
-) -> FluxoDoJogo | None:
-    """O fluxo de som tocado por um processo de jogo (:func:`procurar_o_fluxo_do_jogo`)."""
-    achado = procurar_o_fluxo_do_jogo(fluxos, pids, destinos, padrao)
-    return achado if isinstance(achado, FluxoDoJogo) else None
 
 
 def procurar_o_fluxo_do_jogo(
@@ -1367,7 +1356,6 @@ __all__ = [
     "argv_do_ouvido",
     "conferir_o_alvo_do_ouvido",
     "e_o_fluxo_pedido",
-    "fluxo_do_jogo",
     "lado_da_razao",
     "montar_o_argv_do_ouvido",
     "o_jogo_toca_no_no",

@@ -155,10 +155,10 @@ def test_o_fluxo_e_o_do_processo_de_jogo_e_nunca_o_nosso() -> None:
         _fluxo(3, 200, "jogo-pausado", 503, corked=True),
         _fluxo(4, 200, "jogo", 504),
     ]
-    achado = tj.fluxo_do_jogo(fluxos, {200})
+    achado = tj.procurar_o_fluxo_do_jogo(fluxos, {200})
     assert achado == tj.FluxoDoJogo(indice=4, serial=504, nome="jogo", pid=200)
-    assert tj.fluxo_do_jogo(fluxos, set()) is None
-    assert tj.fluxo_do_jogo(fluxos[:1], {200}) is None
+    assert isinstance(tj.procurar_o_fluxo_do_jogo(fluxos, set()), tj.SemFluxo)
+    assert isinstance(tj.procurar_o_fluxo_do_jogo(fluxos[:1], {200}), tj.SemFluxo)
 
 
 def test_o_gravador_mira_o_fluxo_e_nao_cai_no_microfone() -> None:

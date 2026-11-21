@@ -413,10 +413,10 @@ def test_o_recorte_do_fluxo_diz_o_pausado() -> None:
             propriedades={"application.process.id": "7", "object.serial": str(indice),
                           "node.name": "jogo"})
 
-    assert tj.fluxo_do_jogo([fluxo(1, True)], {7}) == tj.FluxoDoJogo(
+    assert tj.procurar_o_fluxo_do_jogo([fluxo(1, True)], {7}) == tj.FluxoDoJogo(
         1, 1, "jogo", 7, pausado=True)
-    assert tj.fluxo_do_jogo([fluxo(1, True), fluxo(2, False)], {7}) == tj.FluxoDoJogo(
-        2, 2, "jogo", 7)
+    assert tj.procurar_o_fluxo_do_jogo(
+        [fluxo(1, True), fluxo(2, False)], {7}) == tj.FluxoDoJogo(2, 2, "jogo", 7)
 
 
 P = tuple(f"aa:bb:cc:00:00:{i:02x}" for i in range(1, 5))

@@ -230,8 +230,8 @@ def test_com_o_nome_inteiro_o_alvo_errado_de_verdade_ainda_cala_o_ouvido() -> No
                            _leitor({"--format=json list sink-inputs": json.dumps(fluxos_crus)}),
                            grafo)
     assert fluxos is not None
-    jogo = tj.fluxo_do_jogo(fluxos, [4242])
-    assert jogo is not None
+    jogo = tj.procurar_o_fluxo_do_jogo(fluxos, [4242])
+    assert isinstance(jogo, tj.FluxoDoJogo)
     assert (jogo.serial, jogo.nome, jogo.nome_perdido) == (719, nome, False)
     assert tj.e_o_fluxo_pedido(afb.OrigemDoGravador(179, 739, nome), jogo) is False
     assert tj.e_o_fluxo_pedido(afb.OrigemDoGravador(171, 719, nome), jogo) is True
