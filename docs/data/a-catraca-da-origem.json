@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1294763,
+      "piso": 1294764,
       "por_item": {
         "docs": 107879,
         "scripts": 115755,
         "src": 327794,
-        "tests": 743335
+        "tests": 743336
       },
-      "razao": "tamanho: +192 linhas (1294571 -> 1294763), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo 5d8ca9574873",
+      "razao": "tamanho: +1 linhas (1294763 -> 1294764), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo 39af696b1e64",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2283,6 +2283,12 @@
           "de": 1294571,
           "para": 1294763,
           "razao": "tamanho: +192 linhas (1294571 -> 1294763), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo 5d8ca9574873"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1294763,
+          "para": 1294764,
+          "razao": "tamanho: +1 linhas (1294763 -> 1294764), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo 39af696b1e64"
         }
       ],
       "unidade": "linhas",
