@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1294566,
+      "piso": 1294571,
       "por_item": {
         "docs": 107874,
-        "scripts": 115753,
+        "scripts": 115755,
         "src": 327783,
-        "tests": 743156
+        "tests": 743159
       },
-      "razao": "tamanho: +837 linhas (1293729 -> 1294566), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo 36188b3c180a",
+      "razao": "tamanho: +5 linhas (1294566 -> 1294571), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo d0fda89d96a9",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2271,6 +2271,12 @@
           "de": 1293729,
           "para": 1294566,
           "razao": "tamanho: +837 linhas (1293729 -> 1294566), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo 36188b3c180a"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1294566,
+          "para": 1294571,
+          "razao": "tamanho: +5 linhas (1294566 -> 1294571), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN; registrado no fecho, topo d0fda89d96a9"
         }
       ],
       "unidade": "linhas",
