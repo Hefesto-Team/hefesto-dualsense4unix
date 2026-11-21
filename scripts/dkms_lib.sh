@@ -124,24 +124,72 @@ dkms_secure_boot_ligado() {
     return 1
 }
 
-dkms_chave_mok_inscrita() {
-    local _pub _lista _resposta
+_dkms_srcversion_do_modulo() {
+    if [[ -n "${HEFESTO_DKMS_KERNEL:-}" ]]; then
+        modinfo -k "${HEFESTO_DKMS_KERNEL}" -F srcversion "$1" 2>/dev/null || true
+    else
+        modinfo -F srcversion "$1" 2>/dev/null || true
+    fi
+}
+
+_dkms_carregado_e_da_casa() {
+    local _nome="$1" _carregado _novo
+    [[ -n "${_nome}" ]] || return 1
+    _carregado="$(cat "${HEFESTO_DKMS_SYS_MODULE:-/sys/module}/${_nome//-/_}/srcversion" 2>/dev/null || true)"
+    [[ -n "${_carregado}" ]] || return 1
+    dkms_modulo_da_casa "${_nome}" || return 1
+    _novo="$(_dkms_srcversion_do_modulo "${_nome}")"
+    [[ -n "${_novo}" && "${_novo}" == "${_carregado}" ]]
+}
+
+dkms_estado_da_chave() {
+    local _pub _lista _resposta _leu=0 _rc
+    if _dkms_carregado_e_da_casa "${1:-}"; then
+        printf 'inscrita'
+        return 0
+    fi
     _pub="$(_dkms_mok_pub)"
-    [[ -r "${_pub}" && -s "${_pub}" ]] || return 1
+    if [[ ! -r "${_pub}" || ! -s "${_pub}" ]]; then
+        printf 'nao-sei'
+        return 0
+    fi
     if command -v mokutil >/dev/null 2>&1; then
         _resposta="$(mokutil --test-key "${_pub}" 2>&1 || true)"
-        [[ "${_resposta}" == *"already enrolled"* ]] && return 0
+        if [[ "${_resposta}" == *"already enrolled"* ]]; then
+            printf 'inscrita'
+            return 0
+        fi
+        [[ "${_resposta}" == *"is not enrolled"* ]] && _leu=1
     fi
     while IFS= read -r _lista; do
         [[ -r "${_lista}" ]] || continue
-        python3 - "${_pub}" "${_lista}" <<'PYEOF' && return 0
+        _rc=0
+        python3 - "${_pub}" "${_lista}" <<'PYEOF' || _rc=$?
 import sys
-chave = open(sys.argv[1], "rb").read()
-lista = open(sys.argv[2], "rb").read()
+try:
+    chave = open(sys.argv[1], "rb").read()
+    lista = open(sys.argv[2], "rb").read()
+except OSError:
+    raise SystemExit(2)
 raise SystemExit(0 if chave and chave in lista else 1)
 PYEOF
+        if [[ "${_rc}" -eq 0 ]]; then
+            printf 'inscrita'
+            return 0
+        fi
+        [[ "${_rc}" -eq 1 ]] && _leu=1
     done < <(_dkms_mok_listas)
-    return 1
+    if [[ "${_leu}" -eq 1 ]]; then printf 'fora'; else printf 'nao-sei'; fi
+    return 0
+}
+
+dkms_chave_mok_inscrita() { [[ "$(dkms_estado_da_chave "${1:-}")" == "inscrita" ]]; }
+
+dkms_chave_mok_fora() { [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; }
+
+dkms_sem_a_chave_garantida() {
+    dkms_secure_boot_ligado || return 1
+    ! dkms_chave_mok_inscrita "${1:-}"
 }
 
 dkms_passo_da_mok() {
@@ -158,13 +206,71 @@ dkms_efeito_sem_a_chave() {
     printf 'o DualSense e o controle Nintendo funcionam, sem as curas, os nós de movimento e do touchpad e as luzes; o microfone pelo rádio fica desligado; o pad virtual cai para a reserva; o dongle Wi-Fi USB da Realtek fica sem driver, porque o kernel não traz um'
 }
 
+_dkms_como_instalar_o_mokutil() {
+    if command -v apt-get >/dev/null 2>&1; then printf 'sudo apt install mokutil'
+    elif command -v dnf >/dev/null 2>&1; then printf 'sudo dnf install mokutil'
+    elif command -v pacman >/dev/null 2>&1; then printf 'sudo pacman -S --needed mokutil'
+    else printf 'instale o mokutil pela sua distribuição'; fi
+}
+
+dkms_passo_para_ler_a_chave() {
+    local _pub; _pub="$(_dkms_mok_pub)"
+    if [[ ! -e "${_pub}" || ( -r "${_pub}" && ! -s "${_pub}" ) ]]; then
+        dkms_passo_da_mok
+    elif [[ ! -r "${_pub}" ]]; then
+        printf 'deixe a chave %s legível para quem roda o install (a chave é pública) e rode ./install.sh de novo' "${_pub}"
+    else
+        printf 'instale o mokutil (%s) e rode ./install.sh de novo' "$(_dkms_como_instalar_o_mokutil)"
+    fi
+}
+
+dkms_chave_e_o_passo() {
+    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+        printf 'Secure Boot ligado e a chave do DKMS não está inscrita, e sem a chave o driver do Hefesto não se instala: %s' "$(dkms_passo_da_mok)"
+    else
+        printf 'Secure Boot ligado, e não consegui ler a chave do DKMS: sem saber se está inscrita, o driver do Hefesto não se instala nem se troca. Para ler a chave: %s' "$(dkms_passo_para_ler_a_chave)"
+    fi
+}
+
+dkms_titulo_da_chave() {
+    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+        printf 'Secure Boot ligado, e a chave do DKMS não está inscrita'
+    else
+        printf 'Secure Boot ligado, e não consegui ler a chave do DKMS para saber se está inscrita'
+    fi
+}
+
+dkms_modulos_sem_a_chave() {
+    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+        printf 'Os módulos do Hefesto não vão ser instalados, porque o kernel os recusaria no boot. Os que já estavam instalados saem e o driver de fábrica volta.'
+    else
+        printf 'Sem saber, os módulos do Hefesto não são instalados nem trocados.'
+    fi
+}
+
+dkms_efeito_do_estado() {
+    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+        printf 'Sem as curas: %s.' "$(dkms_efeito_sem_a_chave)"
+    else
+        printf 'O que já estava instalado continua como estava.'
+    fi
+}
+
+dkms_passo_da_chave() {
+    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+        printf 'Para ganhar as curas: %s.' "$(dkms_passo_da_mok)"
+    else
+        printf 'Para ler a chave: %s.' "$(dkms_passo_para_ler_a_chave)"
+    fi
+}
+
 : "${_DKMS_SB_WARNED:=0}"
 dkms_warn_secureboot_once() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
     dkms_secure_boot_ligado || return 0
-    dkms_chave_mok_inscrita && return 0
+    dkms_chave_mok_inscrita "${1:-}" && return 0
     _DKMS_SB_WARNED=1
-    _dkms_warn "Secure Boot ligado e a chave do DKMS não está inscrita: os módulos desta casa NÃO ficam instalados, porque o kernel os recusaria no boot. Os que já estavam instalados saem e os drivers de fábrica voltam no próximo carregamento: $(dkms_efeito_sem_a_chave). Para ganhar as curas: $(dkms_passo_da_mok)."
+    _dkms_warn "$(dkms_titulo_da_chave "${1:-}"). $(dkms_modulos_sem_a_chave "${1:-}") $(dkms_efeito_do_estado "${1:-}") $(dkms_passo_da_chave "${1:-}")"
     return 0
 }
 
@@ -354,9 +460,13 @@ dkms_install_patched_module() {
         _dkms_warn "dkms ausente — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar dkms)"
         return 0
     fi
-    if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
-        dkms_warn_secureboot_once
-        dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}"
+    if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita "${_built}"; then
+        dkms_warn_secureboot_once "${_built}"
+        if dkms_chave_mok_fora "${_built}"; then
+            dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}"
+        else
+            _dkms_log "${_pkg} pulado: não li a chave do DKMS, então nada se instala nem se tira"
+        fi
         return 0
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then

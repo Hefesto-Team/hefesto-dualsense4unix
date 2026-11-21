@@ -1452,11 +1452,11 @@ _reconhecimento() {
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
     if [[ "${NO_DKMS}" -eq 0 ]] && [[ "${_fam}" != "imutavel" ]] \
         && dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
-        warn "Secure Boot ligado, e a chave do DKMS não está inscrita"
-        printf '      Os módulos do Hefesto não vão ser instalados: o kernel os recusaria\n'
-        printf '      no boot, e o DualSense ficaria sem driver nenhum. O driver de fábrica\n'
-        printf '      fica, o DualSense funciona sem as curas, e o microfone pelo rádio\n'
-        printf '      fica desligado. Para ganhar as curas: %s.\n' "$(dkms_passo_da_mok)"
+        warn \
+            "$(dkms_titulo_da_chave)"
+        printf '      %s\n' "$(dkms_modulos_sem_a_chave)"
+        printf '      %s\n' "$(dkms_efeito_do_estado)"
+        printf '      %s\n' "$(dkms_passo_da_chave)"
         achou_algo=1
     fi
 

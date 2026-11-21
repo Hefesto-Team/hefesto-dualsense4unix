@@ -490,6 +490,10 @@ _dkms_por_fonte() {
             [[ "${rc}" -eq 2 ]] && falhou=1
             continue
         fi
+        if /usr/bin/python3 "${pasta}/preparar-o-fonte.py" --chave-nao-garantida 2>/dev/null; then
+            printf 'pulando %s %s: não li a chave do DKMS, então nada se refaz nem se tira\n' "${nome}" "${ver}"
+            continue
+        fi
         while IFS= read -r kernel; do
             [[ -n "${kernel}" ]] || continue
             if [[ "${forcar}" -eq 0 ]] \

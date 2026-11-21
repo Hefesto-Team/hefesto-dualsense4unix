@@ -92,9 +92,18 @@ class TestContratoDeTexto:
     def test_validacao_pela_copia_do_dkms_nunca_srcversion(self) -> None:
         assert "modinfo -F filename" in LIB
         assert 'cmp -s "${_link}/module/${_ko##*/}"' in LIB
-        assert "srcversion" not in LIB, (
-            "srcversion não distingue in-tree de DKMS (armadilha do estudo)"
+        fora = re.sub(
+            r"_dkms_srcversion_do_modulo\(\) \{.*?\n\}\n|_dkms_carregado_e_da_casa\(\) \{.*?\n\}\n",
+            "", LIB, flags=re.S,
         )
+        assert "srcversion" not in fora, (
+            "srcversion não distingue in-tree de DKMS (armadilha do estudo): só serve para "
+            "comparar o carregado com o arquivo que a cópia do DKMS já provou ser da casa"
+        )
+        carregado = LIB[LIB.index("_dkms_carregado_e_da_casa() {"):]
+        carregado = carregado[:carregado.index("\n}\n")]
+        assert carregado.index("dkms_modulo_da_casa") < carregado.index(
+            "_dkms_srcversion_do_modulo")
 
     def test_fail_safe_documenta_as_curas_nos_avisos(self) -> None:
         assert "sudo apt install dkms" in LIB
@@ -492,8 +501,14 @@ PREPARADOR = REPO_ROOT / "assets" / "dkms" / "hid-playstation" / "preparar-o-fon
 CINCO_PREPARADORES = sorted((REPO_ROOT / "assets" / "dkms").glob("*/preparar-o-fonte.py"))
 
 
-def _estado_do_secure_boot(raiz: Path, *, ligado: bool | None, inscrita: bool) -> dict[str, str]:
-    """efivars, chave e lista do shim de mentira, no formato que as duas leituras recebem."""
+def _estado_do_secure_boot(
+    raiz: Path, *, ligado: bool | None, inscrita: bool, leitura: str = "completa"
+) -> dict[str, str]:
+    """efivars, chave e lista do shim de mentira, no formato que as duas leituras recebem.
+
+    ``leitura`` diz o que as leituras alcançam: ``completa``, ``sem-chave-publica`` (a chave que
+    o DKMS assina não está onde se lê) ou ``sem-lista`` (nenhuma lista da MOK se lê).
+    """
     efivars = raiz / "efivars"
     efivars.mkdir()
     if ligado is not None:
@@ -502,13 +517,17 @@ def _estado_do_secure_boot(raiz: Path, *, ligado: bool | None, inscrita: bool) -
     (raiz / "MokListRT").write_bytes(CHAVE if inscrita else b"outra-chave")
     return {
         "HEFESTO_EFIVARS_ROOT": str(efivars),
-        "HEFESTO_DKMS_MOK_PUB": str(raiz / "mok.pub"),
-        "HEFESTO_MOK_LISTAS": str(raiz / "MokListRT"),
+        "HEFESTO_DKMS_MOK_PUB": str(raiz / ("sem-chave.pub" if leitura == "sem-chave-publica"
+                                            else "mok.pub")),
+        "HEFESTO_MOK_LISTAS": str(raiz / ("sem-lista" if leitura == "sem-lista"
+                                          else "MokListRT")),
+        "HEFESTO_DKMS_SYS_MODULE": str(raiz / "sem-modulo-carregado"),
     }
 
 
 ESTADOS = [(True, False), (True, True), (False, False), (None, False)]
 ESTADOS_IDS = ["ligado-sem-chave", "ligado-com-chave", "desligado", "sem-efi"]
+SEM_LEITURA = ["sem-chave-publica", "sem-lista"]
 
 
 class TestSecureBootLigadoDevolveODriverDeFabrica:
@@ -526,9 +545,13 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
         "hefesto-teste/9.9.9, 6.9.0-generic, x86_64: built\n"
     )
 
-    def _instalar(self, tmp_path: Path, estado: dict[str, str], status: str) -> tuple[str, str]:
+    def _instalar(
+        self, tmp_path: Path, estado: dict[str, str], status: str, modinfo: str = ""
+    ) -> tuple[str, str]:
         bin_ = tmp_path / "bin"
         bin_.mkdir()
+        if modinfo:
+            _stub(bin_, "modinfo", modinfo)
         chamadas = tmp_path / "chamadas.log"
         _stub(bin_, "uname", 'echo "7.1.5-generic"')
         _stub(bin_, "sudo", f'echo "sudo $*" >> "{chamadas}"\nexec "$@"')
@@ -639,20 +662,34 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
                 esperado = "^/" if (ligado and not inscrita) else ""
                 assert feito.stdout.strip() == esperado, (preparador, ligado, inscrita, feito)
 
+    @pytest.mark.parametrize("leitura", ["completa", *SEM_LEITURA])
     @pytest.mark.parametrize(("ligado", "inscrita"), ESTADOS, ids=ESTADOS_IDS)
     def test_a_leitura_do_python_e_a_do_bash_dizem_o_mesmo(
-        self, tmp_path: Path, ligado: bool | None, inscrita: bool
+        self, tmp_path: Path, ligado: bool | None, inscrita: bool, leitura: str
     ) -> None:
-        estado = _estado_do_secure_boot(tmp_path, ligado=ligado, inscrita=inscrita)
+        """D-2111-A-CHAVE-QUE-NAO-SE-LE-NAO-TIRA-O-MODULO: os três estados, dos dois lados."""
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=ligado, inscrita=inscrita, leitura=leitura)
+        ambiente = {**os.environ, **estado}
+
+        def python(*args: str) -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                ["python3", str(PREPARADOR), *args], env=ambiente, capture_output=True,
+                text=True, check=False, timeout=60,
+            )
+
+        estado_em_bash = _roda("dkms_estado_da_chave", "/usr/bin:/bin", estado).stdout
+        assert estado_em_bash == python("--estado-da-chave").stdout, (ligado, inscrita, leitura)
+        esperado = "inscrita" if (inscrita and leitura == "completa") else (
+            "nao-sei" if leitura != "completa" else "fora")
+        assert estado_em_bash == esperado, (ligado, inscrita, leitura, estado_em_bash)
         em_bash = _roda(
-            "dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita",
-            "/usr/bin:/bin", estado,
+            "dkms_secure_boot_ligado && dkms_chave_mok_fora", "/usr/bin:/bin", estado
         ).returncode
-        em_python = subprocess.run(
-            ["python3", str(PREPARADOR), "--sem-a-chave"], env={**os.environ, **estado},
-            capture_output=True, check=False, timeout=60,
-        ).returncode
-        assert em_bash == em_python, (ligado, inscrita)
+        assert em_bash == python("--sem-a-chave").returncode, (ligado, inscrita, leitura)
+        garantida = _roda(
+            "dkms_sem_a_chave_garantida", "/usr/bin:/bin", estado).returncode
+        assert garantida == python("--chave-nao-garantida").returncode, (ligado, inscrita, leitura)
 
     @pytest.mark.parametrize(
         ("os_release", "framework"),
@@ -687,6 +724,133 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
             check=False, timeout=60,
         ).stdout
         assert em_bash == em_python
+
+
+class TestChaveQueNaoSeLeNaoTiraOModulo:
+    """O-SECURE-BOOT-SO-TIRA-O-MODULO-COM-A-CHAVE-FORA-DE-CERTEZA-01.
+
+    D-2111-A-CHAVE-QUE-NAO-SE-LE-NAO-TIRA-O-MODULO: sem ler a chave nada se instala nem se tira.
+    """
+
+    instalar = TestSecureBootLigadoDevolveODriverDeFabrica._instalar
+    STATUS = TestSecureBootLigadoDevolveODriverDeFabrica.STATUS
+
+    def _modulo_carregado(
+        self, tmp_path: Path, estado: dict[str, str], srcversion_carregado: str
+    ) -> tuple[str, str]:
+        from tests.unit.dkms_de_mentira import ko_do_dkms
+
+        arvore = tmp_path / "arvore"
+        ko_do_dkms(tmp_path / "ko", arvore, "hefesto-teste", "hid-teste.ko", kernel="7.1.5-generic")
+        sysmod = tmp_path / "sysmod" / "hid_teste"
+        sysmod.mkdir(parents=True)
+        (sysmod / "srcversion").write_text(srcversion_carregado + "\n", encoding="utf-8")
+        modinfo = (
+            f'case "$*" in *filename*) echo "{tmp_path / "ko"}/lib/modules/7.1.5-generic/'
+            'updates/dkms/hid-teste.ko";; *srcversion*) echo SRC123;; esac'
+        )
+        ambiente = {
+            **estado, "HEFESTO_DKMS_TREE": str(arvore),
+            "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sysmod"),
+        }
+        return self.instalar(tmp_path, ambiente, self.STATUS, modinfo)
+
+    @pytest.mark.parametrize("leitura", SEM_LEITURA)
+    def test_sem_ler_a_chave_nada_se_instala_nem_se_tira_e_o_resumo_diz_que_nao_leu(
+        self, tmp_path: Path, leitura: str
+    ) -> None:
+        """D-2111-A-CHAVE-QUE-NAO-SE-LE-NAO-TIRA-O-MODULO."""
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False, leitura=leitura)
+        saida, lidas = self.instalar(tmp_path, estado, self.STATUS)
+        assert "dkms remove" not in lidas, lidas
+        for verbo in ("dkms add", "dkms build", "dkms install", "dkms uninstall"):
+            assert verbo not in lidas, lidas
+        assert "STALE=0" in saida, saida
+        assert "não consegui ler a chave do DKMS" in saida, saida
+        assert "nem trocados" in saida and "Para ler a chave:" in saida, saida
+        assert "saem e o driver de fábrica volta" not in saida, saida
+        passo = "mokutil --import" if leitura == "sem-chave-publica" else "instale o mokutil"
+        assert passo in saida, saida
+
+    def test_o_modulo_da_casa_ja_carregado_prova_a_assinatura_e_nao_sai(
+        self, tmp_path: Path
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        _saida, lidas = self._modulo_carregado(tmp_path, estado, "SRC123")
+        assert "dkms remove hefesto-teste/9.9.9 -k" not in lidas, lidas
+        assert "STALE=0" in _saida, _saida
+        assert "sudo chown -R root:root" in lidas, lidas
+
+    def test_o_carregado_que_nao_e_o_da_casa_nao_prova_nada(self, tmp_path: Path) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        _saida, lidas = self._modulo_carregado(tmp_path, estado, "OUTRA999")
+        assert "dkms remove hefesto-teste/9.9.9 -k 7.1.5-generic" in lidas, lidas
+
+    @pytest.mark.parametrize("leitura", SEM_LEITURA)
+    def test_o_exclusivo_dos_cinco_so_pula_a_construcao_no_nao_sei(
+        self, tmp_path: Path, leitura: str
+    ) -> None:
+        veredito = tmp_path / "dkms" / "pacote" / "1.0.0"
+        veredito.mkdir(parents=True)
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False, leitura=leitura)
+        for preparador in CINCO_PREPARADORES:
+            env = {**os.environ, **estado}
+            feito = subprocess.run(
+                ["python3", str(preparador), "--exclusivo", "7.1.5-generic",
+                 str(tmp_path / "sem-fonte"), str(veredito)],
+                capture_output=True, text=True, check=False, timeout=60, env=env,
+            )
+            assert feito.stdout.strip() == "^/", (preparador, feito)
+            fora = subprocess.run(
+                ["python3", str(preparador), "--sem-a-chave"], capture_output=True, check=False,
+                timeout=60, env=env,
+            )
+            assert fora.returncode == 1, (preparador, fora)
+
+    @pytest.mark.parametrize("leitura", SEM_LEITURA)
+    def test_o_atualizador_no_nao_sei_nao_tira_nem_refaz(
+        self, tmp_path: Path, leitura: str
+    ) -> None:
+        if os.geteuid() == 0:
+            pytest.skip("o ajudante como root usa os caminhos de verdade")
+        from tests.unit.test_o_ajudante_do_atualizador import Lar
+
+        (tmp_path / "lar").mkdir()
+        lar = Lar(tmp_path / "lar")
+        pasta = lar.src / "hefesto-hid-playstation-1.0.0"
+        pasta.mkdir()
+        shutil.copy(PREPARADOR, pasta / "preparar-o-fonte.py")
+        (pasta / "dkms.conf").write_text(
+            'BUILT_MODULE_NAME[0]="hid-playstation"\n', encoding="utf-8")
+        pasta.chmod(0o755)
+        (pasta / "preparar-o-fonte.py").chmod(0o755)
+        (pasta / "dkms.conf").chmod(0o644)
+        (lar.modulos / "7.2.18-generic" / "build").mkdir(parents=True)
+        lar.duble(
+            "dkms",
+            '[ "$1" = status ] && printf "%s\\n" "hefesto-hid-playstation/1.0.0, 7.2.18-generic, '
+            'x86_64: installed"\nexit 0',
+        )
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False, leitura=leitura)
+        feito = lar.rodar("dkms-refazer", **estado)
+        assert feito.returncode == 0, feito.stderr
+        lidas = lar.lidas()
+        assert not [x for x in lidas if x.startswith(("dkms remove", "dkms install",
+                                                      "dkms build", "update-initramfs"))], lidas
+        assert "não li a chave do DKMS" in feito.stdout + feito.stderr
+
+    @pytest.mark.parametrize(
+        ("leitura", "frase"),
+        [("completa", "não está inscrita"), ("sem-lista", "não consegui ler a chave do DKMS")],
+    )
+    def test_o_doctor_e_o_install_dizem_o_mesmo_estado(
+        self, tmp_path: Path, leitura: str, frase: str
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False, leitura=leitura)
+        dito = _roda("dkms_chave_e_o_passo; echo; dkms_titulo_da_chave", "/usr/bin:/bin", estado)
+        assert frase in dito.stdout, dito
+        if leitura == "sem-lista":
+            assert "Para ler a chave:" in dito.stdout, dito
 
 
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:

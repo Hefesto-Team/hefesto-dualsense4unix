@@ -12,16 +12,21 @@ kernel casa quando o de fábrica fica, para o DKMS pular com 77 e o `autoinstall
 a instalação do kernel. Sem ele, é o `PRE_BUILD`: usa o guardado ou decide na hora.
 
 Com o Secure Boot ligado e a chave do DKMS fora da MOK, o kernel recusaria o módulo no boot: o
-`--exclusivo` devolve o padrão que nenhum kernel casa, e `--sem-a-chave` sai com 0 nesse estado
-(1 fora dele) para quem refaz o módulo por fora do DKMS.
+`--exclusivo` devolve o padrão que nenhum kernel casa quando a chave não está inscrita nem se
+consegue saber, e `--sem-a-chave` sai com 0 só quando a leitura respondeu que a chave está fora da
+MOK (1 fora dele, inclusive no «não sei») para quem refaz o módulo por fora do DKMS. A leitura tem
+três respostas, `inscrita`, `fora` e `nao-sei` (a chave pública ou as listas que não se leem);
+`--estado-da-chave` as imprime e `--chave-nao-garantida` sai com 0 quando não é `inscrita`. O módulo
+da casa já carregado neste boot prova a assinatura e vale como `inscrita`.
 
     preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
-    preparar-o-fonte.py --sem-a-chave
+    preparar-o-fonte.py --sem-a-chave | --chave-nao-garantida | --estado-da-chave
 """
 
 from __future__ import annotations
 
 import contextlib
+import filecmp
 import glob
 import hashlib
 import os
@@ -622,43 +627,96 @@ def _chave_do_dkms() -> Path:
     return Path(certificado or "/var/lib/dkms/mok.pub")
 
 
-def _chave_inscrita() -> bool:
+def _carregado_e_da_casa() -> bool:
+    try:
+        modulo = _conf("BUILT_MODULE_NAME[0]")
+    except OSError:
+        return False
+    if not modulo:
+        return False
+    raiz = Path(os.environ.get("HEFESTO_DKMS_SYS_MODULE", "/sys/module"))
+    try:
+        carregado = (raiz / modulo.replace("-", "_") / "srcversion").read_text().strip()
+    except OSError:
+        return False
+    if not carregado:
+        return False
+    kernel = os.environ.get("HEFESTO_DKMS_KERNEL")
+    base = ["modinfo", *(["-k", kernel] if kernel else [])]
+
+    def campo(nome: str) -> str:
+        try:
+            feito = subprocess.run(
+                [*base, "-F", nome, modulo], capture_output=True, text=True, check=False,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return feito.stdout.strip()
+
+    arquivo = campo("filename")
+    if not arquivo or campo("srcversion") != carregado:
+        return False
+    arvore = os.environ.get("HEFESTO_DKMS_TREE", "/var/lib/dkms")
+    for ligacao in glob.glob(f"{arvore}/hefesto-*/kernel-*"):
+        copia = Path(ligacao) / "module" / Path(arquivo).name
+        with contextlib.suppress(OSError):
+            if copia.is_file() and filecmp.cmp(copia, arquivo, shallow=False):
+                return True
+    return False
+
+
+def _estado_da_chave() -> str:
+    """`inscrita`, `fora` (a leitura respondeu que não está) ou `nao-sei` (não respondeu)."""
+    if _carregado_e_da_casa():
+        return "inscrita"
     chave = _chave_do_dkms()
     try:
         bytes_da_chave = chave.read_bytes()
     except OSError:
-        return False
+        return "nao-sei"
     if not bytes_da_chave:
-        return False
+        return "nao-sei"
+    leu = False
     mokutil = shutil.which("mokutil")
     if mokutil:
         resposta = subprocess.run(
             [mokutil, "--test-key", str(chave)], capture_output=True, text=True, check=False,
             timeout=30,
         )
-        if "already enrolled" in resposta.stdout + resposta.stderr:
-            return True
+        texto = resposta.stdout + resposta.stderr
+        if "already enrolled" in texto:
+            return "inscrita"
+        leu = "is not enrolled" in texto
     listas = os.environ.get(
         "HEFESTO_MOK_LISTAS",
         "/sys/firmware/efi/mok-variables/MokListRT "
         "/sys/firmware/efi/efivars/MokListRT-605dab50-e046-4300-abb6-3dd810dd8b23",
     )
     for lista in listas.split():
-        with contextlib.suppress(OSError):
-            if bytes_da_chave in Path(lista).read_bytes():
-                return True
-    return False
+        try:
+            conteudo = Path(lista).read_bytes()
+        except OSError:
+            continue
+        if bytes_da_chave in conteudo:
+            return "inscrita"
+        leu = True
+    return "fora" if leu else "nao-sei"
 
 
 def _sem_a_chave() -> bool:
-    return _secure_boot_ligado() and not _chave_inscrita()
+    return _secure_boot_ligado() and _estado_da_chave() == "fora"
+
+
+def _chave_nao_garantida() -> bool:
+    return _secure_boot_ligado() and _estado_da_chave() != "inscrita"
 
 
 def _exclusivo(kver: str, ksrc: str, veredito: Path | None) -> str:
     modulo = _conf("BUILT_MODULE_NAME[0]")
     if not kver or not modulo or veredito is None or (veredito / kver).is_dir():
         return ""
-    if _sem_a_chave():
+    if _chave_nao_garantida():
         return NENHUM_KERNEL
     if not (Path(ksrc) / "Makefile").is_file():
         ksrc = str(_modulos_root() / kver / "build")
@@ -711,6 +769,11 @@ def _do_guardado(veredito: Path | None, kver: str) -> bool:
 def main(argv: list[str]) -> int:
     if argv == ["--sem-a-chave"]:
         return 0 if _sem_a_chave() else 1
+    if argv == ["--chave-nao-garantida"]:
+        return 0 if _chave_nao_garantida() else 1
+    if argv == ["--estado-da-chave"]:
+        print(_estado_da_chave(), end="")
+        return 0
     exclusivo = bool(argv) and argv[0] == "--exclusivo"
     if exclusivo:
         argv = argv[1:]

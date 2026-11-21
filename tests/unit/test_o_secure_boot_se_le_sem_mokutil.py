@@ -110,6 +110,25 @@ def test_a_chave_se_confere_sem_mokutil(
     assert r.stdout.strip() == esperado, (r.stdout, r.stderr)
 
 
+@pytest.mark.parametrize(
+    ("gerada", "inscrita", "esperado"),
+    [(True, True, "inscrita"), (True, False, "fora"), (False, False, "nao-sei")],
+)
+def test_a_chave_tem_tres_respostas(
+    tmp_path: Path, gerada: bool, inscrita: bool, esperado: str
+) -> None:
+    """D-2111-A-CHAVE-QUE-NAO-SE-LE-NAO-TIRA-O-MODULO: só a lista lida sem a chave diz «fora»."""
+    r = _lib(tmp_path, "dkms_estado_da_chave", _mok(tmp_path, gerada=gerada, inscrita=inscrita))
+    assert r.stdout == esperado, (r.stdout, r.stderr)
+
+
+def test_sem_lista_que_se_leia_a_chave_e_nao_sei(tmp_path: Path) -> None:
+    env = _mok(tmp_path, gerada=True, inscrita=False)
+    env["HEFESTO_MOK_LISTAS"] = str(tmp_path / "nao-existe")
+    r = _lib(tmp_path, "dkms_estado_da_chave", env)
+    assert r.stdout == "nao-sei", (r.stdout, r.stderr)
+
+
 _POP = 'NAME="Pop!_OS"\nID=pop\nID_LIKE="ubuntu debian"\n'
 _UBUNTU = "NAME=Ubuntu\nID=ubuntu\nID_LIKE=debian\n"
 _MINT = 'ID=linuxmint\nID_LIKE="ubuntu debian"\n'
