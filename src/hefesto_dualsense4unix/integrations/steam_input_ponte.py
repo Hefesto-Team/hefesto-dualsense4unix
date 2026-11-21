@@ -544,6 +544,26 @@ class Estado:
         }
 
 
+ERROS_DO_VDF = "surrogateescape"
+
+
+def ler_vdf(vdf: Path) -> str:
+    """O texto de um vdf da Steam, o dono da leitura de todo vdf deste módulo.
+
+    Os bytes fora de UTF-8 passam sem tradução (``surrogateescape``) e voltam iguais em
+    :func:`escrever_vdf`. Falha levanta ``OSError`` com a frase do dono dos arquivos de terceiro.
+    """
+    lido = ler_de_terceiro(vdf, errors=ERROS_DO_VDF)
+    if lido.texto is None:
+        raise OSError(lido.motivo or f"{Path(vdf).name} não existe")
+    return lido.texto
+
+
+def escrever_vdf(vdf: Path, texto: str, *, familia: str) -> Path | None:
+    """Troca o vdf pelo ``texto`` pelo dono dos arquivos de terceiro, byte a byte como foi lido."""
+    return escrever_de_terceiro(vdf, texto, familia=familia, errors=ERROS_DO_VDF)
+
+
 def ler_allowlist(config_home: Path | None = None) -> list[str]:
     """Os appids da lista de exceções do usuário. Lista vazia se o arquivo não existe."""
     try:
@@ -579,7 +599,7 @@ def estado_da_ponte(
             sandbox.append(str(vdf))
             continue
         try:
-            texto = vdf.read_text(encoding="utf-8", errors="replace")
+            texto = ler_vdf(vdf)
         except OSError as exc:
             erros.append(f"{vdf}: {exc}")
             continue
@@ -665,8 +685,8 @@ def garantir_ponte(
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": SANDBOX})
             continue
         try:
-            original = vdf.read_text(encoding="utf-8")
-        except (OSError, ValueError) as exc:
+            original = ler_vdf(vdf)
+        except OSError as exc:
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
             houve_erro = True
             continue
@@ -684,7 +704,7 @@ def garantir_ponte(
             continue
         if not dry_run:
             try:
-                escrever_de_terceiro(vdf, novo, familia="steam-input-ponte")
+                escrever_vdf(vdf, novo, familia="steam-input-ponte")
             except OSError as exc:
                 detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
                 houve_erro = True
@@ -772,7 +792,7 @@ def configuracao_por_jogo(pasta: Path) -> set[str] | None:
                 continue
             if not (nome.startswith("configset_") and nome.endswith(".vdf")):
                 continue
-            texto = filho.read_text(encoding="utf-8")
+            texto = ler_vdf(filho)
         except (OSError, ValueError):
             return None
         do_arquivo = appids_com_autosave(texto)
@@ -848,8 +868,8 @@ def garantir_fora_da_lista_desligado(
             houve_incerteza = True
             continue
         try:
-            original = vdf.read_text(encoding="utf-8")
-        except (OSError, ValueError) as exc:
+            original = ler_vdf(vdf)
+        except OSError as exc:
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
             houve_erro = True
             continue
@@ -899,7 +919,7 @@ def garantir_fora_da_lista_desligado(
     for vdf, novo, desligados in planos:
         if not dry_run:
             try:
-                escrever_de_terceiro(vdf, novo, familia="steam-input-fora-da-lista")
+                escrever_vdf(vdf, novo, familia="steam-input-fora-da-lista")
             except OSError as exc:
                 detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
                 houve_erro = True
@@ -925,11 +945,7 @@ def gravar_vdf(vdf: Path, origem: Path) -> Path | None:
     Os bytes passam sem tradução (``surrogateescape``). Falha levanta ``OSError`` com o vdf de
     antes intacto. Devolve a cópia de antes.
     """
-    lido = ler_de_terceiro(origem, errors="surrogateescape")
-    if lido.texto is None:
-        raise OSError(lido.motivo or f"{origem.name} não existe")
-    return escrever_de_terceiro(
-        vdf, lido.texto, familia=FAMILIA_DO_GUARDA, errors="surrogateescape")
+    return escrever_vdf(vdf, ler_vdf(origem), familia=FAMILIA_DO_GUARDA)
 
 
 _SAIDA = {

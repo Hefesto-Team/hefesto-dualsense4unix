@@ -181,7 +181,7 @@ def wireplumber_config_dir(ensure: bool = False) -> Path:
     o drop-in do microfone, e o Hefesto continuava olhando o lugar velho).
     Um dono só, chamado pelos dois — mesmo padrão de `${XDG_CONFIG_HOME:-
     $HOME/.config}` que os shells desta casa já resolvem
-    (`scripts/disable_steam_input.sh:257`, `scripts/doctor.sh`).
+    (`scripts/disable_steam_input.sh:175`, `scripts/doctor.sh`).
 
     A pasta é ``wireplumber.conf.d`` (0.5 em diante) ou ``main.lua.d`` (0.4):
     ver :func:`wireplumber_forma`. O nome do arquivo na pasta é o de
