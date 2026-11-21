@@ -16,6 +16,7 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -139,6 +140,42 @@ def test_o_laco_so_nasce_depois_da_varredura(
     assert lacos.ligar("a1", captura="mic")
 
     assert eventos == ["varreu", "lancou"]
+
+
+def test_o_fio_que_chega_durante_a_varredura_aguarda_o_fim_para_lancar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MORDIDA: a marca posta antes de varrer deixa o segundo fio lançar com o órfão de pé."""
+    raiz, _sinais, _ = _sem_maquina(tmp_path)
+    _fingir_processo(raiz, P + 5, _laco(FAMILIA, "p1"), 1)
+    eventos: list[str] = []
+    na_varredura = threading.Event()
+    solta = threading.Event()
+
+    def _matar_devagar(pid: int, sinal: int) -> None:
+        na_varredura.set()
+        solta.wait(5.0)
+        eventos.append("varreu")
+
+    class _Lancador:
+        def lancar(self, argv: Any) -> Any:
+            eventos.append("lancou")
+            return _Processo()
+
+    monkeypatch.setattr(laco_de_audio, "_LANCADOR", _Lancador())
+    monkeypatch.setattr(laco_de_audio.shutil, "which", lambda _n: "/usr/bin/pw-loopback")
+    lacos = Lacos(FAMILIA, raiz=raiz, matar=_matar_devagar)
+    primeiro = threading.Thread(target=lacos.ligados)
+    primeiro.start()
+    assert na_varredura.wait(5.0)
+    segundo = threading.Thread(target=lambda: lacos.ligar("p2", captura="mic"))
+    segundo.start()
+    segundo.join(0.3)
+    solta.set()
+    primeiro.join(5.0)
+    segundo.join(5.0)
+
+    assert eventos == ["varreu", "lancou"], "o segundo fio lançou antes de a varredura acabar"
 
 
 def test_recolher_orfaos_e_a_entrada_explicita(tmp_path: Path) -> None:

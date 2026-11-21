@@ -177,17 +177,22 @@ class Lacos:
     def recolher_orfaos(self) -> list[int]:
         """Recolhe os laços órfãos desta família agora, com a `raiz` e o `matar` de quem a criou."""
         with self._trava_da_varredura:
-            self._varrida = True
-            return varrer_orfaos(self.familia, raiz=self._raiz, matar=self._matar)
+            try:
+                return varrer_orfaos(self.familia, raiz=self._raiz, matar=self._matar)
+            finally:
+                self._varrida = True
 
     def _recolher_no_primeiro_contato(self) -> None:
+        """Varre uma vez; o fio que chega durante a varredura aguarda o fim da varredura."""
         if self._varrida:
             return
         with self._trava_da_varredura:
             if self._varrida:
                 return
-            self._varrida = True
-            varrer_orfaos(self.familia, raiz=self._raiz, matar=self._matar)
+            try:
+                varrer_orfaos(self.familia, raiz=self._raiz, matar=self._matar)
+            finally:
+                self._varrida = True
 
     def esta_ligado(self, chave: str) -> bool:
         """Esta laçada está de pé AGORA? Pergunta ao processo, não à lembrança."""
