@@ -298,6 +298,7 @@ def ler_o_barramento(
     leitor = ler_texto if ler is None else ler
     leitor_de_bytes = _ler_bytes if ler_bytes is None else ler_bytes
     da_base = _da_libudev if base is None else base
+    memoria = _MEMORIA if ler is None and ler_bytes is None else _MemoriaDaTrava()
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
@@ -312,10 +313,11 @@ def ler_o_barramento(
     brutos = {
         nome: _ler_um(
             nome, caminho, raiz_usb, interfaces, leitor=leitor, real=real, listar=listar,
-            leitor_de_bytes=leitor_de_bytes, base=da_base,
+            leitor_de_bytes=leitor_de_bytes, base=da_base, memoria=memoria,
         )
         for nome, caminho in caminhos.items()
     }
+    memoria.esquecer_fora(caminhos.values())
     aparelhos = tuple(
         sorted(
             (
@@ -563,6 +565,7 @@ def _ler_um(
     listar: Callable[[str], list[str]],
     leitor_de_bytes: Callable[[str], bytes] = lambda _caminho: b"",
     base: Callable[[str, str], str | None] = lambda _syspath, _nome: None,
+    memoria: _MemoriaDaTrava | None = None,
 ) -> _Bruto:
     """Todos os atributos de um nó, mais a classe da interface 0."""
     campos = {
@@ -570,14 +573,10 @@ def _ler_um(
         for atributo in (
             "idVendor",
             "idProduct",
-            "manufacturer",
-            "product",
             "speed",
             "busnum",
             "devpath",
             "bDeviceClass",
-            "bMaxPower",
-            "bmAttributes",
             "physical_location/panel",
             "power/control",
             "port/over_current_count",
@@ -586,6 +585,9 @@ def _ler_um(
             "maxchild",
         )
     }
+    trava, bos = (memoria or _MemoriaDaTrava()).ler(
+        caminho, campos["devnum"], leitor, leitor_de_bytes)
+    campos.update(trava)
     classe, subclasse, protocolo, origem = _classe_da_interface(
         nome,
         campos["busnum"],
@@ -619,7 +621,7 @@ def _ler_um(
         interfaces=triplas,
         eventos=eventos,
         drivers=_drivers(pastas, real),
-        bos=_bytes_sem_erro(leitor_de_bytes, os.path.join(caminho, "bos_descriptors")),
+        bos=bos,
         pares=_pares(pastas, real, listar) if classe == CLASSE_HUB else (),
         fabricante_da_base=_nome_da_base(base, caminho, "ID_VENDOR_FROM_DATABASE"),
         produto_da_base=_nome_da_base(base, caminho, "ID_MODEL_FROM_DATABASE"),
@@ -1026,3 +1028,53 @@ __all__ = [
     "ler_o_barramento",
     "ler_o_bos",
 ]
+
+
+_SOB_A_TRAVA = ("manufacturer", "product", "bMaxPower", "bmAttributes")
+
+
+class _MemoriaDaTrava:
+    """O que o kernel só serve sob a trava do aparelho USB, lido uma vez por enumeração.
+
+    As strings, a energia da configuração ativa e o ``bos_descriptors`` não mudam enquanto o
+    aparelho tem o mesmo ``devnum``, e o kernel as serve sob ``usb_lock_device``, que a probe de um
+    driver segura (a do som de um DualSense no cabo, cerca de 10 s). Relidas a cada censo, seguravam
+    todo chamador enquanto OUTRO aparelho entrava (medido em 20/11/2026: o Edge chegou ao diário
+    9,2 s depois do kernel). A chave é o caminho e o ``devnum``: quem sai e volta renumera e é lido
+    de novo. Só se guarda a leitura de quem já tem configuração (``bMaxPower`` lido).
+    """
+
+    def __init__(self) -> None:
+        import threading
+
+        self._lidos: dict[tuple[str, str], tuple[dict[str, str], bytes]] = {}
+        self._trava = threading.Lock()
+
+    def ler(
+        self,
+        caminho: str,
+        devnum: str,
+        leitor: Callable[[str], str],
+        leitor_de_bytes: Callable[[str], bytes],
+    ) -> tuple[dict[str, str], bytes]:
+        chave = (caminho, devnum)
+        with self._trava:
+            guardado = self._lidos.get(chave)
+        if guardado is not None:
+            return dict(guardado[0]), guardado[1]
+        campos = {atributo: _campo(caminho, atributo, leitor) for atributo in _SOB_A_TRAVA}
+        bos = _bytes_sem_erro(leitor_de_bytes, os.path.join(caminho, "bos_descriptors"))
+        if devnum and campos["bMaxPower"]:
+            with self._trava:
+                self._lidos[chave] = (dict(campos), bos)
+        return campos, bos
+
+    def esquecer_fora(self, presentes: Iterable[str]) -> None:
+        """Esquece quem não está mais no barramento."""
+        vivos = set(presentes)
+        with self._trava:
+            for chave in [c for c in self._lidos if c[0] not in vivos]:
+                del self._lidos[chave]
+
+
+_MEMORIA = _MemoriaDaTrava()

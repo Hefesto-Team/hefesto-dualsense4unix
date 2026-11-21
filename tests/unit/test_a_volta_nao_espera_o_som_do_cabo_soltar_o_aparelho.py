@@ -47,9 +47,11 @@ class _Arvore:
         self.devices = raiz / "devices"
         self.presas: list[Path] = []
 
-    def controle(self, numero: int, transporte: str, pid: str, uniq: str, *, preso: bool) -> None:
+    def controle(
+        self, numero: int, transporte: str, pid: str, uniq: str, *, preso: bool, vid: str = "054C"
+    ) -> None:
         nome = f"hidraw{numero}"
-        hid_nome = f"{BARRAMENTO[transporte]}:054C:{pid}.{numero:04X}"
+        hid_nome = f"{BARRAMENTO[transporte]}:{vid}:{pid}.{numero:04X}"
         if transporte == "usb":
             aparelho = self.devices / "pci0000:00" / "usb3" / f"3-{numero}"
             pai = aparelho / f"3-{numero}:1.3" / hid_nome
@@ -65,7 +67,7 @@ class _Arvore:
             pai = self.devices / "virtual" / "misc" / "uhid" / hid_nome
             pai.mkdir(parents=True)
         (pai / "uevent").write_text(
-            f"HID_ID={BARRAMENTO[transporte]}:0000054C:0000{pid}\n"
+            f"HID_ID={BARRAMENTO[transporte]}:0000{vid}:0000{pid}\n"
             f"HID_NAME=Wireless Controller\nHID_UNIQ={uniq}\n",
             encoding="utf-8",
         )
@@ -186,3 +188,38 @@ def test_a_volta_abre_a_mesa_inteira_com_o_som_do_cabo_preso(
 
     assert terminou, f"o connect da volta esperou o aparelho USB travado ({PRAZO_S:g} s)"
     assert set(ctl._handles) == {uniq for uniq, _p, _e in esperado}
+
+
+def test_a_lista_diz_o_mesmo_que_o_hidapi_dizia(arvore: _Arvore) -> None:
+    """Nada se perde: a lista nunca usou as strings do aparelho USB, só o PID, o nó e o endereço.
+
+    Sem trava, o `_hidraws_da_sony` e o `hid_enumerate(0x054C)` dão os mesmos nós, com o Edge pelo
+    PID, o DualSense 4 e o controle de terceiro com VID próprio de fora, e o clone que se apresenta
+    com o VID e o PID da Sony dentro, nos dois.
+    """
+    mesa = (
+        ("usb", "054C", "0CE6", "aa:bb:cc:00:00:01"),
+        ("usb", "054C", "0DF2", "aa:bb:cc:00:00:02"),
+        ("bt", "054C", "0DF2", "aa:bb:cc:00:00:03"),
+        ("usb", "054C", "05C4", "aa:bb:cc:00:00:04"),
+        ("usb", "2DC8", "3106", "aa:bb:cc:00:00:05"),
+        ("bt", "054C", "0CE6", "aa:bb:cc:00:00:06"),
+    )
+    for numero, (transporte, vid, pid, uniq) in enumerate(mesa, start=10):
+        arvore.controle(numero, transporte, pid, uniq, preso=False, vid=vid)
+
+    antes = [
+        (info.product_id, info.path, info.serial_number)
+        for info in sys.modules["hidapi"].enumerate(vendor_id=0x054C)
+    ]
+    agora = [
+        (info.product_id, info.path, info.serial_number) for info in backend_mod._hidraws_da_sony()
+    ]
+
+    assert agora == antes
+    assert PyDualSenseController._enumerate_device_keys() == [
+        ("aa:bb:cc:00:00:01", b"/dev/hidraw10", False),
+        ("aa:bb:cc:00:00:02", b"/dev/hidraw11", True),
+        ("aa:bb:cc:00:00:03", b"/dev/hidraw12", True),
+        ("aa:bb:cc:00:00:06", b"/dev/hidraw15", False),
+    ]
