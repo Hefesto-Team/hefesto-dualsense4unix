@@ -292,6 +292,59 @@ class TestRegisterClient:
         assert antiga.recv(16) == b"", "a conexão de quem ficou atrás tem de cair"
         del broker
 
+    def test_quem_ficou_atras_e_calou_cai_no_tique(self, logind: LogindFalso) -> None:
+        """D-1310-O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE: calada, a conta de trás cai no tique."""
+        eventos: list[tuple[str, dict[str, object]]] = []
+        agora = [100.0]
+        logind.na_frente("c2", O_USUARIO)
+        broker, cliente = _broker(logind, agora, eventos)
+        antiga = cliente(O_USUARIO)
+        logind.na_frente("c3", OUTRA)
+        agora[0] += 2 * hb.VALIDADE_NO_TIQUE_S
+        broker.tique_da_entrega()
+        soltos = [c for e, c in eventos if e == "peer_solto"]
+        assert [c["motivo"] for c in soltos] == ["ficou_atras_na_troca_de_usuario"]
+        antiga.settimeout(2.0)
+        assert antiga.recv(16) == b"", "a conexão calada de quem ficou atrás tem de cair"
+        del broker
+
+    def test_o_pedido_de_quem_ficou_atras_volta_recusado_e_a_conexao_cai(
+        self, logind: LogindFalso
+    ) -> None:
+        """D-1310-O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE: o pedido da conta de trás não é despachado."""
+        eventos: list[tuple[str, dict[str, object]]] = []
+        agora = [100.0]
+        logind.na_frente("c2", O_USUARIO)
+        broker, cliente = _broker(logind, agora, eventos)
+        antiga = cliente(O_USUARIO)
+        logind.na_frente("c3", OUTRA)
+        agora[0] += 2 * hb.VALIDADE_DA_SESSAO_S
+        antiga.sendall(b'{"cmd":"ping"}\n')
+        broker.step(timeout=2.0)
+        antiga.settimeout(2.0)
+        resposta = antiga.recv(4096)
+        assert b"reject_nao_e_quem_esta_na_frente" in resposta, resposta
+        assert antiga.recv(16) == b"", "a conexão de quem ficou atrás tem de cair"
+        del broker
+
+    def test_logind_mudo_nao_derruba_a_conexao_de_quem_esta_servido(
+        self, logind: LogindFalso
+    ) -> None:
+        eventos: list[tuple[str, dict[str, object]]] = []
+        agora = [100.0]
+        logind.na_frente("c2", O_USUARIO)
+        broker, cliente = _broker(logind, agora, eventos)
+        servida = cliente(O_USUARIO)
+        logind.vazio()
+        agora[0] += 2 * hb.VALIDADE_NO_TIQUE_S
+        broker.tique_da_entrega()
+        servida.sendall(b'{"cmd":"ping"}\n')
+        broker.step(timeout=2.0)
+        servida.settimeout(2.0)
+        assert b'"ok": true' in servida.recv(4096)
+        assert not [e for e, _c in eventos if e == "peer_solto"]
+        del broker
+
     def test_sem_ninguem_na_frente_recusa_com_o_motivo(self, logind: LogindFalso) -> None:
         eventos: list[tuple[str, dict[str, object]]] = []
         logind.vazio()

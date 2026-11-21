@@ -100,6 +100,7 @@ LOGINCTL_ENV = "HEFESTO_BROKER_LOGINCTL"
 SEAT_PADRAO = "seat0"
 VALIDADE_DA_SESSAO_S = 1.0
 VALIDADE_NA_VARREDURA_S = 10.0
+VALIDADE_NO_TIQUE_S = 5.0
 PRAZO_DO_LOGINCTL_S = 1.0
 ESPERA_DA_SESSAO_S = 0.25
 ESPERA_DA_PRIMEIRA_SESSAO_S = 1.5
@@ -3659,6 +3660,7 @@ class Broker:
         state = self._state
         agora = self._relogio()
         self._fechar_as_mudas(agora)
+        self._soltar_na_troca()
         if self._graca_da_entrega_s <= 0:
             return
         if self._ha_cliente():
@@ -3712,6 +3714,10 @@ class Broker:
             del buffer[: newline + 1]
             if not line.strip():
                 continue
+            if self._ficou_atras(self._peer_uids[conn_id]):
+                self._send(sock, {"ok": False, "error": "reject_nao_e_quem_esta_na_frente"})
+                self._soltar(sock, conn_id)
+                return
             self._sem_cliente_desde = None
             response, fd = self._state.handle_line(conn_id, self._peer_uids[conn_id], line)
             sent = (
@@ -3741,6 +3747,31 @@ class Broker:
         finally:
             os.close(fd)
 
+    def _ficou_atras(self, uid: int, validade: float = VALIDADE_DA_SESSAO_S) -> bool:
+        """O logind põe outra conta na frente? Sem resposta (seat vazio, logind mudo), ninguém."""
+        if self._state.allowed_uid is not None:
+            return False
+        autorizado = self._state.uid_autorizado(validade)
+        return autorizado is not None and autorizado != uid
+
+    def _soltar(self, sock: socket.socket, conn_id: int) -> None:
+        self._log("peer_solto", conn=conn_id, peer_uid=self._peer_uids.get(conn_id),
+                  motivo="ficou_atras_na_troca_de_usuario")
+        self._close_conn(sock, conn_id)
+
+    def _soltar_na_troca(self) -> None:
+        """No tique, a conexão calada da conta que ficou atrás cai: o pedido não a alcançaria."""
+        if not self._peer_uids:
+            return
+        for chave in list(self._sel.get_map().values()):
+            tipo, conn_id = chave.data
+            if tipo != "conn" or not self._ficou_atras(
+                    self._peer_uids.get(conn_id, 0), VALIDADE_NO_TIQUE_S):
+                continue
+            sock = chave.fileobj
+            assert isinstance(sock, socket.socket)
+            self._soltar(sock, conn_id)
+
     def _soltar_quem_ficou_atras(self, autorizado: int) -> None:
         """A conta que entrou na frente leva o controle: a conexão da que ficou atrás cai.
 
@@ -3753,11 +3784,9 @@ class Broker:
             tipo, conn_id = chave.data
             if tipo != "conn" or self._peer_uids.get(conn_id, autorizado) == autorizado:
                 continue
-            self._log("peer_solto", conn=conn_id, peer_uid=self._peer_uids.get(conn_id),
-                      motivo="ficou_atras_na_troca_de_usuario")
             sock = chave.fileobj
             assert isinstance(sock, socket.socket)
-            self._close_conn(sock, conn_id)
+            self._soltar(sock, conn_id)
 
     def _close_conn(self, sock: socket.socket, conn_id: int) -> None:
         with contextlib.suppress(KeyError, ValueError):
