@@ -194,7 +194,7 @@ def test_o_laco_que_mudou_entre_as_duas_leituras_nao_leva_sinal(
         if proc.name == "40":
             lidas.append(1)
             if len(lidas) > 1 and lido is not None:
-                return (lido[0], lido[1], "99999")
+                return (lido[0], lido[1], "99999", lido[3])
         return lido
 
     monkeypatch.setattr(laco_de_audio, "_ler_o_processo", _troca)

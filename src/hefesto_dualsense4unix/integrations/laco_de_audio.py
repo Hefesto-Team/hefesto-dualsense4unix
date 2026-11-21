@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import atexit
 import concurrent.futures
-import contextlib
 import os
 import queue
 import re
@@ -74,17 +73,19 @@ class _Lancador:
 _LANCADOR = _Lancador()
 
 
-def _ler_o_processo(proc: Path) -> tuple[list[str], int, str] | None:
-    """`(argv, pai, início)` do processo em `proc`, ou `None` se ele sumiu ou não se lê."""
+def _ler_o_processo(proc: Path) -> tuple[list[str], int, str, int] | None:
+    """`(argv, pai, início, dono)` do processo em `proc`, ou `None` se ele sumiu ou não se lê."""
     try:
         argv = (proc / "cmdline").read_bytes().decode("utf-8", "replace").split("\0")
         stat = (proc / "stat").read_text(encoding="utf-8", errors="replace")
-    except OSError:
+        dono = proc.stat().st_uid
+    except OSError as erro:
+        logger.debug("laco_processo_nao_se_le", pid=proc.name, err=str(erro))
         return None
     campos = stat.rpartition(")")[2].split()
     if len(campos) < 20:
         return None
-    return argv, int(campos[1]), campos[19]
+    return argv, int(campos[1]), campos[19], dono
 
 
 def _e_do_hefesto(pai: int, raiz: Path) -> bool:
@@ -114,22 +115,23 @@ def varrer_orfaos(
     recolhidos: list[int] = []
     try:
         candidatos = [p for p in raiz.iterdir() if p.name.isdigit()]
-    except OSError:
+    except OSError as erro:
+        logger.debug("laco_proc_nao_se_lista", err=str(erro))
         return recolhidos
     for proc in candidatos:
         lido = _ler_o_processo(proc)
-        if lido is None or not _e_um_laco_da_familia(lido[0], prefixo):
+        if lido is None or lido[3] != dono or not _e_um_laco_da_familia(lido[0], prefixo):
             continue
+        if _e_do_hefesto(lido[1], raiz) or _ler_o_processo(proc) != lido:
+            continue
+        pid = int(proc.name)
         try:
-            do_dono = proc.stat().st_uid == dono
-        except OSError:
+            matar(pid, signal.SIGTERM)
+        except OSError as erro:
+            logger.debug("laco_orfao_nao_caiu", familia=familia, pid=pid, err=str(erro))
             continue
-        if not do_dono or _e_do_hefesto(lido[1], raiz) or _ler_o_processo(proc) != lido:
-            continue
-        with contextlib.suppress(OSError):
-            matar(int(proc.name), signal.SIGTERM)
-            recolhidos.append(int(proc.name))
-            logger.info("laco_orfao_recolhido", familia=familia, pid=int(proc.name))
+        recolhidos.append(pid)
+        logger.info("laco_orfao_recolhido", familia=familia, pid=pid)
     return recolhidos
 
 
