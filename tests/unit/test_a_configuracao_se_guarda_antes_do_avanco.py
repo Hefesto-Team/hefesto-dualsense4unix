@@ -6,7 +6,8 @@ os toca não copia nada, e a cópia que não coube segura o avanço. Repositóri
 
 AS MORDIDAS (feitas com a cura devolvida): sem a cópia reprova o caso do perfil byte a byte; a
 faixa que copia sempre reprova o caso do avanço que não toca; sem a poda reprova o caso da quarta
-cópia; o avanço que segue sem a cópia reprova o caso da cópia que não coube.
+cópia; o avanço que segue sem a cópia e a metade da cópia que fica no lugar reprovam o caso da
+cópia que não coube.
 """
 from __future__ import annotations
 
@@ -85,13 +86,16 @@ def test_so_as_tres_copias_mais_novas_ficam(casa: Casa, lar: Path) -> None:
 
 def test_a_copia_que_nao_coube_segura_o_avanco(
         casa: Casa, lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    def sem_espaco(*_a: object, **_k: object) -> None:
+    def sem_espaco(_origem: Path, destino: Path, **_k: object) -> None:
+        Path(destino).mkdir(parents=True)
+        (Path(destino) / "mods.json").write_text("{", encoding="utf-8")
         raise OSError("sem espaço")
 
     monkeypatch.setattr(shutil, "copytree", sem_espaco)
     inicio = casa.topo()
     assert _avancar(casa, PERFIS) is False
     assert casa.topo() == inicio
+    assert _copias(casa) == []
 
 
 def test_sem_configuracao_o_avanco_segue_sem_copia(

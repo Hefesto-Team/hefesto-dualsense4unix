@@ -53,7 +53,7 @@ cd hefesto-dualsense4unix
 
 Não rode com `sudo` na frente: o instalador pede a senha uma vez e pergunta antes dos passos opcionais (sem terminal interativo, `./install.sh --yes`). Ele instala regras udev, serviços do systemd, quatro módulos de kernel via DKMS, parâmetros de boot e ajustes no Bluetooth e na Steam. Cada item tem opção para pular, e `./install.sh --dry-run` mostra o plano sem mudar nada. Com o Secure Boot ligado, registre a chave do DKMS que o instalador indicar e reinicie. Detalhes, os pacotes `.deb`, Flatpak, AppImage, Arch, Fedora e Nix (o caminho testado é o `./install.sh`) e o `./uninstall.sh` estão em [instalacao.md](docs/usage/instalacao.md).
 
-Instalado assim, o Hefesto baixa a versão nova do ramo `dev` quando a janela abre e só aceita commit com a assinatura do projeto. Com a **Atualização automática** ligada na aba Sistema, a versão entra ao fechar a janela; desligada, que é o padrão, a versão espera o clique em Atualizações. Detalhes em [instalacao.md](docs/usage/instalacao.md).
+Instalado assim, o Hefesto baixa a versão nova do ramo `dev` quando a janela abre e só aceita commit com a assinatura do projeto. Com a **Atualização automática** ligada na aba Sistema, a versão entra ao fechar a janela; desligada, que é o padrão, a versão espera o **Atualizar tudo** em Atualizações. Detalhes em [instalacao.md](docs/usage/instalacao.md).
 
 Depois, abra o Hefesto pelo menu de aplicativos ou com `hefesto-dualsense4unix-gui`; o serviço passa a subir sozinho no login. Para parear por Bluetooth, ligue o Procurar na aba Conexões, segure PS + Create no controle e clique em Parear na linha dele.
 

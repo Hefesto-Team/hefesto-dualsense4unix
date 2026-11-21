@@ -413,7 +413,7 @@ def test_com_a_atualizacao_automatica_desligada_o_fecho_so_baixa_e_a_peca_mostra
     fio.join(10)
     fins[0]()
     assert casa.topo() == inicio and pedidos == []
-    assert "espera o «Atualizar» em Atualizações" in capsys.readouterr().out
+    assert "espera o «Atualizar tudo» em Atualizações" in capsys.readouterr().out
 
     monkeypatch.setattr(pecas_do_atualizador, "RAIZ_DO_REPOSITORIO", casa.clone)
     versoes = pecas_do_atualizador.versoes_do_hefesto(True)

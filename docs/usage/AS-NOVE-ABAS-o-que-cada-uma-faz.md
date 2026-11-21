@@ -197,7 +197,7 @@ Esta aba é do computador, não de um controle, e a fita fica esmaecida.
   versão de agora, a nova e o **Atualizar tudo**. A **Atualização automática**
   sobe as peças sem perguntar, só com o jogo fechado. Instalado pelo código, o
   Hefesto baixa a versão nova ao abrir a janela; com a automática desligada, a
-  versão espera o clique na linha do Hefesto, e ligada, entra ao fechar a janela.
+  versão espera o **Atualizar tudo**, e ligada, entra ao fechar a janela.
 - **Funcionamento do app**: **Parar**, **Reler atalhos** (relê os atalhos e os
   arquivos da Steam), **Corrigir o serviço** e **Reiniciar**. Parar desliga o
   serviço inteiro, o que não é o mesmo que Desligado na aba Jogar.

@@ -601,6 +601,7 @@ def test_a_peca_hefesto_le_o_que_a_baixada_conferiu(
     assert _baixar(casa) == alvo
     nova = _a_peca_hefesto(casa, monkeypatch)
     assert nova["estado"] == at.NOVA and nova["para"]
+    assert pa.versoes_do_hefesto(False).publicada is None
     va.aplicar(casa.clone, alvo, jogo_aberto=lambda: False, disparar=lambda _i: None)
     assert _a_peca_hefesto(casa, monkeypatch)["estado"] == at.EM_DIA
 

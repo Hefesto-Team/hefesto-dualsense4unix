@@ -4,10 +4,10 @@ Só numa instalação pelo código, em ``dev``, com a árvore limpa, sem trabalh
 aberto; qualquer outra coisa para em silêncio, com uma linha no diário. A rede fica num fio que a
 janela não espera, e o avanço, só rápido e só com cada commit da faixa assinado por chave da lista
 que vale nele (a do ``HEAD`` de agora, trocada só por commit aceito), fica para o fecho, só com a
-«Atualização automática» ligada (desligada, a versão baixada espera o «Atualizar») e com a cópia
-datada da configuração antes de mudar perfis ou extensões. A
-faixa que pede install o solta fora do cgroup da janela (``--install``): ele espera o jogo fechar de
-vez, roda uma vez só e nunca guarda senha; a falha fica em ``install-pendente``.
+«Atualização automática» ligada (desligada, a versão baixada espera o «Atualizar tudo») e com a
+cópia datada da configuração antes de mudar perfis ou extensões. A faixa que pede install o solta
+fora do cgroup da janela (``--install``): ele espera o jogo fechar de vez, roda uma vez só e nunca
+guarda senha; a falha fica em ``install-pendente``.
 """
 from __future__ import annotations
 
@@ -368,7 +368,7 @@ def o_que_a_faixa_pede(caminhos: Iterable[str]) -> str:
 def guardar_a_configuracao(antes: str) -> Path | None:
     """Copia a configuração de quem usa para o state, com a hora e o commit de ``antes`` no nome, e
     guarda só as ``COPIAS_GUARDADAS`` mais novas. ``None``: não há configuração a guardar; a cópia
-    que não coube levanta ``OSError``."""
+    que não coube levanta ``OSError`` e não deixa metade no lugar de uma cópia inteira."""
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir, state_dir
 
     origem = config_dir()
@@ -378,8 +378,11 @@ def guardar_a_configuracao(antes: str) -> Path | None:
     pasta.mkdir(mode=0o700, exist_ok=True)
     carimbo = datetime.now().strftime("%Y%m%dT%H%M%S%f")
     destino = pasta / f"{carimbo}-{antes[:CURTO]}"
-    shutil.rmtree(destino, ignore_errors=True)
-    shutil.copytree(origem, destino, symlinks=True)
+    try:
+        shutil.copytree(origem, destino, symlinks=True)
+    except OSError:
+        shutil.rmtree(destino, ignore_errors=True)
+        raise
     for velha in sorted(p for p in pasta.iterdir() if p.is_dir())[:-COPIAS_GUARDADAS]:
         shutil.rmtree(velha, ignore_errors=True)
     return destino
@@ -733,7 +736,7 @@ def baixar_ao_abrir(raiz: Path) -> threading.Thread | None:
     def _aplicar() -> None:
         try:
             if baixada and not _atualizacao_automatica():
-                _dizer(f"{baixada[0][:CURTO]} baixada: espera o «Atualizar» em Atualizações")
+                _dizer(f"{baixada[0][:CURTO]} baixada: espera o «Atualizar tudo» em Atualizações")
                 retomar_o_install(raiz)
             elif not (baixada and aplicar(raiz, baixada[0])):
                 retomar_o_install(raiz)
