@@ -979,6 +979,26 @@ class TestInscricaoPedidaEAindaNaoReiniciada:
         assert python("--chave-nao-garantida").returncode == esperado
         assert _roda("dkms_sem_a_chave_garantida", caminho, estado).returncode == esperado
 
+    @pytest.mark.parametrize(("outras", "esperado"), [
+        ([b"0\x82\x02\x10CHAVE-DO-DRIVER-DE-VIDEO"], "fora"),
+        ([b"0\x82\x02\x10CHAVE-DO-DRIVER-DE-VIDEO", CHAVE], "pedida"),
+    ], ids=["so-outra-chave-pedida", "outra-e-a-da-casa-pedidas"])
+    def test_o_pedido_de_outra_chave_nao_e_o_da_casa(
+        self, tmp_path: Path, outras: list[bytes], esperado: str
+    ) -> None:
+        """A variável do pedido guarda todas as chaves pedidas: só a da casa vale `pedida`."""
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        corpo = b"".join(b"\xa1\x59\xc0\xa5" + b"\x00" * 24 + chave for chave in outras)
+        (Path(estado["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + corpo)
+        caminho = _sem_mokutil(estado)
+        assert _roda("dkms_estado_da_chave", caminho, estado).stdout == esperado
+        feito = subprocess.run(
+            ["python3", str(PREPARADOR), "--estado-da-chave"],
+            env={**os.environ, **estado, "PATH": caminho},
+            capture_output=True, text=True, check=False, timeout=60,
+        )
+        assert feito.stdout == esperado, feito
+
     def test_a_chave_inscrita_vence_o_pedido(self, tmp_path: Path) -> None:
         estado, caminho = _com_a_inscricao_pedida(tmp_path, inscrita=True)
         ambiente = {**os.environ, **estado, "PATH": caminho}
