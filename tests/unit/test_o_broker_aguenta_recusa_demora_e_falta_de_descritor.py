@@ -9,7 +9,9 @@ AS MORDIDAS (feitas na sprint, com a cura devolvida): o cliente sem o recuo repr
 cem pedidos; a linha de recusa por pedido reprova o mesmo caso; a pergunta ao logind de volta ao
 laço reprova o caso da demora; o teto de conexões tirado reprova o caso das 64; o ``continue``
 cego no accept reprova o caso do descritor; a conexão que zera a graça ao chegar reprova o caso da
-conexão muda; o cliente que fecha no timeout reprova o caso da lease.
+conexão muda; o cliente que fecha no timeout reprova o caso da lease. Na conferência: o cliente
+sem o dreno da resposta atrasada reprova o caso da lease, e a escuta que não volta ao seletor
+depois da pausa reprova o caso do descritor.
 """
 from __future__ import annotations
 
@@ -259,6 +261,7 @@ def test_sem_descritor_o_accept_sai_do_seletor_e_o_laco_nao_gira(pasta_curta: Pa
         broker.step(timeout=0)
         agora[0] += 0.01
     assert escuta.chamadas <= 3, f"{escuta.chamadas} voltas em 2 s"
+    assert escuta.chamadas >= 2, "a escuta não voltou ao seletor depois da pausa"
     assert _linhas_de(eventos, "accept_sem_descritor")
     esperando.close()
     escuta.close()
@@ -321,7 +324,7 @@ def test_o_timeout_de_uma_resposta_nao_fecha_a_lease(pasta_curta: Path) -> None:
         leitor = conexao.makefile("rb")
         leitor.readline()
         time.sleep(0.5)
-        conexao.sendall(b'{"ok": true, "atrasada": true}\n')
+        conexao.sendall(b'{"ok": false, "error": "atrasada"}\n')
         leitor.readline()
         conexao.sendall(b'{"ok": true}\n')
         try:
