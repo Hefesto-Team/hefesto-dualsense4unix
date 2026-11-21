@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1279966,
+      "piso": 1281359,
       "por_item": {
-        "docs": 107697,
+        "docs": 107706,
         "scripts": 115083,
-        "src": 324856,
-        "tests": 732330
+        "src": 325237,
+        "tests": 733333
       },
-      "razao": "tamanho: +1806 linhas (1278160 -> 1279966), pagas por Origem: D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-EXTENSAO-SO-SE-INSTALA-DE-ENDERECO-COM-CIFRA, D-1911-A-EXTENSAO-SO-SUBSTITUI-A-DA-MESMA-ORIGEM; registrado no fecho, topo 33f95ebe31e0",
+      "razao": "tamanho: +1393 linhas (1279966 -> 1281359), pagas por Origem: D-1911-A-FALHA-NA-VOLTA-CHEGA-AO-DIARIO, D-1911-A-PORTA-DIZ-O-DESFECHO-DO-CORPO, D-1911-O-MICROFONE-RENASCE-QUANDO-O-CANAL-CAI, D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI, D-1911-O-TOQUE-DA-EXTENSAO-HONRA-A-RECUSA-DO-CORPO; registrado no fecho, topo 714bfc4224bb",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2133,10 +2133,16 @@
           "de": 1278160,
           "para": 1279966,
           "razao": "tamanho: +1806 linhas (1278160 -> 1279966), pagas por Origem: D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-EXTENSAO-SO-SE-INSTALA-DE-ENDERECO-COM-CIFRA, D-1911-A-EXTENSAO-SO-SUBSTITUI-A-DA-MESMA-ORIGEM; registrado no fecho, topo 33f95ebe31e0"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1279966,
+          "para": 1281359,
+          "razao": "tamanho: +1393 linhas (1279966 -> 1281359), pagas por Origem: D-1911-A-FALHA-NA-VOLTA-CHEGA-AO-DIARIO, D-1911-A-PORTA-DIZ-O-DESFECHO-DO-CORPO, D-1911-O-MICROFONE-RENASCE-QUANDO-O-CANAL-CAI, D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI, D-1911-O-TOQUE-DA-EXTENSAO-HONRA-A-RECUSA-DO-CORPO; registrado no fecho, topo 714bfc4224bb"
         }
       ],
       "unidade": "linhas",
-      "universo": 3562
+      "universo": 3566
     }
   }
 }
