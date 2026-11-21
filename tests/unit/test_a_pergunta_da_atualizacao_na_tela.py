@@ -323,9 +323,20 @@ def test_o_hefesto_nao_tem_voltar_a_anterior() -> None:
     assert 'data-v="kernel"' in corpo and 'data-v="hefesto"' not in corpo
 
 
-def test_o_portal_e_a_gdk_sobem_pelo_motor_na_volta_2(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_portal_e_a_gdk_sobem_pelo_motor_na_volta_2(monkeypatch: pytest.MonkeyPatch,
+                                                      tmp_path: Path) -> None:
     from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
 
+    ajudante = tmp_path / "atualizador-raiz"
+    ajudante.write_text("")
+    pedidos: list[list[str]] = []
+
+    def comando(argv: list[str], **_k: Any) -> tuple[int, str]:
+        pedidos.append(list(argv))
+        return 0, ""
+
+    monkeypatch.setattr(pa, "AJUDANTE", ajudante)
+    monkeypatch.setattr(pa, "_comando", comando)
     monkeypatch.setattr(pa, "_instalados", lambda *_p: {
         pa.PACOTE_DO_PORTAL: "1.0.0~1780000000+0~hefesto1"})
     monkeypatch.setattr(pa, "_atualizar_a_lista_do_apt", lambda _rede: None)
@@ -339,6 +350,7 @@ def test_o_portal_e_a_gdk_sobem_pelo_motor_na_volta_2(monkeypatch: pytest.Monkey
     estados = {i["id"]: i["estado"]
                for i in at.conferir(rede=True, lista=[pecas["portal"]])["pecas"]}
     assert estados == {"portal": at.EM_DIA}
+    assert pedidos == [["sudo", "-n", str(ajudante), "backport-reinstalavel", "portal"]]
     assert tela.ORDEM_NA_TELA.index("gdk") < tela.ORDEM_NA_TELA.index("python")
 
 
