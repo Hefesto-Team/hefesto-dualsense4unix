@@ -258,6 +258,39 @@ COLISOES_DECLARADAS = {
         "mede a conferência. A triagem a chama de processo pela palavra «versão», que aqui é o "
         "pacote instalado (09/11/2026)."
     ),
+    "D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO": (
+        "É de PRODUTO: a decisão diz por qual código o serviço troca a extensão de fábrica, e "
+        "`test_a_extensao_de_fabrica_so_troca_por_commit_assinado.py::"
+        "test_a_de_fabrica_so_troca_pela_chave_da_lista_do_pacote` mede a troca. A triagem a chama "
+        "de processo pela palavra «commit», que aqui é o commit assinado da extensão que o produto "
+        "confere, e por «versão» (20/11/2026)."
+    ),
+    "D-1911-A-LINHA-QUE-REINSTALA-TEM-GLIFO-PROPRIO": (
+        "É de PRODUTO: a decisão diz o que a linha da atualização mostra na tela, e "
+        "`test_a_pergunta_da_atualizacao_na_tela.py::"
+        "test_a_linha_que_reinstala_tem_glifo_proprio_e_a_que_sobe_diz_de_para` mede a linha. A "
+        "triagem a chama de processo pela palavra «versão», que aqui é a versão da peça escrita na "
+        "linha (20/11/2026)."
+    ),
+    "D-1911-A-VENV-DOENTE-SE-RECRIA-COM-O-MOTIVO": (
+        "É de PRODUTO: a decisão diz o que o install faz com a venv que não serve, e "
+        "`test_a_venv_doente_se_recria_com_o_motivo_dito.py::"
+        "test_a_venv_doente_se_recria_com_o_motivo` mede o install. A triagem a chama de processo "
+        "pela palavra «versão», que aqui é a versão do Python da venv (20/11/2026)."
+    ),
+    "D-1911-O-PYTHON-TROCA-LOGO-ANTES-DO-REINICIO": (
+        "É de PRODUTO: a decisão diz quando o atualizador troca as bibliotecas na venv, e "
+        "`test_o_python_sobe_sem_compilar_na_hora.py::"
+        "test_a_troca_na_venv_vem_logo_antes_do_reinicio` mede a ordem. A triagem a chama de "
+        "processo pelas palavras «versão» e «leva», esta no sentido de «demora» (20/11/2026)."
+    ),
+    "D-1911-O-SIM-COBRE-TUDO-O-QUE-ALARGA-O-ALCANCE": (
+        "É de PRODUTO: a decisão diz o que o aceite de uma extensão cobre, e "
+        "`test_o_sim_dos_aparelhos_guarda_o_que_aceitou.py::"
+        "test_a_ligada_antes_dos_alcances_segue_ligada_sem_pedir_o_sim` mede o aceite. A triagem a "
+        "chama de processo pela palavra «versão», que aqui é a versão nova da extensão que alarga "
+        "o alcance (20/11/2026)."
+    ),
 }
 
 
