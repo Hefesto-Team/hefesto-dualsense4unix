@@ -161,10 +161,15 @@ class TestOSegundoCliqueTrazAJanela:
     ) -> None:
         _o_filho_tem_o_glib()
         ai = _carregar_o_lancador()
+        from hefesto_dualsense4unix.app.actions import atos_da_bandeja, atualizador, versao_ao_abrir
         from hefesto_dualsense4unix.utils import single_instance
 
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda _p: True)
         monkeypatch.setattr(ai, "diario_da_janela", lambda: None)
+        monkeypatch.setattr(ai, "trazer_o_servico", lambda: False)
+        monkeypatch.setattr(atos_da_bandeja, "garantir_a_bandeja", lambda *_a, **_k: False)
+        monkeypatch.setattr(atualizador, "conferir_ao_abrir", lambda *_a, **_k: None)
+        monkeypatch.setattr(versao_ao_abrir, "baixar_ao_abrir", lambda *_a, **_k: None)
         piloto = _piloto_que_denuncia(tmp_path, monkeypatch)
         monkeypatch.setattr(ai, "achar_o_piloto", lambda: piloto)
         monkeypatch.setenv("XDG_ACTIVATION_TOKEN", "token-do-clique")
