@@ -37,6 +37,11 @@ if sys.argv[2] == "glib":
     sys.path.insert(0, str(pathlib.Path(sys.argv[3]).parent))
     ai.achar_o_piloto = lambda: pathlib.Path(sys.argv[3]).stem
     ai.diario_da_janela = lambda: None
+    ai.trazer_o_servico = lambda: False
+    from hefesto_dualsense4unix.app.actions import atos_da_bandeja, atualizador, versao_ao_abrir
+    atos_da_bandeja.garantir_a_bandeja = lambda *_a, **_k: False
+    atualizador.conferir_ao_abrir = lambda *_a, **_k: None
+    versao_ao_abrir.baixar_ao_abrir = lambda *_a, **_k: None
     sys.exit(ai.abrir([]))
 nome = ai.tomar_a_vez([])
 print("vez:" + repr(nome), flush=True)
