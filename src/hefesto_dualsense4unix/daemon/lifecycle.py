@@ -711,7 +711,7 @@ class Daemon:
     _arranjo_lido_no_arme: tuple[Any, tuple[Any, ...]] | None = None
     _teclado_so_no_jogo: bool = False
     _teclado_sempre: bool = False
-    _teclado_de_fabrica: bool | None = None
+    _teclado_global: bool | None = None
     _teclado_forcado_pelo_perfil: bool = False
     _estava_no_jogo: bool = False
     _suppress_manual_ts: float = field(default=float("-inf"))
@@ -1488,20 +1488,17 @@ class Daemon:
         return relatorio
 
     def _flag_global_do_teclado(self) -> bool:
-        """A «Função do teclado» da máquina: o arquivo da sessão, ou o que a config trouxe do boot.
+        """A «Função do teclado» da máquina, da memória: a ativação roda no laço e não lê o disco.
 
-        O valor da config é lido uma vez, antes de qualquer perfil mexer nele: o perfil que liga ou
-        desliga o teclado muda `config.keyboard_emulation_enabled`, e o perfil seguinte, sem
-        opinião, precisa ver o global e não o rastro do anterior.
+        É a config que o boot trouxe do `keyboard_emulation.flag`, lida uma vez, antes de qualquer
+        perfil mudar a config; o gesto que grava a escolha (:meth:`set_keyboard_emulation` com
+        `persist`) troca o valor. O perfil que liga ou desliga o teclado muda
+        `config.keyboard_emulation_enabled`, e o perfil seguinte, sem opinião, precisa ver o global
+        e não o rastro do anterior.
         """
-        from hefesto_dualsense4unix.utils.session import load_keyboard_preference
-
-        flag = load_keyboard_preference()
-        if flag is not None:
-            return bool(flag)
-        if self._teclado_de_fabrica is None:
-            self._teclado_de_fabrica = bool(self.config.keyboard_emulation_enabled)
-        return self._teclado_de_fabrica
+        if self._teclado_global is None:
+            self._teclado_global = bool(self.config.keyboard_emulation_enabled)
+        return self._teclado_global
 
     def _ligar_o_teclado_do_perfil(
         self, profile: Any | None, *, sempre: bool = False
@@ -1724,6 +1721,7 @@ class Daemon:
             else:
                 self._stop_keyboard_emulation()
             if persist:
+                self._teclado_global = bool(enabled)
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.utils.session import (
                         save_keyboard_emulation,

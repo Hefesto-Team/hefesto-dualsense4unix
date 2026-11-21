@@ -3161,7 +3161,7 @@ def _numeros_sem_vpad(
     - **Conexão Nativa (Sony)**: o jogo abre o controle FÍSICO e fala direto com
       ele. Não há intermediário, mas há controle na mão de alguém, e o número
       dele **já está calculado** — o ``identity_registry`` é chaveado pelo MAC e
-      não consulta modo nenhum (``daemon/lifecycle.py:4232-4233`` roda o
+      não consulta modo nenhum (``daemon/lifecycle.py:4293-4294`` roda o
       ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
       dado pronto que a tela não publicava.
 

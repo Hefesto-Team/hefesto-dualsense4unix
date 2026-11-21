@@ -12,6 +12,7 @@ nascimento do device de teclado por um que anota, sem uinput):
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -171,6 +172,30 @@ def test_a_opiniao_do_perfil_nao_vira_a_preferencia_global() -> None:
 
     corpo = json.loads((Path(config_dir()) / "keyboard_emulation.flag").read_text("utf-8"))
     assert corpo == {"enabled": False}
+
+
+def test_a_ativacao_sabe_o_global_sem_ler_o_disco(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO: o arme do lançamento ativa no laço, sem disco."""
+    from hefesto_dualsense4unix.profiles import loader
+
+    _flag_global(False)
+    _perfil(teclado_emulado=True)
+    perfil = loader.load_profile(NOME)
+    d = _daemon()
+    d.set_keyboard_emulation(False)
+    tocados: list[str] = []
+    stat = os.stat
+
+    def espia(caminho: Any, *a: Any, **k: Any) -> os.stat_result:
+        tocados.append(str(caminho))
+        return stat(caminho, *a, **k)
+
+    monkeypatch.setattr(os, "stat", espia)
+    d.apply_profile_suppression(False, profile=perfil, origin="launch")
+    monkeypatch.setattr(os, "stat", stat)
+
+    assert d._keyboard_device is not None
+    assert [c for c in tocados if c.startswith(str(config_dir()))] == []
 
 
 def test_o_arranjo_do_desktop_liga_o_teclado_antes_das_tabelas() -> None:

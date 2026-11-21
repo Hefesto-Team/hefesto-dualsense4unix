@@ -291,7 +291,7 @@ def test_o_teclado_do_perfil_nao_vira_a_preferencia_global() -> None:
 
 
 def test_o_perfil_sem_opiniao_deixa_a_flag_global_mandar() -> None:
-    """`teclado_emulado: null` = sem opinião, e a flag continua mandando."""
+    """`teclado_emulado: null` = sem opinião, e a flag (o boot a põe na config) segue mandando."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     (Path(config_dir()) / "keyboard_emulation.flag").write_text(
         json.dumps({"enabled": False}), encoding="utf-8"
@@ -299,6 +299,7 @@ def test_o_perfil_sem_opiniao_deixa_a_flag_global_mandar() -> None:
     sem_opiniao = {k: v for k, v in PERFIL_DA_NAVEGACAO.items()
                    if k != "teclado_emulado"}
     d = _daemon_com(sem_opiniao)
+    d.config.keyboard_emulation_enabled = False
 
     d.aplicar_o_arranjo_do_desktop(origin="manual")
 
