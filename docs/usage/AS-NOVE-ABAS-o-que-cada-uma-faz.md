@@ -192,7 +192,13 @@ Esta aba é do computador, não de um controle, e a fita fica esmaecida.
   Input e outros, cada linha com símbolo e cor juntos, para quem não distingue
   verde de laranja. A linha que falha fica vermelha até se curar. **Ícone na
   bandeja** mostra o Hefesto na barra do sistema.
-- **Funcionamento do app**: **Parar**, **Atualizar** (relê os atalhos e os
+- **Atualizações**, ao lado de **Atualização automática** e do prazo «A cada N
+  dias»: o botão abre o mapa das peças que o Hefesto atualiza, cada uma com a
+  versão de agora, a nova e o **Atualizar tudo**. A **Atualização automática**
+  sobe as peças sem perguntar, só com o jogo fechado. Instalado pelo código, o
+  Hefesto baixa a versão nova ao abrir a janela; com a automática desligada, a
+  versão espera o clique na linha do Hefesto, e ligada, entra ao fechar a janela.
+- **Funcionamento do app**: **Parar**, **Reler atalhos** (relê os atalhos e os
   arquivos da Steam), **Corrigir o serviço** e **Reiniciar**. Parar desliga o
   serviço inteiro, o que não é o mesmo que Desligado na aba Jogar.
 - **Interface**: o tamanho das letras e dos botões (**Padrão**, **Confortável**

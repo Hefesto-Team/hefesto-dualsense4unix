@@ -562,6 +562,7 @@ def _o_fim_da_janela(casa: Casa, monkeypatch: pytest.MonkeyPatch, alvo: str | No
     monkeypatch.setattr(va.atexit, "register", fins.append)
     monkeypatch.setattr(va, "_a_suite_esta_rodando", lambda: False)
     monkeypatch.setattr(va, "baixar", lambda _r: alvo)
+    monkeypatch.setattr(va, "_atualizacao_automatica", lambda: True)
     monkeypatch.setattr(troca, "_jogo_aberto", _sem_jogo)
     monkeypatch.setattr(fora, "abrir", _abrir)
     fio = va.baixar_ao_abrir(casa.clone)

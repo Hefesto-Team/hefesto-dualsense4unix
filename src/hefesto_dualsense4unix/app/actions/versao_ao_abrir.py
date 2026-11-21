@@ -3,10 +3,10 @@
 Só numa instalação pelo código, em ``dev``, com a árvore limpa, sem trabalho em voo e sem jogo
 aberto; qualquer outra coisa para em silêncio, com uma linha no diário. A rede fica num fio que a
 janela não espera, e o avanço, só rápido e só para commit assinado por chave da lista do ``HEAD`` de
-agora, fica para o fecho, com a cópia datada da configuração antes de mudar perfis ou extensões. A
-marca de voo conta só as linhas cuja árvore ainda existe. A faixa que pede install o solta fora do
-cgroup da janela (``--install``): ele espera o jogo fechar de vez, roda uma vez só e nunca guarda
-senha; a falha fica em ``install-pendente`` com o motivo que a aba Sistema e o ``doctor`` dizem.
+agora, fica para o fecho, só com a «Atualização automática» ligada (desligada, a versão baixada
+espera o «Atualizar») e com a cópia datada da configuração antes de mudar perfis ou extensões. A
+faixa que pede install o solta fora do cgroup da janela (``--install``): ele espera o jogo fechar de
+vez, roda uma vez só e nunca guarda senha; a falha fica em ``install-pendente``.
 """
 from __future__ import annotations
 
@@ -626,6 +626,12 @@ def aplicar(
     return True
 
 
+def _atualizacao_automatica() -> bool:
+    from hefesto_dualsense4unix.app.actions.atualizador import ler_a_escolha
+
+    return ler_a_escolha().sozinho
+
+
 def _guardada_no_registro(copia: Path) -> None:
     from hefesto_dualsense4unix.app.actions.atualizador import _anotar
 
@@ -650,7 +656,10 @@ def baixar_ao_abrir(raiz: Path) -> threading.Thread | None:
 
     def _aplicar() -> None:
         try:
-            if not (baixada and aplicar(raiz, baixada[0])):
+            if baixada and not _atualizacao_automatica():
+                _dizer(f"{baixada[0][:CURTO]} baixada: espera o «Atualizar» em Atualizações")
+                retomar_o_install(raiz)
+            elif not (baixada and aplicar(raiz, baixada[0])):
                 retomar_o_install(raiz)
         except Exception as erro:
             _dizer(f"o fecho parou no meio ({erro})")

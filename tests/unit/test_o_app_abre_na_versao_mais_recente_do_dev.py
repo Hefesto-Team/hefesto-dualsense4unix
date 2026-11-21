@@ -95,6 +95,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Casa:
     from hefesto_dualsense4unix.utils import xdg_paths
 
     monkeypatch.setattr(xdg_paths, "state_dir", lambda ensure=False: _pasta(tmp_path / "estado"))
+    monkeypatch.setattr(xdg_paths, "config_dir", lambda ensure=False: _pasta(tmp_path / "config"))
     monkeypatch.setattr(troca, "_jogo_aberto", lambda: False)
     return Casa(tmp_path, assinar_todo_commit(tmp_path, monkeypatch))
 
@@ -356,6 +357,9 @@ def _capturar_o_fim(monkeypatch: pytest.MonkeyPatch) -> list[Callable[[], None]]
 def test_o_avanco_so_acontece_no_fim_do_processo(
     casa: Casa, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from hefesto_dualsense4unix.app.actions import atualizador
+
+    atualizador.mudar_a_escolha(sozinho=True)
     fins = _capturar_o_fim(monkeypatch)
     pedidos: list[Any] = []
     monkeypatch.setattr(troca, "disparar", pedidos.append)
@@ -372,6 +376,32 @@ def test_o_avanco_so_acontece_no_fim_do_processo(
     fins[0]()
     assert casa.topo() == alvo
     assert pedidos == [("daemon",)]
+
+
+def test_com_a_atualizacao_automatica_desligada_o_fecho_so_baixa_e_a_peca_mostra(
+    casa: Casa, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    """D-2011-O-AVANCO-DO-DEV-OBEDECE-A-ATUALIZACAO-AUTOMATICA: desligada, a versão nova espera."""
+    from hefesto_dualsense4unix.app.actions import atualizador, pecas_do_atualizador
+
+    assert atualizador.ler_a_escolha().sozinho is False
+    fins = _capturar_o_fim(monkeypatch)
+    pedidos: list[Any] = []
+    monkeypatch.setattr(troca, "disparar", pedidos.append)
+    monkeypatch.setattr(va, "soltar_o_install", pedidos.append)
+    casa.publicar("install.sh")
+    inicio = casa.topo()
+
+    fio = va.baixar_ao_abrir(casa.clone)
+    assert fio is not None
+    fio.join(10)
+    fins[0]()
+    assert casa.topo() == inicio and pedidos == []
+    assert "espera o «Atualizar» em Atualizações" in capsys.readouterr().out
+
+    monkeypatch.setattr(pecas_do_atualizador, "RAIZ_DO_REPOSITORIO", casa.clone)
+    versoes = pecas_do_atualizador.versoes_do_hefesto(True)
+    assert versoes.tem_nova() and versoes.publicada
 
 
 def test_a_instalacao_sem_clone_nem_solta_o_fio(

@@ -94,6 +94,10 @@ def test_a_copia_que_nao_coube_segura_o_avanco(
     assert casa.topo() == inicio
 
 
-def test_sem_configuracao_o_avanco_segue_sem_copia(casa: Casa) -> None:
+def test_sem_configuracao_o_avanco_segue_sem_copia(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    monkeypatch.setattr(xdg_paths, "config_dir", lambda ensure=False: casa.base / "sem-config")
     assert _avancar(casa, PERFIS)
     assert _copias(casa) == []

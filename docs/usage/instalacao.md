@@ -134,6 +134,19 @@ Quatro ajustes entram por padrão:
 - **A cópia dos pareamentos** em `/var/lib/hefesto-dualsense4unix/bt-bonds/`,
   tirada pelo timer e a cada conexão. `scripts/bt_bonds_restore.sh` a devolve.
 
+## Atualizar
+
+Instalado pelo código (clone no ramo `dev`, árvore limpa, sem jogo aberto), o
+Hefesto baixa a versão nova do `dev` quando a janela abre, e só a aceita se o
+commit vier assinado por uma chave da lista do projeto
+(`assets/assinaturas/quem-assina`). Com a **Atualização automática** ligada na
+aba Sistema, a versão baixada entra ao fechar a janela, e o `install.sh` roda
+fora da janela quando a mudança pede. Desligada, que é o padrão, nada entra
+sozinho: a versão nova aparece na linha do Hefesto em **Atualizações** e espera o
+clique em **Atualizar tudo**. Para desligar, tire a marca de **Atualização
+automática**. Os pacotes `.deb`, Flatpak e AppImage não sobem sozinhos: a linha
+do Hefesto mostra a versão nova e como instalá-la.
+
 ## Pacotes
 
 Os formatos abaixo existem, mas o caminho testado é o do código-fonte.
