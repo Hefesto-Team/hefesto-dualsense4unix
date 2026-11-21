@@ -503,10 +503,6 @@ dkms_modulo_da_casa() {
 
 _dkms_marca_de_assinatura() {
     python3 - "$1" <<'PYEOF'
-import gzip
-import lzma
-import shutil
-import subprocess
 import sys
 
 MARCA = b"~Module signature appended~\n"
@@ -515,19 +511,23 @@ try:
     with open(caminho, "rb") as arquivo:
         dados = arquivo.read()
     if caminho.endswith(".xz"):
+        import lzma
         dados = lzma.decompress(dados)
     elif caminho.endswith(".gz"):
+        import gzip
         dados = gzip.decompress(dados)
     elif caminho.endswith(".zst"):
+        import shutil
+        import subprocess
         zstd = shutil.which("zstd")
         if not zstd:
             raise SystemExit(2)
         dados = subprocess.run(
             [zstd, "-dc", caminho], capture_output=True, check=True, timeout=60
         ).stdout
-except Exception:
+except BaseException:
     raise SystemExit(2)
-raise SystemExit(0 if dados.endswith(MARCA) else 1)
+raise SystemExit(0 if dados.endswith(MARCA) else 3)
 PYEOF
 }
 
@@ -536,7 +536,7 @@ dkms_modulo_da_casa_sem_assinatura() {
     _path="$(_dkms_arquivo_do_modulo "$1")" || return 1
     dkms_ko_da_casa "${_path}" || return 1
     _dkms_marca_de_assinatura "${_path}" || _rc=$?
-    [[ "${_rc}" -eq 1 ]]
+    [[ "${_rc}" -eq 3 ]]
 }
 
 DKMS_MARCAS_DO_USB_F_HID=(get_report_sized get_report_refuses)

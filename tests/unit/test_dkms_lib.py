@@ -1084,12 +1084,18 @@ class TestModuloSemAssinaturaComAChaveInscrita:
 
     def _instalar(
         self, tmp_path: Path, estado: dict[str, str], *, arquivo: str = "hid-teste.ko",
-        assinado: bool = False, corrompido: bool = False,
+        assinado: bool = False, corrompido: bool = False, chave_privada: bool = True,
+        dubles: dict[str, str] | None = None, ambiente: dict[str, str] | None = None,
     ) -> str:
         bin_ = tmp_path / "bin"
         bin_.mkdir()
         chamadas = tmp_path / "chamadas.log"
         arvore = tmp_path / "arvore"
+        privada = tmp_path / "mok.key"
+        if chave_privada:
+            privada.write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+        framework = tmp_path / "framework.conf"
+        framework.write_text(f'mok_signing_key="{privada}"\n', encoding="utf-8")
         ko = tmp_path / "lib" / "modules" / KERNEL_DO_TESTE / "updates" / "dkms" / arquivo
         guardado = (arvore / "hefesto-teste" / "1.0.0" / KERNEL_DO_TESTE / "x86_64" / "module"
                     / arquivo)
@@ -1113,6 +1119,8 @@ class TestModuloSemAssinaturaComAChaveInscrita:
             f'"hefesto-teste/9.9.9, {KERNEL_DO_TESTE}, x86_64: installed"\n'
             "exit 0",
         )
+        for nome, corpo in (dubles or {}).items():
+            _stub(bin_, nome, corpo)
         modulos = tmp_path / "modules"
         (modulos / KERNEL_DO_TESTE / "build").mkdir(parents=True)
         fonte = tmp_path / "fonte"
@@ -1125,9 +1133,11 @@ class TestModuloSemAssinaturaComAChaveInscrita:
             f"{bin_}:/usr/bin:/bin",
             {"HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
              "HEFESTO_DKMS_MODULES_ROOT": str(modulos), "HEFESTO_DKMS_TREE": str(arvore),
-             "HEFESTO_DKMS_KERNEL": KERNEL_DO_TESTE, **estado},
+             "HEFESTO_DKMS_KERNEL": KERNEL_DO_TESTE,
+             "HEFESTO_DKMS_FRAMEWORK_CONFS": str(framework), **estado, **(ambiente or {})},
         )
         assert feito.returncode == 0, feito.stderr
+        self.dito = feito.stdout + feito.stderr
         return chamadas.read_text(encoding="utf-8") if chamadas.exists() else ""
 
     @pytest.mark.parametrize("arquivo", ["hid-teste.ko", "hid-teste.ko.xz", "hid-teste.ko.gz",
@@ -1175,6 +1185,36 @@ class TestModuloSemAssinaturaComAChaveInscrita:
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
         lidas = self._instalar(tmp_path, estado, arquivo=arquivo, corrompido=True)
         assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+
+    @pytest.mark.parametrize(("arquivo", "biblioteca"), [("hid-teste.ko.xz", "lzma"),
+                                                         ("hid-teste.ko.gz", "gzip")])
+    def test_sem_o_descompressor_do_python_nao_se_refaz(
+        self, tmp_path: Path, arquivo: str, biblioteca: str
+    ) -> None:
+        """O Python sem o módulo que descomprime não sabe ler a marca: nada se refaz."""
+        falsos = tmp_path / "python-sem-descompressor"
+        falsos.mkdir()
+        (falsos / f"{biblioteca}.py").write_text(
+            "raise ImportError('módulo ausente nesta máquina')\n", encoding="utf-8")
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        lidas = self._instalar(tmp_path, estado, arquivo=arquivo,
+                               ambiente={"PYTHONPATH": str(falsos)})
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+
+    def test_sem_o_zstd_o_modulo_zst_nao_se_refaz(self, tmp_path: Path) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        lidas = self._instalar(tmp_path, estado, arquivo="hid-teste.ko.zst",
+                               dubles={"zstd": "exit 1"})
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+        so_python = tmp_path / "so-python"
+        so_python.mkdir()
+        python = shutil.which("python3")
+        assert python
+        (so_python / "python3").symlink_to(python)
+        ko = (tmp_path / "lib" / "modules" / KERNEL_DO_TESTE / "updates" / "dkms"
+              / "hid-teste.ko.zst")
+        feito = _roda(f"_dkms_marca_de_assinatura '{ko}'", str(so_python))
+        assert feito.returncode == 2, feito
 
 
 class TestAvisoDaChaveNomeiaOModuloELeUmaVez:
