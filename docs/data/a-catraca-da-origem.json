@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1281708,
+      "piso": 1282171,
       "por_item": {
         "docs": 107707,
-        "scripts": 115116,
-        "src": 325288,
-        "tests": 733597
+        "scripts": 115164,
+        "src": 325306,
+        "tests": 733994
       },
-      "razao": "tamanho: +349 linhas (1281359 -> 1281708), pagas por Origem: D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo 24a0953897b7",
+      "razao": "tamanho: +463 linhas (1281708 -> 1282171), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo b60a9111bf40",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2145,10 +2145,16 @@
           "de": 1281359,
           "para": 1281708,
           "razao": "tamanho: +349 linhas (1281359 -> 1281708), pagas por Origem: D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo 24a0953897b7"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1281708,
+          "para": 1282171,
+          "razao": "tamanho: +463 linhas (1281708 -> 1282171), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo b60a9111bf40"
         }
       ],
       "unidade": "linhas",
-      "universo": 3567
+      "universo": 3570
     }
   }
 }
