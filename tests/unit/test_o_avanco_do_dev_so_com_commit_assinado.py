@@ -197,6 +197,53 @@ def test_a_chave_nova_entra_pelo_commit_que_a_casa_assinou(casa: Casa, base: Pat
     assert casa.topo() == alvo
 
 
+def test_a_chave_nova_se_segue_pela_linhagem_sem_ter_parado_no_commit_da_troca(
+        casa: Casa, base: Path) -> None:
+    """D-2011-A-CHAVE-NOVA-SE-SEGUE-PELA-LINHAGEM: o clone parado antes da troca segue."""
+    segunda, terceira = _chave(base, "segunda"), _chave(base, "terceira")
+    casa.escrever(LISTA, _linha_da_lista(segunda))
+    casa.commitar(casa.chave)
+    casa.escrever(LISTA, _linha_da_lista(terceira))
+    casa.commitar(segunda)
+    alvo = casa.publicar(terceira)
+    antes = casa.topo()
+    pedidos = Pedidos()
+
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) == alvo
+    assert casa.topo() == antes
+    assert _avancar(casa, alvo, pedidos)
+    assert casa.topo() == alvo
+    assert va.pendencia_do_install() is None
+
+
+def test_o_commit_de_fora_no_meio_da_faixa_nao_se_atravessa(casa: Casa, base: Path) -> None:
+    de_fora, nova = _chave(base, "de-fora"), _chave(base, "nova")
+    casa.escrever(LISTA, _linha_da_lista(casa.chave) + _linha_da_lista(nova))
+    casa.commitar(de_fora)
+    alvo = casa.publicar(nova)
+    antes = casa.topo()
+    pedidos = Pedidos()
+
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) is None
+    assert not _avancar(casa, alvo, pedidos)
+    assert casa.topo() == antes
+    pendencia = va.pendencia_do_install()
+    assert pendencia is not None and MOTIVO in pendencia[1]
+
+
+def test_a_lista_da_ponta_nao_vale_para_a_propria_ponta(casa: Casa, base: Path) -> None:
+    de_fora = _chave(base, "de-fora")
+    casa.publicar(casa.chave)
+    casa.escrever(LISTA, _linha_da_lista(casa.chave) + _linha_da_lista(de_fora))
+    casa.commitar(de_fora)
+    alvo = casa.publicar(de_fora, "src/dois.py")
+    antes = casa.topo()
+
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) is None
+    assert not _avancar(casa, alvo, Pedidos())
+    assert casa.topo() == antes
+
+
 def test_a_recusa_sai_da_aba_sistema_quando_o_assinado_entra(casa: Casa) -> None:
     pedidos = Pedidos()
     assert not _avancar(casa, casa.publicar(None), pedidos)

@@ -195,23 +195,40 @@ def _assinado_por_ssh(commit: str) -> bool:
         INICIO_DA_ASSINATURA_SSH]
 
 
-def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
-    """A lista vem do ``HEAD`` de agora, nunca da faixa baixada: chave nova só entra num commit que
-    uma chave da lista já assinou. A assinatura do alvo fixa a faixa inteira pelo hash."""
-    lista = _git(raiz, "show", f"HEAD:{LISTA_DE_QUEM_ASSINA}")
-    commit = _git(raiz, "cat-file", "commit", alvo)
-    if not lista or commit is None or not _assinado_por_ssh(commit):
-        return True
+def _assinado_pela_lista(raiz: Path, commit: str, lista: str) -> bool:
+    texto = _git(raiz, "cat-file", "commit", commit)
+    if texto is None or not _assinado_por_ssh(texto):
+        return False
     descritor, caminho = tempfile.mkstemp(prefix="hefesto-quem-assina-")
     try:
         with os.fdopen(descritor, "w", encoding="utf-8") as arquivo:
             arquivo.write(f"{lista}\n")
         return _git(
             raiz, "-c", "gpg.format=ssh", "-c", f"gpg.ssh.allowedSignersFile={caminho}",
-            "-c", "gpg.minTrustLevel=fully", "verify-commit", alvo) is None
+            "-c", "gpg.minTrustLevel=fully", "verify-commit", commit) is not None
     finally:
         with contextlib.suppress(OSError):
             os.unlink(caminho)
+
+
+def _o_passo_da_linhagem(raiz: Path, de: str, alvo: str, lista: str) -> str | None:
+    """O commit mais novo de ``de..alvo``, pelo primeiro pai, que a ``lista`` aceita."""
+    sha = _git(raiz, "rev-list", "--first-parent", f"{de}..{alvo}")
+    return next((c for c in (sha or "").split() if _assinado_pela_lista(raiz, c, lista)), None)
+
+
+def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
+    """A lista parte do ``HEAD`` de agora, nunca da faixa baixada, e só anda por commit que a
+    lista vigente aceita: a chave nova entra num commit que uma chave da lista já assinou, e o
+    commit seguinte a relê dele. A assinatura do alvo fixa a faixa inteira pelo hash."""
+    de = _git(raiz, "rev-parse", "HEAD")
+    lista = _git(raiz, "show", f"HEAD:{LISTA_DE_QUEM_ASSINA}")
+    while de and lista:
+        if _assinado_pela_lista(raiz, alvo, lista):
+            return False
+        de = _o_passo_da_linhagem(raiz, de, alvo, lista)
+        lista = _git(raiz, "show", f"{de}:{LISTA_DE_QUEM_ASSINA}") if de else None
+    return True
 
 
 def _recusa_da_assinatura() -> Path:
