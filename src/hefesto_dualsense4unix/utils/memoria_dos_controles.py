@@ -557,6 +557,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "atualizador.log": (CASA, "o registro das atualizações; não identifica controle"),
     "atualizador-ja-esta.json": (CASA, "a versão de cada peça que não tinha o que subir aqui, e "
                                        "o porquê; não identifica controle"),
+    "versao-baixada.json": (CASA, "o que a última baixada do clone conferiu: o commit, o ramo do "
+                                  "remoto e o veredito; não identifica controle"),
     "python-sem-roda.json": (CASA, "os pacotes Python cuja versão nova não montou roda, e o "
                                    "porquê; não identifica controle"),
     "python-provado.txt": (CASA, "as versões das bibliotecas Python que o atualizador provou, "

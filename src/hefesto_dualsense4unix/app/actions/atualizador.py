@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
+
 MODULO = "hefesto_dualsense4unix.app.actions.atualizador"
 ARQUIVO_DA_ESCOLHA = "atualizador.json"
 ARQUIVO_DA_CONFERENCIA = "atualizador-conferencia.json"
@@ -661,7 +663,7 @@ def falta_espaco(peca: Peca) -> str:
     for caminho, piso in _pisos(peca):
         livre = _livre_em(caminho)
         if livre is not None and livre < piso:
-            falta = f"{(piso - livre) / GB:.1f}".replace(".", ",")
+            falta = formata_pt_br((piso - livre) / GB)
             return f"faltam {falta} GB em {caminho}"
     return ""
 

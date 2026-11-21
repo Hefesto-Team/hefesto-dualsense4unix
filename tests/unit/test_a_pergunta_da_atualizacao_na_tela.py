@@ -481,7 +481,7 @@ def test_so_a_espera_que_a_steam_segura_oferece_fechar_e_continuar(registro: lis
                 "fase": at.ESPERA, "espera": {"peca": "kernel", "motivo": "a Steam está aberta"}}
     do_jogo = {**_andamento("esperando", at.O_JOGO_ABERTO), "inicio": 1000.0,
                "fase": at.ESPERA_O_JOGO}
-    jogo_da_steam = pacotes.Contexto(state={"jogo_steam": {"appid": 1245620}})
+    jogo_da_steam = pacotes.Contexto(state={"jogo_steam": {"appid": 9900001}})
     trava = at._a_trava()
     assert trava is not None
     try:
