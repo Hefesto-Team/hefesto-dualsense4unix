@@ -298,6 +298,13 @@ COLISOES_DECLARADAS = {
         "processo porque «release» é o fim do nome do arquivo `os-release`, e «Flatpak» e "
         "«sandbox» não estão no vocabulário de produto (21/11/2026)."
     ),
+    "D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ": (
+        "É de PRODUTO: a decisão diz o que o install faz com o módulo sem assinatura no kernel que "
+        "não assina, e `test_a_chave_privada_do_dkms.py::test_o_kernel_que_nao_assina_nao_pede_a_"
+        "chave_privada` mede o install. A triagem a chama de processo porque «versão» é o pedaço "
+        "do caminho `/lib/modules/<versão>/build` (a do kernel), e «módulo», «kernel» e «install» "
+        "não estão no vocabulário de produto (21/11/2026)."
+    ),
 }
 
 
