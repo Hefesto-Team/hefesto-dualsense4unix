@@ -75,6 +75,12 @@ _FORA_DO_PRODUTO: dict[str, str] = {
         "`docs/data/orcamento-de-ar.csv` aponta por este caminho, e que "
         "`tests/unit/test_o_orcamento_conta_a_ponte.py` importa de lá"
     ),
+    "mods.por_dentro_da_caixa": (
+        "roda por caminho, num processo à parte (`python -I -S por_dentro_da_caixa.py <pid>`), "
+        "porque o `setns` pede uma linha só de execução: quem o chama é o "
+        "`mods.supervisor.mudar_por_dentro_da_caixa`, pelo `POR_DENTRO_DA_CAIXA`, "
+        "e ninguém o importa"
+    ),
 }
 
 _PONTUADO = re.compile(r"hefesto_dualsense4unix(?:\.[A-Za-z_]\w*)+")
