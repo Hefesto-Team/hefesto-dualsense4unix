@@ -123,7 +123,9 @@ def _mesa(barramento: _Barramento) -> None:
 def test_o_radio_que_entra_nao_espera_o_controle_em_probe(
     barramento: _Barramento, preso: int
 ) -> None:
-    """De P1 a P4, DualSense, Edge e controle de terceiro: o rádio entra e o censo responde."""
+    """D-2011-O-CENSO-LE-SOB-A-TRAVA-UMA-VEZ-POR-APARELHO.
+
+    De P1 a P4, DualSense, Edge e controle de terceiro: o rádio entra e o censo responde."""
     _mesa(barramento)
     antes = _vistos(barramento.ler())
     barramento.em_probe(preso + 1)

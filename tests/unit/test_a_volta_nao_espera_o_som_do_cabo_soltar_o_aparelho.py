@@ -188,7 +188,9 @@ class _Handle:
 def test_a_volta_abre_a_mesa_inteira_com_o_som_do_cabo_preso(
     arvore: _Arvore, monkeypatch: pytest.MonkeyPatch, presa: int
 ) -> None:
-    """O `connect` da volta abre os quatro enquanto a probe do som segura o aparelho USB."""
+    """D-2011-A-VOLTA-NAO-ESPERA-O-SOM-DO-CABO-SOLTAR-O-APARELHO.
+
+    O `connect` da volta abre os quatro enquanto a probe do som segura o aparelho USB."""
     monkeypatch.setattr(evdev_reader, "discover_gamepads", lambda **_k: [])
     monkeypatch.setattr(backend_mod, "TETO_DA_ABERTURA_NA_VOLTA_SEC", 0.1)
     esperado, transportes = _montar(arvore, presa)
