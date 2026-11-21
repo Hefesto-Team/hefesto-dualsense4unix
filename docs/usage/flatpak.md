@@ -89,7 +89,7 @@ cp ~/.config/hefesto-dualsense4unix/profiles/*.json \
 | `--filesystem=/run/hefesto-hidraw-broker:ro` | o serviço que entrega o controle físico ao Hefesto |
 | `--filesystem=/run/hefesto-dualsense4unix` | a trava comum do rádio, dividida com os serviços do sistema |
 | `--filesystem=/run/udev/data:ro` | a base do udev: quem move o cursor, e a identidade do controle para a vibração |
-| `--filesystem=/run/ostree-booted:ro` | saber se o sistema é de imagem (SteamOS, Silverblue), para não sugerir um comando de pacote que não vale lá |
+| `--filesystem=/run/ostree-booted:ro` | saber se o sistema é de imagem (Silverblue, Bazzite), para não sugerir um comando de pacote que não vale lá |
 | `--system-talk-name=org.bluez` | parear, reconectar, remover e mover controles de adaptador |
 | `--system-talk-name=org.freedesktop.NetworkManager` | ler o canal do Wi-Fi, sem varrer |
 | `--filesystem=/var/lib/hefesto-dualsense4unix:ro` | o diário dos serviços do sistema, só leitura |

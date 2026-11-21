@@ -36,11 +36,14 @@ NAO_SE_EXPOE: dict[str, str] = {
     ),
 }
 
+PASTA_DO_FLATPAK = "/run/host"
+
 MONTADO_PELO_FLATPAK: dict[str, str] = {
     "/run/host/os-release": (
-        "o próprio Flatpak o monta, com o os-release do host (medido no 1.18.1: a lista de "
-        "`/run/host` do libflatpak traz `os-release`); sem ele, o `/etc/os-release` de dentro "
-        "é o do runtime, e a distribuição dita seria a errada"
+        "o próprio Flatpak o monta, com o os-release do host, desde o 1.10 (medido no 1.18.1: "
+        "a lista de `/run/host` do libflatpak traz `os-release`); num Flatpak mais velho o "
+        "arquivo falta, o `/etc/os-release` de dentro é o do runtime, e a linha só perde o "
+        "comando de pacote"
     ),
 }
 
@@ -248,6 +251,11 @@ def test_a_trava_do_radio_escreve_e_por_isso_a_linha_nao_e_ro(
 def test_o_que_o_flatpak_ja_monta_nao_ganha_linha() -> None:
     linhas = linhas_de_run_do_manifesto()
     for pasta, porque in MONTADO_PELO_FLATPAK.items():
+        assert _debaixo_de(pasta, PASTA_DO_FLATPAK), (
+            f"{pasta} não mora em {PASTA_DO_FLATPAK}, a única pasta de /run que o Flatpak "
+            "enche sozinho e que nenhuma linha `--filesystem=` alcança: dê a linha ou a razão "
+            "em NAO_SE_EXPOE"
+        )
         assert not [linha for linha in linhas if _debaixo_de(pasta, linha) or
                     _debaixo_de(linha, pasta)], (
             f"{pasta} não pede linha, e dar uma é dar mais do que o código usa: {porque}"
