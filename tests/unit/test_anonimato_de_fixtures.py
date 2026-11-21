@@ -35,6 +35,7 @@ _HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
         "444553540000",
         "ae9e1faefc6c",
         "00e098032b8c",
+        "3dd810dd8b23",
     }
 )
 
