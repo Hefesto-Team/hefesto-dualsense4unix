@@ -250,9 +250,10 @@ def _a_linhagem_aceita(raiz: Path, de: str, alvo: str) -> bool:
 
 
 def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
-    """A faixa do ``HEAD`` de agora até o ``alvo`` não anda pela linhagem assinada."""
+    """A faixa do ``HEAD`` de agora até o ``alvo`` não anda pela linhagem assinada; o ``alvo`` que
+    já é o ``HEAD`` não traz faixa a conferir."""
     de = _git(raiz, "rev-parse", "HEAD")
-    return not (de and _a_linhagem_aceita(raiz, de, alvo))
+    return not (de and (de == alvo or _a_linhagem_aceita(raiz, de, alvo)))
 
 
 def _recusa_da_assinatura() -> Path:

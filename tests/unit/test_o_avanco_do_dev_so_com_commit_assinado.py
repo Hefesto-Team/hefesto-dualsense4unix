@@ -310,6 +310,21 @@ def test_a_recusa_sai_da_aba_sistema_quando_o_assinado_entra(casa: Casa) -> None
     assert va.pendencia_do_install() is None
 
 
+def test_o_fecho_que_acha_a_baixada_ja_entrou_nao_a_recusa(
+        casa: Casa, capsys: pytest.CaptureFixture[str]) -> None:
+    alvo = casa.publicar(casa.chave)
+    pedidos = Pedidos()
+    assert _avancar(casa, alvo, pedidos)
+    capsys.readouterr()
+
+    assert not va.sem_a_assinatura_da_casa(casa.clone, alvo)
+    va.aplicar(casa.clone, alvo, jogo_aberto=lambda: False,
+               disparar=pedidos.disparar, instalar=pedidos.instalar)
+    assert casa.topo() == alvo
+    assert MOTIVO not in capsys.readouterr().out
+    assert va.pendencia_do_install() is None
+
+
 def test_sem_a_lista_no_head_nada_avanca(casa: Casa) -> None:
     casa.escrever("README.md", "x\n")
     _git(casa.autor, "rm", "-q", LISTA)
