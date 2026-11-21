@@ -264,10 +264,18 @@ def test_a_ponte_monta_o_comando_com_o_adaptador_e_o_controle() -> None:
     assert pedido.sonda == ("sudo", "-n", "-l", "--", "/caminho/ponte.sh", "desconectar")
 
 
-def test_a_ponte_nao_instalada_e_impedimento_declarado() -> None:
+def test_a_ponte_nao_instalada_e_impedimento_declarado(monkeypatch: pytest.MonkeyPatch) -> None:
+    sondas: list[tuple[str, ...]] = []
+
+    def sem_regra(self: PontePrivilegiada, pedido: PedidoAPonte) -> bool:
+        sondas.append(tuple(pedido.sonda))
+        return False
+
+    monkeypatch.setattr(PontePrivilegiada, "_sudo_sem_senha", sem_regra)
     ponte = PontePrivilegiada(caminho="/nao/existe/ponte.sh")
     motivos = ponte.impedimentos()
     assert motivos and any("não está instalada" in m for m in motivos)
+    assert sondas == [("sudo", "-n", "-l", "--", "/nao/existe/ponte.sh", "desconectar")]
 
 
 def test_o_verbo_desconectar_existe_no_script_e_na_regra_do_sudoers() -> None:

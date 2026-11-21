@@ -58,7 +58,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
-from hefesto_dualsense4unix.integrations.conexao_zumbi import PedidoAPonte
+from hefesto_dualsense4unix.integrations.conexao_zumbi import PedidoAPonte, PontePrivilegiada
 from tests.unit.barramento_de_mentira import (
     ADAPTADOR,
     CLASSE_DO_DUALSENSE,
@@ -158,8 +158,11 @@ def test_nao_deu_nunca_e_ninguem() -> None:
     assert gp.FRASE_NINGUEM != gp.FRASE_NAO_DEU
 
 
-def test_sem_a_ponte_instalada_o_estado_e_sem_porta(tmp_path: Path) -> None:
+def test_sem_a_ponte_instalada_o_estado_e_sem_porta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Ausência é resposta com motivo, nunca uma exceção nem uma lista vazia."""
+    monkeypatch.setattr(PontePrivilegiada, "_sudo_sem_senha", lambda self, pedido: False)
     resultado = gp.procurar(ADAPTADOR, 1, caminho=str(tmp_path / "nao-existe.sh"))
     assert resultado.estado == gp.ESTADO_SEM_PORTA
     assert resultado.candidatos == ()

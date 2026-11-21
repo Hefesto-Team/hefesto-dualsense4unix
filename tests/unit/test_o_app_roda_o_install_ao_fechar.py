@@ -402,7 +402,7 @@ def test_o_install_nao_herda_o_interpretador_da_janela(
     casa: Casa, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("VIRTUAL_ENV", "/um/venv")
-    monkeypatch.setenv("PATH", f"/um/venv/bin:{os.environ['PATH']}")
+    monkeypatch.setenv("PATH", f"{casa.base / 'bin'}:/um/venv/bin:{os.environ['PATH']}")
     casa.anotar("a..b")
     _rodar_a_vigia(casa)
     virtual, _, caminho = casa.ambiente.read_text(encoding="utf-8").partition("|")

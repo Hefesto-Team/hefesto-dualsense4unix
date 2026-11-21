@@ -3308,6 +3308,7 @@ BINARIOS_DE_LANCADOR: tuple[str, ...] = (
     "xdg-open", "gtk-launch", "gio",
     "flatpak", "wmctrl",
     "pkill", "killall", "pgrep",
+    "sudo",
 )
 
 RAIZES_DE_LANCADOR: tuple[str, ...] = ("steam", "heroic", "lutris")
@@ -3657,17 +3658,42 @@ def _esperar_os_filhos_no_duble() -> None:
         _FILHOS_NO_DUBLE.pop(0)
 
 
+_SIGLA_DO_SUDO = "A-SUITE-NAO-CHAMA-O-SUDO-DA-MAQUINA-01"
+
+_SUDO_REGISTRO_ENV = "HEFESTO_SUDO_REGISTRO"
+
+
+def _e_chamada_do_sudo(linha: str) -> bool:
+    return _partir_a_linha(linha)[0].split(" ", 1)[0] == "sudo"
+
+
+def _registrar_o_sudo(linhas: list[str], nodeid: str) -> bool:
+    """Modo de registro: com ``HEFESTO_SUDO_REGISTRO=<arquivo>`` a chamada ao
+    ``sudo`` de mentira não reprova; vira uma linha ``nodeid<TAB>argv`` no
+    arquivo. Devolve se o modo estava ligado."""
+    arquivo = os.environ.get(_SUDO_REGISTRO_ENV, "").strip()
+    if not arquivo:
+        return False
+    with open(arquivo, "a", encoding="utf-8") as saida:
+        for linha in linhas:
+            argv, quem = _partir_a_linha(linha)
+            saida.write(f"{quem.split(' ')[0] or nodeid}\t{argv}\n")
+    return True
+
+
 def _abrir_a_fase() -> None:
     """O que chegou ao livro ENTRE fases não é de teste nenhum."""
     linhas, ate = _ler_o_livro(_LIVRO_LIDO[0])
-    _ATOS_FORA_DE_FASE.extend(
-        linha for inicio, linha in linhas if inicio not in _ATOS_DE_PROPOSITO
-    )
+    fora = [linha for inicio, linha in linhas if inicio not in _ATOS_DE_PROPOSITO]
+    sudos = [linha for linha in fora if _e_chamada_do_sudo(linha)]
+    if sudos and _registrar_o_sudo(sudos, "<fora de teste>"):
+        fora = [linha for linha in fora if not _e_chamada_do_sudo(linha)]
+    _ATOS_FORA_DE_FASE.extend(fora)
     _LIVRO_LIDO[0] = ate
 
 
 def _fechar_a_fase(item: Any, fase: str) -> None:
-    """Reprova a fase que chamou um ato, com o argv e o nodeid."""
+    """Reprova a fase que chamou um ato ou o ``sudo``, com o argv e o nodeid."""
     _esperar_os_filhos_no_duble()
     linhas, ate = _ler_o_livro(_LIVRO_LIDO[0])
     _LIVRO_LIDO[0] = ate
@@ -3675,6 +3701,23 @@ def _fechar_a_fase(item: Any, fase: str) -> None:
     if not atos:
         return
     nodeid = str(getattr(item, "nodeid", item))
+    sudos = [linha for linha in atos if _e_chamada_do_sudo(linha)]
+    if sudos:
+        atos = [linha for linha in atos if not _e_chamada_do_sudo(linha)]
+        if not _registrar_o_sudo(sudos, nodeid):
+            relato_do_sudo = [
+                f"  - `{_partir_a_linha(linha)[0]}`" for linha in sudos
+            ]
+            raise AssertionError("\n".join([
+                f"{_SIGLA_DO_SUDO}: este teste ({nodeid}, fase {fase}) chamou o "
+                f"`sudo` da máquina {len(sudos)} vez(es), sem dublê:",
+                *relato_do_sudo,
+                "  O `sudo` de mentira da suíte recusa (rc 1). Ponha o dublê no próprio"
+                " teste (um `sudo` na frente do PATH dele, ou `monkeypatch` da função"
+                " que chama), ou declare a chamada pela fixture `ato_de_proposito`.",
+            ]))
+    if not atos:
+        return
     relato = []
     for linha in atos:
         argv, quem = _partir_a_linha(linha)

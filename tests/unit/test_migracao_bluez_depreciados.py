@@ -546,8 +546,24 @@ class TestMapaDeHandlesSaiDoKernel:
         modulo = _carregar_byte_no_fio()
         assert modulo._handles_do_sysfs(str(tmp_path / "nao-existe")) == {}
 
-    def test_a_regua_volta_junto_com_o_mapa(self) -> None:
+    @pytest.mark.parametrize(
+        ("do_sysfs", "do_plano_b", "regua"),
+        [
+            ({MAC_PRO.lower(): 256}, {}, "sysfs"),
+            ({}, {MAC_PRO.lower(): 256}, "depreciado"),
+            ({}, {}, "NENHUMA"),
+        ],
+    )
+    def test_a_regua_volta_junto_com_o_mapa(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        do_sysfs: dict[str, int],
+        do_plano_b: dict[str, int],
+        regua: str,
+    ) -> None:
         modulo = _carregar_byte_no_fio()
-        mapa, regua = modulo.handles_por_mac()
-        assert isinstance(mapa, dict)
-        assert regua, "o instrumento tem de declarar de onde tirou o mapa"
+        monkeypatch.setattr(modulo, "_handles_do_sysfs", lambda *_: do_sysfs)
+        monkeypatch.setattr(modulo, "_handles_do_hcitool", lambda: do_plano_b)
+        mapa, declarada = modulo.handles_por_mac()
+        assert mapa == (do_sysfs or do_plano_b)
+        assert regua in declarada, "o instrumento tem de declarar de onde tirou o mapa"
