@@ -55,12 +55,26 @@ def _guarda_slug(name: str, *, force: bool) -> None:
 
 
 @app.command("list")
-def cmd_list() -> None:
+def cmd_list(
+    como_json: bool = typer.Option(False, "--json", help="Saída como JSON (scripts)."),
+) -> None:
     """Lista os perfis a escolher no diretório XDG — o Freestyle é o botão, não linha."""
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
     profiles = os_perfis_de_escolher(load_all_profiles())
+    if como_json:
+        console.print_json(data=[
+            {
+                "nome": p.name,
+                "prioridade": p.priority,
+                "tipo": p.match.type,
+                "gatilho_esquerdo": p.triggers.left.mode,
+                "gatilho_direito": p.triggers.right.mode,
+            }
+            for p in profiles
+        ])
+        return
     if not profiles:
         console.print("[dim]nenhum perfil encontrado[/dim]")
         return

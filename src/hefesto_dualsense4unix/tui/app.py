@@ -11,6 +11,7 @@ direto do disco e mostra "daemon offline".
 """
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
@@ -23,6 +24,7 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Header, Label, Static
 
 from hefesto_dualsense4unix import __version__
+from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 from hefesto_dualsense4unix.tui.widgets import BatteryMeter, StickPreview, TriggerBar
 from hefesto_dualsense4unix.utils import identidade
 
@@ -37,27 +39,62 @@ class DaemonSnapshot:
     active_profile: str | None = None
     battery_pct: int | None = None
     profiles: list[dict[str, Any]] = field(default_factory=list)
+    controllers: list[dict[str, Any]] = field(default_factory=list)
 
 
-async def fetch_daemon_snapshot() -> DaemonSnapshot:
+class EloComOServico:
+    """Uma conexão com o serviço, mantida entre as chamadas e reaberta só depois da queda."""
+
+    def __init__(self) -> None:
+        self._pilha: contextlib.AsyncExitStack | None = None
+        self._cliente: IpcClient | None = None
+
+    async def chamar(self, metodo: str, params: dict[str, Any] | None = None) -> Any:
+        """O resultado do método. Queda de transporte solta a conexão e levanta; a recusa do
+        serviço levanta e mantém a conexão."""
+        try:
+            if self._cliente is None:
+                self._pilha = contextlib.AsyncExitStack()
+                self._cliente = await self._pilha.enter_async_context(IpcClient.connect())
+            return await self._cliente.call(metodo, params)
+        except IpcError as exc:
+            from hefesto_dualsense4unix.app.ipc_bridge import servico_mudo
+
+            if servico_mudo(exc):
+                await self.soltar()
+            raise
+        except (OSError, ValueError):
+            await self.soltar()
+            raise
+
+    async def soltar(self) -> None:
+        pilha, self._pilha, self._cliente = self._pilha, None, None
+        if pilha is not None:
+            await pilha.aclose()
+
+
+async def fetch_daemon_snapshot(conexao: EloComOServico | None = None) -> DaemonSnapshot:
     """Consulta o daemon via IPC; se offline, retorna snapshot vazio."""
+    propria = conexao is None
+    conexao = EloComOServico() if conexao is None else conexao
     try:
-        from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
-
-        async with IpcClient.connect() as client:
-            try:
-                status = await client.call("daemon.status")
-                profiles = await client.call("profile.list")
-            except IpcError:
-                return DaemonSnapshot(online=True)
-            return DaemonSnapshot(
-                online=True,
-                connected=bool(status.get("connected")),
-                transport=status.get("transport"),
-                active_profile=status.get("active_profile"),
-                battery_pct=status.get("battery_pct"),
-                profiles=profiles.get("profiles", []),
-            )
+        try:
+            status = await conexao.chamar("daemon.state_full")
+            profiles = await conexao.chamar("profile.list")
+        except IpcError:
+            return DaemonSnapshot(online=True)
+        controllers = status.get("controllers")
+        return DaemonSnapshot(
+            online=True,
+            connected=bool(status.get("connected")),
+            transport=status.get("transport"),
+            active_profile=status.get("active_profile"),
+            battery_pct=status.get("battery_pct"),
+            profiles=profiles.get("profiles", []),
+            controllers=[
+                c for c in controllers if isinstance(c, dict) and c.get("connected")
+            ] if isinstance(controllers, list) else [],
+        )
     except (FileNotFoundError, ConnectionError, OSError):
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
         from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
@@ -75,6 +112,25 @@ async def fetch_daemon_snapshot() -> DaemonSnapshot:
         except Exception:
             profiles = []
         return DaemonSnapshot(online=False, profiles=profiles)
+    finally:
+        if propria:
+            await conexao.soltar()
+
+
+def _numero_do_controle(c: dict[str, Any]) -> int:
+    from hefesto_dualsense4unix.cli.cmd_controller import _numero_exibido
+
+    return _numero_exibido(c)
+
+
+def _resumo_do_controle(c: dict[str, Any]) -> str:
+    pct = c.get("battery_pct")
+    cor = "green" if (pct or 0) > 40 else "yellow" if (pct or 0) > 15 else "red"
+    bateria = f"{pct}%" if pct is not None else "?"
+    return (
+        f"Controle {_numero_do_controle(c)} [cyan]{str(c.get('transport') or '?').upper()}[/] "
+        f"[{cor}]{bateria}[/]"
+    )
 
 
 class StatusBar(Static):
@@ -88,6 +144,11 @@ class StatusBar(Static):
             return "[yellow]daemon offline[/] — mostrando perfis do XDG"
         if not s.connected:
             return "[red]daemon online[/], controle desconectado"
+        if s.controllers:
+            return " | ".join(
+                [_resumo_do_controle(c) for c in s.controllers]
+                + [f"perfil [magenta]{s.active_profile or '[dim]nenhum[/]'}[/]"]
+            )
         battery = f"{s.battery_pct}%" if s.battery_pct is not None else "?"
         color = (
             "green"
@@ -125,14 +186,8 @@ class MainScreen(Screen[None]):
             with Horizontal():
                 yield Static(id="info_box", classes="panel")
                 with Vertical(id="preview_panel", classes="panel"):
-                    yield Label("[bold]Gatilhos[/]")
-                    yield TriggerBar(side_label="L2", id="trigger_l2")
-                    yield TriggerBar(side_label="R2", id="trigger_r2")
-                    yield Label("[bold]Bateria[/]")
-                    yield BatteryMeter(id="battery_meter")
-                    with Horizontal(id="sticks_row"):
-                        yield StickPreview(label="L", id="stick_l")
-                        yield StickPreview(label="R", id="stick_r")
+                    yield Label("[bold]Controles[/]")
+                    yield Vertical(id="controles")
             yield Label("[bold]Perfis disponíveis[/]", id="profiles_title")
             table: DataTable[str] = DataTable(id="profiles_table")
             table.add_columns("Nome", "Prioridade", "Match")
@@ -140,57 +195,69 @@ class MainScreen(Screen[None]):
             yield StatusBar(id="status_bar")
         yield Footer()
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._elo = EloComOServico()
+        self._chaves: tuple[tuple[Any, Any], ...] = ()
+
     async def on_mount(self) -> None:
         await self.action_refresh()
         self.set_interval(0.1, self._tick_preview)
 
+    async def on_unmount(self) -> None:
+        await self._elo.soltar()
+
     async def _tick_preview(self) -> None:
-        """Lê estado do controle direto pra atualizar widgets a 10Hz.
-
-        Usa o IPC quando disponível pra reaproveitar conexão do daemon.
-        Em offline, cai em leitura direta via PyDualSenseController (mas
-        sem hardware retorna valores padrão — safe).
-        """
+        """Lê os valores vivos de cada controle (o `daemon.state_full`, o mesmo da janela), 10 vezes
+        por segundo, na conexão que o app mantém. Sem serviço, o tique espera o próximo."""
         try:
-            from hefesto_dualsense4unix.cli.ipc_client import IpcClient
-
-            async with IpcClient.connect() as client:
-                status = await client.call("daemon.status")
-            self._apply_preview(
-                l2=0,
-                r2=0,
-                lx=128,
-                ly=128,
-                rx=128,
-                ry=128,
-                battery=status.get("battery_pct"),
-            )
-        except Exception:
+            estado = await self._elo.chamar("daemon.state_full")
+        except (OSError, ValueError, IpcError):
             return
+        controles = estado.get("controllers") if isinstance(estado, dict) else None
+        if isinstance(controles, list):
+            await self._pintar_os_controles(
+                [c for c in controles if isinstance(c, dict) and c.get("connected")]
+            )
 
-    def _apply_preview(
-        self,
-        *,
-        l2: int,
-        r2: int,
-        lx: int,
-        ly: int,
-        rx: int,
-        ry: int,
-        battery: int | None,
-    ) -> None:
-        self.query_one("#trigger_l2", TriggerBar).value = l2
-        self.query_one("#trigger_r2", TriggerBar).value = r2
-        self.query_one("#battery_meter", BatteryMeter).pct = battery
-        stick_l = self.query_one("#stick_l", StickPreview)
-        stick_l.x = lx
-        stick_l.y = ly
-        stick_r = self.query_one("#stick_r", StickPreview)
-        stick_r.x = rx
-        stick_r.y = ry
+    async def _pintar_os_controles(self, controles: list[dict[str, Any]]) -> None:
+        caixa = self.query_one("#controles", Vertical)
+        chaves = tuple((c.get("index"), c.get("uniq")) for c in controles)
+        if chaves != self._chaves:
+            await caixa.remove_children()
+            await caixa.mount(*[self._grupo_do_controle(c) for c in controles])
+            self._chaves = chaves
+        for grupo, c in zip(caixa.children, controles, strict=True):
+            self._apply_preview(grupo, c)
+
+    @staticmethod
+    def _grupo_do_controle(c: dict[str, Any]) -> Vertical:
+        nome = c.get("nome_declarado") or c.get("modelo")
+        titulo = f"[bold]Controle {_numero_do_controle(c)}[/]"
+        titulo += f" {nome}" if isinstance(nome, str) and nome.strip() else ""
+        titulo += f" [dim]{str(c.get('transport') or '?').upper()}[/]"
+        return Vertical(
+            Label(titulo),
+            TriggerBar(side_label="L2"),
+            TriggerBar(side_label="R2"),
+            BatteryMeter(),
+            Horizontal(StickPreview(label="L"), StickPreview(label="R"), classes="sticks_row"),
+        )
+
+    @staticmethod
+    def _apply_preview(grupo: Any, c: dict[str, Any]) -> None:
+        entradas = c.get("inputs")
+        if isinstance(entradas, dict):
+            l2, r2 = grupo.query(TriggerBar)
+            l2.value = int(entradas.get("l2_raw", 0))
+            r2.value = int(entradas.get("r2_raw", 0))
+            stick_l, stick_r = grupo.query(StickPreview)
+            stick_l.x, stick_l.y = int(entradas.get("lx", 128)), int(entradas.get("ly", 128))
+            stick_r.x, stick_r.y = int(entradas.get("rx", 128)), int(entradas.get("ry", 128))
+        grupo.query_one(BatteryMeter).pct = c.get("battery_pct")
 
     async def action_refresh(self) -> None:
-        snap = await fetch_daemon_snapshot()
+        snap = await fetch_daemon_snapshot(self._elo)
         self.snapshot = snap
         info_box = self.query_one("#info_box", Static)
         info_text = (
@@ -224,10 +291,7 @@ class MainScreen(Screen[None]):
     async def _try_activate(self, name: str) -> None:
         """Tenta ativar perfil via IPC; silencioso em erro."""
         try:
-            from hefesto_dualsense4unix.cli.ipc_client import IpcClient
-
-            async with IpcClient.connect() as client:
-                await client.call("profile.switch", {"name": name})
+            await self._elo.chamar("profile.switch", {"name": name})
             await self.action_refresh()
         except Exception:
             self.notify(
@@ -265,7 +329,7 @@ class HefestoApp(App[None]):
     #preview_panel {
         width: 1fr;
     }
-    #sticks_row {
+    .sticks_row {
         height: auto;
     }
     StickPreview {
@@ -306,6 +370,7 @@ def run_tui() -> None:
 
 __all__ = [
     "DaemonSnapshot",
+    "EloComOServico",
     "HefestoApp",
     "MainScreen",
     "StatusBar",

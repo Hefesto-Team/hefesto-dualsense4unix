@@ -5,6 +5,8 @@ import asyncio
 import re
 import subprocess
 import time
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -29,11 +31,48 @@ _GRAVIDADE_WARN = 1
 _GRAVIDADE_FAIL = 2
 
 
+@dataclass
+class _Saida:
+    """O que o ``--quiet`` e o ``--json`` pedem de todo bloco em Python."""
+
+    quiet: bool = False
+    como_json: bool = False
+    achados: list[dict[str, str]] = field(default_factory=list)
+
+
+_SAIDA = _Saida()
+
+
+def _bloco(titulo: str, linhas: Iterable[tuple[str, str]], **como_imprimir: Any) -> None:
+    """O impressor único dos blocos em Python: cabeçalho, linhas, e o que o quiet e o json pedem.
+
+    ``--quiet`` descarta as linhas ``[ OK ]`` e o cabeçalho que ficou sem linha; ``--json`` junta
+    ``{bloco, tag, mensagem}`` em ``_SAIDA.achados`` e não imprime nada.
+    """
+    linhas = list(linhas)
+    if _SAIDA.como_json:
+        _SAIDA.achados.extend(
+            {"bloco": titulo, "tag": _o_nome_da_tag(tag), "mensagem": mensagem}
+            for tag, mensagem in linhas
+        )
+        return
+    visiveis = [(t, m) for t, m in linhas if not (_SAIDA.quiet and _o_nome_da_tag(t) == "OK")]
+    if _SAIDA.quiet and not visiveis:
+        return
+    console.print(f"\n== {titulo} ==")
+    for tag, mensagem in visiveis:
+        console.print(f"{tag} {mensagem}", **como_imprimir)
+
+
+def _o_nome_da_tag(tag: str) -> str:
+    return tag.strip().strip("[]").strip().upper()
+
+
 def _gravidade_das_linhas(linhas: list[tuple[str, str]]) -> int:
     """A pior gravidade entre as linhas ``(tag, mensagem)`` de um bloco."""
     pior = 0
     for tag, _mensagem in linhas:
-        marca = tag.strip().strip("[]").strip().upper()
+        marca = _o_nome_da_tag(tag)
         if marca == "FAIL":
             pior = max(pior, _GRAVIDADE_FAIL)
         elif marca == "WARN":
@@ -404,10 +443,8 @@ def _print_storm_block() -> int:
     from hefesto_dualsense4unix.integrations import storm_doctor
 
     no_cabo = storm_doctor.controles_no_cabo(asyncio.run(_state_full_ou_none()))
-    console.print("\n== anti-storm / sistema ==")
     linhas = storm_doctor.storm_report(controles_no_cabo=no_cabo)
-    for tag, message in linhas:
-        console.print(f"{tag} {message}")
+    _bloco("anti-storm / sistema", linhas)
     return _gravidade_das_linhas(linhas)
 
 
@@ -429,9 +466,7 @@ def _linhas_perfis() -> tuple[list[tuple[str, str]], bool]:
 def _print_bloco_perfis() -> bool:
     """Imprime o bloco de perfis. True quando há achado GRAVE (exit != 0)."""
     linhas, houve_erro = _linhas_perfis()
-    console.print("\n== perfis (coerência entre eles) ==")
-    for tag, mensagem in linhas:
-        console.print(f"{tag} {mensagem}")
+    _bloco("perfis (coerência entre eles)", linhas)
     return houve_erro
 
 
@@ -442,10 +477,11 @@ def _print_bloco_contratos() -> int:
     """
     from hefesto_dualsense4unix.integrations import contratos_de_fora
 
-    console.print("\n== contratos de fora (o que o Hefesto assume dos outros) ==")
     linhas = contratos_de_fora.linhas_do_doctor()
-    for tag, mensagem in linhas:
-        console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+    _bloco(
+        "contratos de fora (o que o Hefesto assume dos outros)", linhas,
+        soft_wrap=True, highlight=False,
+    )
     return _gravidade_das_linhas(linhas)
 
 
@@ -453,10 +489,8 @@ def _print_bloco_proton_fixado() -> int:
     """O Proton fixado e o que o recibo diz de cada versão. Devolve a gravidade do bloco."""
     from hefesto_dualsense4unix.integrations import qualificar_proton
 
-    console.print("\n== Proton fixado (o recibo de cada versão) ==")
     linhas = qualificar_proton.linhas_do_doctor_desta_maquina()
-    for tag, mensagem in linhas:
-        console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+    _bloco("Proton fixado (o recibo de cada versão)", linhas, soft_wrap=True, highlight=False)
     return _gravidade_das_linhas(linhas)
 
 
@@ -464,10 +498,10 @@ def _print_bloco_entrada() -> int:
     """A permissão de ler o teclado e o pedal do «Usar como botões de». Devolve a gravidade."""
     from hefesto_dualsense4unix.core.system_check import permissao_de_ler_a_entrada
 
-    console.print("\n== teclado e pedal (o acionador da aba Conexões) ==")
     linhas = [permissao_de_ler_a_entrada()]
-    for tag, mensagem in linhas:
-        console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+    _bloco(
+        "teclado e pedal (o acionador da aba Conexões)", linhas, soft_wrap=True, highlight=False
+    )
     return _gravidade_das_linhas(linhas)
 
 
@@ -531,14 +565,11 @@ def _print_bloco_registro() -> int:
     """O registro próprio do serviço e as voltas sozinho dele. Devolve a gravidade do bloco."""
     from hefesto_dualsense4unix.utils.logging_config import caminho_do_registro
 
-    console.print("\n== registro do serviço ==")
     linhas = _linhas_do_registro(caminho_do_registro())
     voltas = _linha_das_voltas_sozinho()
     if voltas is not None:
         linhas.append(voltas)
-    for tag, mensagem in linhas:
-        console.print(f"{tag} ", end="")
-        console.print(mensagem, soft_wrap=True, highlight=False, markup=False)
+    _bloco("registro do serviço", linhas, soft_wrap=True, highlight=False, markup=False)
     return _gravidade_das_linhas(linhas)
 
 
@@ -549,32 +580,41 @@ def _print_bloco_install() -> int:
     linha = pendencia_do_install()
     if linha is None:
         return 0
-    console.print("\n== versão nova (o install do fecho da janela) ==")
-    console.print(f"{linha[0]} {linha[1]}", soft_wrap=True, highlight=False)
+    _bloco("versão nova (o install do fecho da janela)", [linha], soft_wrap=True, highlight=False)
     return _gravidade_das_linhas([linha])
 
 
-def doctor_cmd(
-    fix: bool = False,
-    quiet: bool = False,
-    fix_safe: bool = False,
-    perfis: bool = False,
-) -> None:
-    """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon."""
-    if perfis:
-        raise typer.Exit(code=1 if _print_bloco_perfis() else 0)
+def _entregar_o_json() -> None:
+    if _SAIDA.como_json:
+        console.print_json(data=_SAIDA.achados)
 
-    rc = 0
+
+def _rodar_o_doctor_sh(fix: bool, quiet: bool) -> int:
     sh = _find_doctor_sh()
-    if sh is not None:
-        args = ["bash", str(sh)]
-        if fix:
-            args.append("--fix")
-        if quiet:
-            args.append("--quiet")
-        rc = _GRAVIDADE_FAIL if subprocess.run(args, check=False).returncode else 0
-    else:
+    if sh is None:
         _avisar_ausente("scripts/doctor.sh", "só os checks do daemon")
+        return 0
+    args = ["bash", str(sh)]
+    if fix:
+        args.append("--fix")
+    if quiet:
+        args.append("--quiet")
+    return _GRAVIDADE_FAIL if subprocess.run(args, check=False).returncode else 0
+
+
+def _rodar_o_doctor(
+    fix: bool,
+    quiet: bool,
+    fix_safe: bool,
+    perfis: bool,
+    como_json: bool,
+) -> None:
+    if perfis:
+        rc_perfis = 1 if _print_bloco_perfis() else 0
+        _entregar_o_json()
+        raise typer.Exit(code=rc_perfis)
+
+    rc = 0 if como_json else _rodar_o_doctor_sh(fix, quiet)
 
     rc = max(rc, _print_storm_block())
 
@@ -590,13 +630,12 @@ def doctor_cmd(
     rc = max(rc, _print_bloco_registro())
     rc = max(rc, _print_bloco_install())
 
-    console.print("\n== daemon (via IPC) ==")
     linhas_do_daemon = asyncio.run(_daemon_checks())
-    for tag, message in linhas_do_daemon:
-        console.print(f"{tag} {message}")
+    _bloco("daemon (via IPC)", linhas_do_daemon)
     rc = max(rc, _gravidade_das_linhas(linhas_do_daemon))
+    _entregar_o_json()
 
-    if fix_safe:
+    if fix_safe and not como_json:
         console.print("\n== fix-safe (sem sudo) ==")
         _run_script("scripts/disable_steam_input.sh", "--apply-quiet")
         _run_script("scripts/fix_wireplumber_default_source.sh", "--install")
@@ -604,6 +643,25 @@ def doctor_cmd(
         rc = max(rc, _print_storm_block())
 
     raise typer.Exit(code=rc)
+
+
+def doctor_cmd(
+    fix: bool = False,
+    quiet: bool = False,
+    fix_safe: bool = False,
+    perfis: bool = False,
+    como_json: bool = False,
+) -> None:
+    """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon.
+
+    ``como_json`` imprime só os blocos em Python como lista de ``{bloco, tag, mensagem}``: o
+    `doctor.sh` e o ``--fix-safe`` falam em texto e ficam de fora.
+    """
+    _SAIDA.quiet, _SAIDA.como_json, _SAIDA.achados = quiet, como_json, []
+    try:
+        _rodar_o_doctor(fix, quiet, fix_safe, perfis, como_json)
+    finally:
+        _SAIDA.quiet, _SAIDA.como_json, _SAIDA.achados = False, False, []
 
 
 __all__ = ["doctor_cmd"]

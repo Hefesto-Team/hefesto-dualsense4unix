@@ -9,9 +9,9 @@ instala o completar pelo Tab no bash e no zsh.
 | Comando | O que faz |
 |---|---|
 | `version` | a versão instalada |
-| `status` | o serviço e os controles |
-| `doctor` | o diagnóstico (`--fix`, `--fix-safe`, `--quiet`, `--perfis`) |
-| `battery` | a bateria |
+| `status` | o perfil em vigor e uma linha por controle (`--json`) |
+| `doctor` | o diagnóstico (`--fix`, `--fix-safe`, `--quiet`, `--perfis`, `--json`) |
+| `battery` | a bateria de cada controle (`--json`) |
 | `led --color …` | a cor da barra de luz (`--brightness` opcional) |
 | `mouse on/off/status` | o controle como mouse e teclado |
 | `profile list/show/activate/create/delete/apply/save` | os perfis |
@@ -60,7 +60,7 @@ parado.
 ## `profile`
 
 ```bash
-hefesto-dualsense4unix profile list
+hefesto-dualsense4unix profile list         # --json para scripts
 hefesto-dualsense4unix profile show <nome>
 hefesto-dualsense4unix profile create <nome> [--match-class X] [--match-exe X] [--match-regex …] [--priority N] [--fallback]   # perfil enxuto: gatilho, luz e vibração herdam o computador
 hefesto-dualsense4unix profile create <nome> --manual      # só entra pela janela ou pelo activate
@@ -212,6 +212,13 @@ falam com o serviço esperam no máximo o prazo do método e dizem «o daemon n�
 respondeu»; sem controle ao alcance, `battery` e `test led` dizem «nenhum
 controle ao alcance» e saem com `1`. O terminal só mostra avisos e erros do
 diário; `HEFESTO_DUALSENSE4UNIX_LOG_LEVEL=DEBUG` traz o resto.
+`status` e `battery` mostram um controle por linha, pelo número, pela cor do
+plástico, pelo transporte e pela carga; com `--json`, sem controle, a lista sai vazia
+e o código é `0`. `doctor --quiet` não imprime o que está certo em nenhum bloco, e
+`doctor --json` imprime os blocos em Python como lista de `bloco`, `tag` e
+`mensagem` (o `doctor.sh` e o `--fix-safe`, que falam em texto, ficam de fora).
+A interface de terminal (`tui`) mantém uma conexão com o serviço e mostra os
+valores vivos de cada controle.
 `doctor --perfis` só confere os perfis entre si (um perfil geral vencendo o de
 um jogo, prioridades empatadas) e sai com `1` quando acha algo grave. Ele avisa e
 não reescreve arquivo nenhum.

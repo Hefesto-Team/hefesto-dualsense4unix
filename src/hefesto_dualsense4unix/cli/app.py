@@ -117,11 +117,13 @@ app.add_typer(rumble_app, name="rumble")
 
 
 @app.command()
-def status() -> None:
-    """Mostra status do daemon e do controle."""
+def status(
+    como_json: bool = typer.Option(False, "--json", help="Saída como JSON (scripts)."),
+) -> None:
+    """Mostra o perfil em vigor e uma linha por controle conectado."""
     from hefesto_dualsense4unix.cli.cmd_status import status_cmd
 
-    status_cmd()
+    status_cmd(como_json=como_json)
 
 
 @app.command()
@@ -138,19 +140,24 @@ def doctor(
         "--perfis",
         help="SÓ a coerência dos perfis entre si (rápido, sem daemon). Sai 1 se houver erro.",
     ),
+    como_json: bool = typer.Option(
+        False, "--json", help="Os blocos em Python como lista JSON (sem o doctor.sh)."
+    ),
 ) -> None:
     """Diagnóstico de saúde: daemon, udev, applet, áudio, anti-storm + checks via IPC."""
     from hefesto_dualsense4unix.cli.cmd_doctor import doctor_cmd
 
-    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe, perfis=perfis)
+    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe, perfis=perfis, como_json=como_json)
 
 
 @app.command()
-def battery() -> None:
-    """Percentual de bateria do controle."""
+def battery(
+    como_json: bool = typer.Option(False, "--json", help="Saída como JSON (scripts)."),
+) -> None:
+    """Percentual de bateria de cada controle conectado."""
     from hefesto_dualsense4unix.cli.cmd_status import battery_cmd
 
-    battery_cmd()
+    battery_cmd(como_json=como_json)
 
 
 @app.command()

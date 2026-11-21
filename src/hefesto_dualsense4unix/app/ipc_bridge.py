@@ -160,6 +160,11 @@ _SERVICO_PARADO: tuple[type[BaseException], ...] = (FileNotFoundError, Connectio
 _CODIGO_DO_CLIENTE = -1
 
 
+def servico_mudo(exc: IpcError) -> bool:
+    """O erro é do lado do cliente (prazo vencido ou conexão caída), e não a recusa do serviço."""
+    return prazo_vencido(exc) or exc.code == _CODIGO_DO_CLIENTE
+
+
 class Desfecho(NamedTuple):
     """O que a chamada ao serviço provou: ``atendeu``, ``parado`` (socket ausente ou conexão
     recusada), ``recusou`` (com o ``motivo``) ou ``mudo`` (prazo vencido ou conexão caída)."""
@@ -183,7 +188,7 @@ def pedir_ao_servico(
     try:
         corpo = _run_call(method, params, timeout=prazo)
     except IpcError as exc:
-        if prazo_vencido(exc) or exc.code == _CODIGO_DO_CLIENTE:
+        if servico_mudo(exc):
             return Desfecho(MUDO, motivo=exc.message)
         return Desfecho(RECUSOU, motivo=exc.message)
     except _SERVICO_PARADO as exc:

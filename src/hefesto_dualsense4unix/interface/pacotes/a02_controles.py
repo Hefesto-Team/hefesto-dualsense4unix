@@ -1986,7 +1986,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
     `audio.mic_mudo` é LEITURA do byte que vem em todo report de input. Guardar o
-    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:904-905`
+    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:962-963`
     nomeia como o que o que fez a tela parecer mentirosa quando nunca mentiu.
 
     `mic_set(False)` NÃO devolve a posse ao `hid-playstation` — isso é

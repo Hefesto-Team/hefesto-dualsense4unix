@@ -1880,8 +1880,10 @@ class _PedidosDoVolumeDoMic(PedidosEmFioProprio):
                 return
             aparelho = getattr(controller, "set_microphone_volume", None)
             if callable(aparelho):
-                with contextlib.suppress(Exception):
+                try:
                     aparelho(volume, uniq=uniq)
+                except Exception as exc:
+                    logger.warning("profile_mic_byte_do_aparelho_falhou", uniq=uniq, err=str(exc))
             logger.info("profile_mic_volume_applied", volume=volume, fonte=fonte, origin=origin)
         except Exception as exc:
             logger.warning(
