@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1283789,
+      "piso": 1284024,
       "por_item": {
-        "docs": 107745,
+        "docs": 107757,
         "scripts": 115240,
-        "src": 325514,
-        "tests": 735290
+        "src": 325593,
+        "tests": 735434
       },
-      "razao": "tamanho: +31 linhas (1283758 -> 1283789), pagas por Origem: D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL, D-0910-A-PRIMEIRA-LETRA-E-OS-NOMES-PROPRIOS, D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE, D-2011-A-EDICAO-DO-MAPA-SO-SE-LARGA-AO-SAIR, D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO, D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO; registrado no fecho, topo 5f983d2838af",
+      "razao": "tamanho: +235 linhas (1283789 -> 1284024), pagas por Origem: D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL, D-0910-A-PRIMEIRA-LETRA-E-OS-NOMES-PROPRIOS, D-2011-A-ACAO-DA-EXTENSAO-APARECE-QUANDO-CABE-E-A-CONEXAO-ESPERA, D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE, D-2011-A-EDICAO-DO-MAPA-SO-SE-LARGA-AO-SAIR, D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO, D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO; registrado no fecho, topo 13f95dede17b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2175,10 +2175,16 @@
           "de": 1283758,
           "para": 1283789,
           "razao": "tamanho: +31 linhas (1283758 -> 1283789), pagas por Origem: D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL, D-0910-A-PRIMEIRA-LETRA-E-OS-NOMES-PROPRIOS, D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE, D-2011-A-EDICAO-DO-MAPA-SO-SE-LARGA-AO-SAIR, D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO, D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO; registrado no fecho, topo 5f983d2838af"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1283789,
+          "para": 1284024,
+          "razao": "tamanho: +235 linhas (1283789 -> 1284024), pagas por Origem: D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL, D-0910-A-PRIMEIRA-LETRA-E-OS-NOMES-PROPRIOS, D-2011-A-ACAO-DA-EXTENSAO-APARECE-QUANDO-CABE-E-A-CONEXAO-ESPERA, D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE, D-2011-A-EDICAO-DO-MAPA-SO-SE-LARGA-AO-SAIR, D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO, D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO; registrado no fecho, topo 13f95dede17b"
         }
       ],
       "unidade": "linhas",
-      "universo": 3577
+      "universo": 3578
     }
   }
 }
