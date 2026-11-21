@@ -266,7 +266,10 @@ def _os_release_de(tmp_path: Path, id_: str) -> Path:
 def test_dentro_do_sandbox_o_os_release_e_o_do_host_e_o_marcador_decide_o_gesto(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """As duas respostas de dentro: o host vem do Flatpak; o marcador vem da linha do manifesto."""
+    """As duas respostas de dentro: o host vem do Flatpak; o marcador, da linha do manifesto.
+
+    D-2111-O-SANDBOX-DO-FLATPAK-VE-O-MARCADOR-DE-IMAGEM-SO-LEITURA: um caminho a mais, só leitura.
+    """
     from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
 
     assert str(pa.OS_RELEASE[0]) in MONTADO_PELO_FLATPAK, (

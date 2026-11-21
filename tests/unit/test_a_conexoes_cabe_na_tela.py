@@ -559,7 +559,10 @@ def _vistas(largura: int) -> dict[str, Any]:
 
 @pytest.mark.parametrize("largura", sorted(LARGURAS))
 def test_nenhuma_vista_rola_na_vertical_nem_corta_texto(largura: int) -> None:
-    """As 21 vistas do ``medir_ajustado.py`` (sete por largura e o título pairado), sem rolagem."""
+    """As 21 vistas (sete por largura e o título pairado), sem rolagem nem corte.
+
+    D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA: a frase da ponte cabe a 1272 px.
+    """
     vistas = _vistas(largura)
     assert vistas["radio"]["aberta"] == 0, "uma caixa nasceu aberta: o desenho as quer fechadas"
     assert vistas["adaptador"]["aberta"] == 1, "o clique não abriu a caixa do adaptador"
