@@ -873,7 +873,9 @@ def mapa_gravar_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     tecla = _tecla_do_navegador(tecla)
     for parte in tecla.split("+"):
         if not _e_combinacao(parte):
-            raise RuntimeError(FRASE_DA_RECUSA.format(_nome_da_tecla(parte)))
+            raise RuntimeError(
+                f"A tecla {_nome_da_tecla(parte)} não está entre as do teclado virtual: "
+                "escolha outra")
     _grava_na_edicao(ctx, ACAO, tecla)
     return _repinta(ctx)
 
