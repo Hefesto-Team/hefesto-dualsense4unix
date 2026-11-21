@@ -1126,9 +1126,11 @@ QUEM GANHA PONTE, em três caminhos e nesta ordem (03/09/2026)
 2. **declaração** — `DaemonConfig.bt_mic_uniqs` (fiada por `run()` a partir do
    `maquina.json`). Continua valendo inteira: quem já marcou um controle
    continua com a ponte de pé sem precisar tocar em botão nenhum;
-3. **a env** `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` — o caminho à mão, que vale para
-   TODOS os controles. É o que a variável sempre significou, e quem a exporta está
-   pedindo a mesa inteira de propósito.
+3. **a env** `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` — o caminho à mão, que valia para
+   TODOS os controles. Saiu em 21/11/2026: desde 18/09 todo DualSense entra por
+   padrão, e o único efeito que sobrava da variável era passar por cima do
+   microfone desligado na tela de um controle. Hoje são dois caminhos, e a chave
+   de cada controle é a única mão.
 
 **E DESLIGAR CONTINUA DESLIGANDO.** Tirar a marca do card no "Aplicar" derruba
 a ponte mesmo que houvesse um pedido aberto: o laço vê o `uniq` SAIR da
