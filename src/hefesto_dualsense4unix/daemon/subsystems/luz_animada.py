@@ -89,6 +89,7 @@ QUADROS_POR_SEGUNDO_MAXIMO = 30
 INTERVALO_MINIMO = 1.0 / QUADROS_POR_SEGUNDO_MAXIMO
 INTERVALO_DO_LACO_S = INTERVALO_MINIMO
 RELEITURA_DO_PLANO_S = 0.5
+PASSO_DO_REPOUSO_S = 0.25
 PORTA_DA_LUZ = "perfil da luz"
 RELEITURA_DA_CARGA_S = 2.0
 REACAO_ACENDE = "acende"
@@ -553,6 +554,7 @@ class Passo:
         self._brilho_do_acende: dict[str, BrilhoDoAcende] = {}
         self._cargas: dict[str, tuple[object, object]] = {}
         self._carga_lida_em = float("-inf")
+        self.em_repouso = False
 
     def _houve_repintura_de_fora(self) -> bool:
         """O backend repintou a luz resolvida desde o último tique? (o contador dele subiu)."""
@@ -584,6 +586,7 @@ class Passo:
             **self._planos_da_corrida(controles, agora),
             **{c.uniq: self._plano[c.uniq] for c in controles if c.uniq in self._plano},
         }
+        self.em_repouso = not plano
         if not plano:
             self.luz.parar_tudo()
             return 0
@@ -746,7 +749,7 @@ async def luz_animada_loop(daemon: Any, luz: LuzAnimada) -> None:
     passo = Passo(daemon, luz)
     try:
         while not daemon._is_stopping():
-            await asyncio.sleep(INTERVALO_DO_LACO_S)
+            await asyncio.sleep(PASSO_DO_REPOUSO_S if passo.em_repouso else INTERVALO_DO_LACO_S)
             passo.tique_do_laco(time.monotonic())
     finally:
         try:

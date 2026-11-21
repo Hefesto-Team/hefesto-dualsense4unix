@@ -101,6 +101,7 @@ JANELA_DO_TETO_S = 1.0
 INTERVALO_S = 1.0 / 60.0
 FOLGA_DA_CONTINUA_S = 2 * INTERVALO_S
 RELEITURA_DA_RECEITA_S = 1.0
+PASSO_DO_REPOUSO_S = 0.25
 PORTA_DO_TATO = "receita do tato"
 CORPO_MAX_PEDACOS = 16
 SINAL_DO_CORPO = 0.001
@@ -3528,8 +3529,16 @@ class PedidosDoCorpo:
         self._relogio = relogio
         self._pedidos: dict[tuple[str, str], tuple[PedidoDoCorpo, float]] = {}
         self._trava = threading.Lock()
+        self.acordar: Callable[[], object] | None = None
+
+    def em_curso(self) -> bool:
+        """Há pedido guardado, vivo ou ainda não podado: o laço não repousa."""
+        with self._trava:
+            return bool(self._pedidos)
 
     def pedir(self, dono: str, uniq: str, pedido: PedidoDoCorpo, ate_ms: int) -> None:
+        if self.acordar is not None:
+            self.acordar()
         if not 0 < ate_ms <= PRAZO_MAXIMO_DO_CORPO_MS:
             raise ValueError(f"o prazo vai de 1 a {PRAZO_MAXIMO_DO_CORPO_MS} ms")
         if not (0.0 <= pedido.som_no_corpo <= 1.0 and 0.0 <= pedido.forca_dos_motores <= 1.0):
@@ -3635,11 +3644,23 @@ class FonteDeFora:
         self.toques: dict[tuple[str, str], ToqueDeFora] = {}
         self._estalos: deque[tuple[float, Any]] = deque(maxlen=ESTALOS_GUARDADOS)
         self._trava = threading.Lock()
+        self.acordar: Callable[[], object] | None = None
         self.corpo = PedidosDoCorpo(lambda: self.relogio())
         self.contadores: dict[str, int] = {
             "pedidos": 0, "escritas": 0, "recusas_do_modo": 0, "recusas_do_teto": 0,
             "mais_fracos": 0, "pelo_motor": 0,
         }
+
+    def _acordar_o_laco(self) -> None:
+        if self.acordar is not None:
+            self.acordar()
+
+    def ociosa(self) -> bool:
+        """Nenhum pedido vivo, toque em curso, devolução esperando nem pedido do corpo: o
+        ``andar`` não tem o que fazer."""
+        with self._trava:
+            sem_nada = not (self._vivos or self.toques or self._devolver)
+        return sem_nada and not self.corpo.em_curso()
 
     def _podar(self, chave: tuple[str, str, str], agora: float) -> list[PedidoVivo]:
         vivos = []
@@ -3691,6 +3712,7 @@ class FonteDeFora:
         vida_s: float = VIDA_SEM_PRAZO_S,
     ) -> Veredito:
         """Uma escrita de fora: o modo, o mais forte em cada vaga e o teto, nesta ordem."""
+        self._acordar_o_laco()
         self.contadores["pedidos"] += 1
         if o_modo_cala_a_extensao(self.modo_de(uniq)):
             self.contadores["recusas_do_modo"] += 1
@@ -3758,6 +3780,7 @@ class FonteDeFora:
 
     def esquecer(self, origem: str) -> None:
         """A extensão que sai leva os pedidos, os padrões e os toques que eram seus."""
+        self._acordar_o_laco()
         for chave in list(self._vivos):
             self.soltar(origem, chave[1], chave[0], (chave[2],))
         self.padroes = {k: p for k, p in self.padroes.items() if k[0] != origem}
@@ -3776,6 +3799,7 @@ class FonteDeFora:
         bpm: float | None, agora: float, ate_s: float | None,
     ) -> Veredito:
         """O padrão registrado na háptica; pelo rádio sem ponte livre, no motor."""
+        self._acordar_o_laco()
         padrao = self.padroes.get((origem, ident))
         if padrao is None:
             raise ValueError(f"padrão não registrado: {ident}")
@@ -3812,6 +3836,7 @@ class FonteDeFora:
     ) -> Veredito:
         """Um som curto no alto-falante: o da extensão, ou o recorte do estalo do jogo, cortado
         no ``dura_s`` do pedido."""
+        self._acordar_o_laco()
         from hefesto_dualsense4unix.integrations.transiente_do_jogo import recorte_pronto
 
         padrao = self.sons.get((origem, ident))
@@ -4489,6 +4514,18 @@ class Passo:
             else:
                 self.motor.disparo[(controle.uniq, lado)] = valor
 
+    def ocioso(self) -> bool:
+        """Nenhum consumidor com algo a tocar: a receita desligada, nenhum som assinado, a fonte
+        de fora, a volta dos acessórios e os meus toques sem trabalho. O laço repousa."""
+        meus = self.motor.meus_toques
+        return (
+            not self.motor.ligado
+            and not self.som_assinado()
+            and self.motor.de_fora.ociosa()
+            and not (meus is not None and meus.precisa_andar())
+            and not _volta_em_curso(self.motor.volta)
+        )
+
     def tique_do_laco(self, agora: float) -> int:
         """O tique do laço de 60 Hz: o que falha num tique fica no log, e o seguinte vem."""
         try:
@@ -4531,6 +4568,23 @@ class Passo:
                            estalo.energia))
 
 
+def _volta_em_curso(volta: Any) -> bool:
+    """A volta dos acessórios tem toque, medidor ou pulso a andar."""
+    return volta is not None and any(
+        getattr(volta, nome, None) for nome in ("_toques", "_medidores", "_pulsos"))
+
+
+def _acordar_com(fila: asyncio.Queue[Any], acordar: Callable[[], object]) -> None:
+    """Quem põe na fila acorda o laço: o que chega num repouso não espera o passo seguinte."""
+    original = fila.put_nowait
+
+    def colocar(item: Any) -> None:
+        original(item)
+        acordar()
+
+    fila.put_nowait = colocar  # type: ignore[method-assign]
+
+
 async def _diario_do_corpo_loop(daemon: DaemonProtocol, passo: Passo) -> None:
     """A linha do minuto, fora do tique: quem escreve no diário não segura o laço de 60 Hz."""
     while not daemon._is_stopping():
@@ -4559,18 +4613,35 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
     volta = motor.volta
     barramento = getattr(daemon, "bus", None) if volta is not None else None
     gestos = estados = None
+    laco = asyncio.get_running_loop()
+    desperto = asyncio.Event()
+
+    def acordar() -> None:
+        laco.call_soon_threadsafe(desperto.set)
+
+    motor.de_fora.acordar = motor.de_fora.corpo.acordar = acordar
     if barramento is not None:
         gestos = barramento.subscribe(EventTopic.ACESSORIOS_GESTO)
         estados = barramento.subscribe(EventTopic.ACESSORIOS_ESTADO)
+        _acordar_com(gestos, acordar)
+        _acordar_com(estados, acordar)
+    repouso = False
     try:
         while not daemon._is_stopping():
-            await asyncio.sleep(INTERVALO_S)
+            if repouso:
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(desperto.wait(), PASSO_DO_REPOUSO_S)
+            else:
+                await asyncio.sleep(INTERVALO_S)
+            desperto.clear()
             agora = time.monotonic()
             if gestos is not None and estados is not None:
                 volta.drenar(gestos, estados, agora)
             passo.tique_do_laco(agora)
             motor.de_fora.andar(agora)
+            repouso = passo.ocioso()
     finally:
+        motor.de_fora.acordar = motor.de_fora.corpo.acordar = None
         diario.cancel()
         if barramento is not None:
             barramento.unsubscribe(EventTopic.ACESSORIOS_GESTO, gestos)
