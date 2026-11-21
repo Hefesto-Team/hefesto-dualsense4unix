@@ -225,3 +225,22 @@ def test_o_desenho_nao_afirma_que_cada_controle_guarda_o_seu() -> None:
     assert "cada controle guarda o seu" not in texto
     assert "A tecla e o mouse valem para todos, pelo perfil." in texto
     assert texto.count('class="chip plastico on"') == 4
+
+
+def test_o_clique_no_chip_nao_acende_o_que_o_pacote_nao_pintou() -> None:
+    """D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO: só o pacote acende o chip do mapa."""
+    chrome = pathlib.Path("/usr/bin/google-chrome")
+    if not chrome.exists():
+        pytest.skip("sem o Chrome do sistema")
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(executable_path=str(chrome), args=["--no-sandbox"])
+        pg = nav.new_page(viewport={"width": 1212, "height": 809})
+        pg.goto((RAIZ / "mockup" / "mapa-do-controle.html").as_uri())
+        pg.evaluate("document.querySelectorAll('.mc-chips .chip')[1].click()")
+        acesos = pg.evaluate("[...document.querySelectorAll('.mc-chips .chip')]"
+                             ".map(c => c.classList.contains('on'))")
+        nav.close()
+
+    assert acesos == [True] * 4, "o clique recusado apagou os chips que a fita acende"

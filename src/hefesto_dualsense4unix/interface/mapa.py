@@ -830,10 +830,6 @@ JS = r"""
   };
   const chips = $('.mc-chips');
   new MutationObserver(() => acende($('.chip.on', chips))).observe(chips, {childList: true, subtree: true, attributes: true});
-  chips.addEventListener('click', e => {
-    const c = e.target.closest('.chip');
-    if (c) { $$('.chip', chips).forEach(x => x.classList.toggle('on', x === c)); acende(c); }
-  });
   acende($('.chip.on', chips));
   const bloqueia = () => { nome.readOnly = $('.mc-perfil').dataset.fixo === 'sim'; };
   new MutationObserver(bloqueia).observe($('.mc-perfil'), {attributes: true, attributeFilter: ['data-fixo']});
