@@ -288,7 +288,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "Endereço do socket do broker de hidraw. Não é escolha de quem usa: é ponto de "
         "injeção para o teste apontar o cliente a um socket de mentira "
         "(`SOCKET_PATH_ENV` em "
-        "`src/hefesto_dualsense4unix/integrations/hidraw_broker_client.py:21`). Em produção o "
+        "`src/hefesto_dualsense4unix/integrations/hidraw_broker_client.py:22`). Em produção o "
         "caminho vem "
         "do XDG. MEDIDO em 12/08/2026."
     ),
@@ -508,7 +508,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "08/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — quanto "
         "o broker espera sem cliente antes de entregar o físico ao sistema "
         "(`_graca_da_entrega_do_ambiente` em "
-        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:3717`). O "
+        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:3832`). O "
         "padrão é a medida (30 s, o dobro do pior reinício do daemon), e "
         "nenhuma unit, install ou empacotamento a escreve: `0` é a válvula de "
         "quem depura o broker para voltar ao comportamento de antes. Nenhum "
@@ -636,7 +636,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_BROKER_ALLOWED_UID": (
         "Um uid FIXO para o broker de hidraw atender "
-        "(`ALLOWED_UID_ENV` em `src/hefesto_dualsense4unix/broker/hidraw_broker.py:97`). "
+        "(`ALLOWED_UID_ENV` em `src/hefesto_dualsense4unix/broker/hidraw_broker.py:98`). "
         "REMEDIDO em 13/10/2026 (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01, commit 7f1a5f562): "
         "a unit deixou de gravar uid, e o broker atende quem está na frente do seat, "
         "perguntado ao logind a cada pedido. A promessa de servir a sessão de quem usa continua; "
@@ -645,7 +645,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_BROKER_LOGINCTL": (
         "13/10/2026, O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01 — o caminho do `loginctl` que o "
         "broker pergunta (`LOGINCTL_ENV` em "
-        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:98`, lida pelo `_loginctl`). É "
+        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:99`, lida pelo `_loginctl`). É "
         "promessa de sistema, "
         "e não instrumento: o broker atende quem o logind diz que está na frente, e sem "
         "`loginctl` ele não atende ninguém. Nas distros do install os caminhos fixos "
@@ -659,7 +659,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
         "regra `assets/73-hefesto-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01, "
         "que o broker lê pelo `NO_NASCE_FECHADO_ENV` em "
-        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:103`. É promessa de produto, de "
+        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:111`. É promessa de produto, de "
         "20/09/2026: o Hefesto tem prioridade em tudo, e isso vem no install "
         "por padrão. A chave acopla as duas metades da cura — "
         "a udev decide o NASCIMENTO do nó, e esta env conta ao broker qual é o "

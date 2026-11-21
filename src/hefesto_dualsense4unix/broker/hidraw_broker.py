@@ -88,6 +88,7 @@ import socket
 import stat as stat_mod
 import struct
 import sys
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -99,7 +100,14 @@ LOGINCTL_ENV = "HEFESTO_BROKER_LOGINCTL"
 SEAT_PADRAO = "seat0"
 VALIDADE_DA_SESSAO_S = 1.0
 VALIDADE_NA_VARREDURA_S = 10.0
-PRAZO_DO_LOGINCTL_S = 3.0
+PRAZO_DO_LOGINCTL_S = 1.0
+ESPERA_DA_SESSAO_S = 0.25
+ESPERA_DA_PRIMEIRA_SESSAO_S = 1.5
+MAX_CONEXOES_POR_UID = 16
+PRAZO_DA_CONEXAO_MUDA_S = 10.0
+PAUSA_DO_ACCEPT_S = 1.0
+RENOVA_A_LINHA_DA_RECUSA_S = 60.0
+SEM_RECURSO_NO_ACCEPT = frozenset({errno.EMFILE, errno.ENFILE, errno.ENOBUFS, errno.ENOMEM})
 NO_NASCE_FECHADO_ENV = "HEFESTO_BROKER_NO_NASCE_FECHADO"
 MAX_LINE_BYTES = 4096
 
@@ -1937,6 +1945,27 @@ def uid_da_sessao_ativa(seat: str = SEAT_PADRAO) -> int | None:
     return uid if uid > 0 else None
 
 
+class _PerguntaAoLogind:
+    """Uma pergunta ``quem está na frente`` em andamento, fora do laço do broker."""
+
+    def __init__(self, quem: Callable[[], int | None], log: Callable[..., None]) -> None:
+        self.uid: int | None = None
+        self._pronta = threading.Event()
+        threading.Thread(target=self._rodar, args=(quem, log), daemon=True).start()
+
+    def _rodar(self, quem: Callable[[], int | None], log: Callable[..., None]) -> None:
+        try:
+            self.uid = quem()
+        except Exception as exc:
+            log("logind_falhou", erro=type(exc).__name__)
+        finally:
+            self._pronta.set()
+
+    def espera(self, segundos: float) -> bool:
+        """``True`` quando a resposta já está em ``uid``."""
+        return self._pronta.wait(segundos)
+
+
 class BrokerState:
     """Protocolo + contabilidade de lease. Puro (fs injetável) e testável."""
 
@@ -1982,6 +2011,7 @@ class BrokerState:
         self._relogio_da_sessao = relogio
         self._sessao_lida_em: float | None = None
         self._sessao_lida: int | None = None
+        self._pergunta: _PerguntaAoLogind | None = None
         self._ultimo_uid: int | None = None
         self._marca_da_entrega = marca_da_entrega
         self.no_nasce_fechado = bool(no_nasce_fechado)
@@ -2025,6 +2055,7 @@ class BrokerState:
         self.trocar = False
         self._servidos_path = servidos_path
         self._pid_da_conn: dict[int, int] = {}
+        self._pediram: set[int] = set()
         self._servidos: dict[int, int] = self._ler_os_servidos()
         self._segurados: dict[str, set[tuple[str, int, str]]] = {}
         self._validator_externo = validator_externo
@@ -2044,13 +2075,28 @@ class BrokerState:
             return self.allowed_uid if self.allowed_uid else None
         agora = self._relogio_da_sessao()
         if self._sessao_lida_em is None or agora - self._sessao_lida_em >= validade:
-            self._sessao_lida = self._quem_esta_na_frente()
-            self._sessao_lida_em = agora
+            self._renovar_a_sessao(agora, self._quem_esta_na_frente)
         uid = self._sessao_lida
         if uid:
             self._ultimo_uid = uid
             return uid
         return None
+
+    def _renovar_a_sessao(self, agora: float, quem: Callable[[], int | None]) -> None:
+        """Pergunta ao logind SEM prender o laço: o prazo da espera é menor que o do cliente.
+
+        A pergunta corre numa thread. Se a resposta não vem na espera, a anterior segue
+        valendo até a nova voltar (a próxima chamada a recolhe); sem resposta nenhuma ainda,
+        o pedido é recusado, e o cliente recua em vez de reabrir a conexão.
+        """
+        if self._pergunta is None:
+            self._pergunta = _PerguntaAoLogind(quem, self._log)
+        primeira = self._sessao_lida_em is None
+        espera = ESPERA_DA_PRIMEIRA_SESSAO_S if primeira else ESPERA_DA_SESSAO_S
+        if self._pergunta.espera(espera):
+            self._sessao_lida = self._pergunta.uid
+            self._sessao_lida_em = agora
+            self._pergunta = None
 
     def esquecer_a_sessao_lida(self) -> None:
         """Descarta a resposta guardada do logind (o próximo pedido pergunta de novo)."""
@@ -2235,6 +2281,10 @@ class BrokerState:
         if not abrir:
             self._revogar_o_que_escapou(canon)
 
+    def ja_pediu(self, conn_id: int) -> bool:
+        """A conexão já mandou alguma linha? A que só chegou e calou não é cliente."""
+        return conn_id in self._pediram
+
     def lembrar_o_cliente(self, conn_id: int, pid: int) -> None:
         """O pid da conexão (``SO_PEERCRED``): o cliente vivo segura o físico por direito."""
         self._pid_da_conn[conn_id] = pid
@@ -2402,6 +2452,7 @@ class BrokerState:
         self, conn_id: int, peer_uid: int, line: bytes
     ) -> tuple[dict[str, object], int | None]:
         """Uma requisição JSON-por-linha → (resposta, fd|None). NUNCA levanta."""
+        self._pediram.add(conn_id)
         if len(line) > MAX_LINE_BYTES:
             return ({"ok": False, "error": "reject_oversize"}, None)
         try:
@@ -2983,6 +3034,7 @@ class BrokerState:
         nome que já é de outro aparelho: o pad, que o `_pin` recusa, ou um
         físico que ninguém pediu para esconder.
         """
+        self._pediram.discard(conn_id)
         self._podar_o_que_saiu()
         self._desmontar_os_pads_da(conn_id)
         restored: list[str] = self._soltar_os_externos_da(conn_id)
@@ -3482,13 +3534,16 @@ class Broker:
         self._next_conn_id = 1
         self._buffers: dict[int, bytearray] = {}
         self._peer_uids: dict[int, int] = {}
+        self._chegada: dict[int, float] = {}
+        self._recusas_ditas: dict[tuple[int, str], float] = {}
+        self._escuta_pausada_ate: float | None = None
         self.stopping = False
         if listen_sock is not None:
             listen_sock.setblocking(False)
             self._sel.register(listen_sock, selectors.EVENT_READ, ("accept", 0))
 
     def register_client(self, sock: socket.socket) -> int | None:
-        """Autoriza e registra uma conexão; None = recusada (e fechada)."""
+        """Autoriza e registra uma conexão; None = recusada (com a resposta dita, e fechada)."""
         try:
             pid, uid, _gid = self._peercred_fn(sock)
         except OSError:
@@ -3496,17 +3551,13 @@ class Broker:
             return None
         autorizado = self._state.uid_autorizado()
         if autorizado is None:
-            self._log("peer_rejected", peer_uid=uid, peer_pid=pid, motivo="sem_sessao_ativa")
-            sock.close()
+            self._recusar(sock, uid, pid, "sem_sessao_ativa")
             return None
         if uid != autorizado:
-            self._log(
-                "peer_rejected",
-                peer_uid=uid,
-                peer_pid=pid,
-                motivo="nao_e_quem_esta_na_frente",
-            )
-            sock.close()
+            self._recusar(sock, uid, pid, "nao_e_quem_esta_na_frente")
+            return None
+        if sum(1 for dono in self._peer_uids.values() if dono == uid) >= MAX_CONEXOES_POR_UID:
+            self._recusar(sock, uid, pid, "conexoes_demais")
             return None
         self._soltar_quem_ficou_atras(autorizado)
         conn_id = self._next_conn_id
@@ -3515,15 +3566,31 @@ class Broker:
         self._sel.register(sock, selectors.EVENT_READ, ("conn", conn_id))
         self._buffers[conn_id] = bytearray()
         self._peer_uids[conn_id] = uid
+        self._chegada[conn_id] = self._relogio()
+        for chave in [c for c in self._recusas_ditas if c[0] == uid]:
+            del self._recusas_ditas[chave]
         lembrar = getattr(self._state, "lembrar_o_cliente", None)
         if callable(lembrar):
             lembrar(conn_id, pid)
-        self._sem_cliente_desde = None
         self._log("peer_accepted", conn=conn_id, peer_uid=uid, peer_pid=pid)
         return conn_id
 
+    def _recusar(self, sock: socket.socket, uid: int, pid: int, motivo: str) -> None:
+        """Diz o motivo a quem bateu, fecha, e conta no diário uma vez por episódio."""
+        self._send(sock, {"ok": False, "error": f"reject_{motivo}"})
+        sock.close()
+        agora = self._relogio()
+        dita_em = self._recusas_ditas.get((uid, motivo))
+        if dita_em is not None and agora - dita_em < RENOVA_A_LINHA_DA_RECUSA_S:
+            return
+        if len(self._recusas_ditas) >= 64:
+            self._recusas_ditas.clear()
+        self._recusas_ditas[(uid, motivo)] = agora
+        self._log("peer_rejected", peer_uid=uid, peer_pid=pid, motivo=motivo)
+
     def step(self, timeout: float | None = None) -> None:
         """Uma iteração do selector (testável sem thread)."""
+        self._retomar_a_escuta()
         for key, _events in self._sel.select(timeout):
             kind, conn_id = key.data
             sock = key.fileobj
@@ -3531,11 +3598,53 @@ class Broker:
             if kind == "accept":
                 try:
                     client, _addr = sock.accept()
-                except OSError:
+                except OSError as exc:
+                    if exc.errno in SEM_RECURSO_NO_ACCEPT:
+                        self._pausar_a_escuta(sock, exc)
                     continue
                 self.register_client(client)
             else:
                 self._service(sock, conn_id)
+
+    def _pausar_a_escuta(self, sock: socket.socket, exc: OSError) -> None:
+        """Sem descritor para aceitar, a escuta sai do seletor (legível, faria o laço girar)."""
+        with contextlib.suppress(KeyError, ValueError):
+            self._sel.unregister(sock)
+        self._escuta_pausada_ate = self._relogio() + PAUSA_DO_ACCEPT_S
+        self._log("accept_sem_descritor", erro=errno.errorcode.get(exc.errno or 0, exc.errno))
+
+    def _retomar_a_escuta(self) -> None:
+        if self._escuta_pausada_ate is None or self._relogio() < self._escuta_pausada_ate:
+            return
+        self._escuta_pausada_ate = None
+        if self._listen is not None:
+            self._sel.register(self._listen, selectors.EVENT_READ, ("accept", 0))
+
+    def _pediu(self, conn_id: int) -> bool:
+        ja_pediu = getattr(self._state, "ja_pediu", None)
+        return bool(ja_pediu(conn_id)) if callable(ja_pediu) else True
+
+    def _ha_cliente(self) -> bool:
+        """Alguma conexão já pediu algo? A que só chegou e calou não conta."""
+        return any(self._pediu(conn) for conn in self._peer_uids)
+
+    def _fechar_as_mudas(self, agora: float) -> None:
+        """A conexão que não pediu nada no prazo cai: sem lease nem pedido, não é cliente."""
+        vencidas = [
+            conn for conn, chegou in self._chegada.items()
+            if agora - chegou >= PRAZO_DA_CONEXAO_MUDA_S and not self._pediu(conn)
+        ]
+        if not vencidas:
+            return
+        for chave in list(self._sel.get_map().values()):
+            tipo, conn_id = chave.data
+            if tipo != "conn" or conn_id not in vencidas:
+                continue
+            self._log("peer_solto", conn=conn_id, peer_uid=self._peer_uids.get(conn_id),
+                      motivo="sem_pedido_no_prazo")
+            sock = chave.fileobj
+            assert isinstance(sock, socket.socket)
+            self._close_conn(sock, conn_id)
 
     def tique_da_entrega(self) -> None:
         """Entrega o físico ao sistema quando o Hefesto sumiu; vigia o que chega depois.
@@ -3548,11 +3657,14 @@ class Broker:
         nada não pode ver o controle que liga agora aberto para a Steam.
         """
         state = self._state
+        agora = self._relogio()
+        self._fechar_as_mudas(agora)
         if self._graca_da_entrega_s <= 0:
             return
-        agora = self._relogio()
+        if self._ha_cliente():
+            self._sem_cliente_desde = None
         if state.entregue:
-            if not self._peer_uids and agora - self._ultima_entrega >= 1.0:
+            if not self._ha_cliente() and agora - self._ultima_entrega >= 1.0:
                 self._ultima_entrega = agora
                 state.devolver_os_externos_sem_dono()
                 state.entregar_ao_linux()
@@ -3600,6 +3712,7 @@ class Broker:
             del buffer[: newline + 1]
             if not line.strip():
                 continue
+            self._sem_cliente_desde = None
             response, fd = self._state.handle_line(conn_id, self._peer_uids[conn_id], line)
             sent = (
                 self._send_with_fd(sock, response, fd)
@@ -3650,10 +3763,12 @@ class Broker:
         with contextlib.suppress(KeyError, ValueError):
             self._sel.unregister(sock)
         sock.close()
+        pediu = self._pediu(conn_id)
         self._buffers.pop(conn_id, None)
         self._peer_uids.pop(conn_id, None)
+        self._chegada.pop(conn_id, None)
         self._state.on_conn_closed(conn_id)
-        if not self._peer_uids:
+        if not self._ha_cliente() and (pediu or self._sem_cliente_desde is None):
             self._sem_cliente_desde = self._relogio()
         self._log("peer_closed", conn=conn_id)
 

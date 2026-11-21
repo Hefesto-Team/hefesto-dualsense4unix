@@ -301,6 +301,7 @@ class TestLigarDeNovoEscondeOutraVez:
         _o_daemon_sobe_e_para(seis)
         seis.tique(GRACA)
         conn = seis.conectar()
+        assert seis.pedir(conn, {"cmd": "ping"})["ok"]
         seis.mesa.nascer("hidraw11", "radio", 7)
         seis.tique(3.0)
         assert all(_fechado(c) for c in _tudo_do_aparelho(seis.mesa, "hidraw11")), (

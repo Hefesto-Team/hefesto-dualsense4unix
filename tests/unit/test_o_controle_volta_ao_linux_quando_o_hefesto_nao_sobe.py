@@ -189,8 +189,10 @@ def test_o_ping_da_presenca_entrega_os_seis_depois_da_graca(
 
 
 def test_com_o_hefesto_de_pe_o_ping_nao_entrega(ensaio: Ensaio, pasta: Path) -> None:
-    daemon, _ponta = socket.socketpair()
+    daemon, ponta = socket.socketpair()
     assert ensaio.broker.register_client(daemon) is not None
+    ponta.sendall(b'{"cmd": "ping"}\n')
+    ensaio.broker.step(timeout=1.0)
     assert ensaio.ping(pasta, "--ping") == 0
     ensaio.tique(GRACA * 3)
     assert ensaio.st.entregue is False

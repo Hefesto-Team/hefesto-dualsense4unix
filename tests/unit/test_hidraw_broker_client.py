@@ -370,7 +370,7 @@ class TestOpenFdAnomalias:
             cliente.close()
             servidor.close()
 
-    def test_timeout_devolve_none_e_derruba_a_lease(self, sock_path: str) -> None:
+    def test_timeout_devolve_none_e_a_lease_fica(self, sock_path: str) -> None:
         servidor = _ServidorRoteirizado(
             sock_path, {"ping": _responde_ping, "open": None}
         )
@@ -380,7 +380,7 @@ class TestOpenFdAnomalias:
             inicio = time.monotonic()
             assert cliente.open_fd("/dev/hidraw3") is None
             assert (time.monotonic() - inicio) < 1.5
-            assert cliente._sock is None
+            assert cliente._sock is not None
         finally:
             cliente.close()
             servidor.close()

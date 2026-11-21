@@ -8,6 +8,7 @@ import os
 import socket
 import struct
 import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -20,6 +21,10 @@ logger = get_logger(__name__)
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
 SOCKET_PATH_ENV = "HEFESTO_BROKER_SOCKET"
 _TIMEOUT_S = 2.0
+RECUO_DA_RECUSA_S = 5.0
+_RECUSAS_DO_BROKER = frozenset({
+    "reject_sem_sessao_ativa", "reject_nao_e_quem_esta_na_frente", "reject_conexoes_demais",
+})
 _MAX_RESPONSE_BYTES = 65536
 
 _FD_INT_SIZE = struct.calcsize("i")
@@ -36,7 +41,11 @@ class HidrawBrokerClient:
     """Conexão-lease com o broker + hide/restore/restore_all/open_fd/status."""
 
     def __init__(
-        self, socket_path: str | None = None, *, timeout_s: float = _TIMEOUT_S
+        self,
+        socket_path: str | None = None,
+        *,
+        timeout_s: float = _TIMEOUT_S,
+        relogio: Callable[[], float] = time.monotonic,
     ) -> None:
         self._path = (
             socket_path
@@ -44,8 +53,12 @@ class HidrawBrokerClient:
             else os.environ.get(SOCKET_PATH_ENV, DEFAULT_SOCKET_PATH)
         )
         self._timeout_s = timeout_s
+        self._relogio = relogio
         self._lock = threading.Lock()
         self._sock: socket.socket | None = None
+        self._em_voo = 0
+        self._recuo_ate: float | None = None
+        self._recusa_dita = False
         self._indisponivel_logado = False
         self._lease_dita = False
         self._estado_por_no: dict[str, str] = {}
@@ -255,22 +268,27 @@ class HidrawBrokerClient:
                     return None
                 try:
                     sock.sendall(line)
+                    self._em_voo += 1
                     raw = self._read_line_locked(sock)
-                    break
+                except TimeoutError:
+                    return None
                 except OSError:
                     self._close_locked()
                     if tentativa == 2:
                         return None
+                    continue
+                self._em_voo -= 1
+                break
             else:  # pragma: no cover
                 return None
-        try:
-            response = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, ValueError):
-            return None
-        if not isinstance(response, dict):
-            return None
-        self._lease_atendeu(response)
-        return response
+            try:
+                response = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError):
+                return None
+            if not isinstance(response, dict):
+                return None
+            self._lease_atendeu(response)
+            return response
 
     def _request_with_fds(
         self, payload: dict[str, Any]
@@ -284,6 +302,7 @@ class HidrawBrokerClient:
         buf = bytearray()
         try:
             sock.sendall(line)
+            self._em_voo += 1
             while b"\n" not in buf:
                 if len(buf) > _MAX_RESPONSE_BYTES:
                     raise OSError("resposta do broker sem fim de linha")
@@ -299,12 +318,14 @@ class HidrawBrokerClient:
                 if not data:
                     raise OSError("broker fechou a conexão")
                 buf.extend(data)
-        except OSError:
+        except OSError as exc:
             for fd in fds:
                 with contextlib.suppress(OSError):
                     os.close(fd)
-            self._close_locked()
+            if not isinstance(exc, TimeoutError) or buf:
+                self._close_locked()
             return None, []
+        self._em_voo -= 1
         raw = bytes(buf[: buf.find(b"\n")])
         try:
             response = json.loads(raw.decode("utf-8"))
@@ -319,13 +340,31 @@ class HidrawBrokerClient:
         return response, fds
 
     def _lease_atendeu(self, response: dict[str, Any]) -> None:
-        """A resposta ``ok`` fecha a história da lease: a próxima que abrir é dita."""
+        """A resposta ``ok`` fecha a história da lease: a próxima que abrir é dita.
+
+        A recusa de quem não está na frente (o broker diz e fecha) fecha esta ponta também e
+        guarda o instante até onde não se bate de novo; o episódio vira uma linha só.
+        """
         if response.get("ok"):
             self._lease_dita = False
+            self._recuo_ate = None
+            self._recusa_dita = False
+            return
+        erro = response.get("error")
+        if erro in _RECUSAS_DO_BROKER:
+            self._close_locked()
+            self._recuo_ate = self._relogio() + RECUO_DA_RECUSA_S
+            if not self._recusa_dita:
+                self._recusa_dita = True
+                logger.info("hidraw_broker_recusou", motivo=erro, recuo_s=RECUO_DA_RECUSA_S)
 
     def _ensure_sock_locked(self) -> socket.socket | None:
+        if self._sock is not None and self._em_voo:
+            self._drenar_locked(self._sock)
         if self._sock is not None:
             return self._sock
+        if self._recuo_ate is not None and self._relogio() < self._recuo_ate:
+            return None
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.settimeout(self._timeout_s)
         try:
@@ -346,18 +385,52 @@ class HidrawBrokerClient:
             logger.info("hidraw_broker_lease_open", path=self._path)
         return sock
 
+    def _drenar_locked(self, sock: socket.socket) -> None:
+        """Descarta a resposta de um pedido que estourou o prazo e chegou depois.
+
+        Fecha os fds que vierem com a resposta. Sem a resposta no prazo, ou com sobra, a
+        conexão cai e a próxima reabre.
+        """
+        sobra = bytearray()
+        try:
+            while self._em_voo:
+                data, ancdata, flags, _addr = sock.recvmsg(
+                    4096, _ANCILLARY_SPACE, socket.MSG_CMSG_CLOEXEC
+                )
+                for level, ctype, cdata in ancdata:
+                    if level == socket.SOL_SOCKET and ctype == socket.SCM_RIGHTS:
+                        n = len(cdata) // _FD_INT_SIZE
+                        for fd in struct.unpack(f"{n}i", cdata[: n * _FD_INT_SIZE]):
+                            os.close(fd)
+                if flags & socket.MSG_CTRUNC or not data:
+                    raise OSError("broker fechou a conexão")
+                sobra.extend(data)
+                while self._em_voo and b"\n" in sobra:
+                    del sobra[: sobra.find(b"\n") + 1]
+                    self._em_voo -= 1
+            if sobra:
+                raise OSError("sobra de resposta atrasada")
+        except OSError:
+            self._close_locked()
+
     def _read_line_locked(self, sock: socket.socket) -> bytes:
         chunks = bytearray()
         while b"\n" not in chunks:
             if len(chunks) > _MAX_RESPONSE_BYTES:
                 raise OSError("resposta do broker sem fim de linha")
-            data = sock.recv(4096)
+            try:
+                data = sock.recv(4096)
+            except TimeoutError:
+                if chunks:
+                    raise OSError("resposta do broker pela metade") from None
+                raise
             if not data:
                 raise OSError("broker fechou a conexão")
             chunks.extend(data)
         return bytes(chunks[: chunks.find(b"\n")])
 
     def _close_locked(self) -> None:
+        self._em_voo = 0
         if self._sock is not None:
             with contextlib.suppress(OSError):
                 self._sock.close()

@@ -364,6 +364,8 @@ class TestPeerCred:
         try:
             assert broker.register_client(a) is None
             b.settimeout(1.0)
+            assert json.loads(b.recv(256)) == {
+                "ok": False, "error": "reject_nao_e_quem_esta_na_frente"}
             assert b.recv(64) == b""
             assert ops.calls == []
         finally:
