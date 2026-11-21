@@ -1036,12 +1036,12 @@ _SOB_A_TRAVA = ("manufacturer", "product", "bMaxPower", "bmAttributes")
 class _MemoriaDaTrava:
     """O que o kernel só serve sob a trava do aparelho USB, lido uma vez por enumeração.
 
-    As strings, a energia da configuração ativa e o ``bos_descriptors`` não mudam enquanto o
-    aparelho tem o mesmo ``devnum``, e o kernel as serve sob ``usb_lock_device``, que a probe de um
-    driver segura (a do som de um DualSense no cabo, cerca de 10 s). Relidas a cada censo, seguravam
-    todo chamador enquanto OUTRO aparelho entrava (medido em 20/11/2026: o Edge chegou ao diário
-    9,2 s depois do kernel). A chave é o caminho e o ``devnum``: quem sai e volta renumera e é lido
-    de novo. Só se guarda a leitura de quem já tem configuração (``bMaxPower`` lido).
+    As strings, a energia e o ``bos_descriptors`` saem sob ``usb_lock_device``, que a probe de um
+    driver segura (a do som de um DualSense no cabo, cerca de 10 s, medido em 20/11/2026), e não
+    mudam enquanto o aparelho tem o mesmo ``devnum``. A chave é o caminho e o ``devnum``: quem sai
+    e volta renumera e é lido de novo, e a leitura nova de um caminho apaga a velha dele, para o
+    ``devnum`` que o kernel reusa nunca devolver o aparelho de antes. Só se guarda quem já tem
+    configuração (``bMaxPower`` lido); a configuração trocada sem renumerar fica com a energia lida.
     """
 
     def __init__(self) -> None:
@@ -1066,6 +1066,8 @@ class _MemoriaDaTrava:
         bos = _bytes_sem_erro(leitor_de_bytes, os.path.join(caminho, "bos_descriptors"))
         if devnum and campos["bMaxPower"]:
             with self._trava:
+                for velha in [c for c in self._lidos if c[0] == caminho]:
+                    del self._lidos[velha]
                 self._lidos[chave] = (dict(campos), bos)
         return campos, bos
 

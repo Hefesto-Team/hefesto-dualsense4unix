@@ -201,3 +201,23 @@ def test_o_diario_registra_o_radio_que_entra_com_o_controle_em_probe(
         if linha["o_que"] == du.ENTROU
     ]
     assert [(e["no"], e["produto"]) for e in entradas] == [("3-5", "Bluetooth Radio")]
+
+
+def test_o_devnum_que_o_kernel_reusa_no_mesmo_caminho_nao_devolve_o_aparelho_de_antes(
+    barramento: _Barramento,
+) -> None:
+    """Dois aparelhos passam pela porta entre um censo e outro, e o terceiro recebe o devnum do
+    primeiro: o censo lê o terceiro, porque a leitura nova do caminho apagou a velha."""
+    _mesa(barramento)
+    barramento.ler()
+    devnum_do_primeiro = (barramento.bus / "3-1" / "devnum").read_text(encoding="utf-8")
+    barramento.tirar(1)
+    barramento.por(1, RADIO)
+    barramento.ler()
+    barramento.tirar(1)
+    barramento.por(1, CONTROLES[1])
+    (barramento.bus / "3-1" / "devnum").write_text(devnum_do_primeiro, encoding="utf-8")
+
+    lido = _vistos(barramento.ler())
+
+    assert lido["3-1"][1:4] == ("0df2", SONY, "DualSense Edge Wireless Controller")
