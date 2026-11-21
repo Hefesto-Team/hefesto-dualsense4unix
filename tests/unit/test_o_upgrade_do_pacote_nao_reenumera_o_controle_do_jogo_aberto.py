@@ -61,11 +61,24 @@ def test_nenhum_scriptlet_dispara_o_udev_fora_do_dono(arquivo: Path) -> None:
     assert not culpadas, f"{arquivo.name} dispara o udev por conta própria: {culpadas}"
 
 
+GESTO_QUE_INSTALA = {
+    INSTALL_DO_ARCH: ("post_install() {", "\n}\n"),
+    SPEC: ("\n%post\n", "\n%preun\n"),
+    AJUDANTE: ("_build_install_cmd() {", "\n}\n"),
+}
+
+
 @pytest.mark.parametrize(
     "arquivo", [INSTALL_DO_ARCH, SPEC, POSTINST, AJUDANTE, NATIVO], ids=lambda p: p.name
 )
 def test_quem_instala_chama_o_dono(arquivo: Path) -> None:
-    assert "disparo_do_udev.sh" in _na_instalacao(arquivo)
+    """MORDIDA: apague a chamada do dono do `post_install`, do `%post` ou do ajudante."""
+    texto = arquivo.read_text(encoding="utf-8")
+    if arquivo in GESTO_QUE_INSTALA:
+        inicio, fim = GESTO_QUE_INSTALA[arquivo]
+        texto = texto.split(inicio, 1)[1].split(fim, 1)[0]
+    codigo = "\n".join(_linhas_de_codigo(texto))
+    assert "disparo_do_udev.sh" in codigo or "${DISPARO_SH}" in codigo
 
 
 @pytest.mark.parametrize(
@@ -148,11 +161,13 @@ def _pasta_do_pacote(raiz: Path, *, com_leitor: bool) -> Path:
     return pasta / DONO.name
 
 
-def test_o_dono_instalado_acha_o_leitor_ao_lado_e_ve_o_jogo(tmp_path: Path) -> None:
+@pytest.mark.parametrize("jogo", [True, False], ids=["com-jogo", "sem-jogo"])
+def test_o_dono_instalado_acha_o_leitor_ao_lado(tmp_path: Path, jogo: bool) -> None:
+    """MORDIDA: tire a pasta do próprio dono da busca do leitor e o upgrade sem jogo não dispara."""
     dono = _pasta_do_pacote(tmp_path, com_leitor=True)
-    chamadas, _ = _dispara(dono, tmp_path, _proc(tmp_path, jogo=True))
-    assert not _alguma_casa(chamadas, QUE_REENUMERAM)
-    assert chamadas
+    chamadas, saida = _dispara(dono, tmp_path, _proc(tmp_path, jogo=jogo))
+    assert _alguma_casa(chamadas, QUE_REENUMERAM) == (not jogo)
+    assert "não deu para saber" not in saida
 
 
 def test_sem_o_leitor_o_dono_nao_reenumera_e_diz_que_nao_soube(tmp_path: Path) -> None:
