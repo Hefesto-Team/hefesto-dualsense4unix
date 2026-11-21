@@ -9,11 +9,13 @@ Tudo em pasta de mentira (`tmp_path`); só o disco do jogo é dublado, o resto �
 """
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 import pytest
+import structlog
 
 from hefesto_dualsense4unix.integrations import a_roupa_do_jogo as rj
 
@@ -122,7 +124,7 @@ def test_o_aquecimento_segue_quando_uma_raiz_levanta(
 
 
 def test_a_raiz_que_levanta_e_registrada_com_o_caminho(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A falha de UMA raiz sai no registro com o caminho da raiz (e só dessa)."""
     ruim, boa = tmp_path / "ruim", tmp_path / "boa"
@@ -133,8 +135,11 @@ def test_a_raiz_que_levanta_e_registrada_com_o_caminho(
         return "0ce6", "x"
 
     monkeypatch.setattr(rj, "roupa_do_jogo", _roupa)
-    with caplog.at_level("DEBUG", logger=rj.logger.name):
-        rj._aquecer([ruim, boa], None)
+    captura = structlog.testing.LogCapture()
+    monkeypatch.setattr(rj, "logger", structlog.wrap_logger(
+        structlog.ReturnLogger(), processors=[captura],
+        wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG)))
+    rj._aquecer([ruim, boa], None)
 
-    registros = [r.getMessage() for r in caplog.records if "não aqueceu" in r.getMessage()]
-    assert registros == [f"a roupa de {ruim} não aqueceu"]
+    registros = [e for e in captura.entries if e["event"] == "a_roupa_nao_aqueceu"]
+    assert [e["raiz"] for e in registros] == [str(ruim)]

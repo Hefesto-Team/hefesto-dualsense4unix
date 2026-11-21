@@ -13,7 +13,6 @@ from __future__ import annotations
 import atexit
 import contextlib
 import json
-import logging
 import os
 import shutil
 import subprocess
@@ -31,8 +30,9 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_VOZ_FILTRADA,
     sufixo_do_canal_do_mic,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 __all__ = [
     "AJUSTES_DO_FILTRO",
@@ -203,7 +203,7 @@ def abrir(
             return voz
     fechar(uniq)
     if lancar is None and shutil.which("pipewire") is None:
-        logger.info("microfone_filtrado_sem_pipewire", extra={"voz": voz})
+        logger.info("microfone_filtrado_sem_pipewire", voz=voz)
         return ""
     try:
         caminho = _escrever_o_conf(conf_do_filtro(canal, descricao))
@@ -219,7 +219,7 @@ def abrir(
         return ""
     with _TRANCA:
         _DE_PE[uniq] = _Filtro(canal, voz, descricao, caminho, proc)
-    logger.info("microfone_filtrado_de_pe", extra={"voz": voz})
+    logger.info("microfone_filtrado_de_pe", voz=voz)
     return voz
 
 
@@ -230,7 +230,7 @@ def fechar(uniq: str) -> bool:
     if filtro is None:
         return False
     _derrubar(filtro)
-    logger.info("microfone_filtrado_fechado", extra={"voz": filtro.voz})
+    logger.info("microfone_filtrado_fechado", voz=filtro.voz)
     return True
 
 

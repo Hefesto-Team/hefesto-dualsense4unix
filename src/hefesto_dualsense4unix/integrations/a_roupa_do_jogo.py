@@ -10,7 +10,6 @@ pela assinatura dos arquivos; a regra é `_a_regra`, e nunca troca máscara nem 
 """
 from __future__ import annotations
 
-import logging
 import os
 import threading
 import time
@@ -54,7 +53,9 @@ except ImportError:  # pragma: no cover
         read_launch_options_by_appid,
     )
 
-logger = logging.getLogger(__name__)
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 ROUPA_DO_EDGE = "0df2"
 ROUPA_DO_COMUM = "0ce6"
@@ -398,7 +399,7 @@ def _aquecer(raizes: list[Path], ao_aquecer: Callable[[], None] | None) -> None:
                 try:
                     roupa_do_jogo(raiz)
                 except Exception:
-                    logger.debug("a roupa de %s não aqueceu", raiz, exc_info=True)
+                    logger.debug("a_roupa_nao_aqueceu", raiz=str(raiz), exc_info=True)
     finally:
         _AQUECENDO.clear()
     if ao_aquecer is not None:
@@ -413,7 +414,7 @@ def _opcoes_de_lancamento(home: Path | None) -> dict[str, str]:
         try:
             texto = vdf.read_text(encoding="utf-8", errors="replace")
         except OSError as erro:
-            logger.debug("as Launch Options não se leram: %s: %s", vdf, erro)
+            logger.debug("a_roupa_launch_options_nao_se_leram", vdf=str(vdf), err=str(erro))
             continue
         for appid, valor in read_launch_options_by_appid(texto).items():
             opcoes.setdefault(appid, valor)

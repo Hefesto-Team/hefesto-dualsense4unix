@@ -1,12 +1,14 @@
 """O prontuário diz o que cada jogo declara sobre controle, com a fonte de cada linha."""
 from __future__ import annotations
 
+import logging
 import struct
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+import structlog
 
 import hefesto_dualsense4unix as _pacote
 from hefesto_dualsense4unix.integrations import ficha_declarada as fd
@@ -146,16 +148,19 @@ class TestAsCategoriasDizemOVeredito:
         assert not achadas[_TRADUCAO].questionario_respondido
 
     def test_cache_ilegivel_nao_inventa_declaracao(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         quebrado = tmp_path / "appinfo"
         quebrado.write_bytes(b"\x00" * 40)
         assert fd.declaracoes_do_cache(quebrado, ["1"]) is None
         cortado = tmp_path / "cortado"
         cortado.write_bytes(_cache(_declaracoes())[:12])
-        with caplog.at_level("DEBUG", logger=fd.logger.name):
-            assert fd.declaracoes_do_cache(cortado, ["1"]) is None
-        assert "o cache da Steam não se leu" in caplog.text
+        captura = structlog.testing.LogCapture()
+        monkeypatch.setattr(fd, "logger", structlog.wrap_logger(
+            structlog.ReturnLogger(), processors=[captura],
+            wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG)))
+        assert fd.declaracoes_do_cache(cortado, ["1"]) is None
+        assert [e["event"] for e in captura.entries] == ["ficha_cache_da_steam_nao_se_leu"]
         assert fd.declaracoes_do_cache(tmp_path / "nao-existe", ["1"]) is None
 
 

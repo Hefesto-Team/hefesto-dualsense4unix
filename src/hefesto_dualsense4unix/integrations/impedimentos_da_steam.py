@@ -6,12 +6,13 @@ curar escreve pelas primitivas, que recusam com a Steam aberta. Toda função re
 """
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-_LOG = logging.getLogger(__name__)
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+_LOG = get_logger(__name__)
 
 ENTRADA = "entrada"
 PROTON = "proton"

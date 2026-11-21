@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import logging
 import os
 import re
 import struct
@@ -41,7 +40,9 @@ except ImportError:  # pragma: no cover
         default_steam_root,
     )
 
-logger = logging.getLogger(__name__)
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 ENTENDE_DUALSENSE = "entende_dualsense"
 PREVE_TRADUCAO = "preve_traducao"
@@ -267,7 +268,7 @@ def declaracoes_do_cache(
                 vdf, _ = _ler_vdf_binario(entrada, _APPINFO_CABECALHO_DA_ENTRADA, chaves)
                 achados[str(appid)] = declaracao_do_vdf(vdf)
     except (OSError, ValueError, IndexError, struct.error) as erro:
-        logger.debug("o cache da Steam não se leu, a ficha cai no binário: %s", erro)
+        logger.debug("ficha_cache_da_steam_nao_se_leu", err=str(erro))
         return None
     return achados
 
@@ -318,7 +319,7 @@ def _bibliotecas_e_manifesto(
                     elif _ordem_do_asset(nome) is not None:
                         assets.append(Path(entrada.path))
         except OSError as erro:
-            logger.debug("pasta do jogo ilegível, fica fora da ficha: %s: %s", pasta, erro)
+            logger.debug("ficha_pasta_do_jogo_ilegivel", pasta=str(pasta), err=str(erro))
     if roupa is not None:
         assets.sort(key=lambda p: _ordem_do_asset(p.name.lower()) or 0)
         roupa.extend(assets[:_TETO_DE_ASSETS])
@@ -442,7 +443,7 @@ def _escrever_no_disco(nome: str, novas: dict[str, Any]) -> None:
             os.replace(temporario, caminho)
             st = os.stat(caminho)
         except OSError as erro:
-            logger.debug("o cache %s não se gravou: %s", caminho, erro)
+            logger.debug("ficha_cache_nao_se_gravou", caminho=str(caminho), err=str(erro))
             with contextlib.suppress(OSError):
                 temporario.unlink()
             return

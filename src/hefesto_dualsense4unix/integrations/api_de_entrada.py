@@ -76,7 +76,6 @@ precisamente a mudança que o censo reprova, e não foi feita.
 """
 from __future__ import annotations
 
-import logging
 import mmap
 import struct
 from dataclasses import dataclass, field
@@ -84,7 +83,9 @@ from enum import Enum
 from pathlib import Path
 from typing import BinaryIO
 
-logger = logging.getLogger(__name__)
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 _TETO_IMPORTS = 1024
 

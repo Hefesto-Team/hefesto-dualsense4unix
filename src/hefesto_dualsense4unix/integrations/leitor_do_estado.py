@@ -1,13 +1,12 @@
 """O leitor do estado do jogo: lê só os endereços que a receita declara e publica os valores.
 
-A extensão nunca recebe acesso ao processo do jogo. A receita declara os valores (o nome, o
-módulo, a cadeia de ponteiros, o tipo e o ``hz``); o leitor, pai do jogo, segue cada cadeia por
+A extensão nunca recebe acesso ao processo do jogo. A receita declara os valores (nome, módulo,
+cadeia de ponteiros, tipo e ``hz``); o leitor, pai do jogo, segue cada cadeia por
 ``process_vm_readv`` e devolve ``{nome: valor, t}``. Com ``ptrace_scope=1`` só um ancestral lê:
-por isso o leitor entra na frente do ``argv`` do jogo (``--pai``) e o espera.
-
-A trava vem antes de qualquer leitura: a chave «Memória» do jogo ligada (quem a grava é o
-Hefesto, nunca a extensão), o aviso de anticheat visto quando o jogo está na lista e o
-``buildid`` de agora dentro da faixa da receita.
+por isso ele entra na frente do ``argv`` do jogo (``--pai``) e o espera. A trava vem antes de
+qualquer leitura: a chave «Memória» do jogo ligada (quem a grava é o Hefesto, nunca a extensão), o
+aviso de anticheat visto e o ``buildid`` dentro da faixa. Roda como arquivo avulso, sem o
+pacote: só a biblioteca padrão e o ``logging``.
 """
 from __future__ import annotations
 
