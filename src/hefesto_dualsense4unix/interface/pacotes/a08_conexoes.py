@@ -4765,6 +4765,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             "nome": nome_do_jogador.nome_dado(nome_dado_ao_adaptador(maquina, end)),
             "entrada": entrada or (DENTRO_DA_MAQUINA if bz is not None else ""),
             "sabido": bz is not None and maquina is not None,
+            "no_bluez": bz is not None,
             "face": face or "",
             "hub": bool(getattr(mz, "atras_de_hub", False)),
             "varrendo": bool(getattr(bz, "varrendo", False)) and end != busca_em,
@@ -5426,19 +5427,28 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
     return _na_ordem_da_chegada(vistos, dict(buscas or {}))
 
 
+def _os_que_o_bluez_conhece(cena: dict[str, Any]) -> list[dict[str, Any]]:
+    """Os adaptadores da lista que o BlueZ descreve: a central só aceita destino que está em
+    `dono.adaptadores()`, e o endereço que só apareceu no `radio_ar` ou no `radio_governador`
+    recebe `sem_destino`."""
+    return [lug for lug in cena["lugares"] if lug.get("no_bluez", True)]
+
+
 def _destino_do_conectar(cena: dict[str, Any]) -> str:
-    """O destino do «Conectar»: o adaptador ABERTO na lista, e nenhum outro."""
-    if not cena["lugares"]:
+    """O destino do «Conectar»: o adaptador ABERTO na lista, e nenhum outro; só entre os que o
+    BlueZ conhece, e vazio quando nenhum (a central escolhe)."""
+    conhecidos = _os_que_o_bluez_conhece(cena)
+    if not conhecidos:
         return ""
-    ids = {lug["id"] for lug in cena["lugares"]}
-    if cena.get("aberto") in ids:
+    if cena.get("aberto") in {lug["id"] for lug in conhecidos}:
         return str(cena["aberto"])
-    return str(cena.get("destino_da_central") or cena["lugares"][0]["id"])
+    return str(cena.get("destino_da_central") or conhecidos[0]["id"])
 
 
 def _destino_da_central(cena: dict[str, Any], st: dict[str, Any]) -> str:
     """A D8 (`plano_de_radio.ordem_dos_destinos`): o destino quando nenhum"""
-    if not cena["lugares"]:
+    conhecidos = _os_que_o_bluez_conhece(cena)
+    if not conhecidos:
         return ""
     with contextlib.suppress(Exception):
         perfil._com_o_src()
@@ -5447,12 +5457,12 @@ def _destino_da_central(cena: dict[str, Any], st: dict[str, Any]) -> str:
         controles = [c for c in st.get("controllers") or ()
                      if isinstance(c, dict) and c.get("adaptador")]
         planos = plano_de_radio.plano_por_adaptador(
-            controles, adaptadores=[str(lug["id"]).lower() for lug in cena["lugares"]])
+            controles, adaptadores=[str(lug["id"]).lower() for lug in conhecidos])
         ordem = plano_de_radio.ordem_dos_destinos(
-            planos, varrendo=[lug["id"] for lug in cena["lugares"] if lug.get("varrendo")])
+            planos, varrendo=[lug["id"] for lug in conhecidos if lug.get("varrendo")])
         if ordem:
             return nome_do_jogador.mac(ordem[0].endereco)
-    return str(cena["lugares"][0]["id"])
+    return str(conhecidos[0]["id"])
 
 
 _CENA_NA_TELA: dict[str, Any] = {}
@@ -5933,8 +5943,6 @@ def radio_procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     ligar = agora != PROCURAR_LIGADO
     acordou = ligar and _acordar_o_radio()
     destino = _destino_depois_de_acordar(acordou) if ligar else ""
-    if ligar and not destino:
-        raise RuntimeError("não há adaptador Bluetooth para procurar")
     feito = _ligar_a_busca(p, ligar, destino)
     if ligar:
         _abrir_na_tela(destino)
