@@ -123,7 +123,7 @@ def _levado_pelo_deb() -> set[str]:
 
 def _levado_pelo_appimage() -> set[str]:
     extras = _extras_do_comando(
-        BUILD_APPIMAGE.read_text(encoding="utf-8"), r"\$WHEEL\[([a-z,]+)\]"
+        BUILD_APPIMAGE.read_text(encoding="utf-8"), r"\$\{WHEEL\}\[([a-z,]+)\]"
     )
     return _o_que_o_pip_traz(extras)
 
