@@ -267,17 +267,20 @@ _JUNTADO = re.compile(
     r'\([^()]*\)\s*/\s*"([^"]+)"')
 _CONSTANTE = re.compile(
     r'^\s*_?[A-Z][A-Z0-9_]*\s*(?::[^=\n]+)?=\s*"([\w./-]+\.' + _EXT + r')"', re.M)
+_DA_VEZ = re.compile(r'\bquem_segura_a_vez\("([\w-]+)"\)')
 
 
 def nomes_que_o_codigo_grava() -> dict[str, str]:
-    """Todo nome de arquivo que o ``src/`` junta a uma pasta do lar, ou guarda"""
+    """Todo nome de arquivo que o ``src/`` junta a uma pasta do lar, ou guarda; a vez de
+    ``quem_segura_a_vez("<nome>")`` mora em ``<nome>.pid`` na pasta de execução."""
     achados: dict[str, str] = {}
     for arq in sorted(SRC.rglob("*.py")):
         texto = arq.read_text(encoding="utf-8")
-        for padrao in (_JUNTADO, _CONSTANTE):
+        for padrao, nome in ((_JUNTADO, "{}"), (_CONSTANTE, "{}"), (_DA_VEZ, "{}.pid")):
             for achado in padrao.finditer(texto):
                 linha = texto.count("\n", 0, achado.start()) + 1
-                achados.setdefault(achado.group(1), f"{arq.relative_to(RAIZ)}:{linha}")
+                achados.setdefault(nome.format(achado.group(1)),
+                                   f"{arq.relative_to(RAIZ)}:{linha}")
     return achados
 
 
