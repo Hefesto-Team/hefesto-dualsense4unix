@@ -68,9 +68,13 @@ def _mok(tmp_path: Path, *, gerada: bool, inscrita: bool) -> dict[str, str]:
     pub = tmp_path / "mok.pub"
     if gerada:
         pub.write_bytes(CHAVE)
+    (tmp_path / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+    (tmp_path / "framework.conf").write_text(
+        f'mok_signing_key="{tmp_path / "mok.key"}"\n', encoding="utf-8")
     lista = tmp_path / "MokListRT"
     lista.write_bytes(b"\xa1\x59\xc0\xa5" + (CHAVE if inscrita else b"outra-chave") + b"\x00")
-    return {"HEFESTO_DKMS_MOK_PUB": str(pub), "HEFESTO_MOK_LISTAS": str(lista)}
+    return {"HEFESTO_DKMS_MOK_PUB": str(pub), "HEFESTO_MOK_LISTAS": str(lista),
+            "HEFESTO_DKMS_FRAMEWORK_CONFS": str(tmp_path / "framework.conf")}
 
 
 def _lib(

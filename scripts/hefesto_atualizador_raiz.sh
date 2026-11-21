@@ -498,6 +498,10 @@ _dkms_por_fonte() {
             fi
             continue
         fi
+        if /usr/bin/python3 "${pasta}/preparar-o-fonte.py" --sem-a-chave-privada 2>/dev/null; then
+            printf 'pulando %s %s: falta a chave privada do DKMS, então nada se refaz nem se tira\n' "${nome}" "${ver}"
+            continue
+        fi
         while IFS= read -r kernel; do
             [[ -n "${kernel}" ]] || continue
             if [[ "${forcar}" -eq 0 ]] \

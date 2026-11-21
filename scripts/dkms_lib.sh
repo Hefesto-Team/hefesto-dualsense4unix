@@ -134,8 +134,14 @@ _dkms_mok_chave_privada() {
 
 _dkms_assina_com_a_chave_privada() {
     local _chave; _chave="$(_dkms_mok_chave_privada)"
+    [[ "${_chave}" == pkcs11:* ]] && return 0
     [[ -r "${_chave}" && -s "${_chave}" ]] && return 0
     sudo test -s "${_chave}" 2>/dev/null
+}
+
+dkms_sem_a_chave_privada() {
+    dkms_secure_boot_ligado || return 1
+    ! _dkms_assina_com_a_chave_privada
 }
 _dkms_mok_listas() {
     local _l
@@ -277,14 +283,29 @@ dkms_sem_a_chave_garantida() {
     ! dkms_chave_mok_inscrita "${1:-}"
 }
 
-dkms_passo_da_mok() {
-    local _pub; _pub="$(_dkms_mok_pub)"
-    if [[ ! -s "${_pub}" && "${_pub}" == /var/lib/shim-signed/* ]]; then
+_dkms_passo_que_gera_a_chave() {
+    if [[ "$(_dkms_mok_pub)" == /var/lib/shim-signed/* ]]; then
         printf 'gere a chave (sudo update-secureboot-policy --new-key), '
-    elif [[ ! -s "${_pub}" ]]; then
+    else
         printf 'gere a chave (sudo dkms generate_mok), '
     fi
+}
+
+dkms_passo_da_mok() {
+    local _pub; _pub="$(_dkms_mok_pub)"
+    [[ -s "${_pub}" ]] || _dkms_passo_que_gera_a_chave
     printf 'inscreva-a com sudo mokutil --import %s (ele pede uma senha), reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' "${_pub}"
+}
+
+dkms_passo_da_chave_privada() {
+    local _pub; _pub="$(_dkms_mok_pub)"
+    printf 'devolva a chave privada a %s e rode ./install.sh de novo; se a chave privada se perdeu, tire a pública %s do lugar, %sinscreva a nova com sudo mokutil --import %s, reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' \
+        "$(_dkms_mok_chave_privada)" "${_pub}" "$(_dkms_passo_que_gera_a_chave)" "${_pub}"
+}
+
+dkms_texto_da_chave_privada() {
+    printf 'Secure Boot ligado e a chave do DKMS está inscrita, mas falta a chave privada do DKMS (%s) para assinar: sem a privada o DKMS geraria uma chave nova, fora da MOK, e o kernel recusaria o módulo no boot. Os módulos do Hefesto não são instalados nem trocados, e o que já estava instalado continua como estava. Para seguir: %s' \
+        "$(_dkms_mok_chave_privada)" "$(dkms_passo_da_chave_privada)"
 }
 
 dkms_passo_da_inscricao_pedida() {
@@ -375,7 +396,11 @@ dkms_modulos_sem_a_chave() {
 dkms_passo_se_a_chave_falta() {
     dkms_secure_boot_ligado || return 0
     dkms_ler_a_chave "${1:-}"
-    [[ "${DKMS_ESTADO}" == "inscrita" ]] && return 0
+    if [[ "${DKMS_ESTADO}" == "inscrita" ]]; then
+        dkms_sem_a_chave_privada || return 0
+        dkms_texto_da_chave_privada
+        return 0
+    fi
     dkms_chave_e_o_passo "${1:-}"
 }
 
@@ -417,6 +442,14 @@ dkms_passo_da_chave() {
 
 : "${_DKMS_SB_WARNED:=0}"
 dkms_aviso_da_chave_dito() { _DKMS_SB_WARNED=1; }
+
+: "${_DKMS_PRIVADA_WARNED:=0}"
+
+dkms_avisa_a_chave_privada_uma_vez() {
+    [[ "${_DKMS_PRIVADA_WARNED}" -eq 1 ]] && return 0
+    _DKMS_PRIVADA_WARNED=1
+    _dkms_warn "$(dkms_texto_da_chave_privada)"
+}
 
 dkms_warn_secureboot_once() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
@@ -663,14 +696,15 @@ dkms_install_patched_module() {
             esac
             return 0
         fi
+        if dkms_sem_a_chave_privada; then
+            dkms_avisa_a_chave_privada_uma_vez
+            _dkms_log "${_pkg} pulado: falta a chave privada do DKMS, então nada se instala nem se tira"
+            return 0
+        fi
     fi
     if dkms_secure_boot_ligado && dkms_modulo_da_casa_sem_assinatura "${_built}"; then
-        if _dkms_assina_com_a_chave_privada; then
-            _refazer=1
-            _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
-        else
-            _dkms_warn "o módulo ${_built} do Hefesto está instalado sem assinatura e falta a chave privada do DKMS ($(_dkms_mok_chave_privada)) para assiná-lo: ele fica como está, e com o Secure Boot ligado o kernel pode recusá-lo no boot."
-        fi
+        _refazer=1
+        _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then
         _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar cabecalhos "${_kver}")"

@@ -21,8 +21,15 @@ quatro respostas, `inscrita`, `pedida` (a inscrição foi pedida e espera o rein
 da casa já carregado no kernel que roda desmente o `fora` (vira `nao-sei`) e nunca vale `inscrita`:
 prova a chave que o assinou, não a que assina o próximo.
 
+Com o Secure Boot ligado e a chave inscrita, falta ainda a chave privada para assinar: sem a
+privada o DKMS 3 gera um par novo por cima da pública (desde a 3.0.4) e assina com uma chave
+fora da MOK.
+`--sem-a-chave-privada` sai com 0 nesse caso, e o `--exclusivo` devolve o mesmo padrão que nenhum
+kernel casa: nada se constrói, e o que estava instalado fica.
+
     preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
     preparar-o-fonte.py --sem-a-chave | --chave-nao-garantida | --estado-da-chave
+    preparar-o-fonte.py --sem-a-chave-privada
 """
 
 from __future__ import annotations
@@ -635,6 +642,17 @@ def _chave_do_dkms() -> Path:
     return Path(certificado or "/var/lib/dkms/mok.pub")
 
 
+def _chave_privada_do_dkms() -> str:
+    padrao = "/etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf"
+    privada = ""
+    for molde in os.environ.get("HEFESTO_DKMS_FRAMEWORK_CONFS", padrao).split():
+        for conf in sorted(glob.glob(molde)):
+            privada = _valor_do_arquivo(Path(conf), "mok_signing_key") or privada
+    if not privada and _familia_da_distro().startswith("ubuntu"):
+        return "/var/lib/shim-signed/mok/MOK.priv"
+    return privada or "/var/lib/dkms/mok.key"
+
+
 def _raiz_dos_modulos_carregados() -> Path:
     """O `/sys/module`; o botão de teste `HEFESTO_SYS_MODULE` só vale fora do root."""
     if os.geteuid() != 0 and os.environ.get("HEFESTO_SYS_MODULE"):
@@ -731,11 +749,24 @@ def _chave_nao_garantida() -> bool:
     return _secure_boot_ligado() and _estado_da_chave() != "inscrita"
 
 
+def _sem_a_chave_privada() -> bool:
+    """Secure Boot ligado e a chave privada do DKMS não está onde se lê (ou está vazia)."""
+    if not _secure_boot_ligado():
+        return False
+    privada = _chave_privada_do_dkms()
+    if privada.startswith("pkcs11:"):
+        return False
+    try:
+        return Path(privada).stat().st_size == 0
+    except OSError:
+        return True
+
+
 def _exclusivo(kver: str, ksrc: str, veredito: Path | None) -> str:
     modulo = _conf("BUILT_MODULE_NAME[0]")
     if not kver or not modulo or veredito is None or (veredito / kver).is_dir():
         return ""
-    if _chave_nao_garantida():
+    if _chave_nao_garantida() or _sem_a_chave_privada():
         return NENHUM_KERNEL
     if not (Path(ksrc) / "Makefile").is_file():
         ksrc = str(_modulos_root() / kver / "build")
@@ -790,6 +821,8 @@ def main(argv: list[str]) -> int:
         return 0 if _sem_a_chave() else 1
     if argv == ["--chave-nao-garantida"]:
         return 0 if _chave_nao_garantida() else 1
+    if argv == ["--sem-a-chave-privada"]:
+        return 0 if _sem_a_chave_privada() else 1
     if argv == ["--estado-da-chave"]:
         print(_estado_da_chave(), end="")
         return 0

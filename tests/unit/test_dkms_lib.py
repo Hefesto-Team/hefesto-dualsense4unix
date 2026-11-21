@@ -505,13 +505,16 @@ CINCO_PREPARADORES = sorted((REPO_ROOT / "assets" / "dkms").glob("*/preparar-o-f
 
 
 def _estado_do_secure_boot(
-    raiz: Path, *, ligado: bool | None, inscrita: bool, leitura: str = "completa"
+    raiz: Path, *, ligado: bool | None, inscrita: bool, leitura: str = "completa",
+    chave_privada: bool = True,
 ) -> dict[str, str]:
     """efivars, chave e lista do shim de mentira, no formato que as duas leituras recebem.
 
     ``leitura`` diz o que as leituras alcançam: ``completa``, ``sem-chave-publica`` (a chave que
     o DKMS assina não está onde se lê) ou ``sem-lista`` (nenhuma lista da MOK se lê). O
-    ``mokutil`` da máquina fica atrás de um que não responde: ver ``_sem_mokutil``.
+    ``mokutil`` da máquina fica atrás de um que não responde: ver ``_sem_mokutil``. A chave
+    privada que o DKMS assina existe (``mok.key``, dita no ``framework.conf`` de mentira) salvo
+    com ``chave_privada=False``.
     """
     efivars = raiz / "efivars"
     efivars.mkdir()
@@ -522,7 +525,12 @@ def _estado_do_secure_boot(
         (efivars / SECURE_BOOT).write_bytes(b"\x06\x00\x00\x00" + (b"\x01" if ligado else b"\x00"))
     (raiz / "mok.pub").write_bytes(CHAVE)
     (raiz / "MokListRT").write_bytes(CHAVE if inscrita else b"outra-chave")
+    if chave_privada:
+        (raiz / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+    (raiz / "framework-da-chave.conf").write_text(
+        f'mok_signing_key="{raiz / "mok.key"}"\n', encoding="utf-8")
     return {
+        "HEFESTO_DKMS_FRAMEWORK_CONFS": str(raiz / "framework-da-chave.conf"),
         "HEFESTO_EFIVARS_ROOT": str(efivars),
         "HEFESTO_DKMS_MOK_PUB": str(raiz / ("sem-chave.pub" if leitura == "sem-chave-publica"
                                             else "mok.pub")),
@@ -1153,8 +1161,8 @@ class TestModuloSemAssinaturaComAChaveInscrita:
             f"{bin_}:/usr/bin:/bin",
             {"HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
              "HEFESTO_DKMS_MODULES_ROOT": str(modulos), "HEFESTO_DKMS_TREE": str(arvore),
-             "HEFESTO_DKMS_KERNEL": KERNEL_DO_TESTE,
-             "HEFESTO_DKMS_FRAMEWORK_CONFS": str(framework), **estado, **(ambiente or {})},
+             "HEFESTO_DKMS_KERNEL": KERNEL_DO_TESTE, **estado,
+             "HEFESTO_DKMS_FRAMEWORK_CONFS": str(framework), **(ambiente or {})},
         )
         assert feito.returncode == 0, feito.stderr
         self.dito = feito.stdout + feito.stderr
@@ -1239,7 +1247,8 @@ class TestModuloSemAssinaturaComAChaveInscrita:
     def test_sem_a_chave_privada_nao_se_refaz_e_diz_por_que(self, tmp_path: Path) -> None:
         """D-2111-O-MODULO-SEM-ASSINATURA-SE-REFAZ-COM-A-CHAVE-INSCRITA: sem a chave privada o
         DKMS não assina, e refazer daria o mesmo módulo sem marca a cada install."""
-        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=True, inscrita=True, chave_privada=False)
         lidas = self._instalar(tmp_path, estado, chave_privada=False)
         assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
         assert "falta a chave privada do DKMS" in self.dito, self.dito
