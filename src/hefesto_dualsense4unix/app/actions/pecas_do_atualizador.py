@@ -62,11 +62,14 @@ RC_NADA_A_CONSTRUIR = 9
 RC_TRAVA_OCUPADA = 11
 OUTRO_INSTALADOR = "outro instalador está usando o sistema de pacotes"
 GERENCIADORES_DA_DISTRO = (
+    (("steamos",), ""),
     (("fedora", "rhel", "centos", "rocky", "almalinux", "nobara"), "sudo dnf upgrade"),
     (("arch", "manjaro", "cachyos", "endeavouros"), "sudo pacman -Syu"),
     (("opensuse", "suse", "sles"), "sudo zypper update"),
     (("debian", "ubuntu"), "sudo apt upgrade"),
 )
+OS_RELEASE = (Path("/run/host/os-release"), Path("/etc/os-release"))
+MARCA_DO_OSTREE = Path("/run/ostree-booted")
 GRUPO_NVIDIA = re.compile(r"^(?:nvidia-|libnvidia-|xserver-xorg-video-nvidia)")
 GRUPO_KERNEL = re.compile(r"^linux-(?:system76|generic|image-|headers-|modules-|signed-)")
 METAS_DO_KERNEL = ("linux-system76", "linux-generic", "linux-image-generic")
@@ -415,37 +418,36 @@ def _pacotes(n: int) -> str:
     return f"{n} pacote{'s' if n != 1 else ''}"
 
 
+def _os_release() -> dict[str, str]:
+    """Os campos do os-release do sistema: o do host visto de dentro do Flatpak (``/run/host``),
+    senão o do ``/etc``."""
+    for caminho in OS_RELEASE:
+        with contextlib.suppress(OSError):
+            linhas = caminho.read_text(encoding="utf-8").splitlines()
+            return {c: v.strip().strip('"') for c, _, v in (x.partition("=") for x in linhas)}
+    return {}
+
+
 def _versao_da_distro() -> str:
-    with contextlib.suppress(OSError):
-        for linha in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
-            if linha.startswith("VERSION_ID="):
-                return linha.split("=", 1)[1].strip().strip('"')
-    return ""
+    return _os_release().get("VERSION_ID", "")
 
 
 def _nome_da_distro() -> str:
-    with contextlib.suppress(OSError):
-        for linha in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
-            if linha.startswith("PRETTY_NAME="):
-                return linha.split("=", 1)[1].strip().strip('"')
-    return ""
+    return _os_release().get("PRETTY_NAME", "")
 
 
 def _ids_da_distro() -> list[str]:
-    ids: list[str] = []
-    with contextlib.suppress(OSError):
-        for linha in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
-            chave, _, valor = linha.partition("=")
-            if chave in ("ID", "ID_LIKE"):
-                ids += valor.strip().strip('"').lower().split()
-    return ids
+    campos = _os_release()
+    return f"{campos.get('ID', '')} {campos.get('ID_LIKE', '')}".lower().split()
 
 
 def _gesto_do_sistema() -> str:
     """O gesto de quem usa onde o Hefesto não sobe os pacotes: o gerenciador da distribuição, com o
-    comando lido do ``ID`` e do ``ID_LIKE`` do os-release."""
+    comando lido do ``ID`` e do ``ID_LIKE`` do os-release; o sistema de imagem (ostree, SteamOS)
+    não leva comando."""
     ids = _ids_da_distro()
-    comando = next((c for nomes, c in GERENCIADORES_DA_DISTRO if any(i in nomes for i in ids)), "")
+    comando = "" if MARCA_DO_OSTREE.exists() else next(
+        (c for nomes, c in GERENCIADORES_DA_DISTRO if any(i in nomes for i in ids)), "")
     base = "Atualize pelo gerenciador da distribuição"
     return f"{base}: {comando}" if comando else base
 

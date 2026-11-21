@@ -330,13 +330,14 @@ def _numero(valor: Any) -> float:
 
 def _idade(item: dict[str, Any]) -> tuple[str, str]:
     """A idade da versão nova de fora (``idade_dias``) e a dica com a data da publicação e a de
-    subir sozinha (``sobe_em``, só enquanto falta); vazio sem a data da publicação."""
+    subir sozinha (``sobe_em``, só enquanto falta e só na peça que o Hefesto sobe); vazio sem a
+    data da publicação."""
     publicada = _numero(item.get("publicada_em"))
     if _grupo_do_cartao(item) != "nova" or publicada <= 0 or "idade_dias" not in item:
         return "", ""
     dias = int(_numero(item.get("idade_dias")))
     texto = "hoje" if dias <= 0 else f"{dias} dia{'s' if dias != 1 else ''}"
-    sobe = _numero(item.get("sobe_em"))
+    sobe = 0.0 if item.get("gesto") else _numero(item.get("sobe_em"))
     dica = _junto(f"Publicada em {time.strftime('%d/%m', time.localtime(publicada))}",
                   f"Sobe sozinha em {time.strftime('%d/%m', time.localtime(sobe))}"
                   if sobe > 0 else "")

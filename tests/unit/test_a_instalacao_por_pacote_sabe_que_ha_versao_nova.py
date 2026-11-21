@@ -7,7 +7,9 @@ raiz do código é uma pasta sem ``.git``. Teste que vai à rede reprova pela ``
 AS MORDIDAS (feitas com a cura devolvida): ``publicada=None`` sem consultar reprova o caso da
 release maior; o gesto fora do item reprova o caso da dica; a peça nova sem ``gesto`` na marca
 reprova o caso da caixa de marcar; o Sistema sem apt que some do mapa reprova o caso da linha da
-distribuição; o kernel que fica sem o ajudante reprova o caso do ajudante ausente.
+distribuição; o kernel que fica sem o ajudante reprova o caso do ajudante ausente; a dica que
+promete subir sozinha reprova o caso da release maior; ler só o ``/etc`` reprova o caso do Flatpak,
+e mandar comando ao sistema de imagem reprova o caso do ostree e do SteamOS.
 """
 from __future__ import annotations
 
@@ -16,6 +18,7 @@ import json
 import shutil
 import socket
 import sys
+import time
 import urllib.error
 from pathlib import Path
 from typing import Any
@@ -41,6 +44,7 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(repo_files, "MARCA_DO_FLATPAK", tmp_path / "sem-flatpak-info")
     monkeypatch.setattr(repo_files, "PREFIXO_DO_DEB", tmp_path / "sem-opt")
+    monkeypatch.setattr(pa, "MARCA_DO_OSTREE", tmp_path / "sem-ostree")
     return casa
 
 
@@ -105,8 +109,10 @@ def test_sem_clone_a_release_maior_vira_nova_versao_com_o_gesto_da_forma(
     assert (item["estado"], item["de"], item["para"], item["gesto"]) == \
         (at.NOVA, "0.9.5.4", "99.0.0", esperado)
     assert at.novas(conferencia, so_marcadas=False) == []
-    mapa = tela.html_do_mapa({"pecas": [{**item, "marcada": True}]})
+    na_quarentena = {"idade_dias": 1, "sobe_em": time.time() + at.DIA_S}
+    mapa = tela.html_do_mapa({"pecas": [{**item, "marcada": True, **na_quarentena}]})
     assert tela.NOVA_VERSAO in mapa and esperado in mapa
+    assert "Publicada em" in mapa and "Sobe sozinha" not in mapa
     assert 'type="checkbox"' not in mapa and tela.SEM_REDE not in mapa
     assert tela.ids_para_atualizar({"pecas": [{**item, "marcada": True}]}) == []
 
@@ -174,4 +180,25 @@ def test_com_apt_mas_sem_o_ajudante_o_sistema_diz_apt_upgrade_e_o_kernel_some(
 def test_distribuicao_sem_comando_conhecido_diz_so_o_gerenciador(
         monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pa, "_ids_da_distro", lambda: ["voidlinux"])
+    assert pa._gesto_do_sistema() == "Atualize pelo gerenciador da distribuição"
+
+
+def test_o_sistema_le_o_os_release_do_host_e_nao_manda_comando_ao_sistema_de_imagem(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    host, runtime = tmp_path / "host-os-release", tmp_path / "etc-os-release"
+    host.write_text('ID=fedora\nPRETTY_NAME="Fedora Linux 43"\nVERSION_ID=43\n', encoding="utf-8")
+    runtime.write_text('ID=org.freedesktop.platform\nPRETTY_NAME="Freedesktop SDK 24.08"\n'
+                       "VERSION_ID=24.08\n", encoding="utf-8")
+    monkeypatch.setattr(pa, "OS_RELEASE", (host, runtime))
+    assert (pa._nome_da_distro(), pa._versao_da_distro()) == ("Fedora Linux 43", "43")
+    assert pa._gesto_do_sistema().endswith("sudo dnf upgrade")
+    monkeypatch.setattr(pa, "OS_RELEASE", (tmp_path / "fora-do-flatpak", runtime))
+    assert pa._nome_da_distro() == "Freedesktop SDK 24.08"
+
+    monkeypatch.setattr(pa, "OS_RELEASE", (host,))
+    (tmp_path / "ostree-booted").touch()
+    monkeypatch.setattr(pa, "MARCA_DO_OSTREE", tmp_path / "ostree-booted")
+    assert pa._gesto_do_sistema() == "Atualize pelo gerenciador da distribuição"
+    monkeypatch.setattr(pa, "MARCA_DO_OSTREE", tmp_path / "sem-ostree")
+    host.write_text("ID=steamos\nID_LIKE=arch\n", encoding="utf-8")
     assert pa._gesto_do_sistema() == "Atualize pelo gerenciador da distribuição"
