@@ -417,6 +417,44 @@ dkms_modulo_da_casa() {
     dkms_ko_da_casa "${_path}"
 }
 
+_dkms_marca_de_assinatura() {
+    python3 - "$1" <<'PYEOF'
+import gzip
+import lzma
+import shutil
+import subprocess
+import sys
+
+MARCA = b"~Module signature appended~\n"
+caminho = sys.argv[1]
+try:
+    with open(caminho, "rb") as arquivo:
+        dados = arquivo.read()
+    if caminho.endswith(".xz"):
+        dados = lzma.decompress(dados)
+    elif caminho.endswith(".gz"):
+        dados = gzip.decompress(dados)
+    elif caminho.endswith(".zst"):
+        zstd = shutil.which("zstd")
+        if not zstd:
+            raise SystemExit(2)
+        dados = subprocess.run(
+            [zstd, "-dc", caminho], capture_output=True, check=True, timeout=60
+        ).stdout
+except Exception:
+    raise SystemExit(2)
+raise SystemExit(0 if dados.endswith(MARCA) else 1)
+PYEOF
+}
+
+dkms_modulo_da_casa_sem_assinatura() {
+    local _path _rc=0
+    _path="$(_dkms_arquivo_do_modulo "$1")" || return 1
+    dkms_ko_da_casa "${_path}" || return 1
+    _dkms_marca_de_assinatura "${_path}" || _rc=$?
+    [[ "${_rc}" -eq 1 ]]
+}
+
 DKMS_MARCAS_DO_USB_F_HID=(get_report_sized get_report_refuses)
 
 dkms_usb_f_hid_marcas_que_faltam() {
@@ -488,7 +526,7 @@ dkms_devolver_o_driver_de_fabrica() {
 
 dkms_install_patched_module() {
     local _pkg="$1" _ver="$2" _src="$3" _built="$4"
-    local _kver _srcdst _dkms_lic
+    local _kver _srcdst _dkms_lic _refazer=0
     _kver="${HEFESTO_DKMS_KERNEL:-$(uname -r)}"
     _srcdst="$(_dkms_src_root)/${_pkg}-${_ver}"
 
@@ -504,6 +542,10 @@ dkms_install_patched_module() {
             *) _dkms_log "${_pkg} pulado: não li a chave do DKMS, então nada se instala nem se tira" ;;
         esac
         return 0
+    fi
+    if dkms_secure_boot_ligado && dkms_modulo_da_casa_sem_assinatura "${_built}"; then
+        _refazer=1
+        _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then
         _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar cabecalhos "${_kver}")"
@@ -552,10 +594,11 @@ dkms_install_patched_module() {
         fi
     fi
 
-    if [[ ! "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" =~ (built|installed) ]]; then
-        local _rc_build=0 _veredito
+    if [[ "${_refazer}" -eq 1 ]] || [[ ! "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" =~ (built|installed) ]]; then
+        local _rc_build=0 _veredito _forca=()
+        [[ "${_refazer}" -eq 1 ]] && _forca=(--force)
         _dkms_esquecer_o_veredito_que_falhou "${_pkg}" "${_ver}" "${_kver}"
-        sudo dkms build "${_pkg}/${_ver}" -k "${_kver}" || _rc_build=$?
+        sudo dkms build "${_pkg}/${_ver}" -k "${_kver}" ${_forca[@]+"${_forca[@]}"} || _rc_build=$?
         if [[ "${_rc_build}" -ne 0 ]]; then
             _veredito="$(dkms_veredito_do_fonte "${_pkg}" "${_ver}" "${_kver}")"
             case "${_veredito%%$'\t'*}" in
@@ -570,7 +613,8 @@ dkms_install_patched_module() {
         fi
     fi
 
-    if [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" != *installed* ]] \
+    if [[ "${_refazer}" -eq 1 ]] \
+        || [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" != *installed* ]] \
         || [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" == *"between built and installed"* ]]; then
         if ! sudo dkms install "${_pkg}/${_ver}" -k "${_kver}" --force; then
             _dkms_warn "dkms install falhou p/ ${_pkg}/${_ver} — in-tree continua"

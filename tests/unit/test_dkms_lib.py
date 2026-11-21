@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gzip
+import lzma
 import os
 import re
 import shutil
@@ -1050,6 +1052,129 @@ class TestInscricaoPedidaEAindaNaoReiniciada:
         dito = _roda("dkms_chave_e_o_passo; echo; dkms_titulo_da_chave", caminho, estado)
         assert "espera o reinício" in dito.stdout and "Enroll MOK" in dito.stdout, dito
         assert "mokutil --import" not in dito.stdout, dito
+
+
+MARCA_DE_ASSINATURA = b"~Module signature appended~\n"
+KERNEL_DO_TESTE = "7.1.5-generic"
+
+
+def _escreve_o_ko(destino: Path, nome: str, *, assinado: bool) -> None:
+    dados = b"ELF-de-mentira" + b"\x00" * 12 + (MARCA_DE_ASSINATURA if assinado else b"")
+    if nome.endswith(".xz"):
+        dados = lzma.compress(dados)
+    elif nome.endswith(".gz"):
+        dados = gzip.compress(dados)
+    elif nome.endswith(".zst"):
+        zstd = shutil.which("zstd")
+        if not zstd:
+            pytest.skip("sem zstd nesta máquina")
+        dados = subprocess.run(
+            [zstd, "-c"], input=dados, capture_output=True, check=True, timeout=60
+        ).stdout
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_bytes(dados)
+
+
+class TestModuloSemAssinaturaComAChaveInscrita:
+    """O-MODULO-DA-CASA-SEM-ASSINATURA-SE-RECONSTROI-COM-A-CHAVE-INSCRITA-01.
+
+    D-2111-O-MODULO-SEM-ASSINATURA-SE-REFAZ-COM-A-CHAVE-INSCRITA: com a chave inscrita de certeza e
+    o módulo da casa instalado sem a assinatura, o install o refaz; em qualquer outro estado, não.
+    """
+
+    def _instalar(
+        self, tmp_path: Path, estado: dict[str, str], *, arquivo: str = "hid-teste.ko",
+        assinado: bool = False, corrompido: bool = False,
+    ) -> str:
+        bin_ = tmp_path / "bin"
+        bin_.mkdir()
+        chamadas = tmp_path / "chamadas.log"
+        arvore = tmp_path / "arvore"
+        ko = tmp_path / "lib" / "modules" / KERNEL_DO_TESTE / "updates" / "dkms" / arquivo
+        guardado = (arvore / "hefesto-teste" / "1.0.0" / KERNEL_DO_TESTE / "x86_64" / "module"
+                    / arquivo)
+        _escreve_o_ko(ko, arquivo, assinado=assinado)
+        if corrompido:
+            ko.write_bytes("isto não é um arquivo comprimido".encode())
+        guardado.parent.mkdir(parents=True)
+        shutil.copy(ko, guardado)
+        (arvore / "hefesto-teste" / f"kernel-{KERNEL_DO_TESTE}-x86_64").symlink_to(
+            f"1.0.0/{KERNEL_DO_TESTE}/x86_64")
+        _stub(bin_, "modinfo", f'echo "{ko}"')
+        _stub(bin_, "uname", f'echo "{KERNEL_DO_TESTE}"')
+        _stub(bin_, "mokutil", "exit 1")
+        for nome in ("chown", "chmod", "depmod"):
+            _stub(bin_, nome, f'echo "{nome} $*" >> "{chamadas}"')
+        _stub(bin_, "sudo", f'echo "sudo $*" >> "{chamadas}"\nexec "$@"')
+        _stub(
+            bin_, "dkms",
+            f'echo "dkms $*" >> "{chamadas}"\n'
+            '[ "$1" = status ] && echo '
+            f'"hefesto-teste/9.9.9, {KERNEL_DO_TESTE}, x86_64: installed"\n'
+            "exit 0",
+        )
+        modulos = tmp_path / "modules"
+        (modulos / KERNEL_DO_TESTE / "build").mkdir(parents=True)
+        fonte = tmp_path / "fonte"
+        sincronizado = tmp_path / "usr-src" / "hefesto-teste-9.9.9"
+        for pasta in (fonte, sincronizado):
+            pasta.mkdir(parents=True)
+            (pasta / "dkms.conf").write_text('PACKAGE_VERSION="9.9.9"\n', encoding="utf-8")
+        feito = _roda(
+            f"dkms_install_patched_module hefesto-teste 9.9.9 '{fonte}' hid-teste",
+            f"{bin_}:/usr/bin:/bin",
+            {"HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
+             "HEFESTO_DKMS_MODULES_ROOT": str(modulos), "HEFESTO_DKMS_TREE": str(arvore),
+             "HEFESTO_DKMS_KERNEL": KERNEL_DO_TESTE, **estado},
+        )
+        assert feito.returncode == 0, feito.stderr
+        return chamadas.read_text(encoding="utf-8") if chamadas.exists() else ""
+
+    @pytest.mark.parametrize("arquivo", ["hid-teste.ko", "hid-teste.ko.xz", "hid-teste.ko.gz",
+                                         "hid-teste.ko.zst"])
+    def test_sem_a_marca_e_com_a_chave_inscrita_o_modulo_se_refaz(
+        self, tmp_path: Path, arquivo: str
+    ) -> None:
+        """D-2111-O-MODULO-SEM-ASSINATURA-SE-REFAZ-COM-A-CHAVE-INSCRITA."""
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        lidas = self._instalar(tmp_path, estado, arquivo=arquivo)
+        assert f"dkms build hefesto-teste/9.9.9 -k {KERNEL_DO_TESTE} --force" in lidas, lidas
+        assert f"dkms install hefesto-teste/9.9.9 -k {KERNEL_DO_TESTE} --force" in lidas, lidas
+
+    @pytest.mark.parametrize("arquivo", ["hid-teste.ko", "hid-teste.ko.xz", "hid-teste.ko.gz",
+                                         "hid-teste.ko.zst"])
+    def test_com_a_marca_o_modulo_assinado_fica_como_esta(
+        self, tmp_path: Path, arquivo: str
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        lidas = self._instalar(tmp_path, estado, arquivo=arquivo, assinado=True)
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+
+    @pytest.mark.parametrize(
+        ("ligado", "inscrita", "leitura"),
+        [(False, True, "completa"), (True, False, "sem-lista"), (True, False, "sem-chave-publica")],
+        ids=["secure-boot-desligado", "chave-nao-lida-nas-listas", "chave-publica-ausente"],
+    )
+    def test_fora_da_chave_inscrita_de_certeza_o_modulo_sem_marca_nao_se_refaz(
+        self, tmp_path: Path, ligado: bool, inscrita: bool, leitura: str
+    ) -> None:
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=ligado, inscrita=inscrita, leitura=leitura)
+        lidas = self._instalar(tmp_path, estado)
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+
+    def test_a_chave_pedida_e_nao_reiniciada_nao_refaz_o_modulo_sem_marca(
+        self, tmp_path: Path
+    ) -> None:
+        estado, _caminho = _com_a_inscricao_pedida(tmp_path)
+        lidas = self._instalar(tmp_path, estado)
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+
+    @pytest.mark.parametrize("arquivo", ["hid-teste.ko.xz", "hid-teste.ko.gz"])
+    def test_o_arquivo_que_nao_se_le_nao_se_refaz(self, tmp_path: Path, arquivo: str) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        lidas = self._instalar(tmp_path, estado, arquivo=arquivo, corrompido=True)
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
 
 
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:
