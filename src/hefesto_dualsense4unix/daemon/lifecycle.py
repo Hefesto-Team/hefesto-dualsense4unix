@@ -5175,6 +5175,7 @@ _PACOTES_DO_SERVICO: tuple[str, ...] = tuple(
 )
 _MODULOS_AVULSOS_DO_SERVICO: tuple[str, ...] = (
     "hefesto_dualsense4unix.app.actions.atos_da_bandeja",
+    "hefesto_dualsense4unix.app.actions.atualizador",
     "hefesto_dualsense4unix.app.actions.external_controllers",
     "hefesto_dualsense4unix.app.actions.trigger_specs",
     "hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo",
