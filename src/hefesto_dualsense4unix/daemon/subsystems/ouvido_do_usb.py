@@ -2,9 +2,10 @@
 
 Um socket ``NETLINK_KOBJECT_UEVENT``, grupo do kernel, só stdlib e sem root: a cada ``add`` ou
 ``remove`` de um ``usb_device``, relê o censo e compara com a leitura anterior
-(:class:`~hefesto_dualsense4unix.integrations.diario_do_usb.Comparador`). Sem netlink (sandbox),
-o mesmo laço relê a cada :data:`RELEITURA_SEM_NETLINK_S`, e a reenumeração se prova pelo
-``devnum``.
+(:class:`~hefesto_dualsense4unix.integrations.diario_do_usb.Comparador`). Sem netlink (sandbox,
+ou o socket que caiu), o mesmo laço relê a cada :data:`RELEITURA_SEM_NETLINK_S`, a reenumeração se
+prova pelo ``devnum``, e a abertura do socket se repete com recuo de :data:`RECUO_INICIAL_S` até
+:data:`RECUO_MAXIMO_S`.
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ logger = get_logger(__name__)
 NETLINK_KOBJECT_UEVENT = 15
 GRUPO_DO_KERNEL = 1
 RELEITURA_SEM_NETLINK_S = 2.0
+RECUO_INICIAL_S = 2.0
+RECUO_MAXIMO_S = 60.0
 ACOMODAR_S = 0.5
 PRAZO_DA_ESPERA_S = 5.0
 _TAMANHO_DA_MENSAGEM = 1 << 16
@@ -161,7 +164,10 @@ class Ouvido:
     def comecar(self, *, com_netlink: bool) -> None:
         como = "netlink" if com_netlink else f"releitura a cada {RELEITURA_SEM_NETLINK_S:g} s"
         self._registrar(diario_do_usb.COMECOU_A_OUVIR, {"como": como})
-        self.reler()
+        try:
+            self.reler()
+        except Exception:
+            logger.warning("ouvido_do_usb_releitura_falhou", exc_info=True)
 
     def reler(self) -> list[tuple[str, diario_do_usb.Foto]]:
         eventos = self.comparador.observar(diario_do_usb.fotos_do_censo(self._ler_censo()))
@@ -209,7 +215,8 @@ async def _ouvir(
     """``(mudou, o socket que segue)``. O erro do netlink nunca para o ouvido.
 
     ``ENOBUFS``: a rajada estourou a fila e o kernel jogou eventos fora; o que se perdeu só a
-    releitura recupera. Outro erro: o socket caiu, e o laço segue pela releitura periódica.
+    releitura recupera. Outro erro: o socket caiu, e o laço segue pela releitura periódica até
+    reabri-lo.
     """
     try:
         return await _esperar_evento(sock, prazo, daemon), sock
@@ -222,6 +229,14 @@ async def _ouvir(
         return True, None
 
 
+def _abrir_sem_cair(abrir: Callable[[], socket.socket | None]) -> socket.socket | None:
+    try:
+        return abrir()
+    except Exception:
+        logger.warning("ouvido_do_usb_abrir_falhou", exc_info=True)
+        return None
+
+
 async def ouvido_do_usb_loop(
     daemon: Any,
     ouvido: Ouvido,
@@ -230,20 +245,43 @@ async def ouvido_do_usb_loop(
     intervalo: float = RELEITURA_SEM_NETLINK_S,
     acomodar: float = ACOMODAR_S,
     prazo: float = PRAZO_DA_ESPERA_S,
+    recuo_inicial: float = RECUO_INICIAL_S,
+    recuo_maximo: float = RECUO_MAXIMO_S,
+    relogio: Callable[[], float] = time.monotonic,
 ) -> None:
-    sock = abrir()
+    """Ouve o netlink; sem socket, relê a cada ``intervalo`` e tenta reabri-lo com recuo.
+
+    O recuo dobra a cada abertura que falha, de ``recuo_inicial`` até ``recuo_maximo``, e volta ao
+    inicial quando o socket cai de novo. Com o socket de volta, o laço volta a esperar o evento.
+    """
+    sock = _abrir_sem_cair(abrir)
+    recuo = recuo_inicial
+    tentar_em = relogio() + recuo
     try:
         await asyncio.to_thread(ouvido.comecar, com_netlink=sock is not None)
         while not daemon._is_stopping():
+            caiu = False
             if sock is None:
                 await asyncio.sleep(intervalo)
                 mudou = True
             else:
                 mudou, sock = await _ouvir(sock, prazo, daemon)
+                caiu = sock is None
                 if mudou and sock is not None:
                     await asyncio.sleep(acomodar)
                     _drenar(sock, daemon)
             await asyncio.to_thread(ouvido.passo, mudou=mudou)
+            if caiu:
+                recuo = recuo_inicial
+                tentar_em = relogio() + recuo
+            elif sock is None and relogio() >= tentar_em:
+                sock = _abrir_sem_cair(abrir)
+                if sock is None:
+                    recuo = min(recuo * 2, recuo_maximo)
+                    tentar_em = relogio() + recuo
+                else:
+                    logger.info("ouvido_do_usb_netlink_reaberto")
+                    recuo = recuo_inicial
     finally:
         if sock is not None:
             sock.close()
@@ -263,6 +301,8 @@ def start_ouvido_do_usb(daemon: Any) -> None:
 
 __all__ = [
     "NETLINK_KOBJECT_UEVENT",
+    "RECUO_INICIAL_S",
+    "RECUO_MAXIMO_S",
     "Ouvido",
     "a_volta_quer_saber",
     "abrir_o_netlink",
