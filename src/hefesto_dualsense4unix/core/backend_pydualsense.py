@@ -1569,8 +1569,8 @@ class PyDualSenseController(IController):
         )
 
     def _conhecer_o_firmware(self, key: str, handle: pydualsense) -> None:
-        """Na conexão: lê o firmware do controle e põe o handle no modo dele, fora do `_io_lock`.
-
+        """Na conexão: lê o firmware do controle e põe o handle no modo dele; quem chama não segura
+        o `_io_lock`, e aqui ele só copia o handle e guarda a versão (o `ioctl` corre fora dele).
         O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01. Vale para todo handle novo (conexão,
         reconexão, troca de nó).
         """
@@ -5828,8 +5828,8 @@ class PyDualSenseController(IController):
 
         O-CONTROLE-SE-DESLIGA-PELO-BOTAO-PELO-GESTO-E-PELA-OCIOSIDADE-01: o SET_FEATURE `0x08`
         («Set Bluetooth Control», 47 B, `buf[1] = 2`) sai no hidraw DESTE controle, assinado com a
-        semente de escrita `0x53`. Só pelo rádio: no cabo a energia vem do fio e o efeito do `0x08`
-        não foi medido, então o verbo recusa sem escrever. Devolve se o pedido saiu inteiro.
+        semente `0x53`, fora do `_io_lock`. Só pelo rádio: no cabo a energia vem do fio e o efeito
+        do `0x08` não foi medido: recusa. Devolve se o pedido saiu inteiro e o handle não trocou.
         """
         mascarado = _endereco_mascarado(uniq)
         with self._io_lock:
@@ -5842,16 +5842,16 @@ class PyDualSenseController(IController):
             if self._detect_transport(handle) != "bt":
                 logger.info("controle_desligar_recusado", uniq=mascarado, motivo="cabo")
                 return False
-            pedido = pedido_de_desligar()
-            try:
-                escritos = _write_feature_via_hidraw(
-                    caminho.decode("utf-8", "replace"), pedido, opener=self._feature_opener
-                )
-            except OSError as exc:
-                logger.warning("controle_desligar_falhou", uniq=mascarado, err=str(exc))
-                return False
-        logger.info("controle_desligado", uniq=mascarado, escritos=escritos)
-        return escritos == len(pedido)
+            pedido, opener, path = pedido_de_desligar(), self._feature_opener, os.fsdecode(caminho)
+        try:
+            escritos = _write_feature_via_hidraw(path, pedido, opener=opener)
+        except OSError as exc:
+            logger.warning("controle_desligar_falhou", uniq=mascarado, err=str(exc))
+            return False
+        with self._io_lock:
+            trocado = self._handles.get(key) is not handle
+        logger.info("controle_desligado", uniq=mascarado, escritos=escritos, trocado=trocado)
+        return not trocado and escritos == len(pedido)
 
     def set_trigger_scales(self, scales: Mapping[str, float] | None = None) -> None:
         """SUBSTITUI o mapa da «Intensidade do gatilho» por-uniq (1,0 = 100% do trilho).
