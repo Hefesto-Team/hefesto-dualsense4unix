@@ -75,7 +75,7 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -405,19 +405,26 @@ class EleitorDeMicrofone:
     """Elege por `uniq`, confere relendo o ativo, e sabe o caminho de volta."""
 
     anterior: str | None = None
-    _guardou: bool = field(default=False, repr=False)
 
     eleito: str | None = None
 
     fonte_do_eleito: str | None = None
 
     def guardar_anterior(self) -> str | None:
-        """Guarda o `get-default-source` de antes — UMA vez por sessão."""
-        if self._guardou:
-            return self.anterior
-        self._guardou = True
-        self.anterior = fonte_ativa()
-        logger.info("eleicao_mic_guardou_anterior", anterior=self.anterior)
+        """Guarda o padrão de antes, a cada ida que parte de uma fonte que não é controle.
+
+        A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES-01 (20/11/2026). Quem escolheu
+        o microfone foi quem usa, e o que a volta devolve é essa escolha: o padrão
+        de agora vira o `anterior` sempre que não é canal de controle (nem
+        monitor), e a ida de um controle para outro, que parte de um canal nosso,
+        não reescreve a memória. Antes valia a primeira leitura da sessão, e quem
+        trocava de webcam para headset no meio da sessão voltava à webcam.
+        """
+        ativo = fonte_ativa()
+        if ativo is not None and not fontes_dualsense(f"0\t{ativo}\n"):
+            if ativo != self.anterior:
+                logger.info("eleicao_mic_guardou_anterior", anterior=ativo)
+            self.anterior = ativo
         return self.anterior
 
 
@@ -434,7 +441,7 @@ class EleitorDeMicrofone:
         A ordem é a ordem, e cada passo já falhou de um jeito diferente:
 
         1. resolve `uniq → nome` pelo dono da resolução (`escolher_fonte`);
-        2. GUARDA o anterior (só na primeira vez da sessão, em `_eleger_nome`);
+        2. GUARDA o anterior (a cada ida que parte de fonte que não é controle, em `_eleger_nome`);
         3. pergunta ao dono do critério se o alvo SE SUSTENTA — **antes** de
            escrever, porque eleger um nó que não para de pé sobrescreve a
            preferência do usuário por lixo que o WirePlumber desfaz sozinho;
@@ -622,8 +629,8 @@ class EleitorDeMicrofone:
             mais velho, só quem está na mesa), pela `eleger_o_controle` de
             sempre, com a releitura do ativo e as recusas da eleição;
         (b) **sem ninguém no ar, a volta à máquina**, por
-            :meth:`devolver_o_microfone`, que pergunta
-            :func:`outra_captura_elegivel`;
+            :meth:`devolver_o_microfone`: o padrão de antes, se ainda serve, e
+            senão :func:`outra_captura_elegivel`;
         (c) **sem as duas, o padrão fica onde está.** Nada se escreve.
 
         Um canal de controle vira o padrão só por (a), pela ida
@@ -678,11 +685,21 @@ class EleitorDeMicrofone:
         return ResultadoDaEleicao(ok=True, ativo=ativo)
 
     def devolver_o_microfone(self) -> ResultadoDaEleicao:
-        """A VOLTA À MÁQUINA: o padrão vai a uma captura que não é controle nenhum."""
-        try:
-            nome = outra_captura_elegivel()
-        except ConsultaIndisponivelError as exc:
-            return ResultadoDaEleicao(ok=False, motivo=str(exc))
+        """A VOLTA À MÁQUINA: o padrão volta ao de antes, ou a uma captura que não é controle.
+
+        O `anterior` vale quando passa nos filtros da volta: não é controle nem
+        monitor, está na lista viva e se sustenta (`--fonte-se-sustenta`, o
+        mesmo dono do critério). Sem ele, a pergunta é a de sempre,
+        :func:`outra_captura_elegivel`.
+        """
+        nome = self._o_anterior_que_ainda_serve()
+        if nome is not None:
+            logger.info("eleicao_mic_volta_ao_anterior", anterior=nome)
+        else:
+            try:
+                nome = outra_captura_elegivel()
+            except ConsultaIndisponivelError as exc:
+                return ResultadoDaEleicao(ok=False, motivo=str(exc))
         if nome is None:
             return ResultadoDaEleicao(
                 ok=False,
@@ -698,6 +715,22 @@ class EleitorDeMicrofone:
             self.eleito = None
             self.fonte_do_eleito = None
         return resultado
+
+    def _o_anterior_que_ainda_serve(self) -> str | None:
+        """O `anterior`, se ainda é uma captura viva da máquina que se sustenta."""
+        nome = self.anterior
+        if nome is None or nome.lower().endswith(".monitor"):
+            return None
+        if fontes_dualsense(f"0\t{nome}\n"):
+            return None
+        rc, saida = _rodar(["pactl", "list", "sources", "short"])
+        if rc != 0:
+            return None
+        linhas = (linha.split("\t") for linha in saida.splitlines())
+        vivas = {partes[1].strip() for partes in linhas if len(partes) > 1}
+        if nome not in vivas or fonte_se_sustenta(nome) is not True:
+            return None
+        return nome
 
 
 def recusa_de_quem_nao_elegeu(eleito: str | None) -> ResultadoDaEleicao:
