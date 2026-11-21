@@ -46,6 +46,9 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         (casa / sub).mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv(var, str(casa / sub))
     monkeypatch.setenv("HOME", str(casa))
+    ajudante = casa / "atualizador-raiz"
+    ajudante.touch()
+    monkeypatch.setattr(pa, "AJUDANTE", ajudante)
     return casa
 
 
