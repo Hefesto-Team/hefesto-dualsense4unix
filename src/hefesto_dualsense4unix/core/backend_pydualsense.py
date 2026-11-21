@@ -1517,7 +1517,9 @@ class PyDualSenseController(IController):
         """Uma feature do controle `key` pelo hidraw dele, ou None (fail-safe).
 
         Dono único da leitura (calibração 0x05 e firmware 0x20): mesmo fd efêmero, mesmo opener do
-        broker, mesma conferência (tamanho, id e, no rádio, CRC-32).
+        broker, mesma conferência (tamanho, id e, no rádio, CRC-32). O `_io_lock` só copia handle,
+        transporte e caminho; o `ioctl` corre fora dele e o resultado só vale se o handle de `key`
+        ainda for o mesmo ao voltar (senão None): a leitura de um controle não prende os outros.
         """
         from hefesto_dualsense4unix.core.ds_output_report import (
             BT_FEATURE_CRC_SEED,
@@ -1530,20 +1532,18 @@ class PyDualSenseController(IController):
                 return None
             transporte = self._detect_transport(handle)
             caminho = getattr(handle, "_pinned_path", None)
-            if not isinstance(caminho, bytes):
-                return None
-            path = caminho.decode("utf-8", "replace")
-            if not path.startswith("/dev/hidraw"):
-                return None
-            try:
-                data = _read_feature_via_hidraw(
-                    path,
-                    feature_id,
-                    size,
-                    opener=self._feature_opener,
-                )
-            except OSError as exc:
-                logger.info(f"{rotulo}_read_failed", key=key, err=str(exc))
+            opener = self._feature_opener
+        path = caminho.decode("utf-8", "replace") if isinstance(caminho, bytes) else ""
+        if not path.startswith("/dev/hidraw"):
+            return None
+        try:
+            data = _read_feature_via_hidraw(path, feature_id, size, opener=opener)
+        except OSError as exc:
+            logger.info(f"{rotulo}_read_failed", key=key, err=str(exc))
+            return None
+        with self._io_lock:
+            if self._handles.get(key) is not handle:
+                logger.info(f"{rotulo}_handle_trocado", key=key)
                 return None
         if len(data) != size or data[0] != feature_id:
             logger.warning(f"{rotulo}_report_invalido", key=key, tamanho=len(data))
