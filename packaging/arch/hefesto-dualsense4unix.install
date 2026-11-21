@@ -84,6 +84,7 @@ post_upgrade() {
 }
 
 pre_remove() {
+    /usr/share/hefesto-dualsense4unix/scripts/disparo_do_udev.sh --preparar-a-remocao || true
     echo ">>> Parando servicos do Hefesto - DualSense4Unix (se ativos)..."
     systemctl --user stop hefesto-dualsense4unix.service 2>/dev/null || true
     systemctl --user disable hefesto-dualsense4unix.service 2>/dev/null || true
@@ -226,5 +227,5 @@ pre_remove() {
 post_remove() {
     echo ">>> Recarregando udev rules apos remocao das regras do Hefesto..."
     udevadm control --reload-rules
-    udevadm trigger
+    /run/hefesto-dualsense4unix-remocao/disparo_do_udev.sh --apos-a-remocao || true
 }

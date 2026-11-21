@@ -28,6 +28,8 @@ INSTALL_DO_ARCH = RAIZ / "packaging/arch/hefesto-dualsense4unix.install"
 PKGBUILD = RAIZ / "packaging/arch/PKGBUILD"
 SPEC = RAIZ / "packaging/fedora/hefesto-dualsense4unix.spec"
 POSTINST = RAIZ / "packaging/debian/postinst"
+POSTRM = RAIZ / "packaging/debian/postrm"
+PRERM = RAIZ / "packaging/debian/prerm"
 BUILD_DEB = RAIZ / "scripts/build_deb.sh"
 FLATPAK = RAIZ / "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
 AJUDANTE = RAIZ / "scripts/install-host-udev.sh"
@@ -37,27 +39,20 @@ QUE_REENUMERAM = ("hidraw", "idVendor=054c", "subsystem-match=usb", "subsystem-m
 QUE_NAO_REENUMERAM = ("subsystem-match=leds", "subsystem-match=misc", "subsystem-match=pci")
 
 
-def _na_instalacao(arquivo: Path) -> str:
-    texto = arquivo.read_text(encoding="utf-8")
-    for corte in ("post_remove()", "%postun"):
-        texto = texto.split(corte)[0]
-    return texto
-
-
 def _linhas_de_codigo(texto: str) -> list[str]:
+    texto = texto.split("\n%changelog\n")[0]
     return [ln.strip() for ln in texto.splitlines() if not ln.strip().startswith("#")]
 
 
 @pytest.mark.parametrize(
     "arquivo",
-    [INSTALL_DO_ARCH, SPEC, POSTINST, AJUDANTE, NATIVO, BUILD_DEB, FLATPAK],
+    [INSTALL_DO_ARCH, SPEC, POSTINST, POSTRM, PRERM, AJUDANTE, NATIVO, BUILD_DEB, FLATPAK],
     ids=lambda p: p.name,
 )
 def test_nenhum_scriptlet_dispara_o_udev_fora_do_dono(arquivo: Path) -> None:
     """MORDIDA: devolva `udevadm trigger` ao `post_install` do `.install`, e esta régua reprova."""
-    culpadas = [
-        ln for ln in _linhas_de_codigo(_na_instalacao(arquivo)) if "udevadm trigger" in ln
-    ]
+    codigo = _linhas_de_codigo(arquivo.read_text(encoding="utf-8"))
+    culpadas = [ln for ln in codigo if "udevadm trigger" in ln]
     assert not culpadas, f"{arquivo.name} dispara o udev por conta própria: {culpadas}"
 
 
@@ -175,4 +170,112 @@ def test_sem_o_leitor_o_dono_nao_reenumera_e_diz_que_nao_soube(tmp_path: Path) -
     dono = _pasta_do_pacote(tmp_path, com_leitor=False)
     chamadas, saida = _dispara(dono, tmp_path, _proc(tmp_path, jogo=False))
     assert not _alguma_casa(chamadas, QUE_REENUMERAM)
+    assert "não deu para saber" in saida
+
+
+def _corpo(arquivo: Path, inicio: str, fim: str) -> str:
+    texto = arquivo.read_text(encoding="utf-8").split(inicio, 1)[1].split(fim, 1)[0]
+    return "\n".join(_linhas_de_codigo(texto))
+
+
+@pytest.mark.parametrize(
+    ("arquivo", "pre", "pos"),
+    [
+        (INSTALL_DO_ARCH, ("pre_remove() {", "\n}\n"), ("post_remove() {", "\n}\n")),
+        (SPEC, ("\n%preun\n", "\n%postun\n"), ("\n%postun\n", "\n%files\n")),
+    ],
+    ids=["arch", "fedora"],
+)
+def test_a_remocao_decide_antes_dos_arquivos_sairem_e_dispara_depois(
+    arquivo: Path, pre: tuple[str, str], pos: tuple[str, str]
+) -> None:
+    """MORDIDA: tire a decisão do `pre_remove`/`%preun` e o gancho seguinte dispara sem veredito."""
+    assert "disparo_do_udev.sh --preparar-a-remocao" in _corpo(arquivo, *pre)
+    assert "disparo_do_udev.sh --apos-a-remocao" in _corpo(arquivo, *pos)
+    assert "udevadm trigger" not in _corpo(arquivo, *pos)
+
+
+def test_o_spec_so_decide_na_remocao_final_e_nao_no_upgrade() -> None:
+    corpo = _corpo(SPEC, "\n%preun\n", "\n%postun\n")
+    primeiras = corpo.splitlines()[:2]
+    assert primeiras[0] == "if [ $1 -eq 0 ]; then"
+    assert "--preparar-a-remocao" in primeiras[1]
+
+
+def _a_remocao(
+    raiz: Path,
+    *,
+    jogo: bool,
+    com_leitor: bool = True,
+    antes: bool = True,
+    perde_o_veredito: bool = False,
+) -> tuple[list[str], str]:
+    pacote = raiz / "usr" / "share" / "hefesto-dualsense4unix" / "scripts"
+    pacote.mkdir(parents=True)
+    shutil.copy2(DONO, pacote / DONO.name)
+    if com_leitor:
+        shutil.copy2(LEITOR, pacote / LEITOR.name)
+    run = raiz / "run" / "hefesto-dualsense4unix-remocao"
+    ambiente, diario = _udevadm_de_mentira(raiz)
+    ambiente["HEFESTO_RAIZ_PROC"] = str(_proc(raiz, jogo=jogo))
+    ambiente["HEFESTO_RUN_DA_REMOCAO"] = str(run)
+    if antes:
+        feito = subprocess.run(
+            ["bash", str(pacote / DONO.name), "--preparar-a-remocao"],
+            env=ambiente, capture_output=True, text=True, check=False,
+        )
+        assert feito.returncode == 0, feito.stderr
+        assert not diario.exists(), "decidir não dispara nada"
+    if perde_o_veredito:
+        (run / "veredito").unlink()
+    shutil.rmtree(pacote.parent.parent.parent)
+    assert not pacote.exists()
+    saida = ""
+    if (run / DONO.name).exists():
+        feito = subprocess.run(
+            ["bash", str(run / DONO.name), "--apos-a-remocao"],
+            env=ambiente, capture_output=True, text=True, check=False,
+        )
+        assert feito.returncode == 0, feito.stderr
+        saida = feito.stdout
+        assert not run.exists(), "o veredito e a cópia não ficam no /run"
+    chamadas = diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
+    return chamadas, saida
+
+
+def test_remover_o_pacote_com_jogo_aberto_nao_reenumera_o_controle(tmp_path: Path) -> None:
+    """MORDIDA: dispare o geral sem ler o veredito e o jogo perde o controle."""
+    chamadas, saida = _a_remocao(tmp_path, jogo=True)
+    assert not _alguma_casa(chamadas, QUE_REENUMERAM)
+    assert "trigger" not in chamadas
+    assert "próximo plugue" in saida
+
+
+def test_remover_o_pacote_sem_jogo_reenumera_como_antes(tmp_path: Path) -> None:
+    chamadas, saida = _a_remocao(tmp_path, jogo=False)
+    for alvo in QUE_REENUMERAM:
+        assert any(alvo in c for c in chamadas), alvo
+    assert "trigger" in chamadas
+    assert "próximo plugue" not in saida
+
+
+def test_remover_o_pacote_sem_o_leitor_nao_reenumera(tmp_path: Path) -> None:
+    chamadas, saida = _a_remocao(tmp_path, jogo=False, com_leitor=False)
+    assert not _alguma_casa(chamadas, QUE_REENUMERAM)
+    assert "trigger" not in chamadas
+    assert "não deu para saber" in saida
+
+
+def test_remover_o_pacote_sem_veredito_nao_dispara_nada(tmp_path: Path) -> None:
+    """Sem a decisão do `pre_remove`, não há cópia do dono no /run e nada dispara."""
+    chamadas, saida = _a_remocao(tmp_path, jogo=False, antes=False)
+    assert chamadas == []
+    assert saida == ""
+
+
+def test_remover_o_pacote_com_o_veredito_perdido_nao_reenumera(tmp_path: Path) -> None:
+    """MORDIDA: assuma «sem jogo» quando o veredito falta e o gancho reenumera às cegas."""
+    chamadas, saida = _a_remocao(tmp_path, jogo=False, perde_o_veredito=True)
+    assert not _alguma_casa(chamadas, QUE_REENUMERAM)
+    assert "trigger" not in chamadas
     assert "não deu para saber" in saida

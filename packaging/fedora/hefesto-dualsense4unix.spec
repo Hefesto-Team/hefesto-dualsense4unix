@@ -390,6 +390,9 @@ As regras do udev se refazem com:
 MSG
 
 %preun
+if [ $1 -eq 0 ]; then
+    %{_datadir}/%{app_id}/scripts/disparo_do_udev.sh --preparar-a-remocao || :
+fi
 # BROKER-01 (achado #21): purge nao pode deixar a unit ROOT do broker orfa
 # habilitada. disable+stop dispara o ExecStopPost --restore-all-and-exit da
 # propria unit (nenhum hidraw fisico fica 0600 orfao); o belt explicito roda
@@ -524,7 +527,7 @@ fi
 if [ $1 -eq 0 ]; then
     # Remocao final — recarrega udev sem nossas regras.
     /usr/sbin/udevadm control --reload-rules || :
-    /usr/sbin/udevadm trigger || :
+    /run/hefesto-dualsense4unix-remocao/disparo_do_udev.sh --apos-a-remocao || :
 fi
 
 %files
