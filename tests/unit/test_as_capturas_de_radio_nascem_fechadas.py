@@ -304,6 +304,8 @@ def _grupo_esperado() -> int:
 
 
 def _chamadas(dubles: Dubles) -> list[str]:
+    if not dubles.log_chamadas.exists():
+        return []
     return dubles.log_chamadas.read_text(encoding="utf-8").splitlines()
 
 
