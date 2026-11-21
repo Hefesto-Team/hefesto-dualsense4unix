@@ -127,13 +127,13 @@ def test_de_controle_para_controle_a_memoria_continua_a_entrada_de_antes(
 
 @pytest.mark.parametrize(
     "caso",
-    ["sumiu-da-lista", "porta-sem-captura", "era-controle"],
+    ["sumiu-da-lista", "porta-sem-captura", "era-controle", "era-monitor"],
 )
 def test_anterior_que_nao_serve_cai_no_criterio_de_hoje(
     mesa: Callable[..., _PipeWire], caso: str
 ) -> None:
-    """Fonte que sumiu, que não se sustenta ou que é controle: a primeira captura da máquina."""
-    inicial = _canal(VERMELHO) if caso == "era-controle" else WEBCAM
+    """Fonte que sumiu, que não se sustenta, controle ou monitor: a primeira captura da máquina."""
+    inicial = {"era-controle": _canal(VERMELHO), "era-monitor": MONITOR_HDMI}.get(caso, WEBCAM)
     pw = mesa(_lista(), inicial)
     eleitor = elm.EleitorDeMicrofone()
     _ligar(eleitor, ROXO)

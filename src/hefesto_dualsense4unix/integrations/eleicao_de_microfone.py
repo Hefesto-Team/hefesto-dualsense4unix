@@ -683,9 +683,9 @@ class EleitorDeMicrofone:
     def devolver_o_microfone(self) -> ResultadoDaEleicao:
         """A VOLTA À MÁQUINA: o padrão volta ao de antes, ou a uma captura que não é controle.
 
-        O `anterior` vale quando passa nos filtros da volta: não é controle nem
-        monitor, está na lista viva e se sustenta (`--fonte-se-sustenta`, o
-        mesmo dono do critério). Sem ele, a pergunta é a de sempre,
+        O `anterior` (nunca controle nem monitor, por `guardar_anterior`) vale quando se
+        sustenta (`--fonte-se-sustenta`, o mesmo dono do critério, que só responde a
+        fonte da lista viva com porta usável). Sem ele, a pergunta é a de sempre,
         :func:`outra_captura_elegivel`.
         """
         nome = self._o_anterior_que_ainda_serve()
@@ -713,20 +713,9 @@ class EleitorDeMicrofone:
         return resultado
 
     def _o_anterior_que_ainda_serve(self) -> str | None:
-        """O `anterior`, se ainda é uma captura viva da máquina que se sustenta."""
+        """O `anterior`, se ele ainda se sustenta."""
         nome = self.anterior
-        if nome is None or nome.lower().endswith(".monitor"):
-            return None
-        if fontes_dualsense(f"0\t{nome}\n"):
-            return None
-        rc, saida = _rodar(["pactl", "list", "sources", "short"])
-        if rc != 0:
-            return None
-        linhas = (linha.split("\t") for linha in saida.splitlines())
-        vivas = {partes[1].strip() for partes in linhas if len(partes) > 1}
-        if nome not in vivas or fonte_se_sustenta(nome) is not True:
-            return None
-        return nome
+        return nome if nome is not None and fonte_se_sustenta(nome) is True else None
 
 
 def recusa_de_quem_nao_elegeu(eleito: str | None) -> ResultadoDaEleicao:
