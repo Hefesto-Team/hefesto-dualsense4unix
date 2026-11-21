@@ -531,6 +531,19 @@ static void rumble_de(aparelho *a, const gi_rumble *p)
     LeaveCriticalSection(&a->wlock);
 }
 
+/* O aparelho que sai leva o rumble dele: o par vai a zero, o zero se escreve uma vez, e o
+ * vigia não tem o que reenviar quando o mesmo caminho volta. Só este aparelho; os outros seguem. */
+static void calar(aparelho *a)
+{
+    EnterCriticalSection(&a->wlock);
+    if (a->fraco || a->forte) {
+        a->fraco = 0;
+        a->forte = 0;
+        escrever_rumble(a, 0, 0);
+    }
+    LeaveCriticalSection(&a->wlock);
+}
+
 static void preencher_info(aparelho *a, uint16_t vid, uint16_t pid, uint16_t rev)
 {
     BYTE id[32];
@@ -603,6 +616,8 @@ static int abrir(aparelho *a)
     if (a->escrita != INVALID_HANDLE_VALUE) CloseHandle(a->escrita);
     a->escrita = CreateFileW(a->caminho, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                              NULL, OPEN_EXISTING, 0, NULL);
+    a->fraco = 0;
+    a->forte = 0;
     LeaveCriticalSection(&a->wlock);
     if (a->escrita == INVALID_HANDLE_VALUE) return 0;
     InterlockedExchange(&a->perdido, 0);
@@ -752,6 +767,7 @@ static int listar_hid(mudanca *m, int max)
     for (j = 0; j < g_ap_n; j++) {
         if (!visto[j] && g_ap[j].status == STATUS_CONNECTED) {
             g_ap[j].status = 0;
+            calar(&g_ap[j]);
             if (n < max) { m[n].a = &g_ap[j]; m[n].antes = STATUS_CONNECTED; m[n].depois = 0; n++; }
         }
     }

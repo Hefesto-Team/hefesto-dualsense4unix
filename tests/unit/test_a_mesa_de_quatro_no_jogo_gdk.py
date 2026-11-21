@@ -4,9 +4,11 @@ O jogo GDK lê a entrada pela XInput e pelo HID da biblioteca Sony; a peça `gam
 responde ao Wwise Motion, que pede a vibração. Para a mesa de quatro, a peça garante, em cabo
 e rádio e de P1 a P4: cada pad é um aparelho só, achado pelo caminho; o controle que sai e
 volta pelo mesmo caminho é o mesmo aparelho, com o mesmo `deviceId`; o rumble e o reenvio de
-1 s são de cada aparelho; e cabem os quatro jogadores e as voltas deles numa partida, como pede
-a D-2210-O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-DA-CASA («P1 a P4»). O comportamento no jogo de
-verdade se mede no prefixo, não aqui.
+1 s são de cada aparelho; o aparelho que sai leva o rumble dele, e o que volta pelo mesmo
+caminho nasce calado, sem tocar no vizinho; e cabem os quatro jogadores e as voltas deles numa
+partida, como pede a D-2210-O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-DA-CASA («P1 a P4»). A troca de
+transporte no meio do jogo não chega à peça: o jogador que troca fica com o mesmo pad virtual,
+logo com o mesmo caminho. O comportamento no jogo de verdade se mede no prefixo, não aqui.
 """
 from __future__ import annotations
 
@@ -55,6 +57,33 @@ def test_o_rumble_e_o_reenvio_sao_de_cada_aparelho() -> None:
     rumble = _corpo(fonte, "static void rumble_de(aparelho *a, const gi_rumble *p)\n{")
     assert "a->fraco = fraco;" in rumble
     assert "escrever_rumble(a, fraco, forte);" in rumble
+
+
+def test_o_aparelho_que_sai_leva_o_rumble_dele() -> None:
+    """A saída zera o par só daquele aparelho, sob a trava dele, e escreve o zero uma vez."""
+    fonte = _fonte()
+    lista = _corpo(fonte, "static int listar_hid(mudanca *m, int max)\n{")
+    saida = lista.split("SetupDiDestroyDeviceInfoList(set);", 1)[1]
+    poe_zero = saida.find("g_ap[j].status = 0;")
+    assert poe_zero != -1, "a lista não marca mais a saída"
+    assert "calar(&g_ap[j]);" in saida[poe_zero:], (
+        "o aparelho que sai deixa o rumble para quem volta"
+    )
+    calar = _corpo(fonte, "static void calar(aparelho *a)\n{")
+    assert "g_ap[" not in calar, "o calar mexe no rumble de outro aparelho"
+    trava = calar.find("EnterCriticalSection(&a->wlock);")
+    solta = calar.find("LeaveCriticalSection(&a->wlock);")
+    for linha in ("a->fraco = 0;", "a->forte = 0;", "escrever_rumble(a, 0, 0);"):
+        assert trava < calar.find(linha) < solta, f"o calar perdeu, sob a trava: {linha}"
+
+
+def test_o_aparelho_que_volta_nasce_calado() -> None:
+    """Reabrir o mesmo caminho zera o par: o vigia não reenvia o tranco de antes da saída."""
+    abrir = _corpo(_fonte(), "static int abrir(aparelho *a)\n{")
+    trava = abrir.find("EnterCriticalSection(&a->wlock);")
+    solta = abrir.find("LeaveCriticalSection(&a->wlock);")
+    for linha in ("a->fraco = 0;", "a->forte = 0;"):
+        assert trava < abrir.find(linha) < solta, "quem volta reenvia o rumble velho"
 
 
 def test_cabem_os_quatro_jogadores_e_as_voltas_deles() -> None:
