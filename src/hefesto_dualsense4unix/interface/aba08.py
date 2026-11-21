@@ -1541,12 +1541,19 @@ def _desenho_do_modelo(modelo: str) -> str:
     """O desenho do controle de fora (`assets/control-svg/`) ao lado do DualSense na janela.
 
     Os `id` ganham o prefixo do modelo (`PREFIXO_DA_PECA`), a folha do arquivo fica escopada ao
-    próprio `<svg>`, e cada peça que a tabela do modelo conhece vira o gesto ``acionador-botao``.
+    próprio `<svg>`, os comentários do arquivo ficam de fora (o mockup não tem comentário), o
+    balão não grita (a sigla em caixa alta vira só a primeira letra maiúscula) e cada peça que a
+    tabela do modelo conhece vira o gesto ``acionador-botao``.
     A janela mostra um só: o do `data-modelo` da opção marcada no seletor (CSS, sem gesto).
     """
     prefixo = _pacote08.PREFIXO_DA_PECA[modelo]
     cru = (R / "assets" / "control-svg" / _ARTE_DO_ACIONADOR[modelo]).read_text(encoding="utf-8")
     cru = cru[cru.index("<svg"):cru.rindex("</svg>") + len("</svg>")]
+    cru = re.sub(r"<!--.*?-->", "", cru, flags=re.S)
+    cru = re.sub(
+        r"<title>([^<]*)</title>",
+        lambda m: "<title>" + re.sub(r"\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}\b", lambda g: g.group(0).capitalize(),
+                                    m.group(1)) + "</title>", cru)
     cru = re.sub(r'(\sid=")([^"]+)"', rf'\g<1>{prefixo}\2"', cru)
     cru = re.sub(r'aria-labelledby="([^"]+)"', rf'aria-labelledby="{prefixo}\1"', cru)
     cru = re.sub(r"<style>(.*?)</style>",

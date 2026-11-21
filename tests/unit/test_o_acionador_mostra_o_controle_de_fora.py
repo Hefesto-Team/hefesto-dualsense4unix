@@ -219,3 +219,16 @@ def test_a_janela_do_mockup_traz_os_tres_desenhos_e_o_seletor_escolhe_o_que_apar
     assert len(por_desenho) == 3 and not (
         (por_desenho[0] & por_desenho[1]) | (por_desenho[0] & por_desenho[2])
         | (por_desenho[1] & por_desenho[2]))
+
+
+def test_o_mockup_nao_leva_os_comentarios_das_artes() -> None:
+    """D-2011-O-ACIONADOR-DESENHA-O-CONTROLE-DE-FORA-PELO-MODELO: as artes entram sem comentário.
+
+    O código e o mockup não têm comentário; os arquivos de arte têm, e o gerador os tira ao embutir.
+
+    MORDIDA: tire de ``_desenho_do_modelo`` a remoção dos comentários e regenere o mockup.
+    """
+    for arte in ARTE.glob("*.svg"):
+        if arte.name in {"nintendo-pro.svg", "8bitdo-sn30-pro.svg"}:
+            assert "<!--" in arte.read_text(encoding="utf-8"), arte.name
+    assert "<!--" not in ENSAIO.read_text(encoding="utf-8")

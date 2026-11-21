@@ -3992,37 +3992,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      data-controle="pro" data-modelo="Nintendo Switch Pro Controller">
   <title id="ac-pro-titulo-pro">Nintendo Switch Pro Controller — mapa de peças e features</title>
 
-  <!--
-    SEM width/height NO <svg>, DE PROPOSITO: o viewBox ja define a proporcao, e
-    declarar tamanho com razao um pouco diferente faz o renderizador ENCAIXAR
-    COM TARJA e deslocar o desenho meio pixel. Custou duas confusoes num dia
-    so: a medida de componente saiu com posicao relativa impossivel (1,207), e
-    a prova de fidelidade acusou 19.968 pixels de diferenca que eram apenas
-    esse deslocamento. Quem consome define o tamanho; o arquivo nao opina.
 
-    Mesma norma do dualsense.svg. O que é próprio deste controle:
-
-    1. A FORMA veio de Nintendo-pro_controller.svg, decomposta em 12 componentes.
-       Prova de fidelidade: 137 pixels de ~540.000 (0,03%). A primeira tentativa
-       diferia em 1.124 porque a ferramenta só procurava <path> e APAGAVA o
-       <circle> do botão menos — um botão inteiro sumia, e o defeito apareceu
-       como ponto sólido no diff, não como antisserrilhado de borda.
-
-    2. data-evdev é NOVO e existe porque a casa não tem léxico Nintendo (só
-       "home"). Foi LIDO da fonte do driver que roda nesta máquina,
-       /usr/src/hefesto-hid-nintendo-1.0.0/hid-nintendo.c:473-481, não suposto:
-       A=BTN_EAST, B=BTN_SOUTH, X=BTN_NORTH, Y=BTN_WEST. Note que A e B ficam
-       TROCADOS em relação ao layout PlayStation — é a ponte entre o que está
-       escrito no plástico e o que o código recebe.
-
-    3. L, R, ZL e ZR NÃO EXISTEM como peça neste desenho: são corcovas da
-       própria silhueta. As regiões abaixo são acrescentadas para o mapa ter
-       onde acender; a arte não foi tocada.
-
-    4. O direcional é UMA cruz só. As quatro direções entram como regiões
-       transparentes por cima, para o mapa acender direção por direção sem
-       cortar o desenho original.
-  -->
 
   <style>#acionador svg.ac-pro[data-colorway="preto"]   .corpo{ fill: #2f333c; }#acionador svg.ac-pro[data-colorway="branco"]  .corpo{ fill: #9aa1ad; }#acionador svg.ac-pro g[data-entrada]:hover > .peca,#acionador svg.ac-pro g[data-feature]:hover > .peca,#acionador svg.ac-pro g.marcada > .peca{ fill: #bd93f9; }#acionador svg.ac-pro .regiao{ fill: transparent; }#acionador svg.ac-pro g[data-entrada]:hover > .regiao,#acionador svg.ac-pro g.marcada > .regiao{ fill: #bd93f9; opacity: .55; }#acionador svg.ac-pro .oculta{ opacity: 0; }#acionador svg.ac-pro .oculta.acesa{ opacity: .95; }
   </style>
@@ -4076,7 +4046,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <circle class="peca" fill="none" stroke="#2f333c" stroke-width="0.78" cx="37.1" cy="28.3" r="1.9"/>
   </g>
 
-  <!-- L, R, ZL, ZR: corcovas da silhueta, sem peça própria na arte -->
+
   <g id="ac-pro-zl" data-entrada="zl" data-gesto="acionador-botao" data-hef-forma="acionador" data-evdev="BTN_TL2">
       <title>ZL</title><rect class="regiao" x="19" y="14.6" width="20" height="3.4" rx="1.5"/>
   </g>
@@ -4090,7 +4060,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <title>R</title><rect class="regiao" x="61" y="18" width="20" height="3.6" rx="1.5"/>
   </g>
 
-  <!-- direções do direcional: regiões por cima da cruz, medidas do bbox da cruz -->
+
   <g id="ac-pro-dpad_up" data-entrada="dpad_up" data-gesto="acionador-botao" data-hef-forma="acionador" data-evdev="ABS_HAT0Y-">
       <title>D-pad cima</title><rect class="regiao" x="31.36" y="42.49" width="5.18" height="5.18"/>
   </g>
@@ -4104,19 +4074,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <title>D-pad direita</title><rect class="regiao" x="36.54" y="47.67" width="5.18" height="5.18"/>
   </g>
 
-  <!-- POSIÇÃO LOCALIZADA em 11/08/2026, por FOTO do próprio aparelho:
-       quatro LED numa faixa recuada na aresta frontal, entre os grips, no vão
-       que os ombros deixam. Na foto, os dois da esquerda acesos e os dois da
-       direita apagados — o padrão de jogador 2.
-       A geometria não é chute: ZL/L ocupam x 19..39 e ZR/R ocupam x 61..81, o
-       que deixa o vão em x 39..61 (centro 50); a aresta superior do corpo, no
-       trecho horizontal, está em y 20.5. Os quatro cabem centrados nisso.
-       A foto descreve como "parte de baixo" porque no aparelho na mão a faixa
-       fica na aba inferior da aresta frontal; numa vista de cima, que é esta,
-       a mesma aba projeta no topo, entre os ombros. As duas leituras concordam
-       sobre QUAL extremidade — e é a extremidade que importa para o mapa. -->
+
   <g id="ac-pro-led-jogador" data-feature="led-jogador" data-posicao="aresta-frontal-centro">
-      <title>Indicador de jogador (quatro LED, aresta frontal, entre os grips)</title>
+      <title>Indicador de jogador (quatro Led, aresta frontal, entre os grips)</title>
       <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="43.8" y="22.2" width="2.2" height="1.5" rx="0.3"/>
       <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="47.2" y="22.2" width="2.2" height="1.5" rx="0.3"/>
       <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="50.6" y="22.2" width="2.2" height="1.5" rx="0.3"/>
@@ -4140,7 +4100,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <rect x="41" y="52" width="18" height="18" rx="3" fill="none" stroke="#bd93f9" stroke-width=".7" stroke-dasharray="2 1.5"/>
   </g>
   <g id="ac-pro-feat-nfc" class="oculta" data-feature="nfc">
-      <title>NFC (leitor amiibo, sob o analógico direito)</title>
+      <title>Nfc (leitor amiibo, sob o analógico direito)</title>
       <circle cx="63.5" cy="50.2" r="11" fill="none" stroke="#bd93f9" stroke-width=".7" stroke-dasharray="2 1.5"/>
   </g>
   <g id="ac-pro-feat-bateria" class="oculta" data-feature="bateria">
@@ -4152,42 +4112,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      data-controle="sn30" data-modelo="8BitDo SN30 Pro (modo Switch)">
   <title id="ac-8bitdo-titulo-sn30">8BitDo SN30 Pro — mapa de peças e features</title>
 
-  <!--
-    SEM width/height NO <svg>, DE PROPOSITO: o viewBox ja define a proporcao, e
-    declarar tamanho com razao um pouco diferente faz o renderizador ENCAIXAR
-    COM TARJA e deslocar o desenho meio pixel. Custou duas confusoes num dia
-    so: a medida de componente saiu com posicao relativa impossivel (1,207), e
-    a prova de fidelidade acusou 19.968 pixels de diferenca que eram apenas
-    esse deslocamento. Quem consome define o tamanho; o arquivo nao opina.
 
-    Mesma norma do dualsense.svg e do nintendo-pro.svg. O que é próprio deste:
-
-    1. A FORMA veio de 8bitdo-sn30pro.svg, decomposta em 132 componentes.
-       Prova: 18 pixels de diferença em ~540.000. Duas correções de ferramenta
-       nasceram deste arquivo: (a) ele guarda stroke E um translate de 18 mil
-       unidades no <g> que embrulha tudo — emitir os paths soltos perdia os
-       dois e o desenho ia parar fora do viewBox (52.413 pixels de erro);
-       (b) ele declara width/height com razão diferente do viewBox, o que faz
-       o renderizador encaixar com tarja e deslocar o conteúdo; a medida saía
-       com posição relativa de 1,207, impossível, e foi esse número absurdo
-       que denunciou o erro.
-
-    2. AGRUPAR POR PROXIMIDADE NÃO FUNCIONOU aqui, e isso é informação: no
-       traço fino deste desenho os contornos se TOCAM, então até tolerância
-       0,5 os 132 fragmentos colavam num bloco de 109. A nomeação saiu de
-       caixas lidas numa grade renderizada por cima do desenho, e cada região
-       foi conferida em cor antes de virar nome. O vazamento que sobrou — o
-       contorno do corpo passando por trás dos analógicos — foi cortado por
-       largura: fragmento mais largo que o anel externo é corpo, não stick.
-
-    3. data-evdev lido de /usr/src/hefesto-hid-nintendo-1.0.0/hid-nintendo.c.
-       Este controle sobe pelo MESMO driver do Pro genuíno, e a casa os separa
-       por bcdDevice na regra 84-nintendo-pro-variant.rules.
-
-    4. Este controle NÃO tem lightbar, touchpad, microfone, alto-falante nem
-       gatilho adaptativo. A ausência é informação no mapa tanto quanto a
-       presença: são linhas com transporte=nenhum, não linhas faltando.
-  -->
 
   <style>#acionador svg.ac-8bitdo[data-colorway="cinza"] .corpo{ stroke: #9aa1ad; }#acionador svg.ac-8bitdo[data-colorway="preto"] .corpo{ stroke: #2f333c; }#acionador svg.ac-8bitdo g[data-entrada]:hover > .peca,#acionador svg.ac-8bitdo g[data-feature]:hover > .peca,#acionador svg.ac-8bitdo g.marcada > .peca{ stroke: #bd93f9; }#acionador svg.ac-8bitdo .oculta{ opacity: 0; }#acionador svg.ac-8bitdo .oculta.acesa{ opacity: .95; }
   </style>
@@ -4374,7 +4299,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <path class="peca" stroke-width="3.9" data-name="直线 2834" transform="translate(18635.615 16137.393)" d="M 0 0 h 61.038"/>
   </g>
 </g>
-  <!-- ZL e ZR ficam ATRÁS: não têm peça na vista de frente. -->
+
   <g id="ac-8bitdo-zl" data-entrada="zl" data-gesto="acionador-botao" data-hef-forma="acionador" data-evdev="BTN_TL2" data-posicao="face-traseira">
       <title>ZL (face traseira)</title>
   </g>
@@ -4382,18 +4307,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <title>ZR (face traseira)</title>
   </g>
 
-  <!-- LOCALIZADO em 11/08/2026, por FOTO do próprio aparelho. Este grupo
-       NÃO EXISTIA: o desenho não tinha peça nenhuma para os LED de jogador do
-       SN30, e o mapa por isso nem sabia perguntar por eles. A foto mostra
-       quatro LED numa faixa recuada na aresta frontal, entre os grips, com
-       três acesos e um apagado.
-       Geometria tirada dos marcos do próprio desenho, não de chute: o ombro L
-       ocupa x 55..163 e o R ocupa x 337..445, deixando o vão em x 163..337
-       (centro 250); a aresta superior do corpo está em y 75. Coordenadas em
-       espaço de viewBox, como os grupos vizinhos (o translate da raiz fecha
-       antes daqui). -->
+
   <g id="ac-8bitdo-led-jogador" data-feature="led-jogador" data-posicao="aresta-frontal-centro">
-      <title>Indicador de jogador (quatro LED, aresta frontal, entre os grips)</title>
+      <title>Indicador de jogador (quatro Led, aresta frontal, entre os grips)</title>
       <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="219" y="80" width="11" height="8" rx="1.5"/>
       <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="236" y="80" width="11" height="8" rx="1.5"/>
       <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="253" y="80" width="11" height="8" rx="1.5"/>
