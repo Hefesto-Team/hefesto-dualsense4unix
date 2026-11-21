@@ -142,10 +142,14 @@ except ImportError:  # pragma: no cover
 
 try:
     from ..utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
+    from ..utils.arquivo_de_terceiro import ler as ler_de_terceiro
 except ImportError:  # pragma: no cover
     sys.path.insert(1, str(Path(__file__).resolve().parents[2]))
     from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
         escrever as escrever_de_terceiro,
+    )
+    from hefesto_dualsense4unix.utils.arquivo_de_terceiro import (
+        ler as ler_de_terceiro,
     )
 
 CHAVE = "UseSteamControllerConfig"
@@ -910,6 +914,24 @@ def garantir_fora_da_lista_desligado(
     return PONTE_ERRO, detalhe
 
 
+FAMILIA_DO_GUARDA = "steam-input"
+
+
+def gravar_vdf(vdf: Path, origem: Path) -> Path | None:
+    """Troca o ``localconfig.vdf`` pelo texto de ``origem`` pelo dono dos arquivos de terceiro.
+
+    O guarda transforma o vdf num temporário e entrega aqui: a cópia de antes (família
+    ``steam-input``, carimbo que nunca repete), o arquivo novo inteiro e a poda ficam com o dono.
+    Os bytes passam sem tradução (``surrogateescape``). Falha levanta ``OSError`` com o vdf de
+    antes intacto. Devolve a cópia de antes.
+    """
+    lido = ler_de_terceiro(origem, errors="surrogateescape")
+    if lido.texto is None:
+        raise OSError(lido.motivo or f"{origem.name} não existe")
+    return escrever_de_terceiro(
+        vdf, lido.texto, familia=FAMILIA_DO_GUARDA, errors="surrogateescape")
+
+
 _SAIDA = {
     PONTE_NADA: 0,
     PONTE_LIGADA: 0,
@@ -945,6 +967,13 @@ def main(argv: list[str] | None = None) -> int:
             "por jogo ou que o desenvolvedor pôs no Steam Input (exige a Steam fechada)"
         ),
     )
+    grupo.add_argument(
+        "--gravar-vdf",
+        nargs=2,
+        type=Path,
+        metavar=("VDF", "ORIGEM"),
+        help="troca o VDF pelo texto de ORIGEM, com a cópia de antes e a poda (uso do guarda)",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -959,6 +988,15 @@ def main(argv: list[str] | None = None) -> int:
         help="usa este localconfig.vdf em vez de procurar (repetível)",
     )
     args = parser.parse_args(argv)
+
+    if args.gravar_vdf:
+        try:
+            copia = gravar_vdf(*args.gravar_vdf)
+        except OSError as exc:
+            print(f"[steam-input-ponte] ERRO: {exc}", file=sys.stderr)
+            return 1
+        print(copia or "")
+        return 0
 
     if args.ligar:
         status, estado, detalhe = garantir_ponte(vdfs=args.vdf, dry_run=args.dry_run)

@@ -288,17 +288,14 @@ apply_vdf() {
         rm -f -- "$tmp"
         return 0
     fi
-    local ts bak
-    ts="$(date +%s)"
-    bak="${vdf}.bak.steam-input-${ts}"
-    if ! cp -a -- "$vdf" "$bak"; then
-        log "ERRO: cp falhou ao criar backup: $bak"
+    if [[ ! -f "${PONTE_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
+        log "ERRO: sem o dono dos arquivos de terceiro (steam_input_ponte.py + python3) — não escrevo em $vdf"
         rm -f -- "$tmp"
         return 1
     fi
-    if ! cat -- "$tmp" > "$vdf"; then
-        log "ERRO: escrita falhou em $vdf — restaurando do backup"
-        cp -a -- "$bak" "$vdf" || true
+    local bak
+    if ! bak="$(python3 "${PONTE_PY}" --gravar-vdf "$vdf" "$tmp" 2>&1)"; then
+        log "ERRO: escrita falhou em $vdf — o arquivo de antes ficou intacto: ${bak}"
         rm -f -- "$tmp"
         return 1
     fi
@@ -308,8 +305,15 @@ apply_vdf() {
 
 restore_vdf() {
     local vdf="$1"
-    local latest
-    latest="$(ls -1t "${vdf}.bak.steam-input-"* 2>/dev/null | head -1 || true)"
+    local latest="" candidata carimbo mais_novo=-1
+    for candidata in "${vdf}.bak.steam-input-"*; do
+        carimbo="${candidata#"${vdf}.bak.steam-input-"}"
+        [[ "${carimbo}" =~ ^[0-9]+$ ]] || continue
+        if (( 10#${carimbo} > mais_novo )); then
+            mais_novo=$((10#${carimbo}))
+            latest="${candidata}"
+        fi
+    done
     if [[ -z "${latest}" ]]; then
         log "sem backup para restaurar: $vdf"
         return 0
