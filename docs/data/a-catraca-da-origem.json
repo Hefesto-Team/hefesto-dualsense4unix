@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1284638,
+      "piso": 1284613,
       "por_item": {
         "docs": 107759,
         "scripts": 115240,
-        "src": 325706,
-        "tests": 735933
+        "src": 325689,
+        "tests": 735925
       },
-      "razao": "tamanho: +614 linhas (1284024 -> 1284638), pagas por Origem: D-2011-A-VOLTA-NAO-ESPERA-O-SOM-DO-CABO-SOLTAR-O-APARELHO, D-2011-O-CENSO-LE-SOB-A-TRAVA-UMA-VEZ-POR-APARELHO; registrado no fecho, topo 1256b3fc0a3a",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
