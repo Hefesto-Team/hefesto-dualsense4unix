@@ -47,7 +47,7 @@ FORA: dict[str, str] = {
     "match": "decide QUANDO o perfil entra (a seleção), não o que ele aplica",
     "priority": "decide QUEM ganha na seleção, não o que ele aplica",
     "ponte": "é o carimbo da escada do lançamento, lido pela escada no jogo",
-    "teclado_emulado": "é lido na entrada da Navegação, pelo arranjo do desktop",
+    "teclado_emulado": "é lido pelo daemon, no gancho da supressão e no arranjo do desktop",
     "estilo": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
     "receita_do_tato": "é o desvio do ensaio, lido pelo motor do tato vivo",
     "meus_toques": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
