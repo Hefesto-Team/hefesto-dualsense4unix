@@ -538,30 +538,62 @@ def _perfil_com_ganho() -> None:
     ))
 
 
-def test_o_profile_switch_com_ganho_responde_enquanto_o_amixer_dorme(
+class _AmixerPreso(_Espiao):
+    """O ``amixer`` que fica PRESO até o teste soltar, e nunca prende o fio do laço.
+
+    Fora do fio principal, espera ``solta`` (no máximo ``PRESO_NO_MAXIMO_S``, só para o teste não
+    pendurar) e anota se saiu sozinho. No fio principal, o do laço, volta na hora: o nome do fio
+    anotado é a prova de quem errou.
+    """
+
+    PRESO_NO_MAXIMO_S = 5.0
+
+    def __init__(self, resposta: Any = None) -> None:
+        super().__init__(resposta)
+        self.entrou = threading.Event()
+        self.solta = threading.Event()
+        self.saiu_sozinho = False
+
+    def __call__(self, *_a: Any, **_k: Any) -> Any:
+        self.fios.append(threading.current_thread().name)
+        self.entrou.set()
+        if threading.current_thread() is not threading.main_thread():
+            self.saiu_sozinho = not self.solta.wait(self.PRESO_NO_MAXIMO_S)
+        return self.resposta
+
+
+def test_o_profile_switch_com_ganho_responde_enquanto_o_amixer_esta_preso(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A ativação só pede o ganho: o `amixer` dorme em fio próprio e o laço segue atendendo.
+    """A ativação só pede o ganho: o `amixer` fica preso em fio próprio e o laço segue atendendo.
 
-    MORDIDA: chame o ``definir`` direto em ``_aplicar_ganho_do_mic``, e o status espera.
+    A prova é causal, sem teto de relógio: o ``profile.switch`` e o ``daemon.status`` voltam com o
+    ``amixer`` ainda preso, e ele rodou só no fio ``hefesto-ganho-do-mic``.
+
+    MORDIDA: chame o ``definir`` direto em ``_aplicar_ganho_do_mic``, e o ``amixer`` roda no fio do
+    laço.
     """
     from hefesto_dualsense4unix.app import audio_saida
     from hefesto_dualsense4unix.integrations import ganho_do_microfone
     from hefesto_dualsense4unix.profiles.manager import PEDIDOS_DO_GANHO
 
-    amixer = _Espiao("Capture 'x' [50%] [-3.00dB]")
+    amixer = _AmixerPreso("Capture 'x' [50%] [-3.00dB]")
     monkeypatch.setattr(ganho_do_microfone, "placa_do_controle", lambda *_a: "9")
     monkeypatch.setattr(audio_saida, "rodar_leitura", amixer)
     servidor = _servidor(tmp_path)
     servidor.profile_manager.mic_applier = lambda *_a, **_k: "aplicado"
     _perfil_com_ganho()
 
-    gasto, _corria, _resposta = asyncio.run(_o_status_durante(
-        servidor, servidor._handlers["profile.switch"]({"name": "Com Ganho"})))
-
-    assert gasto < TETO_IPC_S, f"o profile.switch parou o laço {gasto:.2f} s"
-    assert PEDIDOS_DO_GANHO.esperar(DORME_S * 8)
-    _o_fio_do_laco_nao_rodou(amixer)
+    try:
+        _gasto, _corria, resposta = asyncio.run(_o_status_durante(
+            servidor, servidor._handlers["profile.switch"]({"name": "Com Ganho"})))
+        assert amixer.entrou.wait(amixer.PRESO_NO_MAXIMO_S), "o amixer nunca foi chamado"
+        assert not amixer.saiu_sozinho, "o laço esperou o amixer terminar para responder"
+        _o_fio_do_laco_nao_rodou(amixer)
+        assert resposta is not None
+    finally:
+        amixer.solta.set()
+    assert PEDIDOS_DO_GANHO.esperar(amixer.PRESO_NO_MAXIMO_S)
     assert set(amixer.fios) == {"hefesto-ganho-do-mic"}, amixer.fios
 
 
