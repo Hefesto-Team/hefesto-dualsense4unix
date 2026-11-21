@@ -54,6 +54,7 @@ import re
 import shutil
 import subprocess
 import threading
+import weakref
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -366,8 +367,8 @@ def _o_mesmo_no(o: Mapping[str, Any], nos: NosDoGrafo) -> Mapping[str, str] | No
     return achado
 
 
-def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
-    """O objeto com o texto perdido devolvido pelo grafo, e marcado como conferido.
+def _completo(o: Mapping[str, Any], achado: Mapping[str, str] | None) -> dict[str, Any]:
+    """O objeto com o texto perdido devolvido pelo nó do grafo, e marcado como conferido.
 
     O monitor de uma saída (``device.class=monitor``) é o MESMO nó do grafo, com o
     serial da saída, mas o nome e a descrição dele são do ``pipewire-pulse``
@@ -375,7 +376,6 @@ def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
     descrição perdidos seguem perdidos, nunca os da saída.
     """
     novo = {**o, CHAVE_DO_GRAFO: "lido"}
-    achado = _o_mesmo_no(o, nos)
     if achado is None:
         return novo
     bruto = o.get("properties")
@@ -391,26 +391,131 @@ def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
     return novo
 
 
+_TETO_DA_MEMORIA_DO_GRAFO: Final[int] = 512
+
+Identidade = tuple[str, str]
+Memoria = dict[Identidade, "Mapping[str, str] | None"]
+
+_MEMORIAS_DO_GRAFO: weakref.WeakKeyDictionary[object, Memoria] = weakref.WeakKeyDictionary()
+_TRAVA_DA_MEMORIA = threading.Lock()
+
+
+def _especie(o: Mapping[str, Any]) -> str:
+    """A espécie do objeto do ``pactl``: nó de saída, de entrada, ou fluxo de um dos dois."""
+    if "client" in o:
+        return "source-output" if "source" in o else "sink-input"
+    if "monitor_of_sink" in o:
+        return "source"
+    if "monitor_source" in o:
+        return "sink"
+    return "no"
+
+
+def _identidade(o: Mapping[str, Any]) -> Identidade | None:
+    """``(espécie, serial)`` do objeto: o serial do ``pipewire-pulse`` não se repete.
+
+    Sem ``object.serial`` vale o índice, como o casamento do grafo; só com o ``object.id``
+    (que o servidor reaproveita) não há identidade, e o objeto nunca fica na memória.
+    """
+    props = _propriedades(o.get("properties"))
+    serial = props.get("object.serial", "")
+    if not serial and not props.get("object.id"):
+        indice = _inteiro(o.get("index"))
+        serial = "" if indice is None else str(indice)
+    if not serial or serial == NULO_DO_PACTL:
+        return None
+    return (_especie(o), serial)
+
+
+def _memoria_de(leitor: Grafo) -> Memoria | None:
+    """A memória deste leitor do grafo: cada leitor (e cada grafo de mentira) tem a sua.
+
+    O leitor padrão é o do retrato, que se resolve na hora da pergunta: trocá-lo dá memória nova.
+    """
+    dono: object = getattr(leitor, "__self__", leitor)
+    if dono is ler_o_grafo:
+        from hefesto_dualsense4unix.integrations import retrato_do_som
+
+        dono = retrato_do_som.ler_o_pw_dump
+    try:
+        with _TRAVA_DA_MEMORIA:
+            return _MEMORIAS_DO_GRAFO.setdefault(dono, {})
+    except TypeError:
+        return None
+
+
+def _esquecer_os_que_sairam(memoria: Memoria, objetos: Iterable[Mapping[str, Any]]) -> None:
+    """Esquece, de cada espécie vista na lista, o nó que a lista não traz mais."""
+    vistos: dict[str, set[Identidade]] = {}
+    for o in objetos:
+        identidade = _identidade(o)
+        presentes = vistos.setdefault(_especie(o), set())
+        if identidade is not None:
+            presentes.add(identidade)
+    with _TRAVA_DA_MEMORIA:
+        for chave in [c for c in memoria if c[0] in vistos and c not in vistos[c[0]]]:
+            del memoria[chave]
+
+
+def _lembrar(memoria: Memoria, identidade: Identidade, achado: Mapping[str, str] | None) -> None:
+    with _TRAVA_DA_MEMORIA:
+        memoria.pop(identidade, None)
+        memoria[identidade] = achado
+        while len(memoria) > _TETO_DA_MEMORIA_DO_GRAFO:
+            del memoria[next(iter(memoria))]
+
+
+def _sabido(memoria: Memoria | None, o: Mapping[str, Any]) -> Identidade | None:
+    """A identidade do objeto, se a memória já sabe o que o grafo tem (ou não tem) dele."""
+    if memoria is None:
+        return None
+    identidade = _identidade(o)
+    return identidade if identidade is not None and identidade in memoria else None
+
+
 def completar_o_json(texto: str | None, grafo: Grafo | None = None) -> str | None:
     """O JSON de um ``pactl --format=json list`` com o texto perdido vindo do grafo.
 
-    O dono único do completar: ``(null)`` é o texto que o ``pactl`` 16.1 não soube
-    escrever (™, acento, japonês), e o ``pw-dump`` (``grafo``, por padrão
-    :func:`ler_o_grafo`) o tem inteiro; o par é pela identidade (:func:`_o_mesmo_no`).
-    O grafo é lido UMA vez, só se algum objeto perdeu texto. Sem grafo, o campo
-    segue perdido; o que o grafo não tem (o ``module-stream-restore.id``) também, e o
-    objeto sai marcado (:data:`CHAVE_DO_GRAFO`). Idempotente.
+    O dono único do completar: ``(null)`` é o texto que o ``pactl`` 16.1 não soube escrever, e o
+    ``pw-dump`` (``grafo``, por padrão :func:`ler_o_grafo`) o tem; o par é pela identidade
+    (:func:`_o_mesmo_no`). O que o grafo devolveu de cada nó, ou não tem, fica na memória do leitor
+    (:func:`_identidade`): ele só é relido com um nó perdido novo, e o nó que sai da lista é
+    esquecido. Sem grafo o campo segue perdido, sem a marca (:data:`CHAVE_DO_GRAFO`). Idempotente.
     """
     if texto is None or f'"{NULO_DO_PACTL}"' not in texto:
         return texto
     objetos = lista_do_json(texto)
     if objetos is None or not any(_perdeu_algo(o) for o in objetos):
         return texto
-    nos = nos_do_grafo((grafo or ler_o_grafo)())
-    if nos is None:
+    leitor = grafo or ler_o_grafo
+    memoria = _memoria_de(leitor)
+    if memoria is not None:
+        _esquecer_os_que_sairam(memoria, objetos)
+    nos = None
+    if any(_perdeu_algo(o) and _sabido(memoria, o) is None for o in objetos):
+        nos = nos_do_grafo(leitor())
+    saida: list[Mapping[str, Any]] = []
+    mudou = False
+    for o in objetos:
+        if not _perdeu_algo(o):
+            saida.append(o)
+            continue
+        sabido = _sabido(memoria, o)
+        if sabido is not None and memoria is not None:
+            saida.append(_completo(o, memoria[sabido]))
+            mudou = True
+        elif nos is not None:
+            achado = _o_mesmo_no(o, nos)
+            identidade = _identidade(o)
+            if memoria is not None and identidade is not None:
+                _lembrar(memoria, identidade, achado)
+            saida.append(_completo(o, achado))
+            mudou = True
+        else:
+            saida.append(o)
+    if not mudou:
         return texto
-    return json.dumps([_completo(o, nos) if _perdeu_algo(o) else o for o in objetos],
-                      ensure_ascii=False)
+    return json.dumps(saida, ensure_ascii=False)
 
 
 def _fluxo_do_json(o: Mapping[str, Any]) -> Fluxo | None:
