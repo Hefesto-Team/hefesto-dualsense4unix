@@ -131,7 +131,12 @@ def test_a_linha_do_pedal_nasce_na_cena_se_declara_pela_janela_e_deixa_de_ser_no
     MORDIDA: tire de ``_os_acionadores`` a parcela dos não declarados, ou o filtro dos já
     declarados.
     """
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
+
     monkeypatch.setattr(a08, "_RAIZ_DAS_ENTRADAS", str(_sys_de_mentira(tmp_path / "input")))
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     vazia = MaquinaConfig()
     linhas = a08._os_acionadores(vazia, [{"id": LUGAR}])
     assert [(x["id"], x["nome"], x["tipo"], x["lugar"]) for x in linhas] == [

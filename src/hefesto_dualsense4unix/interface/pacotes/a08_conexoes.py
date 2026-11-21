@@ -2791,16 +2791,16 @@ def _os_acionadores_declarados(declaracao: Any, lugares: list[dict[str, Any]]
 def _os_acionadores_nao_declarados(declaracao: Any, lugares: list[dict[str, Any]]
                                    ) -> list[dict[str, Any]]:
     """A linha de cada aparelho de entrada USB presente que ainda não está no `maquina.json`,
-    com o nome que o próprio aparelho diz, ao lado dos declarados."""
-    from hefesto_dualsense4unix.utils.maquina import acionadores_possiveis
-
+    com o nome que o próprio aparelho diz, ao lado dos declarados. A varredura do `/sys` é a
+    última lida num fio de `em_fundo`, nunca no da janela."""
     declarados = getattr(declaracao, "acionadores", None)
     if not lugares:
         return []
+    possiveis = em_fundo.em_fundo("acionadores", _ler_os_acionadores_possiveis, ACIONADORES_S)
     return [{"id": a.chave, "chave": a.chave, "tipo": TIPO_ENTRADA, "lugar": lugares[0]["id"],
              "nome": a.nome, "rotulo": ACIONADOR_SEM_NOME, "controle": "", "fixo": True,
              "esperando": False, "teclas": []}
-            for a in acionadores_possiveis(_RAIZ_DAS_ENTRADAS)
+            for a in possiveis or ()
             if not isinstance(declarados, dict) or a.chave not in declarados]
 
 
@@ -2865,6 +2865,14 @@ def _colorways_da_mesa(ctx: Contexto) -> dict[str, str]:
 
 
 _RAIZ_DAS_ENTRADAS: Any = None
+ACIONADORES_S = 2.0
+
+
+def _ler_os_acionadores_possiveis() -> list[Any]:
+    """Os aparelhos de entrada USB que podem ser acionador, lidos do `/sys` num fio."""
+    from hefesto_dualsense4unix.utils.maquina import acionadores_possiveis
+
+    return acionadores_possiveis(_RAIZ_DAS_ENTRADAS)
 
 
 _ABRIR_O_EVENTO: Callable[[str], Any] | None = None

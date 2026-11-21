@@ -627,6 +627,33 @@ def test_a_primeira_mesa_do_radio_da_08_nao_se_le_no_fio_de_quem_pinta(
     assert a08._mesa_do_radio() == "mesa"
 
 
+def test_os_aparelhos_de_entrada_da_08_nao_se_leem_no_fio_de_quem_pinta(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2011-A-CONEXOES-LISTA-O-ACIONADOR-USB-AINDA-NAO-DECLARADO: a varredura sai do tique.
+
+    A linha do aparelho ainda não declarado volta pela última varredura do `/sys/class/input`,
+    lida num fio: o tique que pinta a 08 não abre o `/sys`.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
+    from hefesto_dualsense4unix.utils import maquina
+
+    pedal = SimpleNamespace(chave="3553:b001:aa", nome="FootSwitch")
+    ler, solta, quem = _leitura_presa([pedal])
+    monkeypatch.setattr(maquina, "acionadores_possiveis", ler)
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
+    t0 = time.perf_counter()
+    assert a08._os_acionadores_nao_declarados(None, [{"id": "lugar"}]) == []
+    assert (time.perf_counter() - t0) < 0.5, "o tique esperou a varredura do /sys"
+    assert _esperar(lambda: quem) and threading.main_thread().name not in quem, quem
+    solta.set()
+    assert _esperar(lambda: em_fundo.lido("acionadores") is not None)
+    assert [x["nome"] for x in a08._os_acionadores_nao_declarados(None, [{"id": "lugar"}])] == [
+        "FootSwitch"]
+
+
 def test_a_largada_da_troca_de_pagina_sai_do_fio_da_janela_e_fica_na_fila(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Com a mesa, a largada roda num fio, e o gesto seguinte do controle entra atrás da largada."""
