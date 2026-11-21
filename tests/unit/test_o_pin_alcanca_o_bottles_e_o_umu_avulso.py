@@ -251,6 +251,7 @@ def test_o_bottles_e_o_umu_sem_cartao_aparecem_na_linha_outros(
     assert f"Minha garrafa (Bottles): {censo.PORQUE_PELO_WINE}" in linha
     assert f"Jogo (umu-run): {censo.PORQUE_UMU_AVULSO}" in linha
     assert "btn" not in linha and "data-gesto" not in linha, "a linha «Outros» não tem botões"
+    assert 'tabindex="0"' in linha, "sem botões, a dica só se alcança pelo teclado se o selo foca"
     assert linha in na_aba, "a aba não pinta a linha «Outros» que a fila monta"
 
 
