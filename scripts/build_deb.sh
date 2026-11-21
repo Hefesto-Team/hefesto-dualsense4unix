@@ -110,6 +110,10 @@ echo "Copiando helper install-host-udev.sh ..."
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/scripts"
 install -Dm755 scripts/install-host-udev.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+install -Dm755 scripts/disparo_do_udev.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/disparo_do_udev.sh"
+install -Dm644 src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/quem_o_jogo_le.py"
 install -Dm755 scripts/regra_do_no_aberta.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/regra_do_no_aberta.sh"
 install -Dm755 scripts/install_snd_quirk.sh \

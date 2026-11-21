@@ -36,6 +36,9 @@ nascia morta **até alguém desconectar e reconectar o controle à mão**. O
 um `udevadm trigger` global; o `scripts/install_udev.sh`, que é o caminho do
 `install.sh`, não tinha esse global.
 
+Desde 20/11/2026 os dois instaladores chamam o `scripts/disparo_do_udev.sh`, único
+dono do `udevadm trigger`: é ele que estes testes leem.
+
 COMO ESTES TESTES MORDEM
 ========================
 - Os dois primeiros leem os arquivos REAIS e sempre rodam: devolver a linha
@@ -57,10 +60,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 
-INSTALADORES = (
-    REPO / "scripts" / "install_udev.sh",
-    REPO / "scripts" / "install-host-udev.sh",
-)
+INSTALADORES = (REPO / "scripts" / "disparo_do_udev.sh",)
 
 FILTRO_IMPOSSIVEL = "attr-match"
 
@@ -109,9 +109,9 @@ def test_o_trigger_de_hidraw_nao_usa_o_filtro_impossivel(script: Path) -> None:
 
 
 def _argumentos_do_trigger_de_hidraw() -> list[str]:
-    """Extrai do `install_udev.sh` REAL os argumentos do trigger de hidraw."""
+    """Extrai do `disparo_do_udev.sh` REAL os argumentos do trigger de hidraw."""
     linhas = _linhas_de_trigger_hidraw(INSTALADORES[0])
-    assert linhas, "install_udev.sh sem trigger de hidraw (ver teste acima)"
+    assert linhas, "disparo_do_udev.sh sem trigger de hidraw (ver teste acima)"
     linha = linhas[0]
     corpo = re.sub(r"\s*2>/dev/null.*$", "", linha)
     corpo = corpo.replace("sudo ", "", 1).strip()
@@ -145,7 +145,7 @@ def test_o_seletor_do_produto_casa_hidraw_de_verdade() -> None:
         pytest.skip("esta máquina não tem nenhum nó hidraw para redisparar")
     do_produto = _selecionados(_argumentos_do_trigger_de_hidraw())
     assert do_produto, (
-        "o trigger de hidraw do scripts/install_udev.sh não selecionou "
+        "o trigger de hidraw do scripts/disparo_do_udev.sh não selecionou "
         f"NENHUM dos {len(todos)} nós hidraw desta máquina — é o defeito de "
         "12/08/2026 de volta: o install anuncia sucesso e o controle já "
         "conectado fica sem permissão de escrita."
@@ -163,6 +163,6 @@ def test_controle_negativo_o_filtro_antigo_nao_casa_nada() -> None:
     )
     assert not antigo, (
         f"o filtro antigo selecionou {len(antigo)} nós — a premissa desta cura "
-        "mudou nesta máquina, e a explicação escrita no install_udev.sh "
+        "mudou nesta máquina, e a explicação escrita neste arquivo "
         "precisa ser remedida antes de qualquer conclusão."
     )

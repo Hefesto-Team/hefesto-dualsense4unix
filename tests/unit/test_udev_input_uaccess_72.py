@@ -340,12 +340,16 @@ def repo_fake(tmp_path: Path) -> Path:
     (tmp_path / "assets" / NOME_FAKE).write_text(_REGRA_BOA, encoding="utf-8")
     (tmp_path / "scripts" / "install_udev.sh").write_text(
         f'sudo install -Dm644 "$ASSETS/{NOME_FAKE}" /etc/udev/rules.d/{NOME_FAKE}\n'
-        "sudo udevadm trigger --action=change --subsystem-match=input\n",
+        'sudo env bash "$HERE/scripts/disparo_do_udev.sh"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "scripts" / "disparo_do_udev.sh").write_text(
+        "udevadm trigger --action=change --subsystem-match=input\n",
         encoding="utf-8",
     )
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
         f'RULES=("{NOME_FAKE}")\n'
-        'cmd+="udevadm trigger --action=change --subsystem-match=input; "\n',
+        'cmd+="bash disparo_do_udev.sh; "\n',
         encoding="utf-8",
     )
     (tmp_path / "scripts" / "build_deb.sh").write_text(
@@ -478,7 +482,7 @@ class TestOPortaoMorde:
 
     def test_sem_o_trigger_de_input_reprova(self, repo_fake: Path) -> None:
         """Sem o trigger, a regra só valeria no próximo replug do controle."""
-        p = repo_fake / "scripts" / "install_udev.sh"
+        p = repo_fake / "scripts" / "disparo_do_udev.sh"
         p.write_text(
             p.read_text(encoding="utf-8").replace("--subsystem-match=input", ""),
             encoding="utf-8",

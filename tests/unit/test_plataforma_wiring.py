@@ -70,11 +70,8 @@ def test_build_deb_cobre_as_81_por_glob() -> None:
     assert "assets/81-*.rules" in texto
 
 
-@pytest.mark.parametrize(
-    "arquivo", ["scripts/install_udev.sh", "scripts/install-host-udev.sh"]
-)
-def test_trigger_pci_aplica_a_81_host_sem_reboot(arquivo: str) -> None:
-    texto = (REPO_ROOT / arquivo).read_text(encoding="utf-8")
+def test_trigger_pci_aplica_a_81_host_sem_reboot() -> None:
+    texto = (REPO_ROOT / "scripts/disparo_do_udev.sh").read_text(encoding="utf-8")
     assert "--subsystem-match=pci" in texto
 
 

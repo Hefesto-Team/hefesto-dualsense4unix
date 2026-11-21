@@ -63,12 +63,16 @@ def fake_repo(tmp_path: Path) -> Path:
     )
     (tmp_path / "scripts" / "install_udev.sh").write_text(
         f'sudo install -Dm644 "$ASSETS/{RULE}" /etc/udev/rules.d/{RULE}\n'
-        "sudo udevadm trigger --action=change --subsystem-match=input\n",
+        'sudo env bash "$HERE/scripts/disparo_do_udev.sh"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "scripts" / "disparo_do_udev.sh").write_text(
+        "udevadm trigger --action=change --subsystem-match=input\n",
         encoding="utf-8",
     )
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
         f'RULES=("{RULE}")\n'
-        'cmd+="udevadm trigger --action=change --subsystem-match=input; "\n',
+        'cmd+="bash disparo_do_udev.sh; "\n',
         encoding="utf-8",
     )
     (tmp_path / "scripts" / "build_deb.sh").write_text(

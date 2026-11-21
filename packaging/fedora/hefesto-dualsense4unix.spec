@@ -245,6 +245,10 @@ fi
 # Helper de re-aplicacao de regras udev (para usuario rodar manualmente).
 install -Dm755 scripts/install-host-udev.sh \
     %{buildroot}%{_datadir}/%{app_id}/scripts/install-host-udev.sh
+install -Dm755 scripts/disparo_do_udev.sh \
+    %{buildroot}%{_datadir}/%{app_id}/scripts/disparo_do_udev.sh
+install -Dm644 src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py \
+    %{buildroot}%{_datadir}/%{app_id}/scripts/quem_o_jogo_le.py
 
 # BROKER-01 (Onda S — fd-injection): o broker root hide-hidraw como unit de
 # SISTEMA do rpm (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). Ele atende quem esta
@@ -362,7 +366,7 @@ if [ -d /run/systemd/system ]; then
 fi
 # Recarrega udev rules + carrega uinput. Idempotente.
 /usr/sbin/udevadm control --reload-rules || :
-/usr/sbin/udevadm trigger || :
+%{_datadir}/%{app_id}/scripts/disparo_do_udev.sh || :
 /usr/sbin/modprobe uinput 2>/dev/null || :
 %{_datadir}/%{app_id}/scripts/dkms_do_pacote.sh || :
 
@@ -553,6 +557,8 @@ fi
 %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 %{_datadir}/%{app_id}/scripts/dkms_lib.sh
 %{_datadir}/%{app_id}/scripts/dkms_do_pacote.sh
+%{_datadir}/%{app_id}/scripts/disparo_do_udev.sh
+%{_datadir}/%{app_id}/scripts/quem_o_jogo_le.py
 %{_datadir}/%{app_id}/dkms/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 /usr/lib/%{app_id}/hefesto-hidraw-broker

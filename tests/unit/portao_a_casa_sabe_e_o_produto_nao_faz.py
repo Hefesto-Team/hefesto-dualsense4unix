@@ -41,7 +41,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "`assets/systemd/hefesto-hidraw-broker.service:34` (`ExecStart`). O .deb "
-        "(`hidraw_broker` em `scripts/build_deb.sh:217`) e o flatpak fazem o mesmo por conta "
+        "(`hidraw_broker` em `scripts/build_deb.sh:221`) e o flatpak fazem o mesmo por conta "
         "própria. A boca não morreu; mudou de arquivo, que é exatamente o "
         "caso que esta régua manda CONFERIR em vez de apagar",
     ),

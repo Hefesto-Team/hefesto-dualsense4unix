@@ -8,7 +8,7 @@ da janela e da bandeja; o daemon a dispara quando o jogo fecha.
 
 A MORDIDA: troque o `&& jogo_em_cena` do primeiro ramo do `install_broker_host` por `&& false`
 e o install com o jogo aberto volta a mandar o SIGKILL e o restart ao broker; tire o ramo do
-`--ha-jogo` do `install_udev.sh` e os quatro `trigger` reenumeram o físico no meio do jogo;
+`--ha-jogo` do `disparo_do_udev.sh` e os quatro `trigger` reenumeram o físico no meio do jogo;
 tire o `jogo_aberto()` do laço do `aplicar` e o jogo que abriu depois da colheita perde o
 controle; zere a `EsperaSemJogo` e a troca sai no intervalo entre dois jogos.
 """
@@ -18,7 +18,6 @@ import asyncio
 import fcntl
 import hashlib
 import os
-import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -209,17 +208,15 @@ def test_o_leitor_de_fundo_no_pad_nao_prende_a_troca_adiada(
     assert disparos == ([["daemon"]] if sai else [])
 
 
-def test_o_udev_nao_reenumera_o_controle_com_jogo_aberto() -> None:
-    """MORDIDA: devolva os quatro `trigger` para fora do `else` — o físico reenumera no jogo."""
+def test_o_udev_do_install_nativo_pergunta_do_jogo_ao_dono() -> None:
+    """MORDIDA: devolva um `trigger` ao `install_udev.sh` e o físico reenumera no jogo."""
     texto = UDEV.read_text(encoding="utf-8")
-    ramo = texto[texto.index("--ha-jogo"):]
-    ramo = ramo[:ramo.index("\nfi\n")]
-    com_jogo, sem_jogo = ramo.split("\nelse\n")
+    assert "scripts/disparo_do_udev.sh" in texto
+    assert "udevadm trigger" not in texto
+    dono = (RAIZ / "scripts/disparo_do_udev.sh").read_text(encoding="utf-8")
+    assert "--ha-jogo" in dono
+    com_jogo = dono[dono.index("    0)"):dono.index("    *)")]
     assert "udevadm trigger" not in com_jogo
-    for alvo in ("--subsystem-match=hidraw", "idVendor=054c", "--subsystem-match=input"):
-        assert alvo in sem_jogo
-    fora = texto.replace(ramo, "")
-    assert not re.search(r"trigger[^\n]*(hidraw|054c|subsystem-match=input)", fora)
 
 
 def test_o_daemon_a_janela_e_a_bandeja_esperam_o_jogo() -> None:

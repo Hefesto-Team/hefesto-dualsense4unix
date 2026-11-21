@@ -186,7 +186,7 @@ def test_o_comando_de_root_do_helper_grava_a_nova_e_tira_a_velha(tmp_path: Path)
             'BROKER_BIN_SRC="" BROKER_INSTALL_OK=1 BROKER_SESSION_GROUP="" BROKER_SESSION_UID=0',
             'BROKER_UNITS_SRC="" BTRES_INSTALL_OK=0 BTRES_SCRIPTS_SRC="" BTRES_UNIT_SRC=""',
             'BTUSB_SRC="" HIDNINTENDO_SRC="" HIDPLAYSTATION_SRC=""',
-            'MODLOAD_DEST=/x MODLOAD_SRC="" SNDQUIRK_DEST=/x SNDQUIRK_SRC=""',
+            'MODLOAD_DEST=/x MODLOAD_SRC="" SNDQUIRK_DEST=/x SNDQUIRK_SRC="" DISPARO_SH=/x',
             f'RULES_SRC="{src}" RULES_DEST="{etc}"',
             f'RULES=("{NOVA}" "71-uinput.rules")',
             f'REGRA_DO_NO="{NOVA}" REGRA_DO_NO_SRC="{src}/{NOVA}" REGRA_DO_NO_VELHA="{VELHA}"',

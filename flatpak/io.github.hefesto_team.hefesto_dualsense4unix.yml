@@ -564,6 +564,10 @@ modules:
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
+      - install -Dm755 scripts/disparo_do_udev.sh
+          /app/share/hefesto-dualsense4unix/scripts/disparo_do_udev.sh
+      - install -Dm644 src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py
+          /app/share/hefesto-dualsense4unix/scripts/quem_o_jogo_le.py
 
       # FEAT-I18N-CATALOGS-01 (v3.4.0): instala catalogos .mo em path
       # próprio do app — NAO em /app/share/locale/ porque o Flatpak

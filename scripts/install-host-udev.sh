@@ -155,8 +155,26 @@ for candidate in \
     fi
 done
 
+DISPARO_SH=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/scripts" \
+    "/usr/share/hefesto-dualsense4unix/scripts" \
+    "${SCRIPT_DIR}" \
+; do
+    if [[ -f "${candidate}/disparo_do_udev.sh" ]]; then
+        DISPARO_SH="${candidate}/disparo_do_udev.sh"
+        break
+    fi
+done
+
 if [[ -z "${RULES_SRC}" ]]; then
     echo "ERRO: regras udev não encontradas em nenhum dos paths esperados." >&2
+    echo "      Verifique a instalação." >&2
+    exit 1
+fi
+
+if [[ -z "${DISPARO_SH}" ]]; then
+    echo "ERRO: disparo_do_udev.sh não encontrado em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
     exit 1
 fi
@@ -394,13 +412,7 @@ _build_install_cmd() {
         cmd+="systemctl daemon-reload 2>/dev/null || true; "
     fi
     cmd+="udevadm control --reload-rules; "
-    cmd+="udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true; "
-    cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
-    cmd+="udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true; "
-    cmd+="udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true; "
-    cmd+="udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true; "
-    cmd+="udevadm trigger --action=change --subsystem-match=pci 2>/dev/null || true; "
-    cmd+="udevadm trigger 2>/dev/null || true; "
+    cmd+="bash '${DISPARO_SH}'; "
     cmd+="echo 'Regras instaladas com sucesso.'"
     printf '%s' "${cmd}"
 }
@@ -448,7 +460,7 @@ else
         echo "  sudo modprobe uinput" >&2
     fi
     echo "  sudo udevadm control --reload-rules" >&2
-    echo "  sudo udevadm trigger" >&2
+    echo "  sudo bash ${DISPARO_SH}" >&2
     exit 1
 fi
 

@@ -109,8 +109,8 @@ def test_uninstall_dispara_trigger_de_input() -> None:
     assert "--subsystem-match=input" in texto
 
 
-def test_install_host_udev_dispara_trigger_de_input() -> None:
-    texto = (REPO_ROOT / "scripts/install-host-udev.sh").read_text(encoding="utf-8")
+def test_o_dono_do_disparo_dispara_trigger_de_input() -> None:
+    texto = (REPO_ROOT / "scripts/disparo_do_udev.sh").read_text(encoding="utf-8")
     assert "--subsystem-match=input" in texto
 
 

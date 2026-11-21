@@ -300,13 +300,18 @@ else
         || _in_falhas+=("nenhuma regra dá uaccess ao nó dos SENSORES DE MOVIMENTO (giroscópio): ele é ID_INPUT_ACCELEROMETER, não ID_INPUT_JOYSTICK, então a 70-uaccess.rules do sistema não o cobre")
     [[ -n "${_in_touch}" ]] \
         || _in_falhas+=("nenhuma regra dá uaccess ao nó do TOUCHPAD: ele é ID_INPUT_TOUCHPAD, não ID_INPUT_JOYSTICK, então a 70-uaccess.rules do sistema não o cobre")
-    for _in_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
+    for _in_inst in scripts/disparo_do_udev.sh; do
         [[ -f "${_in_inst}" ]] || continue
         grep -qF 'subsystem-match=input' "${_in_inst}" 2>/dev/null \
             || _in_falhas+=("${_in_inst} não dispara 'udevadm trigger --subsystem-match=input' — a regra de acesso só valeria no próximo replug")
     done
+    for _in_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
+        [[ -f "${_in_inst}" ]] || continue
+        grep -qF 'disparo_do_udev.sh' "${_in_inst}" 2>/dev/null \
+            || _in_falhas+=("${_in_inst} não chama o scripts/disparo_do_udev.sh — a regra de acesso só valeria no próximo replug")
+    done
     if [[ "${#_in_falhas[@]}" -eq 0 ]]; then
-        echo "[ OK ] touchpad (${_in_touch}) e movimento (${_in_motion}) com uaccess em regra < 73, e o trigger de input nos dois instaladores"
+        echo "[ OK ] touchpad (${_in_touch}) e movimento (${_in_motion}) com uaccess em regra < 73, e o trigger de input no dono do disparo, que os dois instaladores chamam"
     else
         for _in_f in "${_in_falhas[@]}"; do
             echo "[FAIL] ${_in_f}"
@@ -318,9 +323,9 @@ else
     fi
 fi
 
-echo "== trigger de hidraw dos instaladores (tem de casar dispositivo de verdade) =="
+echo "== trigger de hidraw do dono do disparo (tem de casar dispositivo de verdade) =="
 _hidraw_falhas=()
-for _hid_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
+for _hid_inst in scripts/disparo_do_udev.sh; do
     [[ -f "${_hid_inst}" ]] || continue
     _hid_linhas="$(grep -h 'udevadm trigger' "${_hid_inst}" 2>/dev/null \
         | grep -F 'subsystem-match=hidraw' || true)"
@@ -330,7 +335,7 @@ for _hid_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
     fi
 done
 if [[ "${#_hidraw_falhas[@]}" -eq 0 ]]; then
-    echo "[ OK ] os dois instaladores redisparam hidraw sem filtro impossível"
+    echo "[ OK ] o dono do disparo redispara hidraw sem filtro impossível"
 else
     for _hid_f in "${_hidraw_falhas[@]}"; do
         echo "[FAIL] ${_hid_f}"

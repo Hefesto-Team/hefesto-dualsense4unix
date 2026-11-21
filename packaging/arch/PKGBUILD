@@ -241,6 +241,10 @@ package() {
         assets/systemd/hefesto-hidraw-broker.socket
     install -Dm755 scripts/install-host-udev.sh \
         "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+    install -Dm755 scripts/disparo_do_udev.sh \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/disparo_do_udev.sh"
+    install -Dm644 src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/quem_o_jogo_le.py"
 
     # ALVOS DO `RUN+=` DAS REGRAS 82 E 83 (22/08/2026). As duas são REGRAS-COLA:
     # sem o alvo no disco o `TEST==` as deixa INERTES, e o PKGBUILD levava as

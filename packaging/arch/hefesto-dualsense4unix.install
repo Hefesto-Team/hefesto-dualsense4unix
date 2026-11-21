@@ -3,7 +3,8 @@
 ##
 ## post_install dispara reload de udev rules + carregamento do modulo
 ## uinput (necessario para emulacao Xbox 360 via uinput). Idempotente:
-## re-rodar nao quebra; udevadm trigger refaz device nodes.
+## re-rodar nao quebra; o disparo do udev (scripts/disparo_do_udev.sh) refaz
+## device nodes e, com um jogo aberto, nao reenumera o controle.
 
 post_install() {
     # A REGRA DO NO TROCOU DE NOME em 25/09/2026 (70-ps5-controller ->
@@ -43,7 +44,7 @@ post_install() {
 
     echo ">>> Recarregando udev rules para o DualSense..."
     udevadm control --reload-rules
-    udevadm trigger
+    /usr/share/hefesto-dualsense4unix/scripts/disparo_do_udev.sh || true
 
     echo ">>> Carregando modulo do kernel uinput (para emulacao Xbox 360)..."
     modprobe uinput 2>/dev/null || true
