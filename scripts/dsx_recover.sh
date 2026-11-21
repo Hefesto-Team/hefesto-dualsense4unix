@@ -2,7 +2,8 @@
 set -uo pipefail
 
 readonly APP_ID="hefesto-dualsense4unix"
-readonly AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly AQUI
 readonly THROTTLE_SECS=20
 readonly WINDOW_SECS=10
 readonly THRESHOLD=4
@@ -36,7 +37,7 @@ repin_and_trigger() {
     for f in /sys/bus/pci/drivers/xhci_hcd/*/power/control; do
         [[ -w "$f" ]] && echo on > "$f" 2>/dev/null || true
     done
-    "${AQUI}/disparo_do_udev.sh" || true
+    bash "${AQUI}/disparo_do_udev.sh" --so-o-usb-da-sony || true
 }
 
 rebind_dualsense() {

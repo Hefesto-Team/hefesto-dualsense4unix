@@ -42,9 +42,53 @@ def test_nenhum_dos_dois_dispara_o_udev_por_conta_propria(arquivo: Path) -> None
 def test_o_recover_chama_o_dono_do_lado_dele() -> None:
     texto = RECOVER.read_text(encoding="utf-8")
     funcao = texto.split("repin_and_trigger() {", 1)[1].split("\n}\n", 1)[0]
-    assert '"${AQUI}/disparo_do_udev.sh"' in funcao
-    assert 'readonly AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' in texto
+    assert 'bash "${AQUI}/disparo_do_udev.sh" --so-o-usb-da-sony' in funcao
+    assert 'AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' in texto
     assert (RECOVER.parent / "disparo_do_udev.sh").is_file()
+
+
+def _o_recover(raiz: Path, *, jogo: bool, com_leitor: bool = True) -> list[str]:
+    """O `repin_and_trigger` de verdade, com /sys, /proc e udevadm de mentira."""
+    scripts = raiz / "arvore" / "scripts"
+    scripts.mkdir(parents=True)
+    shutil.copy2(DONO, scripts / DONO.name)
+    if com_leitor:
+        shutil.copy2(LEITOR, scripts / LEITOR.name)
+    (raiz / "sys" / "bus" / "usb" / "devices").mkdir(parents=True)
+    texto = RECOVER.read_text(encoding="utf-8")
+    inicio = texto.index("repin_and_trigger() {")
+    funcao = texto[inicio:texto.index("\n}\n", inicio) + 3].replace("/sys/", f"{raiz}/sys/")
+    assert "/sys/" not in funcao.replace(f"{raiz}/sys/", "")
+    bin_ = raiz / "bin"
+    bin_.mkdir()
+    diario = raiz / "udevadm.txt"
+    falso = bin_ / "udevadm"
+    falso.write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> "{diario}"\n', encoding="utf-8")
+    falso.chmod(falso.stat().st_mode | stat.S_IEXEC)
+    ambiente = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}",
+                "HEFESTO_RAIZ_PROC": str(_proc(raiz, jogo=jogo))}
+    feito = subprocess.run(
+        ["bash", "-c", f'AQUI="{scripts}"\n{funcao}\nrepin_and_trigger'],
+        env=ambiente, capture_output=True, text=True, check=False, timeout=30,
+    )
+    assert feito.returncode == 0, feito.stderr
+    return diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
+
+
+def test_o_recover_sem_jogo_dispara_so_o_usb_da_sony_como_antes(tmp_path: Path) -> None:
+    """MORDIDA: chame o disparo inteiro no recover e o geral e o input entram na tempestade."""
+    assert _o_recover(tmp_path, jogo=False) == [
+        "trigger --subsystem-match=usb --attr-match=idVendor=054c"
+    ]
+
+
+@pytest.mark.parametrize(("jogo", "com_leitor"), [(True, True), (False, False)],
+                         ids=["com-jogo", "sem-saber"])
+def test_o_recover_com_jogo_ou_sem_saber_nao_dispara(
+    tmp_path: Path, jogo: bool, com_leitor: bool
+) -> None:
+    """MORDIDA: dispare o usb da Sony sem perguntar do jogo e o recover reenumera o jogo."""
+    assert _o_recover(tmp_path, jogo=jogo, com_leitor=com_leitor) == []
 
 
 def _proc(raiz: Path, *, jogo: bool) -> Path:

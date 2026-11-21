@@ -57,6 +57,12 @@ fi
 command -v udevadm >/dev/null 2>&1 || exit 0
 
 case "${MODO}" in
+    --so-o-usb-da-sony)
+        decidir
+        if [[ "${JOGO}" -eq 10 ]]; then
+            udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true
+        fi
+        ;;
     --preparar-a-remocao)
         rm -rf -- "${PASTA_DA_REMOCAO}" 2>/dev/null || exit 0
         decidir
