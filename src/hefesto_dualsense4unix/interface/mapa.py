@@ -854,9 +854,9 @@ JS = r"""
 def _chips_de_exemplo():
     """Os quatro controles do desenho, um por cor do plástico (o produto troca por `blocos`)."""
     exemplo = (("Cosmic Red", "cosmic-red", "USB", 1, "#0000ff", True),
-               ("Starlight Blue", "starlight-blue", "BT", 2, "#ff0000", False),
-               ("Galactic Purple", "galactic-purple", "BT", 3, "#00ff00", False),
-               ("White", "white", "USB", 4, "#ff0080", False))
+               ("Starlight Blue", "starlight-blue", "BT", 2, "#ff0000", True),
+               ("Galactic Purple", "galactic-purple", "BT", 3, "#00ff00", True),
+               ("White", "white", "USB", 4, "#ff0080", True))
     import monta
     return "".join(
         f'<button class="chip plastico{" on" if ligado else ""}" '
@@ -984,7 +984,7 @@ def main():
   <div class="mc-topo">
     <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) {{ history.back(); return false }}" title="Volta para a Navegação">← Voltar</a>
     <h1 id="mc-titulo">Mapa do controle</h1>
-    <span class="mc-vale"><span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa">{_chips_de_exemplo()}</div></span>
+    <span class="mc-vale"><span class="mc-rot" data-dica="A troca e a sequência valem para os controles acesos. A tecla e o mouse valem para todos, pelo perfil.">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa">{_chips_de_exemplo()}</div></span>
   </div>
   <div class="corpo">
   <div class="mc-perfil" data-fixo="sim" data-campo="mc-fixo" data-hef-alvo="atributo" data-hef-atributo="data-fixo">

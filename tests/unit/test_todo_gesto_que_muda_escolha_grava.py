@@ -109,6 +109,9 @@ ATOS: dict[Chave, str] = {
     ("05-vibracao.html", "testar-haptica"):
         "sessão: o teste «Háptica» toca a vibração fina daquele controle até o "
         "«Parar» (o coração da janela o rebate), e nada vai ao perfil",
+    ("mapa-do-controle.html", "escolher-na-fita"):
+        "tela: o chip de «Vale para» do mapa só recusa o clique que largaria a edição por "
+        "guardar; quem escolhe o controle é o gesto da fita das abas, que ele chama",
     ("mapa-do-controle.html", "mapa-botao"): _RASCUNHO_DO_MAPA,
     ("mapa-do-controle.html", "mapa-cancelar"): _RASCUNHO_DO_MAPA,
     ("mapa-do-controle.html", "mapa-escolher"): _RASCUNHO_DO_MAPA,

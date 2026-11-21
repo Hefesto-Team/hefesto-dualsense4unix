@@ -132,8 +132,11 @@ def test_o_endereco_existe_dos_dois_lados() -> None:
 def test_o_chip_do_mapa_e_o_gesto_da_fita_das_abas() -> None:
     gesto = pacotes.gesto_da_pagina(PAGINA, monta.GESTO_DA_FITA)
     assert gesto is not None, "o chip do mapa não tem quem o atenda"
-    assert gesto is pacotes.gesto_da_pagina("06-navegacao.html", monta.GESTO_DA_FITA), (
-        "o mapa tem uma escolha própria: a fita deixou de ser uma só")
+    da_fita = pacotes.GESTOS[("*", monta.GESTO_DA_FITA)]
+    assert pacotes.gesto_da_pagina("06-navegacao.html", monta.GESTO_DA_FITA) is da_fita
+    assert gesto is a13.mapa_escolher_controle and gesto is not da_fita
+    assert a13.GESTOS[("*", monta.GESTO_DA_FITA)] is da_fita, (
+        "o mapa só recusa o clique que largaria a edição; quem escolhe é o gesto das abas")
     bloco = (pacotes.pacote_da_pagina(PAGINA, _contexto("p1")) or {})["blocos"]
     chips = "".join(bloco.values())
     for n in range(1, 5):
@@ -142,7 +145,7 @@ def test_o_chip_do_mapa_e_o_gesto_da_fita_das_abas() -> None:
 
 @pytest.fixture
 def escolha_limpa() -> Any:
-    mod = sys.modules[pacotes.gesto_da_pagina(PAGINA, monta.GESTO_DA_FITA).__module__]
+    mod = sys.modules[pacotes.GESTOS[("*", monta.GESTO_DA_FITA)].__module__]
     antes = mod.ESCOLHA_DA_FITA.uniq
     yield mod
     mod.ESCOLHA_DA_FITA.uniq = antes

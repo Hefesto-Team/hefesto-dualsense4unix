@@ -39,9 +39,12 @@ import threading
 import time
 from typing import Any, NamedTuple
 
+import monta
+
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 from hefesto_dualsense4unix.core import ativacao_de_botao
 from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
+from hefesto_dualsense4unix.integrations import steam_launch_options
 from hefesto_dualsense4unix.integrations.uinput_mouse import EIXO_DIREITO, EIXO_ESQUERDO
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
@@ -50,12 +53,14 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 from hefesto_dualsense4unix.profiles import estilos_de_jogo
 from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
-from . import Contexto, fios, gesto, perfil, registrar
+from . import GESTOS, Contexto, fios, gesto, perfil, registrar
 from . import a02_controles as a02
 from . import a06_navegacao as a06
 from . import em_fundo as fundo
 
 PAGINA = "mapa-do-controle.html"
+
+GESTO_DA_FITA = "escolher-na-fita"
 
 BLOCO_DOS_CONTROLES = '[data-bloco="controles-do-mapa"]'
 BLOCO_DO_PERFIL = "#perfil"
@@ -74,6 +79,8 @@ ROTULO_DO_TIPO = {"nav": "Navegação", "pac": "Point and click", "troca": "Troc
 NOME_DA_NAVEGACAO = "Navegar no computador"
 
 FORA_DO_JOGO = "Fora do jogo"
+
+AVISO_DO_DONO = "Guarde ou cancele as trocas antes de escolher um controle só"
 
 
 class Botao(NamedTuple):
@@ -177,7 +184,7 @@ def _estado() -> dict[str, Any]:
     if not _EDITANDO:
         _EDITANDO.update({"chave": NAV, "edicoes": {}, "nome": None,
                           "usar_em": None, "botao": None, "peca": None,
-                          "seq": {}, "gravando": None, "nav_de": None})
+                          "seq": {}, "gravando": None, "nav_de": None, "nomes": {}})
     return _EDITANDO
 
 
@@ -236,12 +243,18 @@ def _peca_do_vale_para(ctx: Contexto) -> str | None:
     """O controle (MAC de 12 hex) que o «Vale para» escolheu, ou `None` quando o perfil é o dono.
 
     Com um controle só ninguém escolhe: a troca é do perfil. Com dois ou mais, o chip aceso é o
-    dono. O molde e o perfil novo ainda não têm controle: o chamador só pergunta nos outros.
+    dono; com todos acesos (a fita em «Todos»), o dono é o perfil. O molde e o perfil novo ainda
+    não têm controle: o chamador só pergunta nos outros.
     """
+    _, itens = _escolhidos(ctx)
+    return _peca_dos(ctx, itens)
+
+
+def _peca_dos(ctx: Contexto, itens: list[dict[str, Any]]) -> str | None:
+    """O dono da troca quando os controles escolhidos são `itens`: um só, entre dois ou mais."""
     chave = str(_estado()["chave"])
     if len(ctx.mesa or ()) < 2 or not (chave == NAV or chave.startswith(PERFIL)):
         return None
-    _, itens = _escolhidos(ctx)
     if len(itens) != 1:
         return None
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -386,8 +399,6 @@ def _tipo_de(ctx: Contexto, estado: dict[str, Any], valores: dict[str, tuple[str
 
 def _escolhidos(ctx: Contexto) -> tuple[str, list[dict[str, Any]]]:
     """Quem a fita escolheu, e os itens da mesa que isso alcança."""
-    import monta
-
     escolhido = ctx.escolhido or (str(ctx.mesa[0].get("pref") or "") if ctx.mesa else "")
     _, ativo = monta.escolha_da_fita(escolhido or "todos", ctx.mesa)
     if ativo == "todos":
@@ -426,6 +437,24 @@ def _estado_da_linha(x: Botao, valores: dict[str, tuple[str, str]], botao: str |
     return " ".join(palavras)
 
 
+def _chip_do_jogo(estado: dict[str, Any], texto: str) -> str:
+    """O chip do jogo: o nome da Steam, com o número na dica; sem nome instalado, o número.
+
+    O que se grava no perfil não muda, só o que a tela escreve. O nome é lido uma vez por
+    edição e lembrado em `estado["nomes"]`, porque o tique repinta esta linha.
+    """
+    if not texto.isdigit():
+        return f'<span class="jogo">{html.escape(texto)}</span>'
+    nomes = estado["nomes"]
+    if texto not in nomes:
+        nomes[texto] = steam_launch_options.nome_do_appid(texto)
+    nome = nomes[texto]
+    if not nome:
+        return f'<span class="jogo">{html.escape(texto)}</span>'
+    return (f'<span class="jogo" data-dica="Steam {html.escape(texto)}">'
+            f'{html.escape(nome)}</span>')
+
+
 def _usar_em(ctx: Contexto, estado: dict[str, Any]) -> str:
     """Os chips de «Usar em»: onde o perfil vale, e o «+ Jogo» quando se pode mudar."""
     chave = estado["chave"]
@@ -445,7 +474,7 @@ def _usar_em(ctx: Contexto, estado: dict[str, Any]) -> str:
         except Exception:
             texto = ""
         del loader
-    chips = [f'<span class="jogo">{html.escape(texto)}</span>'] if texto else []
+    chips = [_chip_do_jogo(estado, texto)] if texto else []
     chips.append('<button class="jogo mais" data-gesto="mapa-usar-em" '
                  'data-dica="Usa o jogo que está em foco agora">+ Jogo</button>')
     return "".join(chips)
@@ -586,13 +615,17 @@ def _luz(ctx: Contexto, ativo: str, itens: list[dict[str, Any]]) -> str:
     return str(a02._cor_da_barra(rotulo, base))
 
 
-def chips_do_controle(mesa: list[dict[str, Any]], ativo: str, *, vivo: bool = True) -> str:
-    """Os quatro controles pela cor do plástico: um chip cada, sem «Todos» nem «Nenhum»."""
-    import monta
+def chips_do_controle(mesa: list[dict[str, Any]], ativo: str, *, vivo: bool = True,
+                      pendente: bool = False) -> str:
+    """Os quatro controles pela cor do plástico: um chip cada, sem «Todos» nem «Nenhum».
 
+    Acende quem a fita escolheu (`monta.acesos_da_fita`, a mesma pergunta das abas): com a fita
+    em «Todos», todos acesos. Com troca por guardar (`pendente`), todo chip que não é o único
+    dono avisa na dica que se guarda ou se cancela antes de escolher um controle só.
+    """
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
-    _, ativo = monta.escolha_da_fita(ativo, mesa)
+    acesos = monta.acesos_da_fita(ativo, mesa)
     chips = []
     for c in mesa:
         pref = str(c.get("pref") or "")
@@ -603,12 +636,15 @@ def chips_do_controle(mesa: list[dict[str, Any]], ativo: str, *, vivo: bool = Tr
                if (jogador and not vivo) else "")
         conhece = bool(slug) and monta.o_desenho_conhece(slug)
         cor = f' style="--plastico:{monta.cor_da_zona(slug)}"' if conhece else ""
+        aceso = pref in acesos
+        so_ele = aceso and len(acesos - {"todos"}) == 1
         attrs = (f' data-jogador="{jogador}"' if jogador else "") \
-            + f' data-colorway="{html.escape(slug)}"' + (f' data-luz="{luz}"' if luz else "")
+            + f' data-colorway="{html.escape(slug)}"' + (f' data-luz="{luz}"' if luz else "") \
+            + (f' data-dica="{AVISO_DO_DONO}"' if pendente and not so_ele else "")
         nome = html.escape(str(c.get("nome") or ""))
         via = html.escape(str(c.get("via") or ""))
         texto = f'{nome} <span class="pt">•</span> {via}' if via else nome
-        chips.append(f'<button class="chip plastico{" on" if ativo == pref else ""}"{cor}{attrs}'
+        chips.append(f'<button class="chip plastico{" on" if aceso else ""}"{cor}{attrs}'
                      f'{monta._endereco_do_chip(pref, False)}>{texto}</button>')
     return "".join(chips)
 
@@ -625,7 +661,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                             **_campos_da_sequencia(ctx), LUZ: _luz(ctx, ativo, itens)}
     return {
         "mesa": mesa,
-        "blocos": {BLOCO_DOS_CONTROLES: chips_do_controle(ctx.mesa, ativo),
+        "blocos": {BLOCO_DOS_CONTROLES: chips_do_controle(
+            ctx.mesa, ativo, pendente=_ha_o_que_guardar(_estado())),
                    BLOCO_DO_PERFIL: _opcoes_do_perfil(ctx)},
         "cobertura": {"pintados": len(mesa) + 2, "sem_dono": 0},
         "sem_dono": {},
@@ -665,6 +702,29 @@ def _chave_valida(ctx: Contexto, chave: str) -> bool:
         molde = _molde_da_chave(chave)
         return molde is not None and molde in _moldes_a_vista()
     return chave.startswith(PERFIL) and bool(_cru_da_chave(ctx, chave))
+
+
+def _ha_o_que_guardar(estado: dict[str, Any]) -> bool:
+    """Há troca, ação ou sequência editada que ainda não foi ao disco."""
+    return bool(estado["edicoes"] or estado["seq"])
+
+
+@gesto(PAGINA, GESTO_DA_FITA)
+def mapa_escolher_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> Any:
+    """O chip de «Vale para»: com o que guardar, não troca de dono em silêncio.
+
+    O dono da troca é o controle aceso; trocá-lo largava as edições sem aviso. Aqui o clique que
+    mudaria o dono com edição pendente recusa dizendo (o chip pisca em laranja), e o resto é o
+    gesto da fita das abas, o mesmo de sempre.
+    """
+    estado = _estado()
+    _largar_se_outro_controle(ctx)
+    if _ha_o_que_guardar(estado):
+        pref = str(o.get("pref") or "").strip()
+        quem = [m for m in ctx.mesa if str(m.get("pref") or "") == pref]
+        if _peca_dos(ctx, quem) != estado.get("peca"):
+            raise RuntimeError(AVISO_DO_DONO)
+    return GESTOS[("*", GESTO_DA_FITA)](ctx, o, p)
 
 
 @gesto(PAGINA, "mapa-perfil")
