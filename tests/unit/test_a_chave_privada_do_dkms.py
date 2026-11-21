@@ -26,6 +26,7 @@ from tests.unit.test_dkms_lib import (
     CONFIG_QUE_ASSINA,
     CONFIG_QUE_NAO_ASSINA,
     PREPARADOR,
+    REPO_ROOT,
     _estado_do_secure_boot,
     _roda,
     _sem_mokutil,
@@ -392,7 +393,7 @@ GUARDA_DA_CHAVE_PRIVADA = (
     'if "${BASH_SOURCE[0]%/*}/preparar-o-fonte.py" --sem-a-chave-privada "$kernelver" '
     "2>/dev/null; then"
 )
-CINCO_DKMS_CONF = [preparador.parent / "dkms.conf" for preparador in CINCO_PREPARADORES]
+CINCO_DKMS_CONF = sorted((REPO_ROOT / "assets" / "dkms").glob("*/dkms.conf"))
 
 
 class TestOAutoinstallNemChegaAoBuildSemAChavePrivada:
@@ -404,8 +405,8 @@ class TestOAutoinstallNemChegaAoBuildSemAChavePrivada:
     a chave privada, e o DKMS nem começa o build do módulo.
     """
 
-    def test_os_cinco_dkms_conf_perguntam_pela_chave_privada(self) -> None:
-        assert len(CINCO_DKMS_CONF) == 5, CINCO_DKMS_CONF
+    def test_todo_dkms_conf_da_casa_pergunta_pela_chave_privada(self) -> None:
+        assert len(CINCO_DKMS_CONF) >= 5, CINCO_DKMS_CONF
         for conf in CINCO_DKMS_CONF:
             linhas = conf.read_text(encoding="utf-8").splitlines()
             assert GUARDA_DA_CHAVE_PRIVADA in linhas, f"{conf}: o autoinstall gera o par novo"
@@ -440,3 +441,31 @@ class TestOAutoinstallNemChegaAoBuildSemAChavePrivada:
                 capture_output=True, text=True, check=False, timeout=120, env=ambiente)
             assert lido.returncode == 0, (conf, lido.stderr)
             assert lido.stdout == esperado, (conf, lido.stdout, lido.stderr)
+
+    @pytest.mark.parametrize("falha", ["sem-o-preparador", "o-preparador-que-quebra"])
+    def test_o_preparador_que_falha_guarda_o_autoinstall_de_antes(
+        self, tmp_path: Path, falha: str
+    ) -> None:
+        """D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI.
+
+        O ``dkms.conf`` roda como root dentro do apt: só o 0 do preparador zera o ``AUTOINSTALL``;
+        o preparador ausente ou que sai com outro código deixa o de antes, e a leitura sai com 0.
+        """
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=True, inscrita=True, chave_privada=False)
+        ambiente = {**os.environ, **estado, "PATH": _sem_mokutil(estado, os.environ["PATH"])}
+        for conf in CINCO_DKMS_CONF:
+            lido_de = tmp_path / falha / conf.parent.name / "dkms.conf"
+            lido_de.parent.mkdir(parents=True)
+            shutil.copy(conf, lido_de)
+            if falha == "o-preparador-que-quebra":
+                _stub(lido_de.parent, "preparar-o-fonte.py", "exit 3")
+            lido = subprocess.run(
+                ["bash", "-c",
+                 'autoinstall() { [ "$s" = 77 ]; }\n'
+                 f"kernelver={KERNEL}\nkernel_source_dir='{tmp_path / 'sem-fonte'}'\n"
+                 f"dkms_tree='{tmp_path / 'arvore'}'\n. '{lido_de}'\n"
+                 'printf "%s" "$AUTOINSTALL"'],
+                capture_output=True, text=True, check=False, timeout=120, env=ambiente)
+            assert lido.returncode == 0, (conf, lido.stderr)
+            assert lido.stdout == "yes", (conf, falha, lido.stdout, lido.stderr)
