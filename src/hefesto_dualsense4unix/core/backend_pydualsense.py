@@ -6326,28 +6326,42 @@ def _numero_do_hidraw(nome: str) -> int | None:
     return int(sufixo) if nome.startswith("hidraw") and sufixo.isdigit() else None
 
 
+_BARRAMENTOS_DO_HIDAPI = frozenset({0x03, 0x05, 0x18, 0x1C})
+
+
 def _hidraws_da_sony() -> list[_NoHid]:
-    """Os hidraw da Sony, em ordem de criação, lidos só do uevent do HID pai.
+    """Os hidraw da Sony, lidos só do uevent do HID pai, na lista e na ordem do `hid_enumerate`.
 
     Nunca lê as strings do aparelho USB (`manufacturer`, `product`): o kernel as serve sob a trava
     do aparelho, que a probe do som de um DualSense no cabo segura por cerca de 10 s. Lidas pelo
     `hidapi.enumerate`, seguravam a volta de todos os controles, em qualquer transporte (medido em
     20/11/2026: três ligações, e o `connect` voltou 0,3 s depois do `snd-usb-audio` terminar).
+    Fica o resto do `linux/hid.c` do hidapi 0.14: só os barramentos USB, Bluetooth, I2C e SPI, e
+    a ordem do caminho no `/sys`, componente a componente, que é a da enumeração da libudev (o
+    cabo antes do rádio; entre cabos, a porta).
     """
     try:
         nomes = os.listdir(RAIZ_CLASS_HIDRAW)
     except OSError:
         return []
-    numerados = sorted(
-        (numero, nome) for nome in nomes if (numero := _numero_do_hidraw(nome)) is not None
-    )
-    achados: list[_NoHid] = []
-    for numero, nome in numerados:
+    achados: list[tuple[list[str], int, _NoHid]] = []
+    for nome in nomes:
+        numero = _numero_do_hidraw(nome)
+        if numero is None:
+            continue
         uevent = _hidraw_uevent(nome)
         partes = uevent.get("HID_ID", "").split(":")
-        vendor, produto = (_hexa(partes[1]), _hexa(partes[2])) if len(partes) == 3 else (None, None)
-        if vendor != DUALSENSE_VENDOR or produto is None:
+        barramento, vendor, produto = (
+            (_hexa(partes[0]), _hexa(partes[1]), _hexa(partes[2]))
+            if len(partes) == 3
+            else (None, None, None)
+        )
+        if barramento not in _BARRAMENTOS_DO_HIDAPI or vendor != DUALSENSE_VENDOR:
             continue
+        if produto is None:
+            continue
+        no_do_sys = os.path.realpath(os.path.join(RAIZ_CLASS_HIDRAW, nome, "device"))
         caminho = os.fsencode(f"/dev/hidraw{numero}")
-        achados.append(_NoHid(produto, caminho, uevent.get("HID_UNIQ", "")))
-    return achados
+        no_hid = _NoHid(produto, caminho, uevent.get("HID_UNIQ", ""))
+        achados.append((no_do_sys.split("/"), numero, no_hid))
+    return [no_hid for _ordem, _numero, no_hid in sorted(achados, key=lambda a: (a[0], a[1]))]

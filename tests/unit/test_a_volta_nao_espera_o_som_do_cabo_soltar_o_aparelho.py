@@ -35,7 +35,7 @@ MESA = (
     ("usb", "0DF2", "aa:bb:cc:00:00:03"),
     ("bt", "0DF2", "aa:bb:cc:00:00:04"),
 )
-BARRAMENTO = {"usb": "0003", "bt": "0005"}
+BARRAMENTO = {"usb": "0003", "bt": "0005", "virtual": "0006"}
 
 
 class _Arvore:
@@ -81,17 +81,24 @@ class _Arvore:
 
 
 def _hidapi_como_o_linux(classe: Path) -> SimpleNamespace:
-    """O `hid_enumerate` do `linux/hid.c`: o `HID_ID` filtra, e o cabo lê as strings do pai USB."""
+    """O `hid_enumerate` do `linux/hid.c` (hidapi 0.14): a libudev entrega os hidraw na ordem do
+    caminho no `/sys`, componente a componente; o barramento e o `HID_ID` filtram, e o cabo lê as
+    strings do pai USB."""
+
+    def _ordem(no: str) -> list[str]:
+        return os.path.realpath(classe / no / "device").split("/")
 
     def enumerate(vendor_id: int = 0, product_id: int = 0) -> list[SimpleNamespace]:
         del product_id
         achados = []
-        for no in sorted(os.listdir(classe)):
+        for no in sorted(os.listdir(classe), key=_ordem):
             campos = dict(
                 linha.split("=", 1)
                 for linha in (classe / no / "device" / "uevent").read_text("utf-8").splitlines()
             )
-            _bus, vid, pid = campos["HID_ID"].split(":")
+            bus, vid, pid = campos["HID_ID"].split(":")
+            if int(bus, 16) not in (0x03, 0x05, 0x18, 0x1C):
+                continue
             if vendor_id and int(vid, 16) != vendor_id:
                 continue
             for pasta in Path(os.path.realpath(classe / no / "device")).parents:
@@ -137,7 +144,19 @@ def _montar(
         path = f"/dev/hidraw{numero}".encode()
         esperado.append((uniq, path, pid == "0DF2"))
         transportes[path] = no_cabo
-    return esperado, transportes
+    return _na_ordem_do_sys(arvore, esperado), transportes
+
+
+def _na_ordem_do_sys(
+    arvore: _Arvore, chaves: list[tuple[str, bytes, bool]]
+) -> list[tuple[str, bytes, bool]]:
+    """A ordem da libudev: o caminho do HID pai no `/sys`, componente a componente."""
+
+    def ordem(chave: tuple[str, bytes, bool]) -> list[str]:
+        no = os.path.basename(chave[1].decode())
+        return os.path.realpath(arvore.classe / no / "device").split("/")
+
+    return sorted(chaves, key=ordem)
 
 
 @pytest.mark.parametrize("presa", range(len(MESA)), ids=[f"P{n + 1}" for n in range(len(MESA))])
@@ -220,6 +239,53 @@ def test_a_lista_diz_o_mesmo_que_o_hidapi_dizia(arvore: _Arvore) -> None:
     assert PyDualSenseController._enumerate_device_keys() == [
         ("aa:bb:cc:00:00:01", b"/dev/hidraw10", False),
         ("aa:bb:cc:00:00:02", b"/dev/hidraw11", True),
-        ("aa:bb:cc:00:00:03", b"/dev/hidraw12", True),
         ("aa:bb:cc:00:00:06", b"/dev/hidraw15", False),
+        ("aa:bb:cc:00:00:03", b"/dev/hidraw12", True),
+    ]
+
+
+def test_a_ordem_e_a_do_hidapi_o_cabo_antes_do_radio_e_a_porta_entre_cabos(arvore: _Arvore) -> None:
+    """A ordem da lista é a do `hid_enumerate`, não a do número do hidraw.
+
+    O rádio ligado antes ganha o número menor e segue depois dos cabos; entre cabos vale a porta
+    no `/sys` (`3-12` antes de `3-7`, como a libudev compara). A ordem é a de entrada na volta e o
+    desempate de quem senta quando a mesa ainda não tem carta.
+    """
+    for numero, transporte, uniq in (
+        (3, "bt", "aa:bb:cc:00:00:01"),
+        (7, "usb", "aa:bb:cc:00:00:02"),
+        (12, "usb", "aa:bb:cc:00:00:03"),
+    ):
+        arvore.controle(numero, transporte, "0CE6", uniq, preso=False)
+
+    antes = [info.path for info in sys.modules["hidapi"].enumerate(vendor_id=0x054C)]
+
+    assert [info.path for info in backend_mod._hidraws_da_sony()] == antes
+    assert [chave for chave, _p, _e in PyDualSenseController._enumerate_device_keys()] == [
+        "aa:bb:cc:00:00:03",
+        "aa:bb:cc:00:00:02",
+        "aa:bb:cc:00:00:01",
+    ]
+
+
+def test_o_hidraw_da_sony_fora_dos_barramentos_do_hidapi_fica_de_fora(arvore: _Arvore) -> None:
+    """Um hidraw com o VID e o PID da Sony no barramento virtual (`0006`) nunca foi controle."""
+    arvore.controle(4, "usb", "0CE6", "aa:bb:cc:00:00:01", preso=False)
+    arvore.controle(5, "virtual", "0CE6", "aa:bb:cc:00:00:02", preso=False)
+
+    antes = [info.path for info in sys.modules["hidapi"].enumerate(vendor_id=0x054C)]
+
+    assert [info.path for info in backend_mod._hidraws_da_sony()] == antes == [b"/dev/hidraw4"]
+
+
+def test_o_controle_arrancado_no_meio_nao_derruba_a_lista(arvore: _Arvore) -> None:
+    """O uevent que some (o controle saiu entre o `listdir` e a leitura) tira só ele da lista."""
+    arvore.controle(4, "usb", "0CE6", "aa:bb:cc:00:00:01", preso=False)
+    arvore.controle(5, "bt", "0DF2", "aa:bb:cc:00:00:02", preso=False)
+    arvore.controle(6, "usb", "0DF2", "aa:bb:cc:00:00:03", preso=False)
+    (Path(os.path.realpath(arvore.classe / "hidraw5" / "device")) / "uevent").unlink()
+
+    assert PyDualSenseController._enumerate_device_keys() == [
+        ("aa:bb:cc:00:00:01", b"/dev/hidraw4", False),
+        ("aa:bb:cc:00:00:03", b"/dev/hidraw6", True),
     ]
