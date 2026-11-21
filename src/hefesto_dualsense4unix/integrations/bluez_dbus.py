@@ -165,11 +165,6 @@ def hci_do_aparelho(caminho: str) -> str | None:
     return hci_do_adaptador(forma.group(1)) if forma else None
 
 
-def e_caminho_de_aparelho(caminho: str) -> bool:
-    """O caminho é de um APARELHO (``/org/bluez/hciN/dev_AA_BB_CC_DD_EE_FF``)?"""
-    return _CAMINHO_DE_APARELHO.fullmatch(caminho) is not None
-
-
 def _hci_de(caminho: str) -> str:
     return hci_do_adaptador(caminho) or ""
 

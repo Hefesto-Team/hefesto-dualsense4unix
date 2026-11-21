@@ -876,20 +876,3 @@ def test_o_zumbi_pergunta_ao_dono_o_no_do_aparelho() -> None:
         ("hci0", "aa:bb:cc:00:00:ff"),
         ("hci1", "02:fe:00:00:00:01"),
     }
-
-
-@pytest.mark.parametrize(
-    ("caminho", "esperado"),
-    [
-        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", True),
-        ("/org/bluez/hci1/dev_aa_bb_cc_00_00_ff", True),
-        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF/sep1", False),
-        ("/org/bluez/hci0/dev_AA_BB_CC", False),
-        ("/org/bluez/hci0", False),
-        ("/x/org/bluez/hci0/dev_AA_BB_CC_00_00_FF", False),
-        ("/org/bluez/hci0/dev_AA_BB_CC_00_00_FF\n", False),
-    ],
-)
-def test_o_dono_diz_se_o_caminho_e_de_aparelho(caminho: str, esperado: bool) -> None:
-    """O endpoint de áudio (``…/sep1``) e o nó parcial não são aparelho."""
-    assert bd.e_caminho_de_aparelho(caminho) is esperado
