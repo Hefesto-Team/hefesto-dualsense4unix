@@ -5423,6 +5423,8 @@ _check_dkms_secureboot() {
         _DKMS_SB_WARNED=1
         if ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_chave_mok_fora ); then
             warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto instalados neste kernel — o kernel os RECUSA no boot e o driver de fábrica vale no lugar (a atualização tira esses módulos): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_efeito_sem_a_chave ). Para ganhar as curas: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+        elif ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; [[ "$(dkms_estado_da_chave)" == "pedida" ]] ); then
+            warn "Secure Boot ligado, e a inscrição da chave do DKMS espera o reinício para ser confirmada, e há módulos do Hefesto instalados neste kernel — a atualização não os tira nem os troca. Para confirmar: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_inscricao_pedida )"
         else
             warn "Secure Boot ligado, e não consegui ler a chave do DKMS para saber se está inscrita, e há módulos do Hefesto instalados neste kernel — a atualização não os tira nem os troca. Para ler a chave: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_para_ler_a_chave )"
         fi

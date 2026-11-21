@@ -926,6 +926,132 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
             assert "Para ler a chave:" in dito.stdout, dito
 
 
+MOK_NEW = "MokNew-605dab50-e046-4300-abb6-3dd810dd8b23"
+
+
+def _com_a_inscricao_pedida(
+    raiz: Path, *, ligado: bool | None = True, via: str = "efivar", inscrita: bool = False
+) -> tuple[dict[str, str], str]:
+    """A chave já pedida para a MOK: a variável do pedido a traz, ou o ``mokutil`` o diz."""
+    estado = _estado_do_secure_boot(raiz, ligado=ligado, inscrita=inscrita)
+    if via == "efivar":
+        (Path(estado["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
+        return estado, _sem_mokutil(estado)
+    pasta = raiz / "mokutil-do-pedido"
+    pasta.mkdir()
+    _stub(pasta, "mokutil", 'echo "/etc/dkms/mok.pub is already in the enrollment request"\nexit 1')
+    return estado, f"{pasta}:/usr/bin:/bin"
+
+
+class TestInscricaoPedidaEAindaNaoReiniciada:
+    """A-INSCRICAO-PEDIDA-E-NAO-REINICIADA-NAO-TIRA-O-MODULO-01.
+
+    D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO: a chave já pedida para a MOK espera o reinício e
+    não tira nem instala módulo.
+    """
+
+    instalar = TestSecureBootLigadoDevolveODriverDeFabrica._instalar
+    STATUS = TestSecureBootLigadoDevolveODriverDeFabrica.STATUS
+
+    @pytest.mark.parametrize("ligado", [True, False], ids=["ligado", "desligado"])
+    @pytest.mark.parametrize("via", ["efivar", "mokutil"])
+    def test_a_leitura_do_python_e_a_do_bash_dizem_pedida(
+        self, tmp_path: Path, via: str, ligado: bool
+    ) -> None:
+        """D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO: o quarto estado, dos dois lados."""
+        estado, caminho = _com_a_inscricao_pedida(tmp_path, ligado=ligado, via=via)
+        ambiente = {**os.environ, **estado, "PATH": caminho}
+
+        def python(*args: str) -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                ["python3", str(PREPARADOR), *args], env=ambiente, capture_output=True,
+                text=True, check=False, timeout=60,
+            )
+
+        assert _roda("dkms_estado_da_chave", caminho, estado).stdout == "pedida", via
+        assert python("--estado-da-chave").stdout == "pedida", via
+        assert python("--sem-a-chave").returncode == 1
+        em_bash = _roda("dkms_secure_boot_ligado && dkms_chave_mok_fora", caminho, estado)
+        assert em_bash.returncode != 0
+        esperado = 0 if ligado else 1
+        assert python("--chave-nao-garantida").returncode == esperado
+        assert _roda("dkms_sem_a_chave_garantida", caminho, estado).returncode == esperado
+
+    def test_a_chave_inscrita_vence_o_pedido(self, tmp_path: Path) -> None:
+        estado, caminho = _com_a_inscricao_pedida(tmp_path, inscrita=True)
+        ambiente = {**os.environ, **estado, "PATH": caminho}
+        assert _roda("dkms_estado_da_chave", caminho, estado).stdout == "inscrita"
+        feito = subprocess.run(
+            ["python3", str(PREPARADOR), "--estado-da-chave"], env=ambiente,
+            capture_output=True, text=True, check=False, timeout=60,
+        )
+        assert feito.stdout == "inscrita", feito
+
+    def test_o_install_nao_tira_nem_instala_e_diz_para_reiniciar(self, tmp_path: Path) -> None:
+        """D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO."""
+        estado, _caminho = _com_a_inscricao_pedida(tmp_path)
+        saida, lidas = self.instalar(tmp_path, estado, self.STATUS)
+        assert "dkms remove" not in lidas, lidas
+        for verbo in ("dkms add", "dkms build", "dkms install", "dkms uninstall"):
+            assert verbo not in lidas, lidas
+        assert "STALE=0" in saida, saida
+        assert "espera o reinício" in saida and "Enroll MOK" in saida, saida
+        assert "mokutil --import" not in saida, saida
+        assert "saem e o driver de fábrica volta" not in saida, saida
+        assert "não consegui ler a chave" not in saida, saida
+
+    @pytest.mark.parametrize("via", ["efivar", "mokutil"])
+    def test_o_exclusivo_dos_cinco_pula_a_construcao(self, tmp_path: Path, via: str) -> None:
+        veredito = tmp_path / "dkms" / "pacote" / "1.0.0"
+        veredito.mkdir(parents=True)
+        estado, caminho = _com_a_inscricao_pedida(tmp_path, via=via)
+        for preparador in CINCO_PREPARADORES:
+            feito = subprocess.run(
+                ["python3", str(preparador), "--exclusivo", "7.1.5-generic",
+                 str(tmp_path / "sem-fonte"), str(veredito)],
+                capture_output=True, text=True, check=False, timeout=60,
+                env={**os.environ, **estado, "PATH": caminho},
+            )
+            assert feito.stdout.strip() == "^/", (preparador, feito)
+
+    def test_o_atualizador_nao_tira_nem_refaz_e_diz_para_reiniciar(self, tmp_path: Path) -> None:
+        if os.geteuid() == 0:
+            pytest.skip("o ajudante como root usa os caminhos de verdade")
+        from tests.unit.test_o_ajudante_do_atualizador import Lar
+
+        (tmp_path / "lar").mkdir()
+        lar = Lar(tmp_path / "lar")
+        pasta = lar.src / "hefesto-hid-playstation-1.0.0"
+        pasta.mkdir()
+        shutil.copy(PREPARADOR, pasta / "preparar-o-fonte.py")
+        (pasta / "dkms.conf").write_text(
+            'BUILT_MODULE_NAME[0]="hid-playstation"\n', encoding="utf-8")
+        pasta.chmod(0o755)
+        (pasta / "preparar-o-fonte.py").chmod(0o755)
+        (pasta / "dkms.conf").chmod(0o644)
+        (lar.modulos / "7.2.18-generic" / "build").mkdir(parents=True)
+        lar.duble(
+            "dkms",
+            '[ "$1" = status ] && printf "%s\\n" "hefesto-hid-playstation/1.0.0, 7.2.18-generic, '
+            'x86_64: installed"\nexit 0',
+        )
+        estado, _caminho = _com_a_inscricao_pedida(tmp_path)
+        lar.duble("mokutil", "exit 1")
+        feito = lar.rodar("dkms-refazer", **estado)
+        assert feito.returncode == 0, feito.stderr
+        lidas = lar.lidas()
+        assert not [x for x in lidas if x.startswith(("dkms remove", "dkms install",
+                                                      "dkms build", "update-initramfs"))], lidas
+        saida = feito.stdout + feito.stderr
+        assert "espera o reinício" in saida and "não li a chave do DKMS" not in saida, saida
+
+    def test_o_texto_do_install_e_o_do_doctor_dizem_o_mesmo_estado(self, tmp_path: Path) -> None:
+        estado, caminho = _com_a_inscricao_pedida(tmp_path)
+        dito = _roda("dkms_chave_e_o_passo; echo; dkms_titulo_da_chave", caminho, estado)
+        assert "espera o reinício" in dito.stdout and "Enroll MOK" in dito.stdout, dito
+        assert "mokutil --import" not in dito.stdout, dito
+
+
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:
     assert len(CINCO_PREPARADORES) == 5
     assert len({p.read_bytes() for p in CINCO_PREPARADORES}) == 1

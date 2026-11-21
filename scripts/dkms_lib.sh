@@ -138,8 +138,24 @@ _dkms_carregado_e_da_casa() {
     [[ "$(_dkms_srcversion_do_modulo "${_arquivo}")" == "${_carregado}" ]]
 }
 
+_dkms_arquivo_traz_a_chave() {
+    python3 - "$1" "$2" <<'PYEOF'
+import sys
+try:
+    chave = open(sys.argv[1], "rb").read()
+    lista = open(sys.argv[2], "rb").read()
+except OSError:
+    raise SystemExit(2)
+raise SystemExit(0 if chave and chave in lista else 1)
+PYEOF
+}
+
+_dkms_mok_pedido() {
+    printf '%s' "$(_dkms_efivars_root)/MokNew-605dab50-e046-4300-abb6-3dd810dd8b23"
+}
+
 dkms_estado_da_chave() {
-    local _pub _lista _resposta _leu=0 _rc
+    local _pub _lista _resposta _leu=0 _rc _pedida=0
     _pub="$(_dkms_mok_pub)"
     if [[ ! -r "${_pub}" || ! -s "${_pub}" ]]; then
         printf 'nao-sei'
@@ -151,27 +167,29 @@ dkms_estado_da_chave() {
             printf 'inscrita'
             return 0
         fi
+        [[ "${_resposta}" == *"enrollment request"* ]] && _pedida=1
         [[ "${_resposta}" == *"is not enrolled"* ]] && _leu=1
     fi
     while IFS= read -r _lista; do
         [[ -r "${_lista}" ]] || continue
         _rc=0
-        python3 - "${_pub}" "${_lista}" <<'PYEOF' || _rc=$?
-import sys
-try:
-    chave = open(sys.argv[1], "rb").read()
-    lista = open(sys.argv[2], "rb").read()
-except OSError:
-    raise SystemExit(2)
-raise SystemExit(0 if chave and chave in lista else 1)
-PYEOF
+        _dkms_arquivo_traz_a_chave "${_pub}" "${_lista}" || _rc=$?
         if [[ "${_rc}" -eq 0 ]]; then
             printf 'inscrita'
             return 0
         fi
         [[ "${_rc}" -eq 1 ]] && _leu=1
     done < <(_dkms_mok_listas)
-    if [[ "${_leu}" -eq 1 ]] && ! _dkms_carregado_e_da_casa "${1:-}"; then printf 'fora'; else printf 'nao-sei'; fi
+    if [[ "${_pedida}" -eq 0 && -r "$(_dkms_mok_pedido)" ]]; then
+        _dkms_arquivo_traz_a_chave "${_pub}" "$(_dkms_mok_pedido)" && _pedida=1
+    fi
+    if [[ "${_pedida}" -eq 1 ]]; then
+        printf 'pedida'
+    elif [[ "${_leu}" -eq 1 ]] && ! _dkms_carregado_e_da_casa "${1:-}"; then
+        printf 'fora'
+    else
+        printf 'nao-sei'
+    fi
     return 0
 }
 
@@ -192,6 +210,10 @@ dkms_passo_da_mok() {
         printf 'gere a chave (sudo dkms generate_mok), '
     fi
     printf 'inscreva-a com sudo mokutil --import %s (ele pede uma senha), reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' "${_pub}"
+}
+
+dkms_passo_da_inscricao_pedida() {
+    printf 'reinicie o computador, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a senha que você deu ao pedir a inscrição, e rode ./install.sh de novo'
 }
 
 dkms_efeito_sem_a_chave() {
@@ -227,7 +249,10 @@ dkms_passo_para_ler_a_chave() {
 }
 
 dkms_chave_e_o_passo() {
-    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+    local _estado; _estado="$(dkms_estado_da_chave "${1:-}")"
+    if [[ "${_estado}" == "pedida" ]]; then
+        printf 'Secure Boot ligado, e a inscrição da chave do DKMS espera o reinício para ser confirmada: o driver do Hefesto não se instala nem se troca até lá. Para confirmar: %s' "$(dkms_passo_da_inscricao_pedida)"
+    elif [[ "${_estado}" == "fora" ]]; then
         printf 'Secure Boot ligado e a chave do DKMS não está inscrita, e sem a chave o driver do Hefesto não se instala: %s' "$(dkms_passo_da_mok)"
     else
         printf 'Secure Boot ligado, e não consegui ler a chave do DKMS: sem saber se está inscrita, o driver do Hefesto não se instala nem se troca. Para ler a chave: %s' "$(dkms_passo_para_ler_a_chave)"
@@ -235,7 +260,10 @@ dkms_chave_e_o_passo() {
 }
 
 dkms_titulo_da_chave() {
-    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+    local _estado; _estado="$(dkms_estado_da_chave "${1:-}")"
+    if [[ "${_estado}" == "pedida" ]]; then
+        printf 'Secure Boot ligado, e a inscrição da chave do DKMS espera o reinício para ser confirmada'
+    elif [[ "${_estado}" == "fora" ]]; then
         printf 'Secure Boot ligado, e a chave do DKMS não está inscrita'
     else
         printf 'Secure Boot ligado, e não consegui ler a chave do DKMS para saber se está inscrita'
@@ -243,7 +271,10 @@ dkms_titulo_da_chave() {
 }
 
 dkms_modulos_sem_a_chave() {
-    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+    local _estado; _estado="$(dkms_estado_da_chave "${1:-}")"
+    if [[ "${_estado}" == "pedida" ]]; then
+        printf 'Até a inscrição se confirmar, os módulos do Hefesto não são instalados nem trocados.'
+    elif [[ "${_estado}" == "fora" ]]; then
         printf 'Os módulos do Hefesto não vão ser instalados, porque o kernel os recusaria no boot. Os que já estavam instalados saem e o driver de fábrica volta.'
     else
         printf 'Sem saber, os módulos do Hefesto não são instalados nem trocados.'
@@ -259,7 +290,10 @@ dkms_efeito_do_estado() {
 }
 
 dkms_passo_da_chave() {
-    if [[ "$(dkms_estado_da_chave "${1:-}")" == "fora" ]]; then
+    local _estado; _estado="$(dkms_estado_da_chave "${1:-}")"
+    if [[ "${_estado}" == "pedida" ]]; then
+        printf 'Para confirmar a inscrição: %s.' "$(dkms_passo_da_inscricao_pedida)"
+    elif [[ "${_estado}" == "fora" ]]; then
         printf 'Para ganhar as curas: %s.' "$(dkms_passo_da_mok)"
     else
         printf 'Para ler a chave: %s.' "$(dkms_passo_para_ler_a_chave)"
@@ -464,11 +498,11 @@ dkms_install_patched_module() {
     fi
     if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita "${_built}"; then
         dkms_warn_secureboot_once "${_built}"
-        if dkms_chave_mok_fora "${_built}"; then
-            dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}"
-        else
-            _dkms_log "${_pkg} pulado: não li a chave do DKMS, então nada se instala nem se tira"
-        fi
+        case "$(dkms_estado_da_chave "${_built}")" in
+            fora) dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}" ;;
+            pedida) _dkms_log "${_pkg} pulado: a inscrição da chave do DKMS espera o reinício, então nada se instala nem se tira" ;;
+            *) _dkms_log "${_pkg} pulado: não li a chave do DKMS, então nada se instala nem se tira" ;;
+        esac
         return 0
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then

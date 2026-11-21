@@ -491,7 +491,11 @@ _dkms_por_fonte() {
             continue
         fi
         if /usr/bin/python3 "${pasta}/preparar-o-fonte.py" --chave-nao-garantida 2>/dev/null; then
-            printf 'pulando %s %s: não li a chave do DKMS, então nada se refaz nem se tira\n' "${nome}" "${ver}"
+            if [[ "$(/usr/bin/python3 "${pasta}/preparar-o-fonte.py" --estado-da-chave 2>/dev/null)" == "pedida" ]]; then
+                printf 'pulando %s %s: a inscrição da chave do DKMS espera o reinício, então nada se refaz nem se tira\n' "${nome}" "${ver}"
+            else
+                printf 'pulando %s %s: não li a chave do DKMS, então nada se refaz nem se tira\n' "${nome}" "${ver}"
+            fi
             continue
         fi
         while IFS= read -r kernel; do

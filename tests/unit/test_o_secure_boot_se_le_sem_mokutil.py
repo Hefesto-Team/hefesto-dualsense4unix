@@ -41,6 +41,7 @@ LIB = RAIZ / "scripts" / "dkms_lib.sh"
 INSTALL = (RAIZ / "install.sh").read_text(encoding="utf-8")
 SECURE_BOOT = "SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
 CHAVE = b"0\x82\x03\x1bCHAVE-DE-MENTIRA-DO-DKMS\x00\x01\x02"
+MOK_NEW = "MokNew-605dab50-e046-4300-abb6-3dd810dd8b23"
 
 
 def _bin(tmp_path: Path) -> Path:
@@ -266,7 +267,7 @@ def _reconhecimento() -> str:
     return INSTALL[inicio:fim]
 
 
-def _rodar_reconhecimento(tmp_path: Path, *, ligado: bool) -> str:
+def _rodar_reconhecimento(tmp_path: Path, *, ligado: bool, pedida: bool = False) -> str:
     script = "\n".join(
         (
             "set -euo pipefail",
@@ -286,6 +287,8 @@ def _rodar_reconhecimento(tmp_path: Path, *, ligado: bool) -> str:
         "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=False),
     }
+    if pedida:
+        (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
     r = subprocess.run(
         [BASH, "-c", script], capture_output=True, text=True, timeout=60, check=False, env=env
     )
@@ -300,6 +303,13 @@ def test_o_reconhecimento_avisa_sem_mokutil(tmp_path: Path) -> None:
     assert "Nintendo pode sumir" not in saida
 
 
+def test_o_reconhecimento_com_a_inscricao_pedida_diz_o_reinicio(tmp_path: Path) -> None:
+    """D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO: o install diz o mesmo estado que a lib."""
+    saida = _rodar_reconhecimento(tmp_path, ligado=True, pedida=True)
+    assert "espera o reinício" in saida and "Enroll MOK" in saida, saida
+    assert "mokutil --import" not in saida and "não consegui ler" not in saida, saida
+
+
 def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
     saida = _rodar_reconhecimento(tmp_path, ligado=False)
     assert "Secure Boot" not in saida.replace("distro, bluez e Secure Boot", ""), saida
@@ -308,7 +318,9 @@ def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
-def _doctor(tmp_path: Path, script: str, *, ligado: bool, inscrita: bool) -> str:
+def _doctor(
+    tmp_path: Path, script: str, *, ligado: bool, inscrita: bool, pedida: bool = False
+) -> str:
     arvore = tmp_path / "arvore-do-dkms"
     ko_do_dkms(tmp_path, arvore, "hefesto-hid-playstation", "hid-playstation.ko.zst")
     bin_ = _bin(tmp_path)
@@ -323,6 +335,8 @@ def _doctor(tmp_path: Path, script: str, *, ligado: bool, inscrita: bool) -> str
         "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=inscrita),
     }
+    if pedida:
+        (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
     r = subprocess.run(
         [BASH, "-c", f"source '{DOCTOR}'\nuname() {{ echo k; }}\n{script}\n"],
         capture_output=True, text=True, timeout=60, check=False, env=env,
@@ -334,6 +348,13 @@ def test_o_doctor_avisa_o_secure_boot_sem_mokutil(tmp_path: Path) -> None:
     saida = _doctor(tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=False)
     assert "[WARN]" in saida and "Secure Boot ligado" in saida, saida
     assert "DualSense" in saida and "mokutil --import" in saida, saida
+
+
+def test_o_doctor_com_a_inscricao_pedida_diz_o_reinicio(tmp_path: Path) -> None:
+    """D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO: o doctor não manda inscrever de novo."""
+    saida = _doctor(tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=False, pedida=True)
+    assert "[WARN]" in saida and "espera o reinício" in saida and "Enroll MOK" in saida, saida
+    assert "mokutil --import" not in saida and "não consegui ler" not in saida, saida
 
 
 def test_o_doctor_calado_com_a_chave_inscrita(tmp_path: Path) -> None:

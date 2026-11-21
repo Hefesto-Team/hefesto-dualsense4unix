@@ -15,7 +15,8 @@ Com o Secure Boot ligado e a chave do DKMS fora da MOK, o kernel recusaria o mó
 `--exclusivo` devolve o padrão que nenhum kernel casa quando a chave não está inscrita nem se
 consegue saber, e `--sem-a-chave` sai com 0 só quando a leitura respondeu que a chave está fora da
 MOK (1 fora dele, inclusive no «não sei») para quem refaz o módulo por fora do DKMS. A leitura tem
-três respostas, `inscrita`, `fora` e `nao-sei` (a chave pública ou as listas que não se leem);
+quatro respostas, `inscrita`, `pedida` (a inscrição foi pedida e espera o reinício), `fora` e
+`nao-sei` (a chave pública ou as listas que não se leem);
 `--estado-da-chave` as imprime e `--chave-nao-garantida` sai com 0 quando não é `inscrita`. O módulo
 da casa já carregado no kernel que roda desmente o `fora` (vira `nao-sei`) e nunca vale `inscrita`:
 prova a chave que o assinou, não a que assina o próximo.
@@ -666,7 +667,8 @@ def _carregado_e_da_casa() -> bool:
 
 
 def _estado_da_chave() -> str:
-    """`inscrita`, `fora` (a leitura respondeu que não está) ou `nao-sei` (não respondeu)."""
+    """`inscrita`, `pedida` (a inscrição espera o reinício), `fora` (a leitura respondeu que não
+    está) ou `nao-sei` (não respondeu)."""
     chave = _chave_do_dkms()
     try:
         bytes_da_chave = chave.read_bytes()
@@ -675,6 +677,7 @@ def _estado_da_chave() -> str:
     if not bytes_da_chave:
         return "nao-sei"
     leu = False
+    pedida = False
     mokutil = shutil.which("mokutil")
     if mokutil:
         resposta = subprocess.run(
@@ -684,6 +687,7 @@ def _estado_da_chave() -> str:
         texto = resposta.stdout + resposta.stderr
         if "already enrolled" in texto:
             return "inscrita"
+        pedida = "enrollment request" in texto
         leu = "is not enrolled" in texto
     listas = os.environ.get(
         "HEFESTO_MOK_LISTAS",
@@ -698,6 +702,12 @@ def _estado_da_chave() -> str:
         if bytes_da_chave in conteudo:
             return "inscrita"
         leu = True
+    raiz = Path(os.environ.get("HEFESTO_EFIVARS_ROOT", "/sys/firmware/efi/efivars"))
+    with contextlib.suppress(OSError):
+        pedida = pedida or bytes_da_chave in (
+            raiz / "MokNew-605dab50-e046-4300-abb6-3dd810dd8b23").read_bytes()
+    if pedida:
+        return "pedida"
     return "fora" if leu and not _carregado_e_da_casa() else "nao-sei"
 
 
