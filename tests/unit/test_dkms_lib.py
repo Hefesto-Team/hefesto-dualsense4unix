@@ -1237,7 +1237,8 @@ class TestModuloSemAssinaturaComAChaveInscrita:
         assert feito.returncode == 2, feito
 
     def test_sem_a_chave_privada_nao_se_refaz_e_diz_por_que(self, tmp_path: Path) -> None:
-        """Sem a chave privada o DKMS não assina: refazer daria o mesmo módulo sem marca."""
+        """D-2111-O-MODULO-SEM-ASSINATURA-SE-REFAZ-COM-A-CHAVE-INSCRITA: sem a chave privada o
+        DKMS não assina, e refazer daria o mesmo módulo sem marca a cada install."""
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
         lidas = self._instalar(tmp_path, estado, chave_privada=False)
         assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
