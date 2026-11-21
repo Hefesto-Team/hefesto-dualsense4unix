@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1281359,
+      "piso": 1281708,
       "por_item": {
-        "docs": 107706,
-        "scripts": 115083,
-        "src": 325237,
-        "tests": 733333
+        "docs": 107707,
+        "scripts": 115116,
+        "src": 325288,
+        "tests": 733597
       },
-      "razao": "tamanho: +1393 linhas (1279966 -> 1281359), pagas por Origem: D-1911-A-FALHA-NA-VOLTA-CHEGA-AO-DIARIO, D-1911-A-PORTA-DIZ-O-DESFECHO-DO-CORPO, D-1911-O-MICROFONE-RENASCE-QUANDO-O-CANAL-CAI, D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI, D-1911-O-TOQUE-DA-EXTENSAO-HONRA-A-RECUSA-DO-CORPO; registrado no fecho, topo 714bfc4224bb",
+      "razao": "tamanho: +349 linhas (1281359 -> 1281708), pagas por Origem: D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo 24a0953897b7",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2139,10 +2139,16 @@
           "de": 1279966,
           "para": 1281359,
           "razao": "tamanho: +1393 linhas (1279966 -> 1281359), pagas por Origem: D-1911-A-FALHA-NA-VOLTA-CHEGA-AO-DIARIO, D-1911-A-PORTA-DIZ-O-DESFECHO-DO-CORPO, D-1911-O-MICROFONE-RENASCE-QUANDO-O-CANAL-CAI, D-1911-O-SOM-DO-PC-VOLTA-QUANDO-O-CONTROLE-SAI, D-1911-O-TOQUE-DA-EXTENSAO-HONRA-A-RECUSA-DO-CORPO; registrado no fecho, topo 714bfc4224bb"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1281359,
+          "para": 1281708,
+          "razao": "tamanho: +349 linhas (1281359 -> 1281708), pagas por Origem: D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo 24a0953897b7"
         }
       ],
       "unidade": "linhas",
-      "universo": 3566
+      "universo": 3567
     }
   }
 }
