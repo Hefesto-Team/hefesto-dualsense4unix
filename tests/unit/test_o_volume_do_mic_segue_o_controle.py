@@ -29,6 +29,8 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.profiles.manager import PEDIDOS_DO_VOLUME_DO_MIC
+
 EU = "aabbcc0000ff"
 O_VIZINHO = "aabbcc0000ee"
 
@@ -69,6 +71,7 @@ def test_o_volume_vai_para_a_fonte_do_uniq(
         daemon: Any, escritas: list[tuple[int, str]]) -> None:
     """Com `uniq`, escreve na placa DAQUELE controle."""
     daemon.apply_profile_mic(volume=42, uniq=EU, origin="teste")
+    assert PEDIDOS_DO_VOLUME_DO_MIC.esperar(5.0)
     assert escritas == [(42, MINHA_FONTE)], (
         "o volume não chegou à fonte do controle nomeado — na mesa cheia isso "
         f"é mexer no microfone do vizinho. Escritas: {escritas}")
@@ -78,6 +81,7 @@ def test_sem_uniq_a_rota_global_continua(
         daemon: Any, escritas: list[tuple[int, str]]) -> None:
     """A seção GLOBAL `mic` do perfil não tem dono, e continua pela rota antiga."""
     daemon.apply_profile_mic(volume=7, origin="teste")
+    assert PEDIDOS_DO_VOLUME_DO_MIC.esperar(5.0)
     assert escritas == [(7, FONTE_DO_VIZINHO)]
 
 
@@ -86,6 +90,7 @@ def test_uniq_sem_fonte_nao_cai_para_a_global(
     """Se o controle nomeado não tem fonte, ninguém escreve."""
     resultado = daemon.apply_profile_mic(volume=99, uniq="nao-existe",
                                          origin="teste")
+    assert PEDIDOS_DO_VOLUME_DO_MIC.esperar(5.0)
     assert escritas == [], f"escreveu no vizinho: {escritas}"
     assert resultado != "APLICADO", (
         "disse `APLICADO` sem ter escrito em lugar nenhum")

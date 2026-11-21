@@ -3181,44 +3181,15 @@ class Daemon:
         if volume is None and muted is None:
             logger.debug("profile_mic_sem_opiniao_noop", origin=origin)
             return IGNORADO_SEM_CONTROLE
+        from hefesto_dualsense4unix.profiles.manager import GANHO_PEDIDO, PEDIDOS_DO_VOLUME_DO_MIC
+
         escreveu = False
         falhou = False
+        pediu = volume is not None
         if volume is not None:
-            try:
-                from hefesto_dualsense4unix.integrations.audio_control import (
-                    definir_volume_da_captura,
-                    fonte_de_captura_do_controle,
-                    fonte_de_captura_do_uniq,
-                )
-
-                fonte = (fonte_de_captura_do_uniq(uniq) if uniq
-                         else fonte_de_captura_do_controle())
-                if not fonte:
-                    logger.debug("profile_mic_sem_fonte", origin=origin, uniq=uniq)
-                elif definir_volume_da_captura(int(volume), fonte=fonte):
-                    escreveu = True
-                    aparelho = getattr(
-                        getattr(self, "controller", None),
-                        "set_microphone_volume", None)
-                    if callable(aparelho):
-                        with contextlib.suppress(Exception):
-                            aparelho(int(volume), uniq=uniq)
-                    logger.info(
-                        "profile_mic_volume_applied",
-                        volume=int(volume),
-                        fonte=fonte,
-                        origin=origin,
-                    )
-                else:
-                    falhou = True
-            except Exception as exc:
-                falhou = True
-                logger.warning(
-                    "profile_mic_volume_apply_failed",
-                    volume=volume,
-                    origin=origin,
-                    err=str(exc),
-                )
+            PEDIDOS_DO_VOLUME_DO_MIC.pedir(
+                uniq or "", (getattr(self, "controller", None), int(volume), uniq, origin)
+            )
         if muted is not None:
             setter = getattr(self.controller, "set_microphone_mute", None)
             if not callable(setter):
@@ -3248,7 +3219,9 @@ class Daemon:
                     )
         if escreveu:
             return APLICADO
-        return FALHOU if falhou else IGNORADO_SEM_CONTROLE
+        if falhou:
+            return FALHOU
+        return GANHO_PEDIDO if pediu else IGNORADO_SEM_CONTROLE
 
     def mark_rumble_policy_manual(self) -> None:
         """Registra gesto MANUAL na política de rumble"""

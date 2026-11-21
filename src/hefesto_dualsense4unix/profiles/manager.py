@@ -1790,45 +1790,42 @@ _GRAVACAO_DO_PEDIDO: contextvars.ContextVar[Future[Any] | None] = contextvars.Co
 )
 
 
-class _PedidosDoGanho:
-    """O ganho do microfone sai do fio de quem ativa: o pedido mais novo de cada controle vence.
+class PedidosEmFioProprio:
+    """O que custa um processo filho sai do fio de quem ativa: o pedido mais novo da chave vence.
 
-    O `definir` acha a placa no grafo do som e roda três `amixer`, um processo filho atrás do
-    outro. Quem ativa o perfil só pede; a releitura fica com quem lê o ganho.
+    Quem ativa o perfil só pede, e um fio próprio atende um pedido por vez, na ordem: o valor que
+    fica é o do último pedido. Quem lê o resultado logo depois espera pelo `esperar`.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, nome_do_fio: str) -> None:
+        self._nome_do_fio = nome_do_fio
         self._trava = threading.Lock()
-        self._pedidos: dict[str, int] = {}
+        self._pedidos: dict[str, Any] = {}
         self._fio: threading.Thread | None = None
 
-    def pedir(self, uniq: str, por_cento: int) -> None:
+    def pedir(self, chave: str, pedido: Any) -> None:
         with self._trava:
-            self._pedidos[uniq] = por_cento
+            self._pedidos[chave] = pedido
             if self._fio is None:
                 self._fio = threading.Thread(
-                    target=self._esvaziar, name="hefesto-ganho-do-mic", daemon=True
+                    target=self._esvaziar, name=self._nome_do_fio, daemon=True
                 )
                 self._fio.start()
 
-    def _esvaziar(self) -> None:
-        from hefesto_dualsense4unix.integrations import ganho_do_microfone
+    def _atender(self, chave: str, pedido: Any) -> None:
+        raise NotImplementedError
 
+    def _esvaziar(self) -> None:
         while True:
             with self._trava:
                 if not self._pedidos:
                     self._fio = None
                     return
-                uniq, por_cento = self._pedidos.popitem()
-            try:
-                ficou = ganho_do_microfone.definir(uniq, por_cento, [uniq])
-            except Exception as exc:
-                logger.warning("profile_mic_gain_failed", uniq=uniq, err=str(exc))
-                continue
-            logger.info("profile_mic_gain", uniq=uniq, pedido=por_cento, ficou=ficou)
+                chave, pedido = self._pedidos.popitem()
+            self._atender(chave, pedido)
 
     def esperar(self, teto_s: float) -> bool:
-        """O fio esvaziou dentro de ``teto_s``? Quem lê o ganho logo depois do pedido espera."""
+        """O fio esvaziou dentro de ``teto_s``?"""
         with self._trava:
             fio = self._fio
         if fio is None:
@@ -1837,7 +1834,62 @@ class _PedidosDoGanho:
         return not fio.is_alive()
 
 
+class _PedidosDoGanho(PedidosEmFioProprio):
+    """O ganho do microfone: o `definir` acha a placa no grafo do som e roda três `amixer`."""
+
+    def __init__(self) -> None:
+        super().__init__("hefesto-ganho-do-mic")
+
+    def _atender(self, chave: str, pedido: Any) -> None:
+        from hefesto_dualsense4unix.integrations import ganho_do_microfone
+
+        try:
+            ficou = ganho_do_microfone.definir(chave, pedido, [chave])
+        except Exception as exc:
+            logger.warning("profile_mic_gain_failed", uniq=chave, err=str(exc))
+            return
+        logger.info("profile_mic_gain", uniq=chave, pedido=pedido, ficou=ficou)
+
+
 PEDIDOS_DO_GANHO = _PedidosDoGanho()
+
+class _PedidosDoVolumeDoMic(PedidosEmFioProprio):
+    """O volume do microfone do perfil: a fonte no grafo do som e o `pactl set-source-volume`.
+
+    O pedido é `(controller, volume, uniq, origin)`; o byte do aparelho só sai quando a fonte saiu.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("hefesto-volume-do-mic")
+
+    def _atender(self, chave: str, pedido: Any) -> None:
+        controller, volume, uniq, origin = pedido
+        from hefesto_dualsense4unix.integrations.audio_control import (
+            definir_volume_da_captura,
+            fonte_de_captura_do_controle,
+            fonte_de_captura_do_uniq,
+        )
+
+        try:
+            fonte = fonte_de_captura_do_uniq(uniq) if uniq else fonte_de_captura_do_controle()
+            if not fonte:
+                logger.debug("profile_mic_sem_fonte", origin=origin, uniq=uniq)
+                return
+            if not definir_volume_da_captura(volume, fonte=fonte):
+                logger.warning("profile_mic_volume_nao_aplicado", volume=volume, origin=origin)
+                return
+            aparelho = getattr(controller, "set_microphone_volume", None)
+            if callable(aparelho):
+                with contextlib.suppress(Exception):
+                    aparelho(volume, uniq=uniq)
+            logger.info("profile_mic_volume_applied", volume=volume, fonte=fonte, origin=origin)
+        except Exception as exc:
+            logger.warning(
+                "profile_mic_volume_apply_failed", volume=volume, origin=origin, err=str(exc)
+            )
+
+
+PEDIDOS_DO_VOLUME_DO_MIC = _PedidosDoVolumeDoMic()
 
 
 def _o_perfil_lido(name: str) -> tuple[Profile, Profile]:

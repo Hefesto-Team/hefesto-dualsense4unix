@@ -321,6 +321,7 @@ def test_o_perfil_do_usuario_tambem_chega_ao_aparelho(
     """MORDIDA 6: arrancar a chamada do `apply_profile_mic`."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.integrations import audio_control
+    from hefesto_dualsense4unix.profiles.manager import PEDIDOS_DO_VOLUME_DO_MIC
 
     monkeypatch.setattr(
         audio_control, "definir_volume_da_captura", lambda _v, *, fonte: True)
@@ -333,6 +334,7 @@ def test_o_perfil_do_usuario_tambem_chega_ao_aparelho(
     daemon.controller = aparelho  # type: ignore[attr-defined]
 
     daemon.apply_profile_mic(volume=42, uniq=P3, origin="teste")
+    assert PEDIDOS_DO_VOLUME_DO_MIC.esperar(5.0)
 
     assert aparelho.escritas == [(42, P3)], (
         "o perfil aplicou só o degrau da fonte do sistema: "

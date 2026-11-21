@@ -452,11 +452,12 @@ def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
                 f"{modelo.__name__} recusou {fora_da_faixa} por {tipos}, e o "
                 f"esperado era `{esperado}` — a faixa 0..100 caiu")
 
-    arvore = ast.parse(textwrap.dedent(inspect.getsource(Daemon.apply_profile_mic)))
+    arvore = ast.parse(textwrap.dedent(inspect.getsource(
+        manager_module._PedidosDoVolumeDoMic._atender)))
     chamadas = [n for n in ast.walk(arvore)
                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
     assert any(c.func.id == "fonte_de_captura_do_uniq" for c in chamadas), (
-        "o applier deixou de CHAMAR `fonte_de_captura_do_uniq` — sem isso o "
+        "o atendente do volume deixou de CHAMAR `fonte_de_captura_do_uniq` — sem isso o "
         "volume por peça cai no microfone do vizinho, e o campo que acabou de "
         "abrir passa a gravar sobre a placa de som errada"
     )
