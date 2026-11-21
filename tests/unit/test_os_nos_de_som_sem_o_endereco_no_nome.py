@@ -128,10 +128,12 @@ def test_nenhum_construtor_de_nome_leva_o_endereco(
         assert check.acusa_pedaco(nome, pedacos) == [], f"{dono} tem pedaço do endereço"
 
 
-def test_o_laco_recusa_chave_com_cara_de_endereco(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_laco_recusa_chave_com_cara_de_endereco(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """O dono dos laços não deixa um chamador novo pôr o endereço no `--name`."""
     monkeypatch.setattr(laco_de_audio.shutil, "which", lambda _n: "/usr/bin/pw-loopback")
-    lacos = laco_de_audio.Lacos("regua")
+    lacos = laco_de_audio.Lacos("regua", raiz=tmp_path, matar=lambda _pid, _sinal: None)
     assert not lacos.ligar("02fe00123401", captura="x.monitor")
     assert not lacos.ligar("hefesto_123401", captura="x.monitor")
 

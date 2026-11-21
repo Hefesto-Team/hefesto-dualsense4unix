@@ -108,10 +108,12 @@ def varrer_orfaos(
     Um laço de uma janela que caiu sem o ``atexit`` (uma versão anterior não o prendia ao pai)
     segue levando o microfone à saída, e a janela nova nasce sem lembrar dele. Só cai o processo
     do mesmo usuário, de nome ``pw-loopback`` e ``--name hefesto-<família>-…``, cujo pai não é
-    mais processo do Hefesto, e o PID é lido duas vezes antes do sinal. Devolve os PIDs recolhidos.
+    mais processo do Hefesto, e o PID é lido duas vezes antes do sinal. O PID 1, este processo e o
+    pai dele nunca levam sinal. Devolve os PIDs recolhidos.
     """
     dono = os.getuid() if uid is None else uid
     prefixo = f"hefesto-{familia}-"
+    intocaveis = {1, os.getpid(), os.getppid()}
     recolhidos: list[int] = []
     try:
         candidatos = [p for p in raiz.iterdir() if p.name.isdigit()]
@@ -119,6 +121,8 @@ def varrer_orfaos(
         logger.debug("laco_proc_nao_se_lista", err=str(erro))
         return recolhidos
     for proc in candidatos:
+        if int(proc.name) in intocaveis:
+            continue
         lido = _ler_o_processo(proc)
         if lido is None or lido[3] != dono or not _e_um_laco_da_familia(lido[0], prefixo):
             continue
@@ -145,13 +149,20 @@ def _e_um_laco_da_familia(argv: list[str], prefixo: str) -> bool:
 class Lacos:
     """As laçadas de UMA família, guardadas por chave (normalmente o `uniq`)."""
 
-    def __init__(self, familia: str) -> None:
+    def __init__(
+        self,
+        familia: str,
+        *,
+        raiz: Path = _PROC,
+        matar: Callable[[int, int], None] = os.kill,
+    ) -> None:
+        """Nasce varrendo os órfãos da família em `raiz` com `matar` (o `/proc` e o `os.kill`)."""
         self.familia = familia
         self._vivos: dict[str, subprocess.Popen[bytes]] = {}
         self._pedidos: dict[str, dict[str, object]] = {}
         self._trava = threading.Lock()
         _FAMILIAS.append(self)
-        varrer_orfaos(familia)
+        varrer_orfaos(familia, raiz=raiz, matar=matar)
 
     def esta_ligado(self, chave: str) -> bool:
         """Esta laçada está de pé AGORA? Pergunta ao processo, não à lembrança."""
