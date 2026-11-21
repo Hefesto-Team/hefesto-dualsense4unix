@@ -75,7 +75,8 @@ def _mok(tmp_path: Path, *, gerada: bool, inscrita: bool) -> dict[str, str]:
 def _lib(
     tmp_path: Path, script: str, env_extra: dict[str, str]
 ) -> subprocess.CompletedProcess[str]:
-    env = {"PATH": str(_bin(tmp_path)), "HOME": str(tmp_path), "LC_ALL": "C.UTF-8"}
+    env = {"PATH": str(_bin(tmp_path)), "HOME": str(tmp_path), "LC_ALL": "C.UTF-8",
+           "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module")}
     env.update(env_extra)
     return subprocess.run(
         [BASH, "-c", f"set -euo pipefail\nsource '{LIB}'\n{script}\n"],
@@ -127,6 +128,14 @@ def test_sem_lista_que_se_leia_a_chave_e_nao_sei(tmp_path: Path) -> None:
     env["HEFESTO_MOK_LISTAS"] = str(tmp_path / "nao-existe")
     r = _lib(tmp_path, "dkms_estado_da_chave", env)
     assert r.stdout == "nao-sei", (r.stdout, r.stderr)
+    (tmp_path / "passo").mkdir()
+    r = _lib(tmp_path / "passo", "dkms_passo_para_ler_a_chave", env)
+    assert "instale o mokutil" in r.stdout, (r.stdout, r.stderr)
+
+
+def test_com_a_lista_lida_o_passo_e_inscrever_a_chave(tmp_path: Path) -> None:
+    r = _lib(tmp_path, "dkms_passo_para_ler_a_chave", _mok(tmp_path, gerada=True, inscrita=False))
+    assert "mokutil --import" in r.stdout and "instale o mokutil" not in r.stdout, r.stdout
 
 
 _POP = 'NAME="Pop!_OS"\nID=pop\nID_LIKE="ubuntu debian"\n'
@@ -217,6 +226,7 @@ def _instalar(tmp_path: Path, *, ligado: bool, inscrita: bool) -> tuple[str, str
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
         "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
         "HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
+        "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=inscrita),
     }
     r = subprocess.run(
@@ -273,6 +283,7 @@ def _rodar_reconhecimento(tmp_path: Path, *, ligado: bool) -> str:
         "HOME": str(tmp_path),
         "LC_ALL": "C.UTF-8",
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
+        "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=False),
     }
     r = subprocess.run(
@@ -300,12 +311,16 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 def _doctor(tmp_path: Path, script: str, *, ligado: bool, inscrita: bool) -> str:
     arvore = tmp_path / "arvore-do-dkms"
     ko_do_dkms(tmp_path, arvore, "hefesto-hid-playstation", "hid-playstation.ko.zst")
+    bin_ = _bin(tmp_path)
+    (bin_ / "mokutil").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    (bin_ / "mokutil").chmod(0o755)
     env = {
-        "PATH": f"{_bin(tmp_path)}:/usr/bin:/bin",
+        "PATH": f"{bin_}:/usr/bin:/bin",
         "HOME": str(tmp_path),
         "LC_ALL": "C.UTF-8",
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
         "HEFESTO_DKMS_TREE": str(arvore),
+        "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=inscrita),
     }
     r = subprocess.run(
