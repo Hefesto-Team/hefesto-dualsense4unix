@@ -6,7 +6,8 @@ install, nunca uma lista escrita aqui, e o trecho do uninstall roda num lar de m
 que sai se o ``HOME`` for o de verdade.
 
 A MORDIDA da sprint: o trecho do uninstall sem a remoção do dono dos arquivos de terceiro deixa o
-``arquivo_de_terceiro.py`` e a pasta ``bin/``, e os dois testes reprovam nomeando o arquivo.
+``arquivo_de_terceiro.py`` e a pasta ``bin/``, e os dois testes reprovam nomeando o arquivo; a peça
+nova posta ao lado de outro alvo (``${CAMADAS_TARGET%/*}/...``), sem alvo próprio, também reprova.
 """
 from __future__ import annotations
 
@@ -45,6 +46,13 @@ def test_o_install_declara_cada_peca_do_bin_num_alvo_nomeado() -> None:
         r'install -Dm\d+ [^\n]*(?:\\\n[^\n]*)?"\$\{HOME\}/' + re.escape(BIN) + "/",
         texto)
     assert not avulsas
+    alvos_do_bin = set(re.findall(
+        r'^readonly (\w+_TARGET)="\$\{HOME\}/' + re.escape(BIN) + "/", texto, re.MULTILINE))
+    derivadas = [
+        linha.strip() for linha in texto.splitlines()
+        if any(f"${{{alvo}%/*}}/" in linha for alvo in alvos_do_bin)
+    ]
+    assert derivadas == [], f"peça do bin/ sem alvo nomeado, ao lado de outro alvo: {derivadas}"
 
 
 def test_o_uninstall_nomeia_toda_peca_que_o_install_poe_no_bin() -> None:
