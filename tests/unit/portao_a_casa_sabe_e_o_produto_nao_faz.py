@@ -1576,7 +1576,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "02/11/2026 — o override do carregador de mod (o UE4SS) só com a chave «Memória» ligada "
         "(A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-01). O caminho se perde no ambiente que o "
         "daemon entrega ao wrapper "
-        "(`src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py:297` "
+        "(`src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py:322` "
         "(`ambiente_do_jogo`)), que não o pede, porque o pedido do carregador não chega a ele. "
         "A chave já chega ao lançamento (A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02); fecha "
         "quando o pedido do carregador chegar ao ambiente com a chave."

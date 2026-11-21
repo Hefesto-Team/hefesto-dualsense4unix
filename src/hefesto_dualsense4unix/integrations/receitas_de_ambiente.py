@@ -5,8 +5,9 @@ e que peça exige: sem appid embarcado, só com a peça no lugar (sem a peça o 
 peça») e só o que o wrapper aceita. O sinal pode ter curinga (`*_Data/Plugins/x86_64/X.dll`). A peça
 é um arquivo ao lado do executável, o próprio sinal (`@sinal`), a peça do Hefesto (`@hefesto`, a
 `xgameruntime.dll` no sha256 do `assets/gdk-runtime/pino.txt`) ou o GameInput do Hefesto
-(`@hefesto-gameinput`, complemento da peça GDK: conta só com as duas DLLs no sha do pino, e sem
-ele o jogo abre como abria, sem falta no prontuário). 100% stdlib, como o prontuário.
+(`@hefesto-gameinput`, complemento da peça GDK: conta com a xgameruntime no sha do pino e o
+`gameinput.dll` no sha do pino ou num dos anteriores que o pino ainda aceita, e sem ele o jogo abre
+como abria, sem falta no prontuário). 100% stdlib, como o prontuário.
 """
 from __future__ import annotations
 
@@ -97,17 +98,39 @@ def peca_do_hefesto_instalada(home: Path | None = None, pino: Path | None = None
         return False
 
 
+def _shas_anteriores_do_pino(pino: Path | None, chave: str) -> frozenset[str]:
+    try:
+        texto = (pino if pino is not None else PINO_DA_PECA).read_text(encoding="utf-8")
+    except OSError:
+        return frozenset()
+    for linha in texto.splitlines():
+        nome, igual, valor = linha.partition("=")
+        if igual and nome.strip() == f"{chave}_anteriores":
+            return frozenset(s for s in valor.split() if re.fullmatch(r"[0-9a-f]{64}", s))
+    return frozenset()
+
+
+def _sha_do_gameinput(home: Path | None) -> str | None:
+    dll = pasta_da_peca(home) / "nativa" / "gameinput.dll"
+    try:
+        return hashlib.sha256(dll.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
 def gameinput_do_hefesto_instalado(home: Path | None = None, pino: Path | None = None) -> bool:
     """O `gameinput.dll` da pasta da peça (`nativa/`) existe e o sha256 dele é o `gameinput_sha256`
     do pino."""
     esperado = _sha256_do_pino(pino, "gameinput_sha256")
-    if esperado is None:
-        return False
-    dll = pasta_da_peca(home) / "nativa" / "gameinput.dll"
-    try:
-        return hashlib.sha256(dll.read_bytes()).hexdigest() == esperado
-    except OSError:
-        return False
+    return esperado is not None and _sha_do_gameinput(home) == esperado
+
+
+def gameinput_do_hefesto_de_antes(home: Path | None = None, pino: Path | None = None) -> bool:
+    """O `gameinput.dll` de `nativa/` é um dos que a casa já pinou e o pino ainda aceita
+    (`gameinput_sha256_anteriores`): a peça de antes, posta por um install, que a receita mantém
+    até o install pôr a do pino. Um sha estranho ou o arquivo ausente dá falso."""
+    sha = _sha_do_gameinput(home)
+    return sha is not None and sha in _shas_anteriores_do_pino(pino, "gameinput_sha256")
 
 
 def valor_valido(variavel: str, valor: str) -> bool:
@@ -284,7 +307,9 @@ def ler_jogo(
             if instalada is None:
                 instalada = peca_do_hefesto_instalada(home)
             if gameinput is None:
-                gameinput = instalada and gameinput_do_hefesto_instalado(home)
+                gameinput = instalada and (
+                    gameinput_do_hefesto_instalado(home) or gameinput_do_hefesto_de_antes(home)
+                )
             achadas.append(Leitura(receita, sinal, gameinput))
             continue
         if nomes is None:
@@ -378,6 +403,7 @@ __all__ = [
     "arquivos_do_sinal",
     "caminho_do_ajudante_de_login",
     "carregar_tabela",
+    "gameinput_do_hefesto_de_antes",
     "gameinput_do_hefesto_instalado",
     "jogo_gdk_sem_ajudante",
     "ler_jogo",

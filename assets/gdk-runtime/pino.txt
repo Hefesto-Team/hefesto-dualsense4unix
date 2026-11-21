@@ -8,6 +8,9 @@
 # põe na máquina uma DLL cujo sha256 é o daqui: baixada pela url ({versao} vira a
 # versão do pyproject) ou compilada ali mesmo, se o compilador estiver no PATH.
 # Mudou um fonte? Rode o construir.sh e grave os sha256 aqui no mesmo commit.
+# O gameinput_sha256 que sai vai para gameinput_sha256_anteriores, se a DLL dele funcionava: a
+# receita do jogo segue com essa DLL até o install pôr a nova. A DLL com defeito que tira o controle
+# do jogo não entra na lista.
 name=peca-gdk-1
 url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/xgameruntime.dll
 sha256=9b11967ae3e522ea3da942aa0853eac405c8ad806efe752124a7a05f03365f96
@@ -15,5 +18,6 @@ sonda_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/downlo
 sonda_sha256=728d4f23359af74d820acb0dbde03f2c4f1e4913400ea144e1873a9a7ccde724
 gameinput_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/gameinput.dll
 gameinput_sha256=c3abaaa008b7f36d95e8688f4a392301c2c084c5a3ace6e29ed84f56951a3a4d
+gameinput_sha256_anteriores=1e81d25a4cb55c86610b690ba721f7edd1a15cc219d126a73601f841aaf1f76b
 compilar=bash assets/gdk-runtime/construir.sh <saída> --conferir
 mingw=gcc-mingw-w64-x86-64-posix=13.2.0-6ubuntu1+26.1 binutils-mingw-w64-x86-64=2.41.90.20240122-1ubuntu1+11.4 mingw-w64-x86-64-dev=11.0.1-3build1
