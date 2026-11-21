@@ -65,6 +65,7 @@ PEDEM_INSTALL = (
     f"{_PACOTE}/integrations/audio_ks_dualsense.py",
     f"{_PACOTE}/integrations/camadas_vulkan.py",
     f"{_PACOTE}/integrations/leitor_do_estado.py",
+    f"{_PACOTE}/utils/arquivo_de_terceiro.py",
 )
 PASTAS_DO_INSTALL = ("assets/", "locale/", "packaging/", "scripts/")
 ARQUIVO_DA_BAIXA = "versao-baixada.json"

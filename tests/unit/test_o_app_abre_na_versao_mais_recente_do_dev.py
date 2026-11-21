@@ -244,6 +244,15 @@ def test_toda_copia_que_o_install_faz_do_codigo_pede_install() -> None:
     assert {c: va.o_que_a_faixa_pede([c]) for c in copias} == dict.fromkeys(copias, "install")
 
 
+def test_toda_copia_do_codigo_no_install_nasce_de_uma_variavel_src() -> None:
+    avulsas = []
+    for fonte in (RAIZ / "install.sh", *sorted((RAIZ / "scripts" / "lib").glob("*.sh"))):
+        texto = fonte.read_text(encoding="utf-8")
+        avulsas += re.findall(
+            r'install -D\w*\s+(?:-\w+\s+)*"\$\{ROOT_DIR\}/(src/[^"]+)"', texto)
+    assert avulsas == []
+
+
 def test_toda_pasta_que_o_install_le_esta_classificada() -> None:
     lidos_na_hora = {".venv", "dist", "run.sh", "src"}
     topos = {caminho.split("/")[0] for caminho in _o_que_o_install_le()}
