@@ -4411,10 +4411,10 @@ class PyDualSenseController(IController):
         if handle is None or desired is None:
             return "registrado"
         try:
-            for campo, lado in (("trigger_left", "left"), ("trigger_right", "right")):
-                if campo not in soltos:
-                    continue
-                efeito = getattr(desired, campo)
+            lados: tuple[Side, ...] = ("left", "right")
+            gatilhos_soltos = [lado for lado in lados if f"trigger_{lado}" in soltos]
+            for lado in gatilhos_soltos:
+                efeito = getattr(desired, f"trigger_{lado}")
                 if efeito is not None:
                     self._apply_trigger(handle, lado, efeito)
                 else:
