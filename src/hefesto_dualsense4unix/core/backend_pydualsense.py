@@ -5836,7 +5836,7 @@ class PyDualSenseController(IController):
             key = self._key_for_uniq(uniq)
             handle = self._handles.get(key) if key is not None else None
             caminho = getattr(handle, "_pinned_path", None)
-            if handle is None or not isinstance(caminho, bytes):
+            if key is None or handle is None or not isinstance(caminho, bytes):
                 logger.info("controle_desligar_recusado", uniq=mascarado, motivo="sem_controle")
                 return False
             if self._detect_transport(handle) != "bt":
