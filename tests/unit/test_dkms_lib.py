@@ -791,7 +791,11 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
         assert "não consegui ler a chave do DKMS" in saida, saida
         assert "nem trocados" in saida and "Para ler a chave:" in saida, saida
         assert "saem e o driver de fábrica volta" not in saida, saida
-        assert "mokutil --import" in saida and "instale o mokutil" not in saida, saida
+        assert "instale o mokutil" not in saida, saida
+        if leitura == "sem-lista":
+            assert "mokutil --test-key" in saida and "mokutil --import" not in saida, saida
+        else:
+            assert "mokutil --import" in saida, saida
 
     def test_o_modulo_da_casa_carregado_desmente_o_fora_e_nada_se_instala_nem_sai(
         self, tmp_path: Path
@@ -804,7 +808,8 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
             assert verbo not in lidas, lidas
         assert "STALE=0" in saida, saida
         assert "não consegui ler a chave do DKMS" in saida, saida
-        assert "mokutil --import" in saida and "instale o mokutil" not in saida, saida
+        assert "mokutil --test-key" in saida and "mokutil --import" not in saida, saida
+        assert "instale o mokutil" not in saida, saida
 
     def test_o_carregado_se_compara_com_o_arquivo_do_kernel_que_roda(self, tmp_path: Path) -> None:
         """O /sys/module é do kernel que roda: o arquivo do kernel alvo não prova nada dele."""

@@ -340,7 +340,9 @@ dkms_passo_para_ler_a_chave() {
     elif ! command -v mokutil >/dev/null 2>&1 && ! _dkms_alguma_lista_se_le; then
         printf 'instale o mokutil (%s) e rode ./install.sh de novo' "$(_dkms_como_instalar_o_mokutil)"
     else
-        dkms_passo_da_mok
+        local _antes=""
+        command -v mokutil >/dev/null 2>&1 || _antes="$(printf 'instale o mokutil (%s) e ' "$(_dkms_como_instalar_o_mokutil)")"
+        printf '%sconfira se a chave está inscrita com mokutil --test-key %s («already enrolled» é inscrita, «is not enrolled» é fora) e rode ./install.sh de novo; só com a chave fora o install diz o passo da inscrição' "${_antes}" "${_pub}"
     fi
 }
 

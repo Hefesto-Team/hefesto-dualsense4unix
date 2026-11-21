@@ -44,10 +44,14 @@ CHAVE = b"0\x82\x03\x1bCHAVE-DE-MENTIRA-DO-DKMS\x00\x01\x02"
 MOK_NEW = "MokNew-605dab50-e046-4300-abb6-3dd810dd8b23"
 
 
-def _bin(tmp_path: Path) -> Path:
-    """Um PATH só com o que a lib usa — e sem `mokutil`, de propósito."""
+def _bin(tmp_path: Path, *, com_mokutil: bool = False) -> Path:
+    """Um PATH só com o que a lib usa — e sem `mokutil`, de propósito (salvo `com_mokutil`, um
+    que não responde)."""
     pasta = tmp_path / "bin"
     pasta.mkdir()
+    if com_mokutil:
+        (pasta / "mokutil").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        (pasta / "mokutil").chmod(0o755)
     for nome in ("od", "awk", "python3", "cat", "sed", "diff", "cp", "rm", "install"):
         real = shutil.which(nome)
         if real is None:  # pragma: no cover
@@ -78,10 +82,10 @@ def _mok(tmp_path: Path, *, gerada: bool, inscrita: bool) -> dict[str, str]:
 
 
 def _lib(
-    tmp_path: Path, script: str, env_extra: dict[str, str]
+    tmp_path: Path, script: str, env_extra: dict[str, str], *, com_mokutil: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    env = {"PATH": str(_bin(tmp_path)), "HOME": str(tmp_path), "LC_ALL": "C.UTF-8",
-           "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module")}
+    env = {"PATH": str(_bin(tmp_path, com_mokutil=com_mokutil)), "HOME": str(tmp_path),
+           "LC_ALL": "C.UTF-8", "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module")}
     env.update(env_extra)
     return subprocess.run(
         [BASH, "-c", f"set -euo pipefail\nsource '{LIB}'\n{script}\n"],
@@ -138,9 +142,39 @@ def test_sem_lista_que_se_leia_a_chave_e_nao_sei(tmp_path: Path) -> None:
     assert "instale o mokutil" in r.stdout, (r.stdout, r.stderr)
 
 
-def test_com_a_lista_lida_o_passo_e_inscrever_a_chave(tmp_path: Path) -> None:
-    r = _lib(tmp_path, "dkms_passo_para_ler_a_chave", _mok(tmp_path, gerada=True, inscrita=False))
-    assert "mokutil --import" in r.stdout and "instale o mokutil" not in r.stdout, r.stdout
+def test_o_passo_para_ler_a_chave_diz_como_ler_e_nao_manda_inscrever(tmp_path: Path) -> None:
+    """O-O-PASSO-PARA-LER-A-CHAVE-DIZ-COMO-LER-E-SO-A-CHAVE-FORA-MANDA-INSCREVER-01: inscrever
+    não é ler, e quem segue o passo de «não sei» pediria uma inscrição que talvez já exista."""
+    env = _mok(tmp_path, gerada=True, inscrita=False)
+    r = _lib(tmp_path, "dkms_passo_para_ler_a_chave", env, com_mokutil=True)
+    assert f"mokutil --test-key {tmp_path / 'mok.pub'}" in r.stdout, r.stdout
+    assert "mokutil --import" not in r.stdout and "Enroll MOK" not in r.stdout, r.stdout
+    assert "instale o mokutil" not in r.stdout, r.stdout
+    (tmp_path / "sem").mkdir()
+    sem = _lib(tmp_path / "sem", "dkms_passo_para_ler_a_chave", env)
+    assert "instale o mokutil" in sem.stdout and "mokutil --test-key" in sem.stdout, sem.stdout
+    assert "mokutil --import" not in sem.stdout, sem.stdout
+
+
+@pytest.mark.parametrize("estado", ["nao-sei", "fora", "pedida", "inscrita"])
+def test_o_passo_de_cada_estado_da_chave(tmp_path: Path, estado: str) -> None:
+    """O-O-PASSO-PARA-LER-A-CHAVE-DIZ-COMO-LER-E-SO-A-CHAVE-FORA-MANDA-INSCREVER-01: só `fora`
+    manda inscrever; `nao-sei` manda ler; `pedida` manda reiniciar; `inscrita` não manda nada."""
+    env = _mok(tmp_path, gerada=True, inscrita=estado == "inscrita")
+    efivars = _efivars(tmp_path, True)
+    env["HEFESTO_EFIVARS_ROOT"] = str(efivars)
+    if estado == "pedida":
+        (efivars / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
+    if estado == "nao-sei":
+        env["HEFESTO_MOK_LISTAS"] = str(tmp_path / "nao-existe")
+    r = _lib(tmp_path, "dkms_estado_da_chave; echo; dkms_passo_se_a_chave_falta x", env,
+             com_mokutil=True)
+    lido, _, passo = r.stdout.partition("\n")
+    assert lido == estado, (lido, r.stderr)
+    assert ("mokutil --test-key" in passo) is (estado == "nao-sei"), passo
+    assert ("mokutil --import" in passo) is (estado == "fora"), passo
+    assert ("Enroll MOK" in passo) is (estado in ("fora", "pedida")), passo
+    assert (passo == "") is (estado == "inscrita"), passo
 
 
 _POP = 'NAME="Pop!_OS"\nID=pop\nID_LIKE="ubuntu debian"\n'
