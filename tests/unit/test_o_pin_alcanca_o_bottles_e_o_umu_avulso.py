@@ -226,7 +226,7 @@ def test_sem_bottles_nem_umu_nada_muda(lar: Path, conf: dict[str, str]) -> None:
 
 def test_o_bottles_e_o_umu_sem_cartao_aparecem_na_linha_outros(
         lar: Path, conf: dict[str, str]) -> None:
-    """Mordida: sem a linha «Outros», o `fora` do Bottles e do umu só chega ao diário do vigia."""
+    """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO: Bottles e umu sem cartão vão a «Outros»."""
     from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
@@ -256,7 +256,7 @@ def test_o_bottles_e_o_umu_sem_cartao_aparecem_na_linha_outros(
 
 
 def test_sem_nada_de_fora_nao_ha_linha_outros_e_o_exemplo_e_o_que_o_produto_pinta() -> None:
-    """Mordida: o exemplo do desenho que diverge do produto deixa a tela aprovada mentindo."""
+    """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO: o desenho de «Outros» é o do produto."""
     from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
