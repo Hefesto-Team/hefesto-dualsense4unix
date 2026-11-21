@@ -449,16 +449,32 @@ def descendentes(pids: Iterable[int], raiz_proc: str | None = None) -> list[int]
     return achados
 
 
+COM_JOGO = 0
+SEM_JOGO = 10
+USO = 2
+NAO_SEI = 3
+
+
 def main(argv: list[str] | None = None) -> int:
-    """``--ha-jogo [--proc RAIZ] [--sys RAIZ] [--dev RAIZ]``: 0 com jogo em cena, 1 sem."""
+    """``--ha-jogo [--proc RAIZ] [--sys RAIZ] [--dev RAIZ]``: o que a saída diz.
+
+    ``COM_JOGO`` (0) com jogo em cena, ``SEM_JOGO`` (10) sem jogo, ``USO`` (2) para argumento
+    inválido e ``NAO_SEI`` (3) quando a leitura levantou. Só o ``SEM_JOGO`` exato libera quem
+    pergunta: qualquer outra saída, inclusive o 1 de um interpretador que morreu antes do
+    ``main``, é jogo aberto.
+    """
     args = list(sys.argv[1:] if argv is None else argv)
     raizes = dict(zip(args[1::2], args[2::2], strict=False))
     if not args or args[0] != "--ha-jogo" or set(raizes) - {"--proc", "--sys", "--dev"}:
         print("uso: quem_o_jogo_le.py --ha-jogo [--proc RAIZ] [--sys RAIZ] [--dev RAIZ]",
               file=sys.stderr)
-        return 2
-    jogo = ha_jogo_aberto(raizes.get("--proc"), raizes.get("--sys"), raizes.get("--dev"))
-    return 0 if jogo else 1
+        return USO
+    try:
+        jogo = ha_jogo_aberto(raizes.get("--proc"), raizes.get("--sys"), raizes.get("--dev"))
+    except Exception as erro:
+        print(f"quem_o_jogo_le.py: não sei se há jogo ({type(erro).__name__})", file=sys.stderr)
+        return NAO_SEI
+    return COM_JOGO if jogo else SEM_JOGO
 
 
 if __name__ == "__main__":  # pragma: no cover

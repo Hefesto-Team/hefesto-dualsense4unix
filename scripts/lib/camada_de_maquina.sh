@@ -28,8 +28,10 @@ anotar_reinicio_pendente() {
 }
 
 jogo_em_cena() {
+    local _rc=0
     python3 -I "${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py" \
-        --ha-jogo --proc "${HEFESTO_RAIZ_PROC:-/proc}" >/dev/null 2>&1
+        --ha-jogo --proc "${HEFESTO_RAIZ_PROC:-/proc}" >/dev/null 2>&1 || _rc=$?
+    [[ "${_rc}" -ne 10 ]]
 }
 
 arquivo_da_troca_adiada() {

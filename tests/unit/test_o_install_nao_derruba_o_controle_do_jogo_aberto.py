@@ -141,13 +141,14 @@ def test_a_pendencia_nao_repete_o_item(tmp_path: Path) -> None:
 def test_a_pergunta_do_install_e_a_do_produto(tmp_path: Path, jogo: bool) -> None:
     """O install pergunta ao mesmo dono do «jogo em cena» que o daemon, sem o venv."""
     raiz = _proc(tmp_path, jogo=jogo)
-    assert quem_o_jogo_le.main(["--ha-jogo", "--proc", str(raiz)]) == (0 if jogo else 1)
+    esperado = 0 if jogo else quem_o_jogo_le.SEM_JOGO
+    assert quem_o_jogo_le.main(["--ha-jogo", "--proc", str(raiz)]) == esperado
     feito = subprocess.run(
         ["python3", "-I", str(RAIZ / "src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py"),
          "--ha-jogo", "--proc", str(raiz)],
         capture_output=True, check=False, timeout=30,
     )
-    assert feito.returncode == (0 if jogo else 1), feito.stderr
+    assert feito.returncode == esperado, feito.stderr
 
 
 def _maquina_com_o_pad(tmp_path: Path, comm: str, cmdline: str, cgroup: str) -> list[str]:

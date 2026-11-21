@@ -16,14 +16,14 @@ for candidato in \
     fi
 done
 
-JOGO=2
+JOGO=3
 if [[ -n "${LEITOR}" ]] && command -v python3 >/dev/null 2>&1; then
     python3 -I "${LEITOR}" --ha-jogo --proc "${HEFESTO_RAIZ_PROC:-/proc}" >/dev/null 2>&1
     JOGO=$?
 fi
 
 case "${JOGO}" in
-    1)
+    10)
         udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
         udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true
         udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
@@ -41,7 +41,7 @@ udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true
 udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true
 udevadm trigger --action=change --subsystem-match=pci 2>/dev/null || true
 
-if [[ "${JOGO}" -eq 1 ]]; then
+if [[ "${JOGO}" -eq 10 ]]; then
     udevadm trigger 2>/dev/null || true
 fi
 
