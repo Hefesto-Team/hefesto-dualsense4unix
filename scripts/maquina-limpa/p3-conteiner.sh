@@ -57,7 +57,7 @@ HEFESTO_CI_FLAGS="--no-proton-pin" bash /opt/hefesto/scripts/ci/instalar_como_us
 echo "rc_install=$?"
 echo "--- avisos que a usuária viu:"
 grep -E '^\s+aviso:|FALHA|\[FAIL\]|Reinicie' /tmp/install-como-usuaria.log || true
-echo "--- versões (o constraints.txt manda):"
+echo "--- versões (o piso é o constraints.txt; o que o atualizador provou vale por cima):"
 su - jogadora -c '/opt/hefesto/.venv/bin/python -m pip list 2>/dev/null' \
     | grep -iE '^(evdev|hidapi-usb|pydualsense|pydantic|PyGObject) ' || true
 echo "--- doctor sem aparelho:"

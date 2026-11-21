@@ -69,10 +69,10 @@ roda a receita do backport do BlueZ no Pop (a L2).
 raiz), entra por tarball só de leitura; nada de `--privileged` nem `--device`.
 
 **Espera-se:** `rc_install=0` nas quatro; os avisos que uma pessoa nova lê
-(entre eles o «Reinicie» do fecho e o do microfone pelo rádio); as versões do
-`constraints.txt` no `pip list`; a lista de `[FAIL]`/`[WARN]` de uma máquina
-sem controle; e a sobra do uninstall, que se confere contra o que o produto
-declara deixar.
+(entre eles o «Reinicie» do fecho e o do microfone pelo rádio); no `pip list`, as
+versões iguais ou acima do piso do `constraints.txt` (o que o atualizador provou vale por
+cima); a lista de `[FAIL]`/`[WARN]` de uma máquina sem controle; e a sobra do uninstall,
+que se confere contra o que o produto declara deixar.
 
 O job `install-multi-distro` do CI roda as mesmas quatro imagens e o mesmo
 passo do dkms, e o `smoke-multi-distro` espelha a matriz. O passo do dkms

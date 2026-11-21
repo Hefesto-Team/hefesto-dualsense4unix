@@ -1,4 +1,4 @@
-"""O `evdev` que o `constraints.txt` trava aceita a cura do pad virtual.
+"""O `evdev` do piso do `constraints.txt` aceita a cura do pad virtual.
 
 O pad uinput do Hefesto sobrescreve `UInput._find_device` (`_uinput_sem_no_proprio`) para o
 python-evdev não abrir o `/dev/input/eventN` que acabou de criar: aberto, ele é um leitor a mais
