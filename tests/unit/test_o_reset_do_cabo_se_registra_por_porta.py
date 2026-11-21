@@ -15,6 +15,8 @@ Mordidas:
   diário e :func:`test_o_vigia_leva_o_reset_ao_diario_com_porta_hubs_e_controladora` reprova;
 * tirar ``por_que=self._motivo_da_volta(...)`` da volta no ``Comparador``:
   :func:`test_a_volta_leva_o_motivo_reset_usb_so_na_porta_que_resetou` reprova;
+* tirar o mesmo motivo da volta que passa pela saída (o aparelho sumiu do barramento):
+  :func:`test_a_volta_que_some_do_barramento_depois_do_reset_leva_o_motivo` reprova;
 * tirar o corte de sete dias de ``contar_os_resets``:
   :func:`test_o_doctor_conta_por_porta_na_janela` reprova;
 * trocar ``len(com_hub) == len(contagem)`` por ``bool(com_hub)`` em ``laudo_dos_resets``:
@@ -273,6 +275,37 @@ def test_o_cabo_tirado_e_o_reset_velho_nao_dao_motivo(
     ouvido.reler()
 
     assert _voltas(tmp_path) == {ATRAS_DO_HUB: "", NO_COMPUTADOR: ""}
+
+
+def test_a_volta_que_some_do_barramento_depois_do_reset_leva_o_motivo(
+        sys_usb: SysDeMentira, tmp_path: Path) -> None:
+    """O reset que tira o aparelho do barramento: ele sai e volta na mesma porta com outro número.
+
+    O outro controle no cabo sai e volta no mesmo instante, sem reset na porta dele, e segue sem
+    motivo.
+    """
+    sys_usb.por(ATRAS_DO_HUB, _controle("1.1.1", "3-1.1", 40))
+    sys_usb.por(NO_COMPUTADOR, _controle("2", "usb3", 41))
+    relogio = Relogio(1_795_000_000.0)
+    ouvido = _ouvido(sys_usb, tmp_path, relogio)
+    ouvido.comecar(com_netlink=True)
+    du.registrar_o_reset(
+        _linha_do_kernel(ATRAS_DO_HUB), quando=relogio.t, caminho=ouvido.diario,
+        censo=ler_o_barramento(**sys_usb.fontes()), boot_id="boot-a")
+    atras, no_computador = dict(sys_usb.nos[ATRAS_DO_HUB]), dict(sys_usb.nos[NO_COMPUTADOR])
+
+    sys_usb.tirar(ATRAS_DO_HUB)
+    sys_usb.tirar(NO_COMPUTADOR)
+    relogio.t += 1
+    ouvido.reler()
+    relogio.t += 2.5
+    sys_usb.por(ATRAS_DO_HUB, atras)
+    sys_usb.por(NO_COMPUTADOR, no_computador)
+    sys_usb.mudar(ATRAS_DO_HUB, devnum="50")
+    sys_usb.mudar(NO_COMPUTADOR, devnum="51")
+    ouvido.reler()
+
+    assert _voltas(tmp_path) == {ATRAS_DO_HUB: du.MOTIVO_RESET_USB, NO_COMPUTADOR: ""}
 
 
 def _entrada(porta: str, dias_atras: float, *, hubs: list[str], tipo: str = "Controle",
