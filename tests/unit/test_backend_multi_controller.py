@@ -149,8 +149,6 @@ class TestFanOut:
 class TestEnumerate:
     def test_enumerate_device_keys_dedupe_e_filtra(self) -> None:
         """Dedupe por serial + filtro de PID + fallback por path — HERMÉTICO."""
-        import hidapi
-
         from hefesto_dualsense4unix.core import backend_pydualsense as mod
 
         class _DI:
@@ -170,7 +168,7 @@ class TestEnumerate:
         ]
 
         with (
-            patch.object(hidapi, "enumerate", lambda vendor_id=0: fake),
+            patch.object(mod, "_hidraws_da_sony", lambda: fake),
             patch.object(
                 mod, "_is_virtual_hidraw", lambda path: path == b"/dev/hidraw9"
             ),

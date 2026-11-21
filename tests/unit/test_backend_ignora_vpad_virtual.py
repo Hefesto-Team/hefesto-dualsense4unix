@@ -132,14 +132,7 @@ class TestEnumeracaoIgnoraOVpad:
         nosso_vpad = _Info("02:fe:00:00:00:02", b"/dev/hidraw7")
 
         monkeypatch.setattr(
-            bp, "hidapi", type("_H", (), {"enumerate": staticmethod(
-                lambda **_kw: [fisico_usb, fisico_bt, nosso_vpad])})(),
-            raising=False,
-        )
-        monkeypatch.setitem(
-            __import__("sys").modules, "hidapi",
-            type("_H", (), {"enumerate": staticmethod(
-                lambda **_kw: [fisico_usb, fisico_bt, nosso_vpad])})(),
+            bp, "_hidraws_da_sony", lambda: [fisico_usb, fisico_bt, nosso_vpad]
         )
         monkeypatch.setattr(
             bp, "_is_virtual_hidraw", lambda path: path == b"/dev/hidraw7"
@@ -168,11 +161,7 @@ class TestEnumeracaoIgnoraOVpad:
         edge_fisico = _Info("e8:47:3a:00:00:01", b"/dev/hidraw3")
         nosso_vpad = _Info("02:fe:00:00:00:01", b"/dev/hidraw8")
 
-        monkeypatch.setitem(
-            __import__("sys").modules, "hidapi",
-            type("_H", (), {"enumerate": staticmethod(
-                lambda **_kw: [edge_fisico, nosso_vpad])})(),
-        )
+        monkeypatch.setattr(bp, "_hidraws_da_sony", lambda: [edge_fisico, nosso_vpad])
         monkeypatch.setattr(
             bp, "_is_virtual_hidraw", lambda path: path == b"/dev/hidraw8"
         )

@@ -1466,8 +1466,6 @@ class TestOEnumerarNaoAbreOQueOKernelAindaCria:
     def test_o_no_a_meio_da_probe_fica_de_fora_e_os_outros_seguem(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import hidapi
-
         lista = [
             SimpleNamespace(
                 vendor_id=0x054C, product_id=0x0CE6, path=b"/dev/hidraw1", serial_number=""
@@ -1476,7 +1474,7 @@ class TestOEnumerarNaoAbreOQueOKernelAindaCria:
                 vendor_id=0x054C, product_id=0x0CE6, path=b"/dev/hidraw2", serial_number=MACS[0]
             ),
         ]
-        monkeypatch.setattr(hidapi, "enumerate", lambda vendor_id=0: lista)
+        monkeypatch.setattr(backend_mod, "_hidraws_da_sony", lambda: lista)
         monkeypatch.setattr(backend_mod, "_is_virtual_hidraw", lambda _p: False)
         monkeypatch.setattr(
             backend_mod, "_o_kernel_ainda_cria", lambda path: path == b"/dev/hidraw1"

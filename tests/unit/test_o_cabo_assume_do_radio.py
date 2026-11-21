@@ -58,7 +58,6 @@ from __future__ import annotations
 import asyncio
 import re
 import subprocess
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -1289,8 +1288,7 @@ class TestAEnumeracaoPrefereOCabo:
         radio = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw910", serial_number=MACS[0])
         cabo = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw911", serial_number=MACS[0])
         vistos = [radio, cabo] if ordem == "radio-primeiro" else [cabo, radio]
-        fake_hidapi = SimpleNamespace(enumerate=lambda vendor_id: list(vistos))
-        monkeypatch.setitem(sys.modules, "hidapi", fake_hidapi)
+        monkeypatch.setattr(backend_mod, "_hidraws_da_sony", lambda: list(vistos))
         assert PyDualSenseController._enumerate_device_keys() == [
             (MACS[0], b"/dev/hidraw911", False)
         ]

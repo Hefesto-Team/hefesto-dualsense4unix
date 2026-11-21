@@ -2156,13 +2156,13 @@ class PyDualSenseController(IController):
 
         `key` é o `serial_number` (== MAC) ou, sem serial em USB, o `path`. O mesmo controle em dois
         nós é uma key: vence o cabo (vibração por áudio, som, menos atraso), para a escolha nunca
-        ser do sorteio (O-CABO-ASSUME-DO-RADIO-01).
+        ser do sorteio (O-CABO-ASSUME-DO-RADIO-01). A lista vem de `_hidraws_da_sony`, que não
+        espera a trava do aparelho USB (a probe do som de um DualSense no cabo a segura por cerca
+        de 10 s, medido em 20/11/2026).
         """
-        import hidapi
-
         out: list[tuple[str, bytes, bool]] = []
         posicao: dict[str, int] = {}
-        for info in hidapi.enumerate(vendor_id=DUALSENSE_VENDOR):
+        for info in _hidraws_da_sony():
             if info.product_id not in DUALSENSE_PIDS:
                 continue
             if _is_virtual_hidraw(info.path):
@@ -6306,3 +6306,48 @@ def _esquecer_o_fio(handle: Any, mudo: bool) -> bool:
     handle._no_fio = None
     handle._cor_no_fio = None
     return mudo
+
+
+@dataclass(frozen=True)
+class _NoHid:
+    """Um hidraw da Sony como o kernel o descreve no uevent do HID pai."""
+
+    product_id: int
+    path: bytes
+    serial_number: str
+
+
+def _hexa(texto: str) -> int | None:
+    return int(texto, 16) if texto and all(c in "0123456789abcdefABCDEF" for c in texto) else None
+
+
+def _numero_do_hidraw(nome: str) -> int | None:
+    sufixo = nome.removeprefix("hidraw")
+    return int(sufixo) if nome.startswith("hidraw") and sufixo.isdigit() else None
+
+
+def _hidraws_da_sony() -> list[_NoHid]:
+    """Os hidraw da Sony, em ordem de criação, lidos só do uevent do HID pai.
+
+    Nunca lê as strings do aparelho USB (`manufacturer`, `product`): o kernel as serve sob a trava
+    do aparelho, que a probe do som de um DualSense no cabo segura por cerca de 10 s. Lidas pelo
+    `hidapi.enumerate`, seguravam a volta de todos os controles, em qualquer transporte (medido em
+    20/11/2026: três ligações, e o `connect` voltou 0,3 s depois do `snd-usb-audio` terminar).
+    """
+    try:
+        nomes = os.listdir(RAIZ_CLASS_HIDRAW)
+    except OSError:
+        return []
+    numerados = sorted(
+        (numero, nome) for nome in nomes if (numero := _numero_do_hidraw(nome)) is not None
+    )
+    achados: list[_NoHid] = []
+    for numero, nome in numerados:
+        uevent = _hidraw_uevent(nome)
+        partes = uevent.get("HID_ID", "").split(":")
+        vendor, produto = (_hexa(partes[1]), _hexa(partes[2])) if len(partes) == 3 else (None, None)
+        if vendor != DUALSENSE_VENDOR or produto is None:
+            continue
+        caminho = os.fsencode(f"/dev/hidraw{numero}")
+        achados.append(_NoHid(produto, caminho, uevent.get("HID_UNIQ", "")))
+    return achados

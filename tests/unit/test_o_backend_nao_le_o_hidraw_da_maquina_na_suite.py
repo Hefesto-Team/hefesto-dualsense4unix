@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -52,8 +51,7 @@ def raiz(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
 
 def _enumerar(monkeypatch: pytest.MonkeyPatch, vistos: list[SimpleNamespace]):
-    fake_hidapi = SimpleNamespace(enumerate=lambda vendor_id: list(vistos))
-    monkeypatch.setitem(sys.modules, "hidapi", fake_hidapi)
+    monkeypatch.setattr(bp, "_hidraws_da_sony", lambda: list(vistos))
     return PyDualSenseController._enumerate_device_keys()
 
 
