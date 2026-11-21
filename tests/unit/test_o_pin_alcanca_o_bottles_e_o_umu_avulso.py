@@ -268,3 +268,17 @@ def test_sem_nada_de_fora_nao_ha_linha_outros_e_o_exemplo_e_o_que_o_produto_pint
     assert exemplo.fora_do_pino == desenho.fora_do_pino_html(
         (("Minha garrafa (Bottles)", censo.PORQUE_PELO_WINE),
          ("Jogo do atalho (umu-run)", censo.PORQUE_UMU_AVULSO)), avulsa=True)
+
+
+def test_quem_virou_extensao_sem_te_la_entra_em_outros_pelo_nome_da_fila() -> None:
+    """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO: o Lutris sem extensão entra pelo nome."""
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+
+    lida = desenho.Leitura(
+        do_disco=desenho.DoDisco(fora_do_pino=(("lutris", (("", censo.PORQUE_SEM_A_EXTENSAO),)),)),
+        viraram_extensao=(("lutris", "Lutris", "https://example.invalid/hefesto-mod-lutris"),))
+    outros = desenho.os_outros(lida, desenho.cartoes(lida))
+
+    assert outros is not None
+    assert f"Lutris: {censo.PORQUE_SEM_A_EXTENSAO}" in outros.fora_do_pino
+    assert "lutris:" not in outros.fora_do_pino, "a dica não mostra a chave crua do lançador"

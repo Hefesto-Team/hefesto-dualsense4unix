@@ -1099,15 +1099,18 @@ NOMES_DE_QUEM_SEM_CARTAO = {"bottles": "Bottles", "umu": "umu-run"}
 def os_outros(lida: Leitura | None, com_cartao: Sequence[Lancador]) -> Lancador | None:
     """A linha «Outros»: o que o Proton fixado não alcança em quem não tem cartão próprio.
 
-    O Bottles e o umu avulso entram no ``fora`` do pino sem ter cartão; a linha os junta, sem
-    botões, e diz quantos ficaram de fora e por quê. ``None`` quando nada ficou.
+    O Bottles, o umu avulso e quem virou extensão sem tê-la entram no ``fora`` do pino sem ter
+    cartão; a linha os junta pelo nome que a fila mostra, sem botões, e diz quantos ficaram de
+    fora e por quê. ``None`` quando nada ficou.
     """
     do_disco = lida.do_disco if lida is not None else SEM_DISCO
+    nomes = {**NOMES_DE_QUEM_SEM_CARTAO,
+             **{chave: nome for chave, nome, _ in (lida.viraram_extensao if lida else ())}}
     com = {x.chave for x in com_cartao}
     fora = tuple(
         (f"{jogo} ({nome})", porque) if jogo else ("", f"{nome}: {porque}")
         for chave, linhas in do_disco.fora_do_pino if chave not in com
-        for nome in (NOMES_DE_QUEM_SEM_CARTAO.get(chave, chave),)
+        for nome in (nomes.get(chave, chave),)
         for jogo, porque in linhas)
     if not fora:
         return None
