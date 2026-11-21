@@ -5,8 +5,9 @@
 # versão para cima o produto rodou com os controles na mesa, e vale na primeira
 # instalação. O `install.sh` e o CI instalam com `pip install -c constraints.txt`.
 # Quem sobe a versão é o atualizador: ao declarar a subida boa, ele grava as versões
-# que provou em `python-provado.txt` (a pasta `atualizador` do cache), e o `install.sh`
-# o lê depois deste piso, de modo que reinstalar nunca rebaixa o que ele provou.
+# que provou em `python-provado.txt` (a pasta `atualizador` do cache), também como
+# piso, e o `install.sh` o lê depois deste: reinstalar nunca rebaixa o que ele provou,
+# e a árvore nova que pedir uma versão acima da provada ainda instala.
 # Uma régua (`tests/unit/test_as_versoes_que_a_casa_mediu.py`) reprova a `.venv` abaixo
 # do piso ou diferente do que o atualizador provou.
 #

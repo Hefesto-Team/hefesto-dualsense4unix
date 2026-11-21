@@ -2,16 +2,16 @@
 
 O atualizador sobe a biblioteca e prova que o Hefesto sobe com a versão nova; o install, que roda
 ao fechar a janela, instalava com ``-c constraints.txt`` de igualdade e a rebaixava. Agora o
-``constraints.txt`` é o piso da primeira instalação e o atualizador grava o que provou
-(``python-provado.txt``), que o install lê depois do piso.
+``constraints.txt`` é o piso da primeira instalação e o atualizador grava o que provou, também como
+piso (``python-provado.txt``), que o install lê depois do primeiro.
 
 O passo do pip do ``install.sh`` roda extraído, com um ``pip`` de mentira no ``VENV_DIR`` de um lar
 de mentira que anota os argumentos; nada instala. As travas que ele pediu se leem com o
 ``packaging``: a pergunta é se o ``evdev`` 2.0.0 cabe no que o install pediu.
 
 AS MORDIDAS (feitas na sprint, com a cura devolvida): o ``constraints.txt`` de volta ao ``==``
-reprova os dois primeiros casos; o install sem a linha do registro reprova o terceiro; a troca e a
-volta sem gravar reprovam o quarto e o quinto.
+reprova os dois primeiros casos; o install sem a linha do registro reprova o terceiro; o registro
+gravado com ``==`` reprova o quarto; a troca e a volta sem gravar reprovam as duas que gravam.
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def _rodar_o_passo(lar: Path, provadas: dict[str, str] | None) -> list[Path]:
     cache.mkdir(parents=True, exist_ok=True)
     if provadas is not None:
         (cache / "python-provado.txt").write_text(
-            "".join(f"{n}=={v}\n" for n, v in provadas.items()), encoding="utf-8")
+            "".join(f"{n}>={v}\n" for n, v in provadas.items()), encoding="utf-8")
     venv = lar / "venv"
     (venv / "bin").mkdir(parents=True)
     pip = venv / "bin" / "pip"
@@ -96,7 +96,7 @@ def test_o_install_nao_pede_o_que_rebaixa_a_versao_provada(tmp_path: Path) -> No
 def test_o_install_instala_pelo_registro_das_provadas_depois_do_piso(tmp_path: Path) -> None:
     travas = _rodar_o_passo(tmp_path, NA_MAQUINA)
     assert [a.name for a in travas] == ["constraints.txt", "python-provado.txt"]
-    assert not _cabe(travas, "evdev", "2.0.1"), "o registro das provadas não entrou nas travas"
+    assert not _cabe(travas, "evdev", "1.9.3"), "o registro das provadas não entrou nas travas"
 
 
 @pytest.fixture
@@ -127,9 +127,21 @@ def test_a_troca_provada_grava_o_registro_e_o_install_o_le(
     monkeypatch.setattr(pa, "_o_produto_sobe", lambda: "")
     pa._trocar_o_python({"pacotes": {"evdev": ["1.9.3", "2.0.0"]}})
     assert _registro(lar_do_atualizador).read_text(encoding="utf-8").splitlines() == [
-        "evdev==2.0.0", "pydantic==2.14.3"]
+        "evdev>=2.0.0", "pydantic>=2.14.3"]
     travas = _rodar_o_passo(lar_do_atualizador, None)
     assert _registro(lar_do_atualizador) in travas
+
+
+def test_o_registro_velho_nao_barra_a_arvore_que_pede_mais(lar_do_atualizador: Path) -> None:
+    """A árvore nova que pede uma versão acima da provada (``pydantic>=2.15``) ainda instala: com o
+    registro em ``==``, o pip recusa as duas travas juntas e o install morre no passo 2."""
+    pa._anotar_as_que_provou()
+    travas = _rodar_o_passo(lar_do_atualizador, None)
+    for nome, versao in NA_MAQUINA.items():
+        acima = Version(versao)
+        assert _cabe(travas, nome, f"{acima.major}.{acima.minor + 1}.0"), (
+            f"o registro das provadas barra {nome} acima de {versao}")
+    assert not _cabe(travas, "evdev", "1.9.3")
 
 
 def test_a_troca_que_nao_prova_nao_grava_o_registro(
@@ -147,7 +159,7 @@ def test_a_volta_provada_regrava_o_registro_com_o_que_voltou(
     monkeypatch.setattr(pa, "_o_produto_sobe", lambda: "")
     monkeypatch.setattr(at, "_reiniciar_o_servico", lambda: True)
     monkeypatch.setattr(pa, "_rodas_de_agora", lambda: {"evdev": "1.9.3", "pydantic": "2.13.5"})
-    _registro(lar_do_atualizador).write_text("evdev==2.0.0\n", encoding="utf-8")
+    _registro(lar_do_atualizador).write_text("evdev>=2.0.0\n", encoding="utf-8")
     pa._voltar_o_python({"dados": {"pacotes": {"evdev": ["1.9.3", "2.0.0"]}}})
     assert _registro(lar_do_atualizador).read_text(encoding="utf-8").splitlines() == [
-        "evdev==1.9.3", "pydantic==2.13.5"]
+        "evdev>=1.9.3", "pydantic>=2.13.5"]

@@ -1011,9 +1011,10 @@ ARQUIVO_DAS_PROVADAS = "python-provado.txt"
 
 
 def _anotar_as_que_provou() -> None:
-    """Grava as versões das bibliotecas do produto que acabaram de provar que o Hefesto sobe, no
-    formato de trava do pip: o install as lê como ``-c`` e nunca rebaixa o que se provou."""
-    linhas = [f"{nome}=={versao}" for nome, versao in sorted(_rodas_de_agora().items())]
+    """Grava as versões das bibliotecas do produto que acabaram de provar que o Hefesto sobe, como
+    piso de trava do pip (``nome>=versão``): o install as lê como ``-c`` e nunca rebaixa o que se
+    provou, e a árvore nova que pedir mais que a versão provada ainda instala."""
+    linhas = [f"{nome}>={versao}" for nome, versao in sorted(_rodas_de_agora().items())]
     if linhas:
         with contextlib.suppress(OSError):
             (_cache() / ARQUIVO_DAS_PROVADAS).write_text("\n".join(linhas) + "\n",

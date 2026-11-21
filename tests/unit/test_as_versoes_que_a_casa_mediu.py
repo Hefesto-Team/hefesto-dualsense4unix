@@ -7,7 +7,6 @@ provou e gravou em ``python-provado.txt`` (O-INSTALL-NAO-REBAIXA-O-QUE-O-ATUALIZ
 from __future__ import annotations
 
 import importlib.metadata
-import os
 import re
 from pathlib import Path
 
@@ -35,14 +34,18 @@ def test_as_quatro_que_a_casa_mediu_estao_travadas() -> None:
 
 
 def _provadas() -> dict[str, str]:
-    """O que o atualizador provou, no cache do produto (vazio se ainda não subiu nada)."""
-    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
-    arquivo = Path(base) / "hefesto-dualsense4unix" / "atualizador" / "python-provado.txt"
+    """O que o atualizador provou no cache REAL de quem roda, o mesmo que o install lê; o conftest
+    desvia o ``HOME`` e o ``XDG_CACHE_HOME`` de cada teste. Vazio se ainda não provou nada."""
+    from tests.conftest import _LAR_ENV_ANTES, lar_real
+
+    base = (_LAR_ENV_ANTES.get("XDG_CACHE_HOME") or "").strip()
+    cache = Path(base) if base else lar_real() / ".cache"
+    arquivo = cache / "hefesto-dualsense4unix" / "atualizador" / "python-provado.txt"
     try:
         linhas = arquivo.read_text(encoding="utf-8").splitlines()
     except OSError:
         return {}
-    return dict(linha.split("==", 1) for linha in linhas if "==" in linha)
+    return dict(linha.split(">=", 1) for linha in linhas if ">=" in linha)
 
 
 def test_a_venv_roda_o_piso_ou_o_que_o_atualizador_provou() -> None:
