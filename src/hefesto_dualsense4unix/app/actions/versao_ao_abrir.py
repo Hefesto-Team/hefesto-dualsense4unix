@@ -2,12 +2,11 @@
 
 Só numa instalação pelo código, em ``dev``, com a árvore limpa, sem trabalho em voo e sem jogo
 aberto; qualquer outra coisa para em silêncio, com uma linha no diário. A rede fica num fio que a
-janela não espera, e o avanço, só rápido e só para commit assinado por chave da lista do ``HEAD``
-de agora, fica para o fecho. A marca de voo conta só as linhas cuja árvore ainda existe.
-
-A faixa que pede install o solta fora do cgroup da janela (``--install``): ele espera o jogo fechar
-de vez, roda uma vez só e nunca guarda senha. Sem autorização a parte do sistema fica pendente, e a
-falha fica em ``install-pendente`` com o motivo, que a aba Sistema e o ``doctor`` dizem.
+janela não espera, e o avanço, só rápido e só para commit assinado por chave da lista do ``HEAD`` de
+agora, fica para o fecho, com a cópia datada da configuração antes de mudar perfis ou extensões. A
+marca de voo conta só as linhas cuja árvore ainda existe. A faixa que pede install o solta fora do
+cgroup da janela (``--install``): ele espera o jogo fechar de vez, roda uma vez só e nunca guarda
+senha; a falha fica em ``install-pendente`` com o motivo que a aba Sistema e o ``doctor`` dizem.
 """
 from __future__ import annotations
 
@@ -25,6 +24,7 @@ import tempfile
 import threading
 import time
 from collections.abc import Callable, Iterable, Sequence
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +65,9 @@ PEDEM_INSTALL = (
     f"{_PACOTE}/integrations/leitor_do_estado.py",
 )
 PASTAS_DO_INSTALL = ("assets/", "locale/", "packaging/", "scripts/")
+PEDEM_COPIA = (f"{_PACOTE}/profiles/", f"{_PACOTE}/mods/")
+PASTA_DAS_COPIAS = "copias-da-configuracao"
+COPIAS_GUARDADAS = 3
 
 
 def _dizer(frase: str) -> None:
@@ -267,6 +270,26 @@ def o_que_a_faixa_pede(caminhos: Iterable[str]) -> str:
     if any(n in PEDEM_INSTALL or n.startswith(PASTAS_DO_INSTALL) for n in nomes):
         return "install"
     return "serviço" if any(n.startswith(PASTA_DO_SERVICO) for n in nomes) else ""
+
+
+def guardar_a_configuracao(antes: str) -> Path | None:
+    """Copia a configuração de quem usa para o state, com a hora e o commit de ``antes`` no nome, e
+    guarda só as ``COPIAS_GUARDADAS`` mais novas. ``None``: não há configuração a guardar; a cópia
+    que não coube levanta ``OSError``."""
+    from hefesto_dualsense4unix.utils.xdg_paths import config_dir, state_dir
+
+    origem = config_dir()
+    if not origem.is_dir():
+        return None
+    pasta = state_dir(ensure=True) / PASTA_DAS_COPIAS
+    pasta.mkdir(mode=0o700, exist_ok=True)
+    carimbo = datetime.now().strftime("%Y%m%dT%H%M%S%f")
+    destino = pasta / f"{carimbo}-{antes[:CURTO]}"
+    shutil.rmtree(destino, ignore_errors=True)
+    shutil.copytree(origem, destino, symlinks=True)
+    for velha in sorted(p for p in pasta.iterdir() if p.is_dir())[:-COPIAS_GUARDADAS]:
+        shutil.rmtree(velha, ignore_errors=True)
+    return destino
 
 
 def _nota_do_install() -> Path:
@@ -557,6 +580,14 @@ def aplicar(
         _recusar_sem_assinatura(alvo)
         return False
     caminhos = _git(raiz, "diff", "--name-only", "--no-renames", antes, alvo)
+    if caminhos is not None and any(n.startswith(PEDEM_COPIA) for n in caminhos.splitlines()):
+        try:
+            copia = guardar_a_configuracao(antes)
+        except OSError as erro:
+            _dizer(f"a baixada fica para depois (a cópia da configuração não coube: {erro})")
+            return False
+        if copia is not None:
+            _guardada_no_registro(copia)
     avanco = None
     if caminhos is not None:
         avanco = _git(
@@ -576,6 +607,13 @@ def aplicar(
     else:
         _dizer(f"{alvo[:CURTO]} entrou")
     return True
+
+
+def _guardada_no_registro(copia: Path) -> None:
+    from hefesto_dualsense4unix.app.actions.atualizador import _anotar
+
+    _anotar(f"configuração guardada em {copia}")
+    _dizer(f"a configuração ficou guardada em {copia}")
 
 
 def baixar_ao_abrir(raiz: Path) -> threading.Thread | None:
