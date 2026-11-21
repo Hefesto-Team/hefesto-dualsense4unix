@@ -37,14 +37,19 @@ def morrer_com_o_pai() -> None:
         prctl(_PR_SET_PDEATHSIG, signal.SIGKILL, 0, 0, 0)
 
 
+def lancar_filho(argv: Sequence[str], **kw: Any) -> subprocess.Popen[bytes]:
+    """O ``Popen`` de qualquer filho de som, preso ao pai: o dono do ``preexec_fn``.
+
+    O ``PR_SET_PDEATHSIG`` dispara quando morre o FIO que fez o ``fork``, não o processo:
+    quem lança deve ser um fio que vive tanto quanto o filho (o fio do tocador, que só acaba
+    depois de derrubar o filho, ou o lançador do laço, que vive com o processo).
+    """
+    return subprocess.Popen(list(argv), preexec_fn=morrer_com_o_pai, **kw)
+
+
 def lancar_leitor(argv: Sequence[str]) -> subprocess.Popen[bytes]:
     """O ``Popen`` de um leitor de som: cano no ``stdout``, e preso ao pai."""
-    return subprocess.Popen(
-        list(argv),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        preexec_fn=morrer_com_o_pai,
-    )
+    return lancar_filho(argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
 
 @dataclass(frozen=True)
@@ -140,6 +145,7 @@ __all__ = [
     "ESPERA_PELO_FIM_S",
     "ComoMorreu",
     "derrubar_leitor_de_pipe",
+    "lancar_filho",
     "lancar_leitor",
     "morrer_com_o_pai",
 ]

@@ -37,20 +37,10 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "ajudante", 1,
         "o `pactl subscribe` do leitor único do som; morre com o daemon",
     ),
-    "integrations/filho_de_som.py::lancar_leitor": (
+    "integrations/filho_de_som.py::lancar_filho": (
         "ajudante", 1,
-        "os leitores de som (`parec`/`pw-record`), presos ao pai pelo cano e "
-        "pelo PDEATHSIG",
-    ),
-    "integrations/microfone_filtrado.py::_lancar_processo": (
-        "ajudante", 1,
-        "o `pipewire -c` do filtro de voz de cada controle (echo-cancel com o "
-        "WebRTC); preso ao pai pelo PDEATHSIG e derrubado com o canal",
-    ),
-    "integrations/gesto_de_pareamento.py::_abrir_de_verdade": (
-        "ajudante", 1,
-        "a janela de busca da ponte root (`sudo … descobrir`); morre com quem "
-        "a abriu, e o `fechar` a derruba",
+        "o lançador único dos filhos de som, preso ao pai pelo PDEATHSIG: os leitores "
+        "(`parec`/`pw-record`) e os laços (`pw-loopback`)",
     ),
     "integrations/endpoint_de_haptica.py::TocadorDoRumble.__init__": (
         "ajudante", 1,
@@ -64,16 +54,21 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "controle (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01): alimentado pelo cano, "
         "sai depois da folga de silêncio e com o `parar`",
     ),
+    "integrations/microfone_filtrado.py::_lancar_processo": (
+        "ajudante", 1,
+        "o `pipewire -c` do filtro de voz de cada controle (echo-cancel com o "
+        "WebRTC); preso ao pai pelo PDEATHSIG e derrubado com o canal",
+    ),
+    "integrations/gesto_de_pareamento.py::_abrir_de_verdade": (
+        "ajudante", 1,
+        "a janela de busca da ponte root (`sudo … descobrir`); morre com quem "
+        "a abriu, e o `fechar` a derruba",
+    ),
     "integrations/alto_falante_bt.py::lancar_tocador": (
         "ajudante", 1,
         "o `pw-cat` (ou o `pacat`) da caixa separada de um controle no cabo "
         "(A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01): alimentado pelo cano, preso ao pai "
         "pelo PDEATHSIG, e a `CaixaQueSeparaNoCabo.descer` o derruba",
-    ),
-    "integrations/laco_de_audio.py::_Lancador._servir": (
-        "ajudante", 1,
-        "o `pw-loopback` de um laço de som, com dono que o fecha; sai de um fio de vida longa, "
-        "preso ao pai pelo PDEATHSIG",
     ),
     "integrations/energia_do_som.py::abrir_fluxo": (
         "ajudante", 1,

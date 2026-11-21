@@ -215,9 +215,11 @@ no `PermissionStore`, gravada pelo portal depois do clique, e não há `conf.d` 
 Para ninguém gastar de novo:
 
 - **O WirePlumber não mexe em vídeo.** As regras só tocam nós de áudio do DualSense, e os `pw-loopback` são áudio.
-- **O `pw-loopback` órfão não fica no grafo.** `integrations/laco_de_audio.py` lança sem `PR_SET_PDEATHSIG`, e com
-  um dublê ele sobreviveu ao `SIGKILL` do pai. Só que, na unit, o `KillMode` padrão recolhe o cgroup. O órfão só
-  existe rodando o serviço à mão, fora da unit. Sem sprint.
+- **O `pw-loopback` órfão não fica no grafo.** Em 19/11/2026 o laço sobreviveu ao `SIGKILL` do pai, porque
+  `integrations/laco_de_audio.py` lançava sem `PR_SET_PDEATHSIG`. No serviço, o `KillMode` padrão recolhe o cgroup;
+  a janela roda com `KillMode=process` e não o recolhe. Desde 20/11/2026 todo laço sai preso ao pai, de um fio de
+  vida longa (o `PR_SET_PDEATHSIG` dispara na morte do fio que fez o fork, e o fio do gesto acaba com o clique), e
+  a família que nasce recolhe o laço órfão que sobrou (O-LACO-DE-AUDIO-MORRE-COM-A-JANELA-01).
 - **O PipeWire não é acordado pelo Hefesto.** O `pipewire.service` estava de pé 19 ms antes de o serviço começar.
 - **`core_pattern` global não existe mais.** A regra de `sysctl.d` antiga não está no disco, e o `uninstall.sh`
   segue limpando quem a tem.

@@ -15,7 +15,7 @@ import threading
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from hefesto_dualsense4unix.integrations.filho_de_som import morrer_com_o_pai
+from hefesto_dualsense4unix.integrations.filho_de_som import lancar_filho
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -34,7 +34,7 @@ _PROC = Path("/proc")
 class _Lancador:
     """O fio de vida longa de onde sai todo `pw-loopback`.
 
-    O ``PR_SET_PDEATHSIG`` do ``morrer_com_o_pai`` dispara quando morre o FIO que fez o
+    O ``PR_SET_PDEATHSIG`` do ``lancar_filho`` dispara quando morre o FIO que fez o
     ``fork``, não o processo. Os gestos da janela correm cada um num fio que acaba com o
     gesto, e o laço lançado ali morreria junto: todo laço nasce neste fio, que só acaba
     com o processo, e o kernel recolhe os laços quando ele cai por qualquer meio.
@@ -65,12 +65,8 @@ class _Lancador:
         while True:
             argv, futuro = self._pedidos.get()
             try:
-                futuro.set_result(subprocess.Popen(
-                    list(argv),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    preexec_fn=morrer_com_o_pai,
-                ))
+                futuro.set_result(lancar_filho(
+                    argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
             except Exception as erro:
                 futuro.set_exception(erro)
 
