@@ -1216,6 +1216,24 @@ class TestModuloSemAssinaturaComAChaveInscrita:
         feito = _roda(f"_dkms_marca_de_assinatura '{ko}'", str(so_python))
         assert feito.returncode == 2, feito
 
+    def test_sem_a_chave_privada_nao_se_refaz_e_diz_por_que(self, tmp_path: Path) -> None:
+        """Sem a chave privada o DKMS não assina: refazer daria o mesmo módulo sem marca."""
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        lidas = self._instalar(tmp_path, estado, chave_privada=False)
+        assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
+        assert "falta a chave privada do DKMS" in self.dito, self.dito
+        assert str(tmp_path / "mok.key") in self.dito, self.dito
+
+    def test_a_chave_privada_que_so_o_root_le_se_confere_pelo_sudo(self, tmp_path: Path) -> None:
+        if os.geteuid() == 0:
+            pytest.skip("o root lê qualquer arquivo")
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
+        (tmp_path / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+        (tmp_path / "mok.key").chmod(0)
+        lidas = self._instalar(tmp_path, estado, chave_privada=False)
+        assert f"sudo test -s {tmp_path / 'mok.key'}" in lidas, lidas
+        assert f"dkms build hefesto-teste/9.9.9 -k {KERNEL_DO_TESTE} --force" in lidas, lidas
+
 
 class TestAvisoDaChaveNomeiaOModuloELeUmaVez:
     """O-AVISO-DA-CHAVE-DIZ-O-MODULO-E-A-LEITURA-SE-FAZ-UMA-VEZ-01.

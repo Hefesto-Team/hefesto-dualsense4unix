@@ -80,30 +80,48 @@ _dkms_familia_da_distro() {
     )
 }
 
-_dkms_mok_pub() {
-    if [[ -n "${HEFESTO_DKMS_MOK_PUB:-}" ]]; then
-        printf '%s' "${HEFESTO_DKMS_MOK_PUB}"
-        return 0
-    fi
-    local _conf _linha _chave="" _cert=""
+_dkms_valor_no_framework() {
+    local _campo="$1" _conf _linha _valor=""
     # shellcheck disable=SC2086
     for _conf in ${HEFESTO_DKMS_FRAMEWORK_CONFS:-/etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf}; do
         [[ -r "${_conf}" ]] || continue
         while IFS= read -r _linha || [[ -n "${_linha}" ]]; do
             _linha="${_linha#"${_linha%%[![:space:]]*}"}"
-            case "${_linha}" in
-                mok_signing_key=*) _chave="${_linha#mok_signing_key=}" ;;
-                mok_certificate=*) _cert="${_linha#mok_certificate=}" ;;
-            esac
+            [[ "${_linha}" == "${_campo}="* ]] && _valor="${_linha#"${_campo}"=}"
         done < "${_conf}"
     done
-    _chave="${_chave//[\"\']/}"
-    _cert="${_cert//[\"\']/}"
+    printf '%s' "${_valor//[\"\']/}"
+}
+
+_dkms_mok_pub() {
+    if [[ -n "${HEFESTO_DKMS_MOK_PUB:-}" ]]; then
+        printf '%s' "${HEFESTO_DKMS_MOK_PUB}"
+        return 0
+    fi
+    local _chave _cert
+    _chave="$(_dkms_valor_no_framework mok_signing_key)"
+    _cert="$(_dkms_valor_no_framework mok_certificate)"
     if [[ -z "${_chave}" && "$(_dkms_familia_da_distro)" == ubuntu* ]]; then
         printf '%s' "/var/lib/shim-signed/mok/MOK.der"
         return 0
     fi
     printf '%s' "${_cert:-/var/lib/dkms/mok.pub}"
+}
+
+_dkms_mok_chave_privada() {
+    local _chave
+    _chave="$(_dkms_valor_no_framework mok_signing_key)"
+    if [[ -z "${_chave}" && "$(_dkms_familia_da_distro)" == ubuntu* ]]; then
+        printf '%s' "/var/lib/shim-signed/mok/MOK.priv"
+        return 0
+    fi
+    printf '%s' "${_chave:-/var/lib/dkms/mok.key}"
+}
+
+_dkms_assina_com_a_chave_privada() {
+    local _chave; _chave="$(_dkms_mok_chave_privada)"
+    [[ -r "${_chave}" && -s "${_chave}" ]] && return 0
+    sudo test -s "${_chave}" 2>/dev/null
 }
 _dkms_mok_listas() {
     local _l
@@ -631,8 +649,12 @@ dkms_install_patched_module() {
         fi
     fi
     if dkms_secure_boot_ligado && dkms_modulo_da_casa_sem_assinatura "${_built}"; then
-        _refazer=1
-        _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
+        if _dkms_assina_com_a_chave_privada; then
+            _refazer=1
+            _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
+        else
+            _dkms_warn "o módulo ${_built} do Hefesto está instalado sem assinatura e falta a chave privada do DKMS ($(_dkms_mok_chave_privada)) para assiná-lo: ele fica como está, e com o Secure Boot ligado o kernel pode recusá-lo no boot."
+        fi
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then
         _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar cabecalhos "${_kver}")"
