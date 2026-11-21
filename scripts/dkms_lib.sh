@@ -416,12 +416,14 @@ dkms_passo_da_chave() {
 }
 
 : "${_DKMS_SB_WARNED:=0}"
+dkms_aviso_da_chave_dito() { _DKMS_SB_WARNED=1; }
+
 dkms_warn_secureboot_once() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
     dkms_secure_boot_ligado || return 0
     dkms_ler_a_chave "${1:-}"
     [[ "${DKMS_ESTADO}" == "inscrita" ]] && return 0
-    _DKMS_SB_WARNED=1
+    dkms_aviso_da_chave_dito
     _dkms_warn "$(dkms_titulo_da_chave "${1:-}"). $(dkms_modulos_sem_a_chave "${1:-}") $(dkms_efeito_do_estado "${1:-}") $(dkms_passo_da_chave "${1:-}")"
     return 0
 }

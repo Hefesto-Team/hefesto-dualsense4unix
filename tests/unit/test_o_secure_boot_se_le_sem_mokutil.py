@@ -349,10 +349,11 @@ PASSOS_DO_DKMS = (
 
 
 @pytest.mark.parametrize("pedida", [False, True], ids=["chave-fora", "inscricao-pedida"])
-def test_o_install_inteiro_le_a_chave_uma_vez(tmp_path: Path, pedida: bool) -> None:
+def test_o_install_inteiro_le_a_chave_e_diz_o_aviso_uma_vez(tmp_path: Path, pedida: bool) -> None:
     """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ: o reconhecimento e os cinco passos
     do DKMS do install, na ordem e no mesmo shell em que o install os chama, perguntam ao
-    ``mokutil`` uma vez só; nada roda de verdade (o ``PATH`` só tem dublês)."""
+    ``mokutil`` uma vez só e dizem o aviso da chave uma vez só; nada roda de verdade (o ``PATH``
+    só tem dublês)."""
     bin_ = _bin(tmp_path)
     chamadas = tmp_path / "chamadas.log"
     contador = tmp_path / "mokutil.log"
@@ -399,6 +400,8 @@ def test_o_install_inteiro_le_a_chave_uma_vez(tmp_path: Path, pedida: bool) -> N
     if pedida:
         assert "dkms remove" not in lidas and "dkms build" not in lidas, lidas
     assert len(contador.read_text(encoding="utf-8").split()) == 1, saida
+    titulo = "a inscrição da chave do DKMS espera" if pedida else "a chave do DKMS não está"
+    assert saida.count(f"Secure Boot ligado, e {titulo}") == 1, saida
 
 
 def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
