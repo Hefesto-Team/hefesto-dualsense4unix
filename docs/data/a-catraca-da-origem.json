@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1299564,
+      "piso": 1299585,
       "por_item": {
         "docs": 107902,
         "scripts": 116010,
         "src": 328455,
-        "tests": 747197
+        "tests": 747218
       },
-      "razao": "tamanho: +1 linhas (1299563 -> 1299564), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-CAMADA-DA-EXTENSAO-SOME-NA-SAIDA-E-ATRAVESSA-A-TROCA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-O-GAMEINPUT-DE-ANTES-SEGUE-VIBRANDO, D-2111-O-RESET-DO-CABO-ENTRA-NO-USB-DIARIO-POR-PORTA, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo c14f547c2d71",
+      "razao": "tamanho: +21 linhas (1299564 -> 1299585), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1; registrado no fecho, topo 9e74353e56bb",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2367,6 +2367,12 @@
           "de": 1299563,
           "para": 1299564,
           "razao": "tamanho: +1 linhas (1299563 -> 1299564), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-CAMADA-DA-EXTENSAO-SOME-NA-SAIDA-E-ATRAVESSA-A-TROCA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-O-GAMEINPUT-DE-ANTES-SEGUE-VIBRANDO, D-2111-O-RESET-DO-CABO-ENTRA-NO-USB-DIARIO-POR-PORTA, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo c14f547c2d71"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1299564,
+          "para": 1299585,
+          "razao": "tamanho: +21 linhas (1299564 -> 1299585), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1; registrado no fecho, topo 9e74353e56bb"
         }
       ],
       "unidade": "linhas",
