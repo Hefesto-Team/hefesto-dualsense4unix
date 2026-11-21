@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import math
+import re
 from array import array
+from html import unescape
 from itertools import combinations
 from types import MappingProxyType, SimpleNamespace
 from typing import Any
@@ -759,6 +761,44 @@ def test_quem_cabe_noutro_adaptador_ouve_o_nome_e_o_gesto_da_mao() -> None:
     [(fala, dica)] = falas.values()
     assert fala.startswith("Cabe em ")
     assert "PS + Create" in dica
+
+
+APELIDO_LONGO = "Adaptador da sala de estar perto da TV"
+
+
+def _frases_da_falta(html: str) -> list[tuple[str, str]]:
+    return [(unescape(texto), unescape(dica)) for dica, texto in
+            re.findall(r'<span class="falta" title="([^"]*)">([^<]*)</span>', html)]
+
+
+def _cenas_da_falta() -> dict[str, dict[str, Any]]:
+    longe = _sala(*(_linha(i, A) for i in range(3)), lugares=(A, B))
+    longe["lugares"][1]["nome"] = APELIDO_LONGO
+    return {
+        "apelido": longe,
+        "plural": _sala(*(_linha(i, A) for i in range(6))),
+        "porta": _sala(_linha(0, A), _linha(1, A), _de_fora(2, A), _de_fora(3, A), hub=(A,)),
+        "prazo": _sala(_linha(0, A, pelo_motor=rm.QUEDA_PASSOU_DO_PRAZO)),
+    }
+
+
+@pytest.mark.parametrize("letra", sorted(a08.FALAS_DA_FALTA))
+def test_a_frase_cortada_guarda_a_frase_inteira_na_dica(
+    monkeypatch: pytest.MonkeyPatch, letra: str,
+) -> None:
+    """D-2111-A-FRASE-DA-PONTE-CORTADA-GUARDA-O-NOME-NA-DICA: toda frase da linha sem ponte,
+    em toda redação, abre a dica com a própria frase, e o apelido longo chega inteiro à dica."""
+    monkeypatch.setattr(a08, "OPCAO_DA_FALTA", letra)
+    frases = {nome: _frases_da_falta(a08.campos_da_secao(cena)["radio-sala"])
+              for nome, cena in _cenas_da_falta().items()}
+    assert all(frases.values()), f"cena sem frase da falta: {frases}"
+    for nome, lidas in frases.items():
+        for texto, dica in lidas:
+            assert dica.startswith(f"{texto}. "), (
+                f"na cena {nome}, a dica de «{texto}» não abre com a frase inteira: {dica!r}")
+    [(texto, dica)] = frases["apelido"]
+    assert texto.endswith(APELIDO_LONGO) and APELIDO_LONGO in dica
+    assert any("adaptadores" in texto for texto, _d in frases["plural"])
 
 
 def test_o_adaptador_varrendo_e_o_ultimo_destino() -> None:

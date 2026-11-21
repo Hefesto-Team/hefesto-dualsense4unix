@@ -3152,6 +3152,12 @@ def _fala_do_assento(assento: Any, conta: Any, frases: tuple[str, str, str],
     return frases[2].format(lugar=_titulo_do_lugar(lugar)), f"{dica} {DICA_DO_ASSENTO}"
 
 
+def dica_da_fala(fala: tuple[str, str]) -> str:
+    """A dica da linha sem ponte: a frase inteira e depois a explicação, para a frase cortada
+    com reticência não perder o nome do lugar."""
+    return f"{fala[0]}. {fala[1]}"
+
+
 def com_a_falta(cena: dict[str, Any], opcao: str | None = None) -> dict[str, Any]:
     """A cena com a fala de cada linha sem ponte; sem opção escolhida, a cena volta intacta."""
     escolhida = OPCAO_DA_FALTA if opcao is None else opcao
@@ -3267,7 +3273,8 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
     fala = (cena.get("falas_da_falta") or {}).get(str(ap["id"]))
     if fala is not None:
         botoes_da_ponte = [b for b in botoes_da_ponte if "data-ligada" in b]
-        botoes_da_ponte.append(f'<span class="falta" title="{_x(fala[1])}">{_x(fala[0])}</span>')
+        botoes_da_ponte.append(f'<span class="falta" title="{_x(dica_da_fala(fala))}">'
+                               f'{_x(fala[0])}</span>')
     return (
         '<div class="faixa-do-aparelho" style="width:100%">'
         f'<div class="fluxo manda" style="flex:{manda} 1 0" title="O que o controle manda">'
