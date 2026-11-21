@@ -51,6 +51,7 @@ def test_o_ligar_passa_o_byte_igual(lar: dict[str, Path]) -> None:
 
 
 def test_o_desligar_fora_da_lista_passa_o_byte_igual(lar: dict[str, Path]) -> None:
+    """D-2111-TODO-VDF-DA-PONTE-PASSA-O-BYTE-IGUAL: o desligar regrava o vdf com o byte igual."""
     antes = lar["vdf"].read_bytes()
     status, detalhe = ponte.garantir_fora_da_lista_desligado(lar["home"])
     assert status == ponte.PONTE_DESLIGADA, detalhe

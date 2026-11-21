@@ -83,6 +83,7 @@ def _doctor(lar: Path) -> str:
 
 
 def test_o_doctor_acusa_a_copia_velha_de_cada_peca_do_bin(tmp_path: Path) -> None:
+    """D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN: cada cópia velha é acusada."""
     for nome in _o_que_o_install_poe_no_bin():
         caso = tmp_path / nome
         caso.mkdir()
