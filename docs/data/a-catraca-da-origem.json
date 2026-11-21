@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1282171,
+      "piso": 1282176,
       "por_item": {
-        "docs": 107707,
+        "docs": 107709,
         "scripts": 115164,
         "src": 325306,
-        "tests": 733994
+        "tests": 733997
       },
-      "razao": "tamanho: +463 linhas (1281708 -> 1282171), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo b60a9111bf40",
+      "razao": "tamanho: +5 linhas (1282171 -> 1282176), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO; registrado no fecho, topo 08bfe4ada633",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2151,6 +2151,12 @@
           "de": 1281708,
           "para": 1282171,
           "razao": "tamanho: +463 linhas (1281708 -> 1282171), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO; registrado no fecho, topo b60a9111bf40"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1282171,
+          "para": 1282176,
+          "razao": "tamanho: +5 linhas (1282171 -> 1282176), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO; registrado no fecho, topo 08bfe4ada633"
         }
       ],
       "unidade": "linhas",
