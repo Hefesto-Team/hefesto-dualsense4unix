@@ -99,7 +99,7 @@ def _que_cai_uma_vez(monkeypatch: pytest.MonkeyPatch, falha: int) -> list[OSErro
 
 def test_o_netlink_que_caiu_se_reabre_e_o_add_da_sony_acorda_a_volta(
         sys_usb: SysDeMentira, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Prova da D-2111-O-NETLINK-QUE-CAIU-SE-REABRE-COM-RECUO: o ``add`` depois da queda chega.
+    """O ``add`` depois da queda do socket chega ao sino da volta.
 
     A primeira reabertura falha e a segunda dá o socket; o ``add`` de dois controles em portas
     diferentes, e o ``remove`` de um deles, chegam ao sino da volta e ao relógio de cada porta.
