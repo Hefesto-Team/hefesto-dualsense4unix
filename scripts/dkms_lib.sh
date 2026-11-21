@@ -686,8 +686,8 @@ try:
     tag, inicio, tamanho = corpo(dados, i)
     if tag == 0xA0:
         tag, inicio, tamanho = corpo(dados, inicio + tamanho)
-    if tag != 0x02:
-        raise ValueError("sem o número de série")
+    if tag != 0x02 or dados[inicio] & 0x80:
+        raise ValueError("sem o número de série positivo")
     print(dados[inicio:inicio + tamanho].hex())
 except BaseException:
     raise SystemExit(2)
@@ -695,7 +695,7 @@ PYEOF
 }
 
 _dkms_serie_normalizada() {
-    local _s="${1//:/}"
+    local _s="${1//[[:space:]:]/}"
     _s="${_s,,}"
     while [[ "${_s}" == 00* ]]; do _s="${_s:2}"; done
     printf '%s' "${_s}"
@@ -706,7 +706,8 @@ dkms_modulo_da_casa_de_outra_chave() {
     _path="$(_dkms_arquivo_do_modulo "$1")" || return 1
     dkms_ko_da_casa "${_path}" || return 1
     _dkms_marca_de_assinatura "${_path}" || return 1
-    _do_modulo="$(modinfo -F sig_key "${_path}" 2>/dev/null | head -n 1)" || return 1
+    [[ "$(modinfo -F sig_id "${_path}" 2>/dev/null)" == "PKCS#7" ]] || return 1
+    _do_modulo="$(modinfo -F sig_key "${_path}" 2>/dev/null)" || return 1
     _da_chave="$(_dkms_serie_da_chave_publica 2>/dev/null)" || return 1
     _do_modulo="$(_dkms_serie_normalizada "${_do_modulo}")"
     _da_chave="$(_dkms_serie_normalizada "${_da_chave}")"

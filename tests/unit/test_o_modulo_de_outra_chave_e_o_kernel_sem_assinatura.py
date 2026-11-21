@@ -30,6 +30,7 @@ from tests.unit.test_dkms_lib import (
 
 SERIE_DA_CHAVE = bytes.fromhex("0a1b2c3d4e5f60718293a4b5c6d7e8f901234567")
 SERIE_DE_OUTRA = bytes.fromhex("ffeeddccbbaa99887766554433221100aabbccdd")
+SERIE_LONGA = bytes.fromhex("317fae28cddfab9757117152ecefe4d37aa8d61a70c3281c")
 FALHA_DE_REFAZER = ("dkms build", "dkms install")
 
 
@@ -54,13 +55,17 @@ def _com_a_chave_de(raiz: Path, serie: bytes, *, inscrita: bool = True) -> dict[
     return estado
 
 
-def _com_sig_key(valor: str, status: int = 0) -> dict[str, str]:
-    return {"modinfo": f'case "$*" in *sig_key*) echo "{valor}"; exit {status};; esac\n'
+def _com_sig_key(valor: str, status: int = 0, sig_id: str = "PKCS#7") -> dict[str, str]:
+    return {"modinfo": f'case "$*" in *sig_key*) printf "%b\\n" "{valor}"; exit {status};;\n'
+                       f'*sig_id*) echo "{sig_id}"; exit 0;; esac\n'
                        'echo "$MODULO_DE_MENTIRA"'}
 
 
 def _serie_do_modinfo(serie: bytes) -> str:
-    return ":".join(f"{b:02X}" for b in serie)
+    """Como o kmod mostra o ``sig_key``: hexadecimal com dois pontos, quebrado a cada 20 bytes."""
+    partes = [f"{b:02X}" for b in serie]
+    linhas = [":".join(partes[i:i + 20]) for i in range(0, len(partes), 20)]
+    return ":\\n\\t\\t".join(linhas)
 
 
 class TestModuloAssinadoPorOutraChave:
@@ -74,11 +79,11 @@ class TestModuloAssinadoPorOutraChave:
     def _instalar(
         self, tmp_path: Path, estado: dict[str, str], sig_key: str, *,
         arquivo: str = "hid-teste.ko", status: int = 0, chave_privada: bool = True,
-        config: str | None = CONFIG_QUE_ASSINA,
+        config: str | None = CONFIG_QUE_ASSINA, sig_id: str = "PKCS#7",
     ) -> tuple[str, str]:
         ko = (tmp_path / "lib" / "modules" / KERNEL_DO_TESTE / "updates" / "dkms" / arquivo)
         feito = TestModuloSemAssinaturaComAChaveInscrita()
-        dubles = _com_sig_key(sig_key, status)
+        dubles = _com_sig_key(sig_key, status, sig_id)
         dubles["modinfo"] = dubles["modinfo"].replace("$MODULO_DE_MENTIRA", str(ko))
         lidas = feito._instalar(
             tmp_path, estado, arquivo=arquivo, assinado=True, dubles=dubles,
@@ -153,6 +158,39 @@ class TestModuloAssinadoPorOutraChave:
         estado = _estado_do_secure_boot(tmp_path, ligado=False, inscrita=True)
         (tmp_path / "mok.pub").write_bytes(_certificado(SERIE_DA_CHAVE))
         _dito, lidas = self._instalar(tmp_path, estado, _serie_do_modinfo(SERIE_DE_OUTRA))
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in lidas, lidas
+
+    def test_a_serie_longa_que_o_kmod_quebra_em_linhas_se_le_inteira(self, tmp_path: Path) -> None:
+        """D-2111-O-MODULO-DE-OUTRA-CHAVE-SE-REFAZ-SO-DE-CERTEZA: o kmod quebra o ``sig_key`` a
+        cada 20 bytes; ler só a primeira linha daria «outra chave» a cada install."""
+        (tmp_path / "igual").mkdir()
+        estado = _com_a_chave_de(tmp_path / "igual", SERIE_LONGA)
+        _dito, lidas = self._instalar(tmp_path / "igual", estado, _serie_do_modinfo(SERIE_LONGA))
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in lidas, lidas
+        (tmp_path / "outra").mkdir()
+        estado = _com_a_chave_de(tmp_path / "outra", SERIE_LONGA)
+        outra = SERIE_LONGA[:-1] + b"\x00"
+        _dito, lidas = self._instalar(tmp_path / "outra", estado, _serie_do_modinfo(outra))
+        assert "dkms build" in lidas, lidas
+
+    def test_a_assinatura_que_nao_e_pkcs7_e_nao_sei(self, tmp_path: Path) -> None:
+        """O ``sig_key`` da assinatura antiga (X509) é o identificador da chave, não a série."""
+        estado = _com_a_chave_de(tmp_path, SERIE_DA_CHAVE)
+        _dito, lidas = self._instalar(
+            tmp_path, estado, _serie_do_modinfo(SERIE_DE_OUTRA), sig_id="X509")
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in lidas, lidas
+
+    def test_a_serie_negativa_do_certificado_e_nao_sei(self, tmp_path: Path) -> None:
+        """O kmod mostra o módulo da série; a série negativa não tem leitura de certeza."""
+        estado = _com_a_chave_de(tmp_path, SERIE_DA_CHAVE)
+        corpo = _tlv(0xA0, _tlv(0x02, b"\x02")) + _tlv(0x02, SERIE_DE_OUTRA) + _tlv(0x30, b"")
+        cert = _tlv(0x30, _tlv(0x30, corpo) + _tlv(0x30, b"") + _tlv(0x03, b"\x00"))
+        (tmp_path / "mok.pub").write_bytes(cert)
+        (tmp_path / "MokListRT").write_bytes(cert)
+        _dito, lidas = self._instalar(tmp_path, estado, _serie_do_modinfo(SERIE_DA_CHAVE))
         for verbo in FALHA_DE_REFAZER:
             assert verbo not in lidas, lidas
 
