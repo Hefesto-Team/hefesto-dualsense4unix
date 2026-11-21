@@ -110,27 +110,26 @@ def _shas_anteriores_do_pino(pino: Path | None, chave: str) -> frozenset[str]:
     return frozenset()
 
 
-def _sha_do_gameinput(home: Path | None) -> str | None:
+def _gameinput_e_um_de(home: Path | None, aceitos: frozenset[str]) -> bool:
     dll = pasta_da_peca(home) / "nativa" / "gameinput.dll"
     try:
-        return hashlib.sha256(dll.read_bytes()).hexdigest()
+        return hashlib.sha256(dll.read_bytes()).hexdigest() in aceitos
     except OSError:
-        return None
+        return False
 
 
 def gameinput_do_hefesto_instalado(home: Path | None = None, pino: Path | None = None) -> bool:
     """O `gameinput.dll` da pasta da peça (`nativa/`) existe e o sha256 dele é o `gameinput_sha256`
     do pino."""
     esperado = _sha256_do_pino(pino, "gameinput_sha256")
-    return esperado is not None and _sha_do_gameinput(home) == esperado
+    return esperado is not None and _gameinput_e_um_de(home, frozenset({esperado}))
 
 
 def gameinput_do_hefesto_de_antes(home: Path | None = None, pino: Path | None = None) -> bool:
     """O `gameinput.dll` de `nativa/` é um dos que a casa já pinou e o pino ainda aceita
     (`gameinput_sha256_anteriores`): a peça de antes, posta por um install, que a receita mantém
     até o install pôr a do pino. Um sha estranho ou o arquivo ausente dá falso."""
-    sha = _sha_do_gameinput(home)
-    return sha is not None and sha in _shas_anteriores_do_pino(pino, "gameinput_sha256")
+    return _gameinput_e_um_de(home, _shas_anteriores_do_pino(pino, "gameinput_sha256"))
 
 
 def valor_valido(variavel: str, valor: str) -> bool:
