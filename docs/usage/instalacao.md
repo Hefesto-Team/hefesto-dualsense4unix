@@ -137,8 +137,8 @@ Quatro ajustes entram por padrão:
 ## Atualizar
 
 Instalado pelo código (clone no ramo `dev`, árvore limpa, sem jogo aberto), o
-Hefesto baixa a versão nova do `dev` quando a janela abre, e só a aceita se o
-commit vier assinado por uma chave da lista do projeto
+Hefesto baixa a versão nova do `dev` quando a janela abre, e só a aceita se
+cada commit novo vier assinado por uma chave da lista do projeto
 (`assets/assinaturas/quem-assina`). Com a **Atualização automática** ligada na
 aba Sistema, a versão baixada entra ao fechar a janela, e o `install.sh` roda
 fora da janela quando a mudança pede. Desligada, que é o padrão, nada entra
