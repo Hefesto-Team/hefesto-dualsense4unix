@@ -3,22 +3,145 @@
 from __future__ import annotations
 
 import atexit
+import concurrent.futures
+import contextlib
+import os
+import queue
 import re
 import shutil
+import signal
 import subprocess
 import threading
+from collections.abc import Callable, Sequence
+from pathlib import Path
 
+from hefesto_dualsense4unix.integrations.filho_de_som import morrer_com_o_pai
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-__all__ = ["LATENCIA_MS", "Lacos", "fechar_tudo"]
+__all__ = ["LATENCIA_MS", "Lacos", "fechar_tudo", "varrer_orfaos"]
 
 LATENCIA_MS = 50
 
 _CARA_DE_ENDERECO = re.compile(r"[0-9a-fA-F]{6,}")
 
 _FAMILIAS: list[Lacos] = []
+
+_PROC = Path("/proc")
+
+
+class _Lancador:
+    """O fio de vida longa de onde sai todo `pw-loopback`.
+
+    O ``PR_SET_PDEATHSIG`` do ``morrer_com_o_pai`` dispara quando morre o FIO que fez o
+    ``fork``, não o processo. Os gestos da janela correm cada um num fio que acaba com o
+    gesto, e o laço lançado ali morreria junto: todo laço nasce neste fio, que só acaba
+    com o processo, e o kernel recolhe os laços quando ele cai por qualquer meio.
+    """
+
+    def __init__(self) -> None:
+        self._pedidos: queue.Queue[
+            tuple[Sequence[str], concurrent.futures.Future[subprocess.Popen[bytes]]]
+        ] = queue.Queue()
+        self._trava = threading.Lock()
+        self._fio: threading.Thread | None = None
+
+    def lancar(self, argv: Sequence[str]) -> subprocess.Popen[bytes]:
+        """Lança `argv` preso ao processo. Levanta o que o ``Popen`` levantar."""
+        self._garantir_o_fio()
+        futuro: concurrent.futures.Future[subprocess.Popen[bytes]] = concurrent.futures.Future()
+        self._pedidos.put((argv, futuro))
+        return futuro.result()
+
+    def _garantir_o_fio(self) -> None:
+        with self._trava:
+            if self._fio is None or not self._fio.is_alive():
+                self._fio = threading.Thread(
+                    target=self._servir, name="laco-de-audio-lancador", daemon=True)
+                self._fio.start()
+
+    def _servir(self) -> None:
+        while True:
+            argv, futuro = self._pedidos.get()
+            try:
+                futuro.set_result(subprocess.Popen(
+                    list(argv),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    preexec_fn=morrer_com_o_pai,
+                ))
+            except Exception as erro:
+                futuro.set_exception(erro)
+
+
+_LANCADOR = _Lancador()
+
+
+def _ler_o_processo(proc: Path) -> tuple[list[str], int, str] | None:
+    """`(argv, pai, início)` do processo em `proc`, ou `None` se ele sumiu ou não se lê."""
+    try:
+        argv = (proc / "cmdline").read_bytes().decode("utf-8", "replace").split("\0")
+        stat = (proc / "stat").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    campos = stat.rpartition(")")[2].split()
+    if len(campos) < 20:
+        return None
+    return argv, int(campos[1]), campos[19]
+
+
+def _e_do_hefesto(pai: int, raiz: Path) -> bool:
+    """O pai é este processo ou outro vivo do Hefesto (janela ou serviço)?"""
+    if pai == os.getpid():
+        return True
+    lido = _ler_o_processo(raiz / str(pai)) if pai > 1 else None
+    return lido is not None and "hefesto" in " ".join(lido[0]).lower()
+
+
+def varrer_orfaos(
+    familia: str,
+    *,
+    raiz: Path = _PROC,
+    uid: int | None = None,
+    matar: Callable[[int, int], None] = os.kill,
+) -> list[int]:
+    """Recolhe os `pw-loopback` desta família que ficaram sem o pai do Hefesto.
+
+    Um laço de uma janela que caiu sem o ``atexit`` (uma versão anterior não o prendia ao pai)
+    segue levando o microfone à saída, e a janela nova nasce sem lembrar dele. Só cai o processo
+    do mesmo usuário, de nome ``pw-loopback`` e ``--name hefesto-<família>-…``, cujo pai não é
+    mais processo do Hefesto, e o PID é lido duas vezes antes do sinal. Devolve os PIDs recolhidos.
+    """
+    dono = os.getuid() if uid is None else uid
+    prefixo = f"hefesto-{familia}-"
+    recolhidos: list[int] = []
+    try:
+        candidatos = [p for p in raiz.iterdir() if p.name.isdigit()]
+    except OSError:
+        return recolhidos
+    for proc in candidatos:
+        lido = _ler_o_processo(proc)
+        if lido is None or not _e_um_laco_da_familia(lido[0], prefixo):
+            continue
+        try:
+            do_dono = proc.stat().st_uid == dono
+        except OSError:
+            continue
+        if not do_dono or _e_do_hefesto(lido[1], raiz) or _ler_o_processo(proc) != lido:
+            continue
+        with contextlib.suppress(OSError):
+            matar(int(proc.name), signal.SIGTERM)
+            recolhidos.append(int(proc.name))
+            logger.info("laco_orfao_recolhido", familia=familia, pid=int(proc.name))
+    return recolhidos
+
+
+def _e_um_laco_da_familia(argv: list[str], prefixo: str) -> bool:
+    if not argv or Path(argv[0]).name != "pw-loopback" or "--name" not in argv:
+        return False
+    indice = argv.index("--name") + 1
+    return indice < len(argv) and argv[indice].startswith(prefixo)
 
 
 class Lacos:
@@ -30,6 +153,7 @@ class Lacos:
         self._pedidos: dict[str, dict[str, object]] = {}
         self._trava = threading.Lock()
         _FAMILIAS.append(self)
+        varrer_orfaos(familia)
 
     def esta_ligado(self, chave: str) -> bool:
         """Esta laçada está de pé AGORA? Pergunta ao processo, não à lembrança."""
@@ -83,8 +207,7 @@ class Lacos:
         if destino:
             argv += ["--playback", destino]
         try:
-            proc = subprocess.Popen(
-                argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            proc = _LANCADOR.lancar(argv)
         except (OSError, subprocess.SubprocessError) as exc:
             logger.info(
                 "laco_nao_subiu", familia=self.familia, chave=chave, err=str(exc))

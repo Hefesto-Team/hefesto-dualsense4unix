@@ -70,9 +70,10 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "(A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01): alimentado pelo cano, preso ao pai "
         "pelo PDEATHSIG, e a `CaixaQueSeparaNoCabo.descer` o derruba",
     ),
-    "integrations/laco_de_audio.py::Lacos.ligar": (
+    "integrations/laco_de_audio.py::_Lancador._servir": (
         "ajudante", 1,
-        "o `pw-loopback` de um laço de som, com dono que o fecha",
+        "o `pw-loopback` de um laço de som, com dono que o fecha; sai de um fio de vida longa, "
+        "preso ao pai pelo PDEATHSIG",
     ),
     "integrations/energia_do_som.py::abrir_fluxo": (
         "ajudante", 1,
