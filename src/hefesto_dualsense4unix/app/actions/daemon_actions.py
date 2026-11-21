@@ -16,6 +16,7 @@ from hefesto_dualsense4unix.utils.repo_files import (
     encontrar_arquivo_do_repo,
 )
 from hefesto_dualsense4unix.utils.sd_notify import PRAZO_DA_PARTIDA_S
+from hefesto_dualsense4unix.utils.single_instance import PRAZO_DO_DESLIGAMENTO_S
 
 logger = get_logger(__name__)
 
@@ -33,13 +34,18 @@ PRAZO_DE_DESLIGAR_A_MAQUINA_S = 30.0
 VERBOS_QUE_DESLIGAM_A_MAQUINA = frozenset({"reboot", "poweroff"})
 
 FOLGA_DO_START_S = 5.0
+PRAZO_ESTOURADO_RC = 124
 
 
 def prazo_do_systemctl(args: Sequence[str]) -> float:
     """O prazo do `systemctl <args>`: o da unit mais a folga se liga; o curto se consulta.
 
+    O `restart` soma a parada (`PRAZO_DO_DESLIGAMENTO_S`, o `TimeoutStopSec` da unit) à partida.
+
     O verbo que desliga a máquina pode esperar a senha pedida pelo polkit."""
-    if args and args[0] in ("start", "restart"):
+    if args and args[0] == "restart":
+        return PRAZO_DO_DESLIGAMENTO_S + PRAZO_DA_PARTIDA_S + FOLGA_DO_START_S
+    if args and args[0] == "start":
         return PRAZO_DA_PARTIDA_S + FOLGA_DO_START_S
     if args and args[0] in VERBOS_QUE_DESLIGAM_A_MAQUINA:
         return PRAZO_DE_DESLIGAR_A_MAQUINA_S
@@ -738,6 +744,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 check=check,
                 timeout=prazo_do_systemctl(args),
             )
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess(args, PRAZO_ESTOURADO_RC, "", "")
         except (FileNotFoundError, subprocess.SubprocessError):
             return None
 

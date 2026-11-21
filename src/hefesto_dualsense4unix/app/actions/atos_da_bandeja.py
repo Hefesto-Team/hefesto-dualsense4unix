@@ -71,9 +71,22 @@ def repor_o_lancador() -> None:
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
     try:
-        console.print(rl.frase_do_recibo(rl.repor()))
+        recibo = rl.repor()
     except Exception as erro:
         console.print(f"[yellow]não consegui repor o lançador:[/] {erro}")
+        _avisar_no_desktop(f"Não consegui repor o lançador: {erro}")
+        return
+    frase = rl.frase_do_recibo(recibo)
+    console.print(frase)
+    if recibo.falhou:
+        _avisar_no_desktop(frase)
+
+
+def _avisar_no_desktop(frase: str) -> None:
+    """O recibo que falhou vai à notificação do desktop: o console da bandeja ninguém lê."""
+    from hefesto_dualsense4unix.integrations.desktop_notifications import notify
+
+    notify("Reiniciar o serviço", frase)
 
 
 CHAVE_DO_AUTOSTART = "X-GNOME-Autostart-enabled"

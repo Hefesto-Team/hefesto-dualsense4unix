@@ -193,12 +193,12 @@ def _limpar_o_painel() -> None:
 RECIBO_QUE_FICA_NA_TELA = (CAMPO_DAS_CORRECOES,)
 
 
-def _relatar_o_recibo(gesto_: str, frase: str) -> None:
-    """O recibo do segundo clique: sempre ao diário, e à TELA quando ele some."""
+def _relatar_o_recibo(gesto_: str, frase: str, na_tela: bool = False) -> None:
+    """O recibo do segundo clique: sempre ao diário, e à TELA quando ele some ou quando falhou."""
     if not frase:
         return
     print(f"[relato] {PAGINA} · {gesto_}: {frase}", file=sys.stderr)
-    if gesto_ in RECIBO_QUE_FICA_NA_TELA:
+    if na_tela or gesto_ in RECIBO_QUE_FICA_NA_TELA:
         _para_o_painel(frase)
 
 
@@ -1820,6 +1820,17 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(motivo or "não consegui gravar o perfil de bateria")
 
 
+REINICIO_EM_CURSO = (
+    "O reinício está demorando e segue em curso; os lançadores abertos voltam quando o serviço "
+    "voltar.")
+
+FILA_DO_REINICIO = "reinício do serviço"
+
+
+class ReinicioEmCursoError(RuntimeError):
+    """O `restart` estourou o prazo de quem espera, mas o systemd segue com ele."""
+
+
 def _systemctl(verbo: str) -> None:
     """Roda `systemctl --user <verbo>` pela janela antiga, e LEVANTA se não pegou."""
     janela = _matriz()
@@ -1827,6 +1838,8 @@ def _systemctl(verbo: str) -> None:
         janela._invoke_systemctl(["reset-failed", _unidade()], check=False)
     r = janela._invoke_systemctl([verbo, _unidade()], capture=True)
     rc = getattr(r, "returncode", -1) if r is not None else -1
+    if verbo == "restart" and rc == _daemon.PRAZO_ESTOURADO_RC:
+        raise ReinicioEmCursoError(REINICIO_EM_CURSO)
     if rc != 0:
         detalhe = str(getattr(r, "stderr", "") or "").strip() if r is not None else ""
         recusa = _daemon._SYSTEMCTL_FAIL_MSG.get(verbo, "Não consegui falar com o sistema")
@@ -1907,8 +1920,20 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     motivo = _trava(ctx, "reiniciar")
     if motivo:
         raise RuntimeError(motivo)
-    _systemctl("restart")
+    try:
+        _systemctl("restart")
+    except ReinicioEmCursoError as em_curso:
+        _para_o_painel(str(em_curso))
+        na_fila([FILA_DO_REINICIO], _repor_quando_o_servico_voltar, nome=FILA_DO_REINICIO)
+        return
     _repor_o_lancador()
+
+
+def _repor_quando_o_servico_voltar() -> None:
+    """O `start` bloqueia até a partida: quando ele volta com sucesso, o lançador é reposto."""
+    resultado = _matriz()._invoke_systemctl(["start", _unidade()], capture=True)
+    if getattr(resultado, "returncode", -1) == 0:
+        _repor_o_lancador()
 
 
 def _repor_o_lancador() -> None:
@@ -1918,9 +1943,9 @@ def _repor_o_lancador() -> None:
     try:
         recibo = rl.repor()
     except Exception as erro:
-        _relatar_o_recibo("reiniciar", f"não consegui repor o lançador: {erro}")
+        _relatar_o_recibo("reiniciar", f"não consegui repor o lançador: {erro}", na_tela=True)
         return
-    _relatar_o_recibo("reiniciar", rl.frase_do_recibo(recibo))
+    _relatar_o_recibo("reiniciar", rl.frase_do_recibo(recibo), na_tela=recibo.falhou)
 
 
 CONFIRMA = "Confirma?"

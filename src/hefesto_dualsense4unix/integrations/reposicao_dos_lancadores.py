@@ -238,6 +238,11 @@ class Recibo:
     nao_reabriram: tuple[str, ...] = ()
     barrado_por_jogo: bool = False
 
+    @property
+    def falhou(self) -> bool:
+        """Algum lançador não fechou ou não reabriu: o recibo precisa chegar a quem usa."""
+        return bool(self.nao_fecharam or self.nao_reabriram)
+
 
 def repor() -> Recibo:
     """Fecha e reabre todo lançador que estava aberto. O ato inteiro."""

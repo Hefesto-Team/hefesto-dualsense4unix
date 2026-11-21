@@ -497,7 +497,7 @@ MIOLO = f'''
 {item(ROTULO_PARAR, "Os controles viram gamepads comuns. Pergunta antes", "btn vermelho borda-vermelha", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
 {item_escondido("Corrigir o serviço", "Faz o serviço subir do jeito certo", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
-{item_cinza("Reiniciar", "Para e liga de novo; nenhum ajuste se perde", "reiniciar")}
+{item_cinza("Reiniciar", "Para e liga de novo; a Steam e os outros lançadores abertos fecham e reabrem", "reiniciar")}
           </div>
           <div class="risco"></div>
           <div class="coluna">
