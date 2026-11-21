@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """hefesto-hidraw-broker — broker root que esconde o hidraw do DualSense FÍSICO.
 
 BROKER-01 (FUT-01/PLAT-02), reimplementado na Onda S com FD-INJECTION: daemon,
