@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.utils.sd_notify import PRAZO_DA_PARTIDA_S
 
 logger = get_logger(__name__)
 
-DaemonStatus = Literal["online_systemd", "online_avulso", "iniciando", "offline"]
+DaemonStatus = Literal["online_systemd", "online_avulso", "iniciando", "mudando", "offline"]
 
 MIGRAR_DEU_CERTO = (
     "Pronto — o Hefesto agora liga sozinho e volta sozinho se travar."
@@ -646,25 +646,13 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
 
     _ESTADOS_COM_DAEMON_DE_PE: ClassVar[frozenset[str]] = frozenset(
-        {"online_systemd", "online_avulso", "iniciando"}
+        {"online_systemd", "online_avulso", "iniciando", "mudando"}
     )
 
 
     def _daemon_pid_alive(self) -> bool:
-        """Retorna True se o pid file do daemon aponta para processo vivo."""
-        try:
-            from hefesto_dualsense4unix.utils.single_instance import is_alive
-            from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
-        except Exception:
-            return False
-        pid_file = runtime_dir() / "daemon.pid"
-        try:
-            raw = pid_file.read_text(encoding="ascii").strip()
-        except (FileNotFoundError, OSError):
-            return False
-        if not raw.isdigit():
-            return False
-        return is_alive(int(raw))
+        """Retorna True se alguém segura a vez do daemon (o número do arquivo não basta)."""
+        return self._read_daemon_pid() is not None
 
     def _is_service_active(self) -> str:
         """Retorna saída de `systemctl --user is-active hefesto-dualsense4unix.service`.
@@ -680,39 +668,25 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
 
     def _read_daemon_pid(self) -> int | None:
-        """Lê o PID do arquivo de pid do daemon; retorna None se ausente/inválido."""
+        """O PID de quem segura a vez do daemon, ou None se ninguém segura (número velho)."""
         try:
-            from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+            from hefesto_dualsense4unix.utils.single_instance import quem_segura_a_vez
         except Exception:
             return None
-        pid_file = runtime_dir() / "daemon.pid"
-        try:
-            raw = pid_file.read_text(encoding="ascii").strip()
-        except (FileNotFoundError, OSError):
-            return None
-        if not raw.isdigit():
-            return None
-        pid = int(raw)
-        return pid if pid > 0 else None
+        return quem_segura_a_vez("daemon")
 
     def _daemon_status(self) -> DaemonStatus:
-        """Determina o estado canônico do daemon cruzando 3 fontes.
+        """O estado canônico do daemon: o `is-active` da unit cruzado com quem segura a vez.
 
-        Fontes consultadas:
-          1. `systemctl --user is-active hefesto-dualsense4unix.service` → systemd_active.
-          2. `systemctl --user is-enabled hefesto-dualsense4unix.service` → systemd_enabled.
-          3. `is_alive(pid)` via pid file → process_alive.
-
-        Matriz de decisão (BUG-DAEMON-STATUS-MISMATCH-01):
-          systemd active + process_alive + enabled  → online_systemd
-          systemd active + process_alive            → online_systemd
-          systemd inactive/failed + process_alive   → online_avulso
-          systemd active + not process_alive        → iniciando
-          systemd inactive/failed + not process_alive → offline
+        `activating` é iniciando; `deactivating` e `reloading` são mudando. Nos demais, o processo
+        é o de `quem_segura_a_vez`: com a unit ativa é online_systemd (iniciando se não há dono);
+        com a unit parada é online_avulso (offline se não há dono).
         """
         estado_da_unit = self._systemctl_oneline(["is-active", SERVICE_NORMAL])
         if estado_da_unit == "activating":
             return "iniciando"
+        if estado_da_unit in ("deactivating", "reloading"):
+            return "mudando"
         systemd_active = estado_da_unit == "active"
         pid = self._read_daemon_pid()
         process_alive: bool

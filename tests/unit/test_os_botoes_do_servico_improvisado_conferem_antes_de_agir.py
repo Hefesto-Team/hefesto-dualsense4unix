@@ -107,6 +107,8 @@ def _montar(a09: Any, monkeypatch: pytest.MonkeyPatch, sai_depois: float | None,
                                                      sleep=relogio.sleep))
     monkeypatch.setattr(os, "kill", mundo.kill)
     monkeypatch.setattr(single_instance, "is_alive", mundo.vivo)
+    monkeypatch.setattr(single_instance, "quem_segura_a_vez",
+                        lambda _nome: PID if mundo.vivo() else None)
     monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda _p: True)
     monkeypatch.setattr(service_install.ServiceInstaller, "detect_installed_unit",
                         lambda self: "hefesto-dualsense4unix" if unit else None)

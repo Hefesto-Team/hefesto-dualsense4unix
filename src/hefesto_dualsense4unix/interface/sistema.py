@@ -124,7 +124,7 @@ class Leitura(NamedTuple):
     Cada campo nomeia quem o produz, e nenhum deles é produzido aqui:
 
     :param status: ``daemon_actions._daemon_status()`` — um de
-        ``online_systemd``, ``online_avulso``, ``iniciando``, ``offline``.
+        ``online_systemd``, ``online_avulso``, ``iniciando``, ``mudando``, ``offline``.
     :param autostart: a saída crua de ``systemctl --user is-enabled``.
     :param state: o ``daemon.state_full``, ou ``None`` com o daemon calado.
     :param achados: o retorno de ``storm_doctor.storm_report()`` — pares
@@ -170,6 +170,11 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
     }
 
 
+DICA_DO_SERVICO_MUDANDO = "Parando; volta sozinho quando o reinício terminar"
+
+SERVICO_MUDANDO_ESPERE = "O serviço está parando ou reiniciando — espere terminar."
+
+
 _ESTADO_DO_HEFESTO: dict[str, Linha] = {
     "online_systemd": Linha(
         "Ligado", OK, GLIFO_OK,
@@ -187,6 +192,12 @@ _ESTADO_DO_HEFESTO: dict[str, Linha] = {
         AVISO,
         GLIFO_AVISO,
         "Está terminando de ligar. Aguarde alguns segundos e clique em Atualizar.",
+    ),
+    "mudando": Linha(
+        "Parando…",
+        AVISO,
+        GLIFO_AVISO,
+        DICA_DO_SERVICO_MUDANDO,
     ),
     "offline": Linha(
         "Desligado",
@@ -411,6 +422,9 @@ def status_do_servico(status: str | None, state: object) -> dict[str, str]:
             "Serviço improvisado",
             "Roda por fora do sistema: não liga com o computador nem volta "
             "sozinho se travar.")
+    if status == "mudando":
+        return _linha_de_status("hefesto-estado", "PARANDO", PILULA_AVISO, GLIFO_AVISO,
+                                "Serviço", DICA_DO_SERVICO_MUDANDO)
     if status == "iniciando":
         return _linha_de_status("hefesto-estado", "LIGANDO", PILULA_AVISO,
                                 GLIFO_AVISO, "Serviço", "Terminando de ligar.")
@@ -565,7 +579,10 @@ def travas(leitura: Leitura) -> dict[str, str]:
             if leitura.status is not None
             else "Não deu para saber se o serviço está pausado."
         )
-    if not de_pe:
+    if leitura.status == "mudando":
+        presas["parar-ou-retomar"] = SERVICO_MUDANDO_ESPERE
+        presas["reiniciar"] = SERVICO_MUDANDO_ESPERE
+    elif not de_pe:
         presas["parar-ou-retomar"] = "O serviço já está desligado."
         presas["reiniciar"] = "O serviço está desligado — não há o que reiniciar."
     return presas

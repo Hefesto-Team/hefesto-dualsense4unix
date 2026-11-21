@@ -2105,6 +2105,9 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     :data:`CLIQUE_DE_NOVO` (:func:`_pergunta_do_botao`), a carga leva
     :data:`ARMOU`, e o clique 2 limpa o painel antes de agir.
     """
+    if _status_do_daemon(ctx.state) == "mudando":
+        _ARMADO.clear()
+        raise RuntimeError(_tela.SERVICO_MUDANDO_ESPERE)
     if _de_pe(ctx) and _pausado(ctx):
         _ARMADO.clear()
         retomar(ctx, o, p)
@@ -2254,6 +2257,7 @@ def _o_avulso_saiu(pid: int) -> bool:
         PRAZO_DO_DESLIGAMENTO_S,
         _is_hefesto_dualsense4unix_process,
         is_alive,
+        quem_segura_a_vez,
     )
 
     if not is_alive(pid):
@@ -2266,10 +2270,10 @@ def _o_avulso_saiu(pid: int) -> bool:
         return not is_alive(pid)
     limite = time.monotonic() + PRAZO_DO_DESLIGAMENTO_S
     while time.monotonic() < limite:
-        if not is_alive(pid):
+        if quem_segura_a_vez("daemon") != pid:
             return True
         time.sleep(0.1)
-    return not is_alive(pid)
+    return quem_segura_a_vez("daemon") != pid
 
 
 NADA_A_CORRIGIR = "O serviço já sobe pelo sistema — não há o que corrigir."

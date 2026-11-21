@@ -394,6 +394,32 @@ def ler_o_pedido(porta: socket.socket) -> str | bool | None:
 is_hefesto_dualsense4unix_process = _is_hefesto_dualsense4unix_process
 
 
+def quem_segura_a_vez(name: str) -> int | None:
+    """O número de quem segura a vez de `name` agora, ou `None` se ninguém a segura.
+
+    Quem segura é quem mantém o `flock` do arquivo de número (`acquire_or_takeover`): o lock
+    morre com o processo, ao contrário do número, que fica no arquivo depois da saída e pode cair
+    noutro processo vivo. Por isso tenta `LOCK_SH|LOCK_NB`: se consegue, não há dono e o número é
+    velho; se não, o número é de quem segura. Nunca cria nem apaga o arquivo.
+    """
+    path = _pid_file(name)
+    try:
+        fd = os.open(str(path), os.O_RDONLY)
+    except OSError:
+        return None
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno not in (errno.EWOULDBLOCK, errno.EAGAIN):
+                return None
+            return _read_existing_pid(path)
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return None
+    finally:
+        os.close(fd)
+
+
 def release(name: str) -> None:
     """Libera o lock (e a porta de frente, se houver) explicitamente. No-op se ausente."""
     porta = _PORTAS.pop(name, None)
@@ -420,5 +446,6 @@ __all__ = [
     "ler_o_pedido",
     "pedir_a_frente",
     "porta_de_frente",
+    "quem_segura_a_vez",
     "release",
 ]
