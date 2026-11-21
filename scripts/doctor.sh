@@ -5411,7 +5411,7 @@ _check_dkms_secureboot() {
     local kver; kver="$(uname -r)"
     if compgen -G "${HEFESTO_DKMS_TREE:-/var/lib/dkms}/hefesto-*/kernel-${kver}-*" >/dev/null 2>&1; then
         _DKMS_SB_WARNED=1
-        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto instalados neste kernel — o kernel os RECUSA no boot e o driver de fábrica vale no lugar (a atualização tira os módulos da casa): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_efeito_sem_a_chave ). Para ganhar as curas: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto instalados neste kernel — o kernel os RECUSA no boot e o driver de fábrica vale no lugar (a atualização tira esses módulos): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_efeito_sem_a_chave ). Para ganhar as curas: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
     fi
 }
 
