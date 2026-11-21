@@ -1411,6 +1411,18 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .ac-desenho{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;
     background:var(--app-bg);border-radius:9px;padding:8px}
   .ac-svg{width:100%;height:auto;max-height:52vh}
+  .ac-desenho>.ac-pro,.ac-desenho>.ac-8bitdo{display:none}
+  .ac-para>.ac-n-pro,.ac-para>.ac-n-8bitdo{display:none}
+  #acionador:has(.ac-quem option[data-modelo="pro"]:checked) .ac-para>.ac-n,
+  #acionador:has(.ac-quem option[data-modelo="8bitdo"]:checked) .ac-para>.ac-n{display:none}
+  #acionador:has(.ac-quem option[data-modelo="pro"]:checked) .ac-para>.ac-n-pro,
+  #acionador:has(.ac-quem option[data-modelo="8bitdo"]:checked) .ac-para>.ac-n-8bitdo{
+    display:inline}
+  #acionador:has(.ac-quem option[data-modelo="pro"]:checked) .ac-desenho>.ac-svg,
+  #acionador:has(.ac-quem option[data-modelo="8bitdo"]:checked) .ac-desenho>.ac-svg{display:none}
+  #acionador:has(.ac-quem option[data-modelo="pro"]:checked) .ac-desenho>.ac-pro,
+  #acionador:has(.ac-quem option[data-modelo="8bitdo"]:checked) .ac-desenho>.ac-8bitdo{
+    display:block}
   #acionador .tn-rod .btn{height:34px}
 """ + f"  :root{{{_RAIZ_DAS_CORES_DOS_TIPOS}}}\n"
 
@@ -1467,6 +1479,7 @@ QUEDAS_DO_DESENHO_5 = {"n": 12, "min": 24}
 
 QUEM_RECEBE_NO_DESENHO = (("aabbcc0000c1", "Cosmic Red"), ("aabbcc0000c2", "Starlight Blue"),
                           ("aabbcc0000c3", "White"), ("aabbcc0000c4", "Galactic Purple"))
+PRO_NO_DESENHO = ("aabbcc0000e1", "Pro Controller")
 COLORWAY_NO_DESENHO = dict(zip((k for k, _ in QUEM_RECEBE_NO_DESENHO),
                                ("cosmic-red", "starlight-blue", "white", "galactic-purple"),
                                strict=True))
@@ -1509,6 +1522,48 @@ def _desenho_do_acionador() -> str:
         lambda m: (f'<g {m.group(1)}data-entrada="{m.group(2)}" data-gesto="acionador-botao" '
                    'data-hef-forma="acionador"') if m.group(2) in trocam else m.group(0),
         cru).strip()
+
+
+_ARTE_DO_ACIONADOR = {"pro": "nintendo-pro.svg", "8bitdo": "8bitdo-sn30-pro.svg"}
+
+
+def _escopa_o_estilo(css: str, escopo: str) -> str:
+    """Cada regra do `<style>` do desenho vale só dentro dele: a folha não vaza para a página."""
+    def regra(m: re.Match) -> str:
+        novos = [escopo + sel[3:] if sel.startswith("svg") else f"{escopo} {sel}"
+                 for sel in (x.strip() for x in m.group(1).split(","))]
+        return ",".join(novos) + "{" + m.group(2) + "}"
+
+    return re.sub(r"([^{}]+)\{([^{}]*)\}", regra, css)
+
+
+def _desenho_do_modelo(modelo: str) -> str:
+    """O desenho do controle de fora (`assets/control-svg/`) ao lado do DualSense na janela.
+
+    Os `id` ganham o prefixo do modelo (`PREFIXO_DA_PECA`), a folha do arquivo fica escopada ao
+    próprio `<svg>`, e cada peça que a tabela do modelo conhece vira o gesto ``acionador-botao``.
+    A janela mostra um só: o do `data-modelo` da opção marcada no seletor (CSS, sem gesto).
+    """
+    prefixo = _pacote08.PREFIXO_DA_PECA[modelo]
+    cru = (R / "assets" / "control-svg" / _ARTE_DO_ACIONADOR[modelo]).read_text(encoding="utf-8")
+    cru = cru[cru.index("<svg"):cru.rindex("</svg>") + len("</svg>")]
+    cru = re.sub(r'(\sid=")([^"]+)"', rf'\g<1>{prefixo}\2"', cru)
+    cru = re.sub(r'aria-labelledby="([^"]+)"', rf'aria-labelledby="{prefixo}\1"', cru)
+    cru = re.sub(r"<style>(.*?)</style>",
+                 lambda m: "<style>" + _escopa_o_estilo(m.group(1), f"#acionador svg.ac-{modelo}")
+                 + "</style>", cru, flags=re.S)
+    cru = re.sub(r"<svg\s", f'<svg class="ac-svg ac-{modelo}" ', cru, count=1)
+    trocam = {entrada for entrada, _ in _pacote08.ENTRADAS_DO_MODELO[modelo].values()}
+    return re.sub(
+        r'<g ([^>]*)data-entrada="([^"]+)"',
+        lambda m: (f'<g {m.group(1)}data-entrada="{m.group(2)}" data-gesto="acionador-botao" '
+                   'data-hef-forma="acionador"') if m.group(2) in trocam else m.group(0),
+        cru).strip()
+
+
+def _desenhos_do_acionador() -> str:
+    """O DualSense primeiro (o que a janela mostra sem controle de fora) e os de fora depois."""
+    return "\n".join([_desenho_do_acionador(), *(_desenho_do_modelo(m) for m in _ARTE_DO_ACIONADOR)])
 
 
 def _cena_do_desenho() -> dict:
@@ -1634,8 +1689,9 @@ def _cena_do_desenho() -> dict:
         "ocupado": False, "aberto": None, "perto": perto,
         "destino_do_conectar": vazio["id"],
         "pedindo": [dict(PEDIDO_DO_DESENHO)],
-        "quem_recebe": list(QUEM_RECEBE_NO_DESENHO),
+        "quem_recebe": [*QUEM_RECEBE_NO_DESENHO, PRO_NO_DESENHO],
         "colorway_de": dict(COLORWAY_NO_DESENHO),
+        "modelo_de": {PRO_NO_DESENHO[0]: "pro"},
     }
     cena["procurando"] = (_pacote08.PROCURAR_LIGADO
                           if any(lg.get("conectando") for lg in lugares)
@@ -2537,7 +2593,7 @@ if __name__ == "__main__":
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
     TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR,
                                              _pacote08.html_do_acionador(CENA_DO_RADIO,
-                                                                         _desenho_do_acionador()),
+                                                                         _desenhos_do_acionador()),
                                              _pacote08.html_da_grade_de_tipos(), TELA_SENTADA,
                                              TELA_FIM, TELA_EM_PE, TELA_MAPEAR_PORTAS))
     x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)

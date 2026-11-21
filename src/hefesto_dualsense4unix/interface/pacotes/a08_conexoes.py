@@ -1902,12 +1902,13 @@ def acionador_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Um botão do desenho: a tecla escolhida na lista passa a cair nele."""
     global _RASCUNHO
     r = _o_rascunho()
-    botao = botao_da_peca(str(o.get("entrada") or ""))
+    bruta = o.get("forma")
+    forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
+    modelo = _modelo_de(_CENA_NA_TELA, str(forma.get("acionador-quem") or r.controle))
+    botao = botao_da_peca(str(o.get("entrada") or ""), modelo)
     if botao is None:
         raise ValueError(f"acionador-botao: {o.get('entrada')!r} não é um botão que a troca "
                          "conhece")
-    bruta = o.get("forma")
-    forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
     escolhida = str(forma.get("tecla") or (r.sel if r.sel is not None else ""))
     if not _CODIGO_DE_TECLA.match(escolhida):
         raise ValueError("acionador-botao: nenhuma tecla da lista está escolhida")
@@ -2545,17 +2546,75 @@ def _botoes_do_desenho() -> tuple[tuple[str, str, str], ...]:
     return tuple(vistos.values())
 
 
-def peca_do_botao(botao: str) -> str:
-    return next((peca for peca, motor, _ in _botoes_do_desenho() if motor == botao), botao)
+MODELO_DUALSENSE = "dualsense"
+PREFIXO_DA_PECA = {MODELO_DUALSENSE: "ac-", "pro": "ac-pro-", "8bitdo": "ac-8bitdo-"}
+_DIRECOES_DO_DPAD = {"dpad_up": "ABS_HAT0Y-", "dpad_down": "ABS_HAT0Y+",
+                     "dpad_left": "ABS_HAT0X-", "dpad_right": "ABS_HAT0X+"}
+_ENTRADAS_DOS_EXTERNOS = {
+    "BTN_SOUTH": ("b", "B"), "BTN_EAST": ("a", "A"), "BTN_NORTH": ("x", "X"),
+    "BTN_WEST": ("y", "Y"), "BTN_TL": ("l", "L"), "BTN_TR": ("r", "R"),
+    "BTN_TL2": ("zl", "ZL"), "BTN_TR2": ("zr", "ZR"), "BTN_THUMBL": ("stick_l", "L3"),
+    "BTN_THUMBR": ("stick_r", "R3")}
+ENTRADAS_DO_MODELO: dict[str, dict[str, tuple[str, str]]] = {
+    "pro": {**_ENTRADAS_DOS_EXTERNOS,
+            "BTN_SELECT": ("minus", "Menos"), "BTN_START": ("plus", "Mais"),
+            "ABS_HAT0Y-": ("dpad_up", "D-pad cima"), "ABS_HAT0Y+": ("dpad_down", "D-pad baixo"),
+            "ABS_HAT0X-": ("dpad_left", "D-pad esquerda"),
+            "ABS_HAT0X+": ("dpad_right", "D-pad direita")},
+    "8bitdo": {**_ENTRADAS_DOS_EXTERNOS,
+               "BTN_SELECT": ("select", "Select"), "BTN_START": ("start", "Start")},
+}
+O_DPAD_INTEIRO = {"8bitdo": "dpad"}
+_MODELO_DO_SIMBOLO = {"ext-pro": "pro", "ext-8bitdo": "8bitdo"}
 
 
-def botao_da_peca(peca: str) -> str | None:
-    return next((motor for p, motor, _ in _botoes_do_desenho() if p == peca), None)
+def _evdev_do_botao(botao: str) -> str | None:
+    """O ``BTN_*`` ou o eixo do ``hat`` em que o botão posicional cai no kernel, pelo mapa que o
+    leitor do físico já tem (``evdev_reader.BOTOES_DO_LEITOR``, lido de trás para a frente)."""
+    from hefesto_dualsense4unix.core.evdev_reader import BOTOES_DO_LEITOR
+
+    if botao in _DIRECOES_DO_DPAD:
+        return _DIRECOES_DO_DPAD[botao]
+    lido = {"l2": "l2_btn", "r2": "r2_btn"}.get(botao, botao)
+    return next((codigo for codigo, nome in BOTOES_DO_LEITOR.items() if nome == lido), None)
 
 
-def nome_do_botao(botao: str | None) -> str:
+def peca_do_botao(botao: str, modelo: str = MODELO_DUALSENSE) -> str:
+    """A peça do desenho do modelo em que o botão gravado acende; o 8BitDo, sem as quatro
+    direções, acende o contorno do ``dpad`` inteiro."""
+    tabela = ENTRADAS_DO_MODELO.get(modelo)
+    if tabela is None:
+        return next((peca for peca, motor, _ in _botoes_do_desenho() if motor == botao), botao)
+    achada = tabela.get(_evdev_do_botao(botao) or "")
+    if achada is not None:
+        return achada[0]
+    return O_DPAD_INTEIRO.get(modelo, botao) if botao in _DIRECOES_DO_DPAD else botao
+
+
+def botao_da_peca(peca: str, modelo: str = MODELO_DUALSENSE) -> str | None:
+    """O botão que a peça clicada grava (o nome do DualSense, que o `maquina.json` guarda)."""
+    tabela = ENTRADAS_DO_MODELO.get(modelo)
+    if tabela is None:
+        return next((motor for p, motor, _ in _botoes_do_desenho() if p == peca), None)
+    evdev = next((ev for ev, (entrada, _) in tabela.items() if entrada == peca), None)
+    return next((motor for _, motor, _ in _botoes_do_desenho()
+                 if evdev is not None and _evdev_do_botao(motor) == evdev), None)
+
+
+def nome_do_botao(botao: str | None, modelo: str = MODELO_DUALSENSE) -> str:
+    """O nome do botão na tela: o que está escrito no controle escolhido (B, A, ZL no Pro)."""
+    tabela = ENTRADAS_DO_MODELO.get(modelo)
+    achada = tabela.get(_evdev_do_botao(botao or "") or "") if tabela else None
+    if achada is not None:
+        return achada[1]
     return next((nome for _, motor, nome in _botoes_do_desenho() if motor == botao),
                 TRACO_CURTO)
+
+
+def _modelo_de(cena: dict[str, Any], chave: str) -> str:
+    """O modelo do controle de destino (``dualsense`` quando a cena não diz outro)."""
+    modelo = (cena.get("modelo_de") or {}).get(chave)
+    return modelo if modelo in ENTRADAS_DO_MODELO else MODELO_DUALSENSE
 
 
 @_dataclasses.dataclass
@@ -2602,6 +2661,16 @@ def _quem_recebe(cena: dict[str, Any]) -> list[tuple[str, str]]:
     return [(str(k), str(n)) for k, n in cena.get("quem_recebe") or ()]
 
 
+SUFIXO_DO_NOME = ((MODELO_DUALSENSE, "ds"), ("pro", "pro"), ("8bitdo", "8bitdo"))
+
+
+def _os_nomes_do_botao(botao: str | None) -> str:
+    """O nome do botão em cada modelo; o CSS da janela mostra o do controle escolhido no seletor,
+    no mesmo instante da escolha."""
+    return "".join(f'<span class="ac-n ac-n-{sufixo}">{_x(nome_do_botao(botao, modelo))}</span>'
+                   for modelo, sufixo in SUFIXO_DO_NOME)
+
+
 def html_das_teclas(r: _Rascunho | None) -> str:
     if r is None:
         return ""
@@ -2610,25 +2679,35 @@ def html_das_teclas(r: _Rascunho | None) -> str:
         f'<input type="radio" name="ac-t" value="{codigo}" data-linha="tecla"'
         f'{" checked" if codigo == r.sel else ""}>'
         f'<span class="ac-de">{_x(rotulo)}</span><span class="ac-seta">→</span>'
-        f'<span class="ac-para">{_x(nome_do_botao(botao))}</span></label>'
+        f'<span class="ac-para">{_os_nomes_do_botao(botao)}</span></label>'
         for codigo, rotulo, botao in r.teclas)
 
 
-def html_de_quem_recebe(r: _Rascunho | None, quem: list[tuple[str, str]]) -> str:
+def html_de_quem_recebe(r: _Rascunho | None, quem: list[tuple[str, str]],
+                        modelos: dict[str, str] | None = None) -> str:
+    """As opções do seletor; a do controle de fora leva o `data-modelo`, que o CSS da janela lê
+    (`:has(option:checked)`) para mostrar o desenho dele no mesmo instante da escolha."""
     escolhido = r.controle if r is not None else ""
-    return "".join(
-        f'<option value="{_x(chave)}"{" selected" if chave == escolhido else ""}>{_x(nome)}'
-        '</option>' for chave, nome in quem)
+    opcoes = []
+    for chave, nome in quem:
+        modelo = (modelos or {}).get(chave)
+        do_modelo = f' data-modelo="{modelo}"' if modelo else ""
+        marca = " selected" if chave == escolhido else ""
+        opcoes.append(f'<option value="{_x(chave)}"{do_modelo}{marca}>{_x(nome)}</option>')
+    return "".join(opcoes)
 
 
-def css_do_brilho(r: _Rascunho | None) -> str:
-    """Os botões do desenho que já recebem uma tecla acendem (o roxo do desenho aprovado)."""
-    pecas = [] if r is None else list(dict.fromkeys(
-        peca_do_botao(str(b)) for _, _, b in r.teclas if b))
-    if not pecas:
-        return ""
-    return (",".join(f"#acionador #ac-{p}" for p in pecas)
-            + _BRILHO_DO_DESTINO.format())
+def css_do_brilho(r: _Rascunho | None, modelos: tuple[str, ...] = (MODELO_DUALSENSE,)) -> str:
+    """Os botões que já recebem uma tecla acendem (o roxo do desenho), uma regra por desenho; a
+    janela só mostra o desenho do controle escolhido no seletor."""
+    regras = []
+    for modelo in modelos:
+        pecas = [] if r is None else list(dict.fromkeys(
+            peca_do_botao(str(b), modelo) for _, _, b in r.teclas if b))
+        if pecas:
+            regras.append(",".join(f"#acionador #{PREFIXO_DA_PECA[modelo]}{p}" for p in pecas)
+                          + _BRILHO_DO_DESTINO.format())
+    return "".join(regras)
 
 
 def campos_do_acionador(cena: dict[str, Any]) -> dict[str, Any]:
@@ -2636,9 +2715,10 @@ def campos_do_acionador(cena: dict[str, Any]) -> dict[str, Any]:
     return {
         "acionador-titulo": TITULO_DO_ACIONADOR.format(
             nome=r.nome if r is not None else ACIONADOR_SEM_NOME),
-        "acionador-quem": html_de_quem_recebe(r, _quem_recebe(cena)),
+        "acionador-quem": html_de_quem_recebe(r, _quem_recebe(cena), cena.get("modelo_de")),
         "acionador-teclas": html_das_teclas(r),
         "acionador-brilho": css_do_brilho(r),
+        "acionador-brilho-de-fora": css_do_brilho(r, tuple(ENTRADAS_DO_MODELO)),
         "acionador-desenho": (cena.get("colorway_de") or {}).get(r.controle, "") if r else "",
     }
 
@@ -2668,6 +2748,8 @@ def html_do_acionador(cena: dict[str, Any], desenho: str) -> str:
         f'data-alvo="{alvo}">Guardar</a></div>'
         '<style data-campo="acionador-brilho" data-hef-alvo="html">'
         f'{c["acionador-brilho"]}</style>'
+        '<style data-campo="acionador-brilho-de-fora" data-hef-alvo="html">'
+        f'{c["acionador-brilho-de-fora"]}</style>'
         '</div></div>')
 
 
@@ -2720,11 +2802,35 @@ def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]
         chave = _so_hex(str(m.get("uniq") or "")).lower()
         if _CHAVE_DE_CONTROLE.match(chave) and all(k != chave for k, _ in quem):
             quem.append((chave, _nome_de_quem_recebe(m)))
+    for chave, entrada in _os_externos_que_recebem(ctx):
+        if all(k != chave for k, _ in quem):
+            quem.append((chave, _nome_do_externo_que_recebe(entrada)))
     for a in (getattr(declaracao, "acionadores", None) or {}).values():
         chave = str(getattr(a, "controle", None) or "")
         if chave and all(k != chave for k, _ in quem):
             quem.append((chave, _cor_declarada_de(chave) or "DualSense"))
     return quem
+
+
+def _os_externos_que_recebem(ctx: Contexto) -> list[tuple[str, dict[str, Any]]]:
+    """Os controles de fora da mesa que ganham controle virtual (o Pro e o 8BitDo), com a chave
+    deles no `maquina.json`: o acionador entrega a eles como ao DualSense."""
+    from hefesto_dualsense4unix.app.actions.home_actions import externos_na_mesa
+
+    return [(chave, e) for e in externos_na_mesa(None, getattr(ctx, "externos", None) or ())
+            if _marcas.ganha_controle_virtual(e) and (chave := _marcas.chave_de_maquina(e))]
+
+
+def _nome_do_externo_que_recebe(entrada: dict[str, Any]) -> str:
+    """O modelo do controle de fora, o mesmo `friendly_type` do desenho da linha dele."""
+    return _maiuscula(_marcas.friendly_type(entrada).partition(" (")[0])
+
+
+def _modelos_da_mesa(ctx: Contexto) -> dict[str, str]:
+    """O modelo do desenho de cada controle de fora que recebe (o DualSense fica de fora)."""
+    return {chave: _MODELO_DO_SIMBOLO[simbolo]
+            for chave, e in _os_externos_que_recebem(ctx)
+            if (simbolo := simbolo_do_externo(e)) in _MODELO_DO_SIMBOLO}
 
 
 def _nome_de_quem_recebe(m: dict[str, Any]) -> str:
@@ -4761,6 +4867,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos, buscas),
         "quem_recebe": _quem_recebe_da_mesa(ctx, declaracao_viva),
         "colorway_de": _colorways_da_mesa(ctx),
+        "modelo_de": _modelos_da_mesa(ctx),
     }
     cena["destino_da_central"] = _destino_da_central(cena, st)
     cena["destino_do_conectar"] = _destino_do_conectar(cena)
