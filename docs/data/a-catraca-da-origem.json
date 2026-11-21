@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1295778,
+      "piso": 1296086,
       "por_item": {
-        "docs": 107883,
+        "docs": 107885,
         "scripts": 115931,
         "src": 327794,
-        "tests": 744170
+        "tests": 744476
       },
-      "razao": "tamanho: +7 linhas (1295771 -> 1295778), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo e5036ccae116",
+      "razao": "tamanho: +308 linhas (1295778 -> 1296086), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo aef18ec3fccf",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2301,10 +2301,16 @@
           "de": 1295771,
           "para": 1295778,
           "razao": "tamanho: +7 linhas (1295771 -> 1295778), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo e5036ccae116"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1295778,
+          "para": 1296086,
+          "razao": "tamanho: +308 linhas (1295778 -> 1296086), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo aef18ec3fccf"
         }
       ],
       "unidade": "linhas",
-      "universo": 3614
+      "universo": 3616
     }
   }
 }
