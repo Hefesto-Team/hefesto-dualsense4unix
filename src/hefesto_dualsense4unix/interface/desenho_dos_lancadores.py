@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import dataclasses
 import html
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -171,18 +171,20 @@ def sem_o_ambiente_html(chave: str, onde: tuple[str, ...]) -> str:
     return "<b>Sem o ambiente do Hefesto</b>"
 
 
-def fora_do_pino_html(fora: tuple[tuple[str, str], ...]) -> str:
+def fora_do_pino_html(fora: tuple[tuple[str, str], ...], *, avulsa: bool = False) -> str:
     """A linha do cartão com os jogos que o Proton fixado não alcança, e o porquê na dica.
 
     ``fora`` é ``((jogo, porquê), …)``; o jogo vazio é o lançador inteiro
-    (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO). Vazia quando nada fica de fora.
+    (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO). Vazia quando nada fica de fora. ``avulsa`` é a
+    da linha «Outros», que não tem botões: vai para o fim da linha e se alcança pelo teclado.
     """
     if not fora:
         return ""
     dica = " · ".join(f"{jogo}: {porque}" if jogo else porque for jogo, porque in fora)
     jogos = sum(1 for jogo, _ in fora if jogo)
     rotulo = f"{jogos} fora do Proton fixado" if jogos else "Fora do Proton fixado"
-    return f'<span class="lf-imped" data-dica="{_a(dica)}">{_e(rotulo)}</span>'
+    avulsa_attr = ' style="margin-left:auto" tabindex="0"' if avulsa else ""
+    return f'<span class="lf-imped"{avulsa_attr} data-dica="{_a(dica)}">{_e(rotulo)}</span>'
 
 
 def contador_html(pontes: int) -> str:
@@ -1087,6 +1089,32 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
         x, fora_do_pino=fora_do_pino_html(do_disco.fora_do_pino_de(x.chave))) for x in fora]
 
 
+OUTROS = "outros"
+
+NOME_DOS_OUTROS = "Outros"
+
+NOMES_DE_QUEM_SEM_CARTAO = {"bottles": "Bottles", "umu": "umu-run"}
+
+
+def os_outros(lida: Leitura | None, com_cartao: Sequence[Lancador]) -> Lancador | None:
+    """A linha «Outros»: o que o Proton fixado não alcança em quem não tem cartão próprio.
+
+    O Bottles e o umu avulso entram no ``fora`` do pino sem ter cartão; a linha os junta, sem
+    botões, e diz quantos ficaram de fora e por quê. ``None`` quando nada ficou.
+    """
+    do_disco = lida.do_disco if lida is not None else SEM_DISCO
+    com = {x.chave for x in com_cartao}
+    fora = tuple(
+        (f"{jogo} ({nome})", porque) if jogo else ("", f"{nome}: {porque}")
+        for chave, linhas in do_disco.fora_do_pino if chave not in com
+        for nome in (NOMES_DE_QUEM_SEM_CARTAO.get(chave, chave),)
+        for jogo, porque in linhas)
+    if not fora:
+        return None
+    return Lancador(chave=OUTROS, nome=NOME_DOS_OUTROS, selo="off", jogos="", diz="",
+                    fora_do_pino=fora_do_pino_html(fora, avulsa=True))
+
+
 @dataclass
 class Quadro:
     """Tudo o que a aba mostra: os cartões e a contagem do topo."""
@@ -1133,11 +1161,14 @@ __all__ = [
     "EMBUTIDOS",
     "IDENTIFICAR_ROTULO",
     "MOLDURA",
+    "NOMES_DE_QUEM_SEM_CARTAO",
+    "NOME_DOS_OUTROS",
     "NOVO_ALVO",
     "NOVO_PARA_O_CARTAO",
     "NOVO_PARA_QUEM",
     "NOVO_ROTULO",
     "NOVO_SEM_ALVO",
+    "OUTROS",
     "PROCURAR_O_ARQUIVO",
     "PROCURAR_O_ARQUIVO_ROTULO",
     "REMOVER",
@@ -1173,6 +1204,7 @@ __all__ = [
     "linhas_de_jogos",
     "lista_de_jogos",
     "medir_no_disco",
+    "os_outros",
     "procurados",
     "resposta_do_flatpak",
     "selo_html",

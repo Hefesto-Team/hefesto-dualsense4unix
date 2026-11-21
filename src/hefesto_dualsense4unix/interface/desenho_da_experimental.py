@@ -50,6 +50,7 @@ class Fila(NamedTuple):
     configurar: str
     virou: str = ""
     fora_do_pino: str = ""
+    avulsa: bool = False
 
 
 LANCADORES = (
@@ -61,7 +62,14 @@ LANCADORES = (
     Fila("flatpak", "Flatpak", "", False, "#lanc-conf"),
     Fila("retroarch", "RetroArch", "", False, "#lanc-conf",
          virou="https://github.com/Hefesto-Team/hefesto-mod-retroarch"),
+    Fila("outros", "Outros", "", False, "#lanc-conf", avulsa=True,
+         fora_do_pino='<span class="lf-imped" style="margin-left:auto" tabindex="0" '
+                      'data-dica="Minha garrafa (Bottles): roda pelo Wine, e não pelo Proton · '
+                      'Jogo do atalho (umu-run): pede outro Proton no próprio atalho">'
+                      '2 fora do Proton fixado</span>'),
 )
+
+DICA_DOS_OUTROS = "Programas sem cartão próprio que abrem jogos"
 
 FRASE_DO_QUE_VIROU = "Virou extensão:"
 DICA_DO_QUE_VIROU = "Para seguir com ele, instale de"
@@ -154,10 +162,20 @@ def _fila_que_virou_html(fila: Fila) -> str:
           </div>'''
 
 
+def _fila_avulsa_html(fila: Fila) -> str:
+    """A linha de quem não tem cartão próprio: sem botões, o nome e o que ficou fora do Proton."""
+    return f'''          <div class="lf ausente" data-lancador="{_a(fila.chave)}">
+            <span class="ext-ico lf-ico">{_icone(fila.chave)}</span>
+            <span class="lf-nome"><span class="lanc-nome" data-dica="{_a(DICA_DOS_OUTROS)}">{_e(fila.nome)}</span></span>{fila.fora_do_pino}
+          </div>'''
+
+
 def fila_html(fila: Fila) -> str:
     """Uma linha de lançador: os mesmos três botões, acesos pelo que o lançador é."""
     if fila.virou:
         return _fila_que_virou_html(fila)
+    if fila.avulsa:
+        return _fila_avulsa_html(fila)
     botoes = []
     for gesto, rotulo, destino in BOTOES:
         destino = fila.configurar if gesto == "configurar-lancador" else destino

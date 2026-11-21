@@ -766,8 +766,10 @@ def _relatar(gesto_: str, frase: str) -> None:
 def _resposta(lida: desenho.Leitura | None,
               state: dict[str, Any] | None = None) -> dict[str, Any]:
     """A carga da aba, a mesma no tique e no gesto: a conta, a fila e as janelas abertas."""
-    return _com_as_extensoes({"mesa": {}, "blocos": {}}, desenho.cartoes(lida),
-                             lida.viraram_extensao if lida is not None else ())
+    cartoes = desenho.cartoes(lida)
+    return _com_as_extensoes({"mesa": {}, "blocos": {}}, cartoes,
+                             lida.viraram_extensao if lida is not None else (),
+                             desenho.os_outros(lida, cartoes))
 
 
 @registrar("07-lancadores.html")
@@ -1606,19 +1608,24 @@ _BIBLIOTECA_DA_FILA = re.compile(r"\d+ jogos? na biblioteca · (\d+) instalados?
 
 
 def _fila_de(lancadores: list[desenho.Lancador],
-             viraram: Sequence[tuple[str, str, str]] = ()) -> list[Any]:
-    """A fila: um por cartão e, no fim, a linha da migração de cada um que virou extensão."""
+             viraram: Sequence[tuple[str, str, str]] = (),
+             outros: desenho.Lancador | None = None) -> list[Any]:
+    """A fila: um cartão por lançador, a migração de quem virou extensão e, no fim, «Outros»."""
     cartoes = {x.chave for x in lancadores}
     return [exp.Fila(chave=x.chave, nome=x.nome, jogos=_jogos_da_fila(x), achado=x.presente,
                      configurar=JANELA_DO_LANCADOR, fora_do_pino=x.fora_do_pino)
             for x in lancadores] + [
         exp.Fila(chave=chave, nome=nome, jogos="", achado=False,
                  configurar=JANELA_DO_LANCADOR, virou=endereco)
-        for chave, nome, endereco in viraram if chave not in cartoes]
+        for chave, nome, endereco in viraram if chave not in cartoes] + [
+        exp.Fila(chave=x.chave, nome=x.nome, jogos="", achado=False,
+                 configurar=JANELA_DO_LANCADOR, fora_do_pino=x.fora_do_pino, avulsa=True)
+        for x in (outros,) if x is not None]
 
 
 def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
-                      viraram: Sequence[tuple[str, str, str]] = ()) -> dict[str, Any]:
+                      viraram: Sequence[tuple[str, str, str]] = (),
+                      outros: desenho.Lancador | None = None) -> dict[str, Any]:
     """Acrescenta à carga da aba o quadro das extensões, a fila e as janelas abertas."""
     instaladas = REGISTRO.ler()
     carga["mesa"][CAMPO_DA_CONTA] = exp.conta_das_extensoes(len(instaladas))
@@ -1626,7 +1633,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
     carga["mesa"][exp.CAMPO_DA_RESPOSTA] = ""
     blocos = carga["blocos"]
     blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
-    blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
+    blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram, outros))
     blocos["#ext-instalar"] = exp.instalar_html(*_MEXIDA.recusa_do_instalar)
     _seguir_o_meu_css(instaladas)
     janelas = (("#lanc-janela", _MEXIDA.html_conf), ("#imp-janela", _MEXIDA.html_imp),

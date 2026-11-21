@@ -122,10 +122,12 @@ def _sem_os_tres(fila: str) -> bool:
 
 def _confere_a_forma() -> None:
     """Trava de geração: o que a régua do mockup também afirma, dita antes de gravar."""
-    if len(exp.LANCADORES) != 5 or sum(1 for f in exp.LANCADORES if f.virou) != 1:
-        raise SystemExit(f"ERRO: {len(exp.LANCADORES)} lançadores, e o desenho tem cinco, "
-                         "um deles a linha do que virou extensão.")
-    sem_trio = [f.chave for f in exp.LANCADORES if not f.virou and _sem_os_tres(exp.fila_html(f))]
+    if (len(exp.LANCADORES) != 6 or sum(1 for f in exp.LANCADORES if f.virou) != 1
+            or sum(1 for f in exp.LANCADORES if f.avulsa) != 1):
+        raise SystemExit(f"ERRO: {len(exp.LANCADORES)} lançadores, e o desenho tem seis, "
+                         "um deles a linha do que virou extensão e outro a dos «Outros».")
+    sem_trio = [f.chave for f in exp.LANCADORES
+                if not f.virou and not f.avulsa and _sem_os_tres(exp.fila_html(f))]
     if sem_trio:
         raise SystemExit(f"ERRO: lançador sem os {len(exp.BOTOES)} botões: {sem_trio}")
     if "class=\"ajuda" in MIOLO + exp.telas():

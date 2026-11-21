@@ -222,3 +222,48 @@ def test_sem_bottles_nem_umu_nada_muda(lar: Path, conf: dict[str, str]) -> None:
     feito = _apontar(lar, conf)
     assert feito == censo.FixadoNoLancador()
     assert pp.quem_usa_o_proton(lar) == ("Steam",)
+
+
+def test_o_bottles_e_o_umu_sem_cartao_aparecem_na_linha_outros(
+        lar: Path, conf: dict[str, str]) -> None:
+    """Mordida: sem a linha «Outros», o `fora` do Bottles e do umu só chega ao diário do vigia."""
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+
+    _pino_na(_steam_de_verdade(lar))
+    casa = lar / NATIVO
+    _runners(casa)
+    _garrafa(casa, "Pelo-Wine", SODA, "Minha garrafa")
+    _atalho(lar / ".local/share/applications", "jogo", "umu-run /p/jogo.exe")
+
+    fora = a07._fora_do_pino()
+    lida = desenho.Leitura(do_disco=desenho.DoDisco(fora_do_pino=fora))
+    cartoes = desenho.cartoes(lida)
+    fila = a07._fila_de(cartoes, outros=desenho.os_outros(lida, cartoes))
+    linha = exp.fila_html(fila[-1])
+    na_aba = a07._resposta(lida)["blocos"][".lanc-fila"]
+
+    assert {chave for chave, _ in fora} == {"bottles", "umu"}
+    assert not {"bottles", "umu"} & {c.chave for c in cartoes}
+    assert fila[-1].chave == "outros" and fila[-1].avulsa
+    assert 'data-lancador="outros"' in linha and ">2 fora do Proton fixado<" in linha
+    assert f"Minha garrafa (Bottles): {censo.PORQUE_PELO_WINE}" in linha
+    assert f"Jogo (umu-run): {censo.PORQUE_UMU_AVULSO}" in linha
+    assert "btn" not in linha and "data-gesto" not in linha, "a linha «Outros» não tem botões"
+    assert linha in na_aba, "a aba não pinta a linha «Outros» que a fila monta"
+
+
+def test_sem_nada_de_fora_nao_ha_linha_outros_e_o_exemplo_e_o_que_o_produto_pinta() -> None:
+    """Mordida: o exemplo do desenho que diverge do produto deixa a tela aprovada mentindo."""
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+
+    cartoes = desenho.cartoes(None)
+    assert desenho.os_outros(None, cartoes) is None
+    assert [f.chave for f in a07._fila_de(cartoes)] == [c.chave for c in cartoes]
+    exemplo = next(f for f in exp.LANCADORES if f.chave == "outros")
+    assert exemplo.fora_do_pino == desenho.fora_do_pino_html(
+        (("Minha garrafa (Bottles)", censo.PORQUE_PELO_WINE),
+         ("Jogo do atalho (umu-run)", censo.PORQUE_UMU_AVULSO)), avulsa=True)

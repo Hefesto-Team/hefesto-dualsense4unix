@@ -1934,7 +1934,7 @@ def lancadores_que_viraram_extensao(lar: Path | None = None, *,
 
 
 PORQUE_BOTTLES_ABERTO = "o Bottles está aberto: o Proton fixado entra quando ele fechar"
-PORQUE_UMU_AVULSO = "o umu avulso escolhe o Proton a cada lançamento, pelo atalho"
+PORQUE_UMU_AVULSO = "pede outro Proton no próprio atalho"
 
 
 def _escrever_com_copia(arquivo: Path, texto: str) -> None:
