@@ -14,6 +14,7 @@ import atexit
 import contextlib
 import dataclasses
 import fcntl
+import json
 import os
 import re
 import shutil
@@ -65,6 +66,19 @@ PEDEM_INSTALL = (
     f"{_PACOTE}/integrations/leitor_do_estado.py",
 )
 PASTAS_DO_INSTALL = ("assets/", "locale/", "packaging/", "scripts/")
+ARQUIVO_DA_BAIXA = "versao-baixada.json"
+(AVANCA, ATUAL, ESPERA, FORA_DO_RAMO, ARVORE_MUDADA, SEM_REMOTO, SEM_REDE, DIVERGIU,
+ SEM_A_ASSINATURA) = (
+    "avança", "atual", "espera", "fora-do-ramo", "árvore-mudada", "sem-remoto", "sem-rede",
+    "divergiu", "sem-assinatura")
+VEREDITO_DO_MOTIVO = {f"fora de {RAMO}": FORA_DO_RAMO, "árvore com mudança": ARVORE_MUDADA}
+FRASES_DA_BAIXA = {
+    FORA_DO_RAMO: f"O clone não está no ramo {RAMO}: volte para ele para a versão nova entrar",
+    ARVORE_MUDADA: "O clone tem mudança sem commit: guarde ou desfaça para a versão nova entrar",
+    SEM_REMOTO: "O clone não tem o remoto do projeto: acrescente-o para a versão nova chegar",
+    SEM_A_ASSINATURA: f"A versão nova ficou de fora ({SEM_ASSINATURA}): confira o remoto do clone",
+    DIVERGIU: f"O ramo {RAMO} do clone tem história que o do projeto não tem: fica como está",
+}
 PEDEM_COPIA = (f"{_PACOTE}/profiles/", f"{_PACOTE}/mods/")
 PASTA_DAS_COPIAS = "copias-da-configuracao"
 COPIAS_GUARDADAS = 3
@@ -165,7 +179,7 @@ def por_que_nao(raiz: Path, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> s
         return "instalação sem clone"
     if _git(raiz, "symbolic-ref", "--short", "-q", "HEAD") != RAMO:
         return f"fora de {RAMO}"
-    if _git(raiz, "--no-optional-locks", "status", "--porcelain") != "":
+    if _git(raiz, "--no-optional-locks", "status", "--porcelain", "--untracked-files=no") != "":
         return "árvore com mudança"
     comum = _git(raiz, "rev-parse", "--git-common-dir")
     if comum is None or _ha_voo(raiz, raiz / comum):
@@ -248,32 +262,83 @@ def _esquecer_a_recusa() -> None:
         _recusa_da_assinatura().unlink(missing_ok=True)
 
 
+def _registrar_a_baixa(topo: str, veredito: str, **resto: Any) -> None:
+    """O que a última baixada conferiu, para a peça Hefesto ler: o ``HEAD`` de então, o veredito e
+    o que mais ele traz (``commit``, ``origem``, ``motivo``, ``oferta``)."""
+    with contextlib.suppress(OSError):
+        arquivo = _estado_da_baixa()
+        temporaria = arquivo.with_name(f".{arquivo.name}.{os.getpid()}")
+        temporaria.write_text(
+            json.dumps({"topo": topo, "veredito": veredito, "em": time.time(), **resto}),
+            encoding="utf-8")
+        temporaria.replace(arquivo)
+
+
+def _estado_da_baixa() -> Path:
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    return state_dir(ensure=True) / ARQUIVO_DA_BAIXA
+
+
+def ler_a_baixa() -> dict[str, Any]:
+    with contextlib.suppress(OSError, ValueError):
+        dado = json.loads(_estado_da_baixa().read_text(encoding="utf-8"))
+        if isinstance(dado, dict):
+            return dado
+    return {}
+
+
+def frase_da_baixa(baixa: dict[str, Any]) -> str:
+    """O que a peça Hefesto diz de uma baixada que não pôde avançar, e o que fazer; vazio se a
+    baixada não trouxe motivo de revisão."""
+    veredito = baixa.get("veredito")
+    if veredito == DIVERGIU and baixa.get("oferta"):
+        origem = baixa.get("origem") or f"origin/{RAMO}"
+        guardado = f"{RAMO}-antes-{time.strftime('%Y%m%d')}"
+        return (f"O {RAMO} do projeto foi reescrito: guarde o seu num ramo datado "
+                f"(git branch {guardado}) e refaça pelo publicado (git reset --hard {origem})")
+    return FRASES_DA_BAIXA.get(str(veredito), "")
+
+
 def baixar(raiz: Path, *, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str | None:
-    """Traz o ``dev`` do remoto sem tocar na árvore. Devolve o commit, se ele é outro."""
+    """Traz o ``dev`` do remoto sem tocar na árvore. Devolve o commit, se ele é outro; o que
+    conferiu fica em ``versao-baixada.json``."""
+    topo = _git(raiz, "rev-parse", "HEAD") or ""
     motivo = por_que_nao(raiz, jogo_aberto)
     if motivo:
         _dizer(f"fica como está ({motivo})")
+        _registrar_a_baixa(topo, VEREDITO_DO_MOTIVO.get(motivo, ESPERA), motivo=motivo)
         return None
     remoto = remoto_do_produto(raiz)
     if remoto is None:
         _dizer("fica como está (sem o remoto do produto)")
+        _registrar_a_baixa(topo, SEM_REMOTO)
         return None
+    origem = f"{remoto}/{RAMO}"
     if _git(raiz, "fetch", "--quiet", "--no-tags", remoto, RAMO) is None:
         _dizer("fica como está (o remoto não respondeu)")
+        _registrar_a_baixa(topo, SEM_REDE, origem=origem, motivo="o remoto não respondeu")
         return None
     alvo = _git(raiz, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
-    topo = _git(raiz, "rev-parse", "HEAD")
     if alvo is not None and alvo == topo:
         _esquecer_a_recusa()
         _dizer("já é a mais recente")
+        _registrar_a_baixa(topo, ATUAL, commit=alvo, origem=origem)
         return None
-    if alvo is None or topo is None or not _e_avanco(raiz, topo, alvo):
+    if alvo is None or not topo or not _e_avanco(raiz, topo, alvo):
         _dizer(FORA_DO_AVANCO)
+        if alvo is not None and _e_avanco(raiz, alvo, topo):
+            _registrar_a_baixa(topo, ATUAL, commit=alvo, origem=origem)
+            return None
+        oferta = alvo is not None and not sem_a_assinatura_da_casa(raiz, alvo)
+        _registrar_a_baixa(topo, DIVERGIU, commit=alvo or "", origem=origem, oferta=oferta)
         return None
     if sem_a_assinatura_da_casa(raiz, alvo):
         _recusar_sem_assinatura(alvo)
+        _registrar_a_baixa(topo, SEM_A_ASSINATURA, commit=alvo, origem=origem)
         return None
     _dizer(f"{alvo[:CURTO]} baixada: entra quando a janela fechar")
+    _registrar_a_baixa(topo, AVANCA, commit=alvo, origem=origem)
     return alvo
 
 

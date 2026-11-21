@@ -139,7 +139,7 @@ def _remoto_de_outro(casa: Casa) -> None:
 
 
 @pytest.mark.parametrize("preparar", [
-    _sujar, _criar_arquivo_novo, _outro_ramo, _marca_de_voo, _sem_o_remoto, _remoto_de_outro,
+    _sujar, _outro_ramo, _marca_de_voo, _sem_o_remoto, _remoto_de_outro,
 ], ids=lambda f: f.__name__)
 def test_cada_guarda_para_a_baixa_e_nada_muda(
     casa: Casa, preparar: Callable[[Casa], None],
@@ -149,6 +149,22 @@ def test_cada_guarda_para_a_baixa_e_nada_muda(
     antes = casa.retrato()
     assert va.baixar(casa.clone, jogo_aberto=_sem_jogo) is None
     assert casa.retrato() == antes
+
+
+def test_o_arquivo_novo_no_clone_nao_prende_e_o_que_ele_sobrescreveria_nao_entra(
+    casa: Casa,
+) -> None:
+    _criar_arquivo_novo(casa)
+    alvo = casa.publicar("src/hefesto/novo.py")
+    assert va.baixar(casa.clone, jogo_aberto=_sem_jogo) == alvo
+    assert va.aplicar(casa.clone, alvo, jogo_aberto=_sem_jogo, disparar=lambda _i: None)
+    assert (casa.clone / "rascunho.txt").read_text(encoding="utf-8") == "y\n"
+
+    (casa.clone / "src" / "hefesto" / "outro.py").write_text("meu\n", encoding="utf-8")
+    alvo = casa.publicar("src/hefesto/outro.py")
+    assert va.baixar(casa.clone, jogo_aberto=_sem_jogo) == alvo
+    assert not va.aplicar(casa.clone, alvo, jogo_aberto=_sem_jogo, disparar=lambda _i: None)
+    assert (casa.clone / "src" / "hefesto" / "outro.py").read_text(encoding="utf-8") == "meu\n"
 
 
 def test_o_jogo_aberto_para_a_baixa_antes_da_rede(

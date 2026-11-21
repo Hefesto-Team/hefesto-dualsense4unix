@@ -27,6 +27,14 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions import atualizador as at
 from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+from hefesto_dualsense4unix.app.actions import versao_ao_abrir as va
+from tests.unit import test_o_avanco_do_dev_so_com_commit_assinado as assinado
+
+Casa = assinado.Casa
+casa = assinado.casa
+base = assinado.base
+_chave = assinado._chave
+_git = assinado._git
 
 
 @pytest.fixture(autouse=True)
@@ -574,23 +582,96 @@ def test_a_ge_segurada_nao_entra_de_novo(tmp_path: Path) -> None:
     assert (feito.estado, feito.versao) == ("segurada", "GE-Proton11-12")
 
 
-def test_a_peca_hefesto_le_o_que_o_dev_trouxe(monkeypatch: pytest.MonkeyPatch,
-                                               tmp_path: Path) -> None:
-    raiz = tmp_path / "repo"
-    (raiz / ".git").mkdir(parents=True)
-    (raiz / "pyproject.toml").write_text('version = "0.9.5.1"\n', encoding="utf-8")
-    monkeypatch.setattr(pa, "RAIZ_DO_REPOSITORIO", raiz)
-    vao = pa._vao()
-    respostas = {("rev-parse", "HEAD"): "a" * 40,
-                 ("rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}"): "b" * 40,
-                 ("show", f"{'b' * 40}:pyproject.toml"): 'version = "0.9.5.2"\n'}
-    monkeypatch.setattr(vao, "_git", lambda _r, *args, **k: respostas.get(args))
-    monkeypatch.setattr(vao, "_e_avanco", lambda _r, a, b: True)
-    versoes = pa.versoes_do_hefesto(True)
-    assert (versoes.instalada, versoes.publicada, versoes.tem_nova()) == \
-        ("0.9.5.1", "0.9.5.2", True)
-    respostas[("rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}")] = "a" * 40
-    assert not pa.versoes_do_hefesto(True).tem_nova()
+def _a_peca_hefesto(casa: Casa, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    monkeypatch.setattr(pa, "RAIZ_DO_REPOSITORIO", casa.clone)
+    peca = next(p for p in pa.registro() if p.id == "hefesto")
+    return next(i for i in at.conferir(rede=True, lista=[peca])["pecas"])
+
+
+def _baixar(casa: Casa) -> str | None:
+    return va.baixar(casa.clone, jogo_aberto=lambda: False)
+
+
+def test_a_peca_hefesto_le_o_que_a_baixada_conferiu(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2011-A-PECA-HEFESTO-SO-DIZ-ATUALIZADO-QUANDO-CONFERIU: a baixada conferida diz a versão."""
+    sem_baixada = _a_peca_hefesto(casa, monkeypatch)
+    assert sem_baixada["estado"] == at.NAO_CONSULTADO
+    alvo = casa.publicar(casa.chave, "src/um.py")
+    assert _baixar(casa) == alvo
+    nova = _a_peca_hefesto(casa, monkeypatch)
+    assert nova["estado"] == at.NOVA and nova["para"]
+    va.aplicar(casa.clone, alvo, jogo_aberto=lambda: False, disparar=lambda _i: None)
+    assert _a_peca_hefesto(casa, monkeypatch)["estado"] == at.EM_DIA
+
+
+def test_o_arquivo_solto_no_clone_nao_prende_a_versao_nova(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    (casa.clone / "rascunho.txt").write_text("y\n", encoding="utf-8")
+    alvo = casa.publicar(casa.chave, "src/um.py")
+    assert _baixar(casa) == alvo
+    assert _a_peca_hefesto(casa, monkeypatch)["estado"] == at.NOVA
+
+
+def test_o_fetch_de_outro_ramo_nao_vira_versao_nova(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _baixar(casa) is None
+    assert _a_peca_hefesto(casa, monkeypatch)["estado"] == at.EM_DIA
+    _git(casa.autor, "checkout", "-q", "-b", "outro")
+    casa.publicar(casa.chave, "src/outro.py")
+    _git(casa.autor, "push", "-q", "origin", "outro")
+    _git(casa.clone, "fetch", "-q", "origin", "outro")
+    assert _git(casa.clone, "rev-parse", "FETCH_HEAD") != casa.topo()
+    assert _a_peca_hefesto(casa, monkeypatch)["estado"] == at.EM_DIA
+
+
+def test_sem_o_remoto_a_peca_diz_que_nao_conferiu(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    casa.publicar(casa.chave, "src/um.py")
+    casa.remoto.rename(casa.base / "fora-do-ar.git")
+    assert _baixar(casa) is None
+    item = _a_peca_hefesto(casa, monkeypatch)
+    assert (item["estado"], item["para"]) == (at.NAO_CONSULTADO, "")
+    assert "não respondeu" in item["dica"]
+
+
+def _reescrever_o_dev(casa: Casa, chave: Path, texto: str) -> None:
+    casa.escrever("README.md", texto)
+    _git(casa.autor, "-c", "commit.gpgsign=true", "-c", "gpg.format=ssh",
+         "-c", f"user.signingkey={chave}", "commit", "--amend", "-q", "-m", "reescrito")
+    _git(casa.autor, "push", "-q", "-f", "origin", "dev")
+
+
+def test_o_dev_reescrito_pede_revisao_e_so_oferece_refazer_com_a_ponta_assinada(
+        casa: Casa, base: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _reescrever_o_dev(casa, casa.chave, "reescrito\n")
+    assert _baixar(casa) is None
+    item = _a_peca_hefesto(casa, monkeypatch)
+    assert item["estado"] == at.REVISAR
+    assert "git reset --hard" in item["dica"] and "git branch dev-antes-" in item["dica"]
+
+    _reescrever_o_dev(casa, _chave(base, "de-fora"), "reescrito de novo\n")
+    assert _baixar(casa) is None
+    item = _a_peca_hefesto(casa, monkeypatch)
+    assert item["estado"] == at.REVISAR and "reset" not in item["dica"]
+
+
+def test_a_recusa_por_assinatura_pede_revisao(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    casa.publicar(None, "src/um.py")
+    assert _baixar(casa) is None
+    item = _a_peca_hefesto(casa, monkeypatch)
+    assert item["estado"] == at.REVISAR and "sem a assinatura do projeto" in item["dica"]
+
+
+def test_a_conferencia_de_outro_head_nao_vale(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    casa.publicar(casa.chave, "src/um.py")
+    assert _baixar(casa)
+    (casa.clone / "trabalho.txt").write_text("y\n", encoding="utf-8")
+    _git(casa.clone, "add", "trabalho.txt")
+    _git(casa.clone, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "trabalho")
+    assert _a_peca_hefesto(casa, monkeypatch)["estado"] == at.NAO_CONSULTADO
 
 
 def test_os_modulos_do_kernel_cobrem_os_cinco(monkeypatch: pytest.MonkeyPatch) -> None:

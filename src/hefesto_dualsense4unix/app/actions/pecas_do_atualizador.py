@@ -1250,14 +1250,32 @@ def versoes_do_hefesto(rede: bool) -> Versoes:
     instalada = ""
     with contextlib.suppress(OSError):
         instalada = _versao_do_pyproject((raiz / "pyproject.toml").read_text(encoding="utf-8"))
-    topo = vao._git(raiz, "rev-parse", "HEAD")
-    alvo = vao._git(raiz, "rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}")
-    if not topo or not alvo or alvo == topo or not vao._e_avanco(raiz, topo, alvo):
+    if not rede:
+        return Versoes(instalada, None)
+    return _o_que_a_baixada_conferiu(vao, raiz, instalada)
+
+
+def _o_que_a_baixada_conferiu(vao: Any, raiz: Path, instalada: str) -> Versoes:
+    """A peça Hefesto lê o que a última baixada conferiu, não o ``FETCH_HEAD``, que é o último
+    ``fetch`` de qualquer um: sem baixada deste ``HEAD`` a peça não sabe (``publicada=None``)."""
+    baixa = vao.ler_a_baixa()
+    topo = vao._git(raiz, "rev-parse", "HEAD") or ""
+    commit, veredito = str(baixa.get("commit") or ""), baixa.get("veredito")
+    if veredito == vao.AVANCA and commit and commit == topo:
         return Versoes(instalada, instalada)
-    nova = _versao_do_pyproject(vao._git(raiz, "show", f"{alvo}:pyproject.toml") or "")
-    if not nova or nova == instalada:
-        nova = f"{instalada}+{alvo[:7]}"
-    return Versoes(instalada, nova, nova=True)
+    if not baixa or baixa.get("topo") != topo:
+        return Versoes(instalada, None)
+    if veredito == vao.ATUAL:
+        return Versoes(instalada, instalada)
+    if veredito == vao.AVANCA:
+        nova = _versao_do_pyproject(vao._git(raiz, "show", f"{commit}:pyproject.toml") or "")
+        if not nova or nova == instalada:
+            nova = f"{instalada}+{commit[:7]}"
+        return Versoes(instalada, nova, nova=True)
+    frase = vao.frase_da_baixa(baixa)
+    if frase:
+        return Versoes(instalada, None, revisar=frase)
+    return Versoes(instalada, None, dica=str(baixa.get("motivo") or ""))
 
 
 def _o_hefesto_pode(motivo: str) -> None:

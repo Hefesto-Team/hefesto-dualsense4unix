@@ -133,7 +133,7 @@ def test_o_clone_segue_pelo_git_e_nao_pergunta_a_release(
     vao = pa._vao()
     monkeypatch.setattr(vao, "_git", lambda _r, *_a, **_k: None)
     versoes = pa.versoes_do_hefesto(True)
-    assert (versoes.publicada, versoes.gesto) == ("0.9.5.4", "")
+    assert (versoes.publicada, versoes.gesto) == (None, "")
     assert repo_files.forma_da_instalacao(raiz_sem_clone) == repo_files.FORMA_CLONE
     assert repo_files.gesto_de_subir_a_versao_nova(repo_files.FORMA_CLONE) == ""
 
