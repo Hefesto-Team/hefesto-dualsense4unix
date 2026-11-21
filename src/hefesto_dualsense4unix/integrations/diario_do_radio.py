@@ -19,7 +19,9 @@ logger = get_logger(__name__)
 
 NOME_DO_DIARIO = "radio-diario.jsonl"
 
-DIARIO_DO_ROOT = Path("/var/lib/hefesto-dualsense4unix") / NOME_DO_DIARIO
+PASTA_DO_ROOT = Path("/var/lib/hefesto-dualsense4unix")
+
+DIARIO_DO_ROOT = PASTA_DO_ROOT / NOME_DO_DIARIO
 
 TRAVA_COMUM = Path("/run/hefesto-dualsense4unix/radio.lock")
 
@@ -332,6 +334,7 @@ __all__ = [
     "ESPEROU_A_TRAVA",
     "NOME_DO_DIARIO",
     "PASSO_DA_ESPERA_S",
+    "PASTA_DO_ROOT",
     "PONTE_DESCEU",
     "PONTE_SUBIU",
     "PRAZO_DA_TRAVA_S",

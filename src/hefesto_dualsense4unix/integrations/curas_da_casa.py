@@ -20,6 +20,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from hefesto_dualsense4unix.integrations.diario_do_radio import PASTA_DO_ROOT
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -83,7 +84,7 @@ class Maquina:
     def o_legivel(self) -> Path:
         if self.legivel is not None:
             return self.legivel
-        return self.cache / "legivel" if self.cache else Path("/var/lib/hefesto-dualsense4unix")
+        return self.cache / "legivel" if self.cache else PASTA_DO_ROOT
 
 
 MAQUINA = Maquina()

@@ -46,7 +46,7 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
 
 PAREAR = {"id": "parear", "rotulo": "Parear", "grupo": "Aparelhos", "icone": "procurar"}
 DICA = "Esta página passa a comandar os brinquedos"
-ACEITAR = {"id": "aceitar", "rotulo": "Aceitar o site", "grupo": "Aparelhos", "pedida": True,
+ACAO_DO_SITE = {"id": "aceitar", "rotulo": "Aceitar o site", "grupo": "Aparelhos", "pedida": True,
            "dica": DICA}
 ESPERA = {"id": "jogo", "tipo": "Jogo", "transporte": "local", "estado": "esperando",
           "motivo": "Uma página pediu para comandar: null"}
@@ -58,7 +58,7 @@ TESTAR_PEDIDA = {"id": "testar", "rotulo": "Testar", "pedida": True}
 def test_a_acao_pedida_so_aparece_quando_o_estado_a_nomeia(janela: Any, ctx: Any) -> None:  # noqa: F811
     """D-2011-A-ACAO-DA-EXTENSAO-APARECE-QUANDO-CABE-E-A-CONEXAO-ESPERA"""
     a07, instalar, abrir = janela
-    instalar(acoes=[PAREAR, ACEITAR])
+    instalar(acoes=[PAREAR, ACAO_DO_SITE])
     ponte = _Ponte({"ligado": True, "serie": 1})
     html = abrir(ponte)["blocos"]["#mod-janela"]
     assert 'data-v="toque:parear"' in html and BOTAO not in html, "sem pedido, só o Parear"
@@ -124,12 +124,12 @@ def test_a_porta_aceita_a_conexao_que_espera_e_corta_o_texto_da_acao() -> None:
 
 
 @pytest.mark.parametrize(("mexer", "frase"), [
-    (lambda d: d["acoes"].append({**ACEITAR, "cartao": "Toques"}),  # (noqa-acento)
+    (lambda d: d["acoes"].append({**ACAO_DO_SITE, "cartao": "Toques"}),  # (noqa-acento)
      "é pedida e mora na barra da aba"),
     (lambda d: d.update(aparelhos_acoes={"acoes": [TESTAR_PEDIDA]},  # (noqa-acento)
                         agora=["aparelhos"]),
      "não declara pedida"),
-    (lambda d: d["acoes"].append({**ACEITAR, "dica": "x" * 121}),  # (noqa-acento)
+    (lambda d: d["acoes"].append({**ACAO_DO_SITE, "dica": "x" * 121}),  # (noqa-acento)
      "acoes.1.dica"),
 ])
 def test_a_acao_pedida_torta_recusa_o_manifesto(
