@@ -91,7 +91,6 @@ async def test_o_supervisor_sobe_sem_declaracao_e_o_boot_nao_falha(
     **Ligado não quer dizer capturando**, e essa parte não mudou: sem nó de
     rádio na varredura não há ponte, não há `0x32` e a libopus nem é importada.
     """
-    monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
     )
@@ -214,7 +213,6 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
     )
 
     subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
-    monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
     assert subsystem.is_enabled(_config()) is True
     assert subsystem.is_enabled(_config(bt_mic_uniqs=frozenset)) is True
 
@@ -228,5 +226,3 @@ def test_o_supervisor_fica_de_pe_e_quem_filtra_e_o_alvos(
     assert subsystem.alvos([_No()]) == []
     subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
     assert [no.uniq for no in subsystem.alvos([_No()])] == ["aabbcc000001"]
-    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
-    assert len(subsystem.alvos([_No()])) == 1

@@ -65,7 +65,7 @@ _QUEM_SOBE_A_PONTE = frozenset(
 _PORTAS_DECLARADAS: dict[str, str] = {
     "daemon/subsystems/bt_mic.py": (
         "a porta do PRODUTO. Gate: `DaemonConfig.bt_mic_uniqs` (o que quem usa ligou "
-        "no card, via `maquina.json`) ou `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`. "
+        "no card, via `maquina.json`). "
         "Entrou em 22/08/2026 por escolha de produto, e o preço 5.a não estava na mesa — "
         "ver a nota datada de 23/08 no topo da sprint QUATRO-MICROFONES-01."
     ),

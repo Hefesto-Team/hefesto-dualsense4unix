@@ -83,13 +83,3 @@ def test_a_ponte_continua_existindo_inteira() -> None:
     assert hasattr(bt_mic, "BtMicSubsystem")
 
 
-def test_o_gate_de_ambiente_continua_sendo_o_caminho_a_mao() -> None:
-    """`HEFESTO_DUALSENSE4UNIX_BT_MIC` é como a ponte sobe hoje, e só assim."""
-    fonte = (
-        _raiz() / "src/hefesto_dualsense4unix/daemon/subsystems/bt_mic.py"
-    ).read_text(encoding="utf-8")
-
-    assert "HEFESTO_DUALSENSE4UNIX_BT_MIC" in fonte, (
-        "o gate sumiu: sem ele não há NENHUMA forma de subir a ponte, e aí a "
-        "remoção do interruptor virou remoção da capacidade"
-    )

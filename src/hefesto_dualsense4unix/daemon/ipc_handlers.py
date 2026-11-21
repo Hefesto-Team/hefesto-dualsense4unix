@@ -2331,10 +2331,7 @@ class IpcHandlersMixin:
             result["mic_button_toggles_system"] = bool(
                 getattr(daemon_cfg, "mic_button_toggles_system", True)
             )
-            from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
-                habilitado_por_env,
-                uniqs_pedidos,
-            )
+            from hefesto_dualsense4unix.daemon.subsystems.bt_mic import uniqs_pedidos
 
             bt_mic_sub = getattr(self.daemon, "_bt_mic_subsystem", None)
             com_ponte: list[str] = []
@@ -2345,7 +2342,7 @@ class IpcHandlersMixin:
                 with contextlib.suppress(Exception):
                     motivo = str(bt_mic_sub.motivo)
             result["bt_mic"] = {
-                "enabled": bool(uniqs_pedidos(daemon_cfg)) or habilitado_por_env(),
+                "enabled": bool(uniqs_pedidos(daemon_cfg)),
                 "running": bt_mic_sub is not None,
                 "uniqs": com_ponte,
                 "motivo": motivo,

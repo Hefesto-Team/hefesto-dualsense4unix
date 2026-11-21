@@ -73,7 +73,6 @@ def _config(**campos: Any) -> Any:
 @pytest.fixture(autouse=True)
 def sem_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """A env é o caminho à mão e vale por TODOS — ligada, apaga a medida."""
-    monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
 
 
 class TestORegistro:

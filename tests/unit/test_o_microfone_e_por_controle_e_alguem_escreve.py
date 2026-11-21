@@ -5,8 +5,8 @@ O DEFEITO QUE ESTE ARQUIVO TRAVA
 
 Até 22/08/2026 o `DaemonConfig.bt_mic_enabled` era **lido por três lugares e
 escrito por nenhum**: `lifecycle.py` declarava, `bt_mic.py` lia, `ipc_handlers`
-relatava, e a única forma de subir a ponte era exportar
-`HEFESTO_DUALSENSE4UNIX_BT_MIC=1` no ambiente do daemon, à mão. É a família
+relatava, e a única forma de subir a ponte era uma variável de ambiente do daemon, à mão.
+É a família
 A-CASA-SABE-E-O-PRODUTO-NAO-FAZ, e é exatamente o que o
 `portao_a_casa_sabe_e_o_produto_nao_faz` mede.
 
@@ -194,7 +194,6 @@ class TestOGate:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Fonte ausente é *"ninguém declarou"*, e isso deixou de calar."""
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         assert subsystem.is_enabled(_config()) is True
         subsystem._config = _config()
@@ -253,18 +252,6 @@ class TestPorControle:
             "aa:bb:cc:00:00:01"
         ]
 
-    def test_a_env_a_mao_vale_para_a_mesa_inteira(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A env sempre significou "a mesa inteira", e continua significando."""
-        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
-        subsystem = BtMicSubsystem()
-        subsystem._config = _config(bt_mic_uniqs=frozenset)
-
-        escolhidos = subsystem.alvos([_No(UM), _No(DOIS)])
-
-        assert sorted(no.uniq for no in escolhidos) == [UM, DOIS]
-
 
 class TestOQueOProdutoRelata:
     def test_a_ponte_relatada_e_a_que_subiu_e_nao_a_que_o_usuario_pediu(self) -> None:
@@ -300,7 +287,6 @@ class TestAlguemEscreve:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A mordida principal: sem esta linha o campo volta a ser órfão."""
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         monkeypatch.setattr(
             "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
         )
@@ -352,7 +338,6 @@ class TestAlguemEscreve:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Quem fia a própria fonte manda — e é o que a bateria faz."""
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         monkeypatch.setattr(
             "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
         )

@@ -155,7 +155,6 @@ class TestOStateFullDizDeQuemEACadaPonte:
         self, servidor: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O controle negativo: a chave EXISTE, e é uma lista vazia."""
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, _daemon = servidor
         bloco = (await _state_full(socket_path))["bt_mic"]
 
@@ -168,7 +167,6 @@ class TestOStateFullDizDeQuemEACadaPonte:
         self, servidor: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A mordida principal desta entrega."""
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, daemon_mock = servidor
         daemon_mock.config.bt_mic_uniqs = lambda: frozenset({UM, TRES})
         subsystem = BtMicSubsystem()
@@ -190,7 +188,6 @@ class TestOStateFullDizDeQuemEACadaPonte:
         self, servidor: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O produto responde pelo EFEITO, nunca pelo pedido."""
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, daemon_mock = servidor
         daemon_mock.config.bt_mic_uniqs = lambda: frozenset({UM, DOIS})
         subsystem = BtMicSubsystem()
@@ -215,7 +212,6 @@ class TestOStateFullDizDeQuemEACadaPonte:
         """
         from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 
-        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
         socket_path, daemon_mock = servidor
         assert (await _state_full(socket_path))["bt_mic"]["motivo"] == ""
 

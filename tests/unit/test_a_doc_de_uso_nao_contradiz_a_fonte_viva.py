@@ -173,8 +173,7 @@ def test_a_pagina_do_bluetooth_nao_poe_o_audio_fora_de_escopo() -> None:
         f"{BLUETOOTH.relative_to(RAIZ)} põe o áudio do controle sem fio 'fora de "
         f"escopo', e o mapa de canais diz `{COLUNA_DO_MICROFONE} = {aciona}` em "
         f"`{LINHA_DO_MICROFONE}` — o microfone por rádio está implementado por "
-        "inteiro e nasce em opt-in "
-        "(HEFESTO_DUALSENSE4UNIX_BT_MIC=1). Parágrafo: "
+        "inteiro e nasce ligado, com a chave por controle na tela. Parágrafo: "
         + repr(re.sub(r"\s+", " ", culpados[0])[:160])
     )
 

@@ -28,7 +28,6 @@ def _ninguem_roda_processo(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(subprocess, "run", _recusa)
     monkeypatch.setattr(subprocess, "Popen", _recusa)
-    monkeypatch.delenv(bt_mic.ENV_HABILITA, raising=False)
 
 
 def _sys_do_radio(tmp_path: Path, driver_por_no: dict[str, str | None]) -> Path:
@@ -190,9 +189,10 @@ def test_o_0003_de_antes_da_marca_segue_de_pe(mesa: Any, monkeypatch: pytest.Mon
     assert mesa.sub.motivo == ""
 
 
-def test_a_env_nao_passa_por_cima_do_driver(mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A env pede a mesa inteira, e o driver continua lendo o áudio como gamepad."""
-    monkeypatch.setenv(bt_mic.ENV_HABILITA, "1")
+def test_o_driver_sem_a_guarda_tira_a_mesa_inteira(
+    mesa: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O driver lê o áudio como gamepad: nenhum nó entra, e o motivo diz por quê."""
     monkeypatch.setattr(
         bt_mic, "RAIZ_DO_MODULO_DO_DRIVER", str(_sys_do_modulo(mesa.tmp_path))
     )

@@ -2,9 +2,9 @@
 
 Embrulha ``integrations/dualsense_bt_audio.py`` no contrato ``Subsystem`` do daemon. É fino de
 propósito. Um canal por controle, que pode existir sem capturar; ganha ponte quem foi PROCURADO
-(``PEDIDOS``), declarado (``bt_mic_uniqs``) ou a mesa inteira pela env. Desligar desliga: o
-silêncio de quem usa vence. A razão de cada regra: ``docs/research/o-porque-dos-modulos.md``, seção
-«bt_mic».
+(``PEDIDOS``) ou declarado (``bt_mic_uniqs``); a chave de cada controle na tela é a única mão.
+Desligar desliga: o silêncio de quem usa vence. A razão de cada regra:
+``docs/research/o-porque-dos-modulos.md``, seção «bt_mic».
 """
 from __future__ import annotations
 
@@ -31,21 +31,11 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-ENV_HABILITA = "HEFESTO_DUALSENSE4UNIX_BT_MIC"
-
 RECONCILIA_S = 5.0
 
 ESPERA_DA_VOLTA_S = 2.0
 
-_VALORES_LIGADOS = ("1", "true", "yes", "on")
-
 _UNIQ_HEX = 12
-
-
-def habilitado_por_env(ambiente: dict[str, str] | None = None) -> bool:
-    """True se a env de opt-in está ligada (função pura, testável)."""
-    env = ambiente if ambiente is not None else os.environ
-    return env.get(ENV_HABILITA, "").strip().lower() in _VALORES_LIGADOS
 
 
 DRIVER_QUE_LE_O_DUALSENSE = "playstation"
@@ -476,12 +466,10 @@ class BtMicSubsystem:
         há como saber de quem é o microfone, nem como o usuário o desligaria depois.
 
         **E O DRIVER TEM A PRIMEIRA PALAVRA (28/09/2026).** Um nó que o
-        `playstation` lê sem a guarda do áudio não entra, com ou sem a env e a
+        `playstation` lê sem a guarda do áudio não entra, com ou sem a
         recusa: ver `o_driver_guarda_o_audio` e `motivo`.
         """
         nos = self._os_que_o_driver_deixa(nos)
-        if habilitado_por_env():
-            return list(nos)
         negados = uniqs_negados(self._config)
         return [
             no
@@ -1362,7 +1350,6 @@ __all__ = [
     "BURACO_NAO_SEI",
     "BURACO_NENHUM",
     "BURACO_VAZIO",
-    "ENV_HABILITA",
     "PEDIDOS",
     "RECONCILIA_S",
     "BtMicSubsystem",
@@ -1371,7 +1358,6 @@ __all__ = [
     "VarredorDeCanaisOrfaos",
     "a_heranca_do_no_morto",
     "fonte_padrao_crua",
-    "habilitado_por_env",
     "uniqs_declarados",
     "uniqs_negados",
     "uniqs_pedidos",

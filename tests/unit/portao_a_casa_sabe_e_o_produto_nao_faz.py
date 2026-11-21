@@ -668,13 +668,6 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "`assets/systemd/hefesto-hidraw-broker.service:44` (`__NO_NASCE_FECHADO__`), com o valor "
         "renderizado pelo instalador (1 por default; 0 com `--no-fechar-o-no`)."
     ),
-    "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
-        "Liga o microfone por Bluetooth para TODOS os controles "
-        "(daemon/subsystems/bt_mic.py::habilitado_por_env). É feature de quem usa. "
-        "REMEDIDO em 22/08/2026 (QUATRO-MICROFONES-01): a FEATURE ganhou mão — "
-        "o interruptor por controle da aba Configurações —, e a env virou o "
-        "atalho à mão. Ver `_MAO_FORA_DO_AMBIENTE`."
-    ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que quem usa QUER o DualSense como microfone padrão do sistema "
         "(`HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED` em "
@@ -827,20 +820,6 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "de quem exporta à mão; gravá-la no instalador daria uma SEGUNDA fonte "
         "de verdade para a mesma escolha, que é o defeito que o DROPIN-AMBIGUO "
         "curou.",
-    ),
-    "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
-        "daemon/subsystems/bt_mic.py::uniqs_declarados",
-        "REMEDIDO em 22/08/2026 (QUATRO-MICROFONES-01), e esta entrada é a "
-        "cura da lápide que estava aqui: até 22/08 o campo companheiro era "
-        "`DaemonConfig.bt_mic_enabled`, um `bool` lido por três lugares e "
-        "escrito por NENHUM. Ele saiu. O gate agora é `bt_mic_uniqs`, uma FONTE "
-        "chamável que `daemon/lifecycle.py::Daemon.run` fia com "
-        "`uniqs_declarados(self._maquina)` — e quem escreve o `maquina.json` é "
-        "o interruptor por controle de "
-        "`app/actions/config/secao_controles.py::_BlocoDoMicrofone`, gravado "
-        "pelo `machine.declare` no 'Aplicar'. A env continua sem porta que a "
-        "escreva, e continua certo que continue: a env liga a máquina INTEIRA, e a "
-        "decisão de produto de 22/08 é por controle.",
     ),
     "HEFESTO_MOD_JOGOS": (
         "mods/supervisor.py::Supervisor",
@@ -3055,9 +3034,6 @@ class TestOPortaoMorde:
         ), (
             "o detector aceitou o COMENTÁRIO de "
             "`install.sh:281-281` (`WITH_WIREPLUMBER_FIX`) como escrita"
-        )
-        assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_BT_MIC"), (
-            "o detector aceitou o TEXTO DE AJUDA do controller_card como escrita"
         )
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME"), (
             "o detector aceitou a LEITURA do socket como escrita"

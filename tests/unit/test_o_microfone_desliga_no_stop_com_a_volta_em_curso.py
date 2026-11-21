@@ -63,7 +63,6 @@ def _no(uniq: str, indice: int) -> bt.NoDualSenseBT:
 def sem_sistema(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Tira da volta tudo o que perguntaria ao sysfs, ao pactl ou ao servidor."""
     monkeypatch.setattr(bt, "_SYSFS_HIDRAW", str(tmp_path / "hidraw"))
-    monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
     for nome in (
         "_aplicar_a_palavra_do_usuario",
         "_renomear_os_canais_velhos",

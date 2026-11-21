@@ -720,10 +720,9 @@ def test_o_microfone_do_controle_nasce_no_ar_e_a_recusa_o_cala() -> None:
     assert calado.alvos([_No()]) == []
 
 
-def test_subsystem_liga_por_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_subsystem_esta_sempre_de_pe() -> None:
     from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 
-    monkeypatch.setenv(bt_mic.ENV_HABILITA, "1")
     assert bt_mic.BtMicSubsystem().is_enabled(_ConfigFalsa()) is True
 
 
@@ -752,18 +751,6 @@ def test_o_por_controle_vale_pelo_lado_da_recusa() -> None:
         bt_mic_recusados=lambda: frozenset({"aabbcc000002"})
     )
     assert [no.uniq for no in um.alvos(nos)] == ["aabbcc000001"]
-
-
-def test_habilitado_por_env_aceita_as_grafias_usuais() -> None:
-    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
-        ENV_HABILITA,
-        habilitado_por_env,
-    )
-
-    for valor in ("1", "true", "TRUE", "yes", "on"):
-        assert habilitado_por_env({ENV_HABILITA: valor}) is True
-    for valor in ("", "0", "false", "no", "talvez"):
-        assert habilitado_por_env({ENV_HABILITA: valor}) is False
 
 
 @pytest.mark.asyncio
