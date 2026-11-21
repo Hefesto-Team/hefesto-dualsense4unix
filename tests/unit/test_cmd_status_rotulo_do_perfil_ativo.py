@@ -7,7 +7,7 @@ from rich.console import Console
 from hefesto_dualsense4unix.cli import cmd_status
 
 
-async def _status_falso() -> dict[str, object]:
+def _status_falso() -> dict[str, object]:
     return {
         "connected": True,
         "transport": "usb",

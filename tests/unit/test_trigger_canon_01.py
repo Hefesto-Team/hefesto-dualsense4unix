@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, PRESETS_ANTIGOS
+from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, PARADO, Desfecho
 from hefesto_dualsense4unix.core.trigger_effects import (
     MODOS_DE_DEPURACAO,
     PRESET_FACTORIES,
@@ -213,8 +214,8 @@ def test_o_raw_recusa_quando_o_daemon_esta_vivo(monkeypatch, capsys) -> None:
     from hefesto_dualsense4unix.cli import cmd_test
 
     monkeypatch.setattr(
-        "hefesto_dualsense4unix.app.ipc_bridge.daemon_status_basic",
-        lambda: {"connected": True},
+        "hefesto_dualsense4unix.app.ipc_bridge.pedir_ao_servico",
+        lambda *_a, **_k: Desfecho(ATENDEU, {"connected": True}),
     )
     tocou_o_hardware: list[object] = []
     monkeypatch.setattr(
@@ -241,7 +242,8 @@ def test_o_raw_funciona_com_o_daemon_parado(monkeypatch) -> None:
     from hefesto_dualsense4unix.cli import cmd_test
 
     monkeypatch.setattr(
-        "hefesto_dualsense4unix.app.ipc_bridge.daemon_status_basic", lambda: None
+        "hefesto_dualsense4unix.app.ipc_bridge.pedir_ao_servico",
+        lambda *_a, **_k: Desfecho(PARADO),
     )
     aplicados: list[object] = []
     monkeypatch.setattr(

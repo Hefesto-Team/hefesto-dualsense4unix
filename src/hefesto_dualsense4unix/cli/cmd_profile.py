@@ -94,14 +94,11 @@ def cmd_show(name: str) -> None:
 
 @app.command("activate")
 def cmd_activate(name: str) -> None:
-    """Ativa um perfil. Prefere o daemon vivo (profile.switch via IPC).
+    """Ativa um perfil pelo daemon vivo (`profile.switch`), que troca no processo e grava a escolha.
 
-    Com o daemon rodando, `profile.switch` faz a troca DE VERDADE no processo
-    vivo (grava a escolha do usuário e aplica no controle). Antes, este comando
-    abria um 2º controller local e gravava só o marker — o daemon vivo
-    sobrescrevia o controle logo em seguida, e o perfil em uso não mudava.
-    Só caímos no fallback (controller local + a escolha gravada pelo dono)
-    quando o daemon está offline.
+    Só com o daemon comprovadamente parado (socket ausente ou conexão recusada) aplica no
+    controle local e grava a escolha pelo dono. Recusa sai com o motivo (rc 2) e serviço que não
+    responde a tempo, com a frase do prazo (rc 1): nada se grava por baixo do serviço vivo.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -111,9 +108,12 @@ def cmd_activate(name: str) -> None:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
 
-    from hefesto_dualsense4unix.app.ipc_bridge import profile_switch
+    from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, pedir_ao_servico
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import sair_se_o_servico_vive
 
-    if profile_switch(name):
+    desfecho = pedir_ao_servico("profile.switch", {"name": name})
+    sair_se_o_servico_vive(console, desfecho)
+    if desfecho.estado == ATENDEU:
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
         return
 
@@ -426,40 +426,24 @@ def cmd_save(
 
 
 def _activate_via_ipc_or_fallback(name: str) -> None:
-    """Tenta `profile.switch` no daemon; offline, grava a escolha e avisa.
+    """Tenta `profile.switch` no daemon; parado, grava a escolha e avisa.
 
-    Mantido em função isolada para reuso em `apply`. Mensagens claras
-    (sem traceback) para todos os modos de falha.
+    Mantido em função isolada para reuso em `apply`. Recusa sai com o motivo
+    (rc 2) e serviço mudo com a frase do prazo (rc 1): nada se grava por baixo
+    do serviço vivo.
     """
-    from hefesto_dualsense4unix.app.ipc_bridge import (
-        FRASE_DO_PRAZO_VENCIDO,
-        _run_call,
-        prazo_vencido,
-        teto_da_linha_de_comando,
-    )
-    from hefesto_dualsense4unix.cli.ipc_client import IpcError
+    from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, pedir_ao_servico
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import sair_se_o_servico_vive
 
-    try:
-        _run_call(
-            "profile.switch", {"name": name},
-            timeout=teto_da_linha_de_comando("profile.switch"),
-        )
+    desfecho = pedir_ao_servico("profile.switch", {"name": name})
+    sair_se_o_servico_vive(console, desfecho)
+    if desfecho.estado == ATENDEU:
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
         return
-    except IpcError as exc:
-        if prazo_vencido(exc):
-            console.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
-            return
-        console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")
-        console.print(
-            "[dim]nada foi ativado — a escolha gravada ficou como estava.[/dim]"
-        )
-        return
-    except (FileNotFoundError, ConnectionError, OSError):
-        console.print(
-            "[yellow]daemon offline — gravando a escolha local apenas.[/yellow]"
-        )
 
+    console.print(
+        "[yellow]daemon offline — gravando a escolha local apenas.[/yellow]"
+    )
     _gravar_a_escolha_sem_o_daemon(name)
     console.print(
         f"[dim]escolha gravada: a próxima inicialização do daemon usará '{name}'[/dim]"

@@ -1,7 +1,6 @@
 """Subcomandos `hefesto-dualsense4unix status` e `hefesto-dualsense4unix battery`."""
 from __future__ import annotations
 
-import asyncio
 import contextlib
 from typing import Any
 
@@ -9,7 +8,6 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 from hefesto_dualsense4unix.utils import identidade
 
 console = Console()
@@ -23,33 +21,29 @@ class DaemonNaoRespondeuError(RuntimeError):
     """O serviço aceitou a conexão e não respondeu no prazo (parado ou travado)."""
 
 
-async def _daemon_status_via_ipc() -> dict[str, Any] | None:
-    """O ``daemon.status``; ``None`` com o serviço fora do ar.
+def _daemon_status_via_ipc() -> dict[str, Any] | None:
+    """O ``daemon.status``; ``None`` só com o serviço comprovadamente parado.
 
     Serviço que ATENDE a conexão e não responde não é «fora do ar»: levanta
     :class:`DaemonNaoRespondeuError`, e quem chama diz isso (e não abre o aparelho,
-    que o serviço travado ainda segura).
+    que o serviço travado ainda segura). Serviço que recusa sai com o motivo, rc 2.
     """
-    from hefesto_dualsense4unix.app.ipc_bridge import prazo_vencido
+    from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, MUDO, pedir_ao_servico
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import sair_se_o_servico_vive
 
-    try:
-        async with IpcClient.connect() as client:
-            result = await client.call("daemon.status")
-            if isinstance(result, dict):
-                return result
-            return None
-    except IpcError as exc:
-        if prazo_vencido(exc):
-            raise DaemonNaoRespondeuError(exc.message) from exc
-        return None
-    except (FileNotFoundError, ConnectionError):
-        return None
+    desfecho = pedir_ao_servico("daemon.status")
+    if desfecho.estado == MUDO:
+        raise DaemonNaoRespondeuError(desfecho.motivo)
+    sair_se_o_servico_vive(console, desfecho)
+    if desfecho.estado == ATENDEU and isinstance(desfecho.corpo, dict):
+        return desfecho.corpo
+    return None
 
 
 def _status_ou_sair() -> dict[str, Any] | None:
     """O status do serviço, ou ``None`` fora do ar; serviço mudo sai com rc 1."""
     try:
-        return asyncio.run(_daemon_status_via_ipc())
+        return _daemon_status_via_ipc()
     except DaemonNaoRespondeuError as exc:
         console.print(f"[red]{exc}[/red] — confira o serviço: `hefesto-dualsense4unix doctor`")
         raise typer.Exit(code=1) from exc

@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
@@ -148,6 +148,51 @@ def _safe_call(
         )
         return False, None
     return True, result
+
+
+ATENDEU = "atendeu"
+PARADO = "parado"
+RECUSOU = "recusou"
+MUDO = "mudo"
+
+_SERVICO_PARADO: tuple[type[BaseException], ...] = (FileNotFoundError, ConnectionRefusedError)
+
+_CODIGO_DO_CLIENTE = -1
+
+
+class Desfecho(NamedTuple):
+    """O que a chamada ao serviço provou: ``atendeu``, ``parado`` (socket ausente ou conexão
+    recusada), ``recusou`` (com o ``motivo``) ou ``mudo`` (prazo vencido ou conexão caída)."""
+
+    estado: str
+    corpo: Any = None
+    motivo: str | None = None
+
+
+def pedir_ao_servico(
+    method: str,
+    params: dict[str, Any] | None = None,
+    timeout: float | None = None,
+) -> Desfecho:
+    """RPC da linha de comando que entrega o desfecho distinto, e não um ``bool``.
+
+    Só ``parado`` prova que o serviço não está de pé: quem recusa ou não responde está vivo, e
+    abrir o controle por fora disputaria o aparelho com ele. Exceção inesperada propaga.
+    """
+    prazo = teto_da_linha_de_comando(method) if timeout is None else timeout
+    try:
+        corpo = _run_call(method, params, timeout=prazo)
+    except IpcError as exc:
+        if prazo_vencido(exc) or exc.code == _CODIGO_DO_CLIENTE:
+            return Desfecho(MUDO, motivo=exc.message)
+        return Desfecho(RECUSOU, motivo=exc.message)
+    except _SERVICO_PARADO as exc:
+        return Desfecho(PARADO, motivo=str(exc))
+    except _IPC_TRANSPORT_ERRORS as exc:
+        return Desfecho(MUDO, motivo=str(exc))
+    if isinstance(corpo, dict) and corpo.get("status") == "recusado":
+        return Desfecho(RECUSOU, corpo, _recusa_no_corpo(corpo))
+    return Desfecho(ATENDEU, corpo)
 
 
 def call_async(

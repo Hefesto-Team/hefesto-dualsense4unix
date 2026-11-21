@@ -11,10 +11,13 @@ o serviço recusa o pedido, `3` com o serviço fora do ar.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import typer
 from rich.console import Console
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.app.ipc_bridge import Desfecho
 
 console = Console()
 
@@ -42,4 +45,22 @@ def chamar(metodo: str, params: dict[str, Any] | None = None) -> Any:
         raise typer.Exit(code=3) from None
 
 
-__all__ = ["chamar", "console"]
+def sair_se_o_servico_vive(console_do_comando: Console, desfecho: Desfecho) -> None:
+    """A reserva direta só vale com o serviço comprovadamente parado.
+
+    Recusa sai com a frase do motivo e rc 2; serviço que não respondeu, com a do prazo vencido
+    e rc 1.
+    ``atendeu`` e ``parado`` voltam: quem chama decide o que fazer com cada um.
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import FRASE_DO_PRAZO_VENCIDO, MUDO, RECUSOU
+
+    if desfecho.estado == RECUSOU:
+        motivo = desfecho.motivo or "sem motivo informado"
+        console_do_comando.print(f"[red]o serviço recusou o pedido:[/red] {motivo}")
+        raise typer.Exit(code=2)
+    if desfecho.estado == MUDO:
+        console_do_comando.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
+        raise typer.Exit(code=1)
+
+
+__all__ = ["chamar", "console", "sair_se_o_servico_vive"]

@@ -2008,6 +2008,14 @@ direto, a 08 continua vendo tudo e a 01 só o que fala (regra paga duas vezes em
 (`painel.aviso_do_grab_dobrado`, mesma condição de `home_actions.aviso_de_grab`); a linha desta
 aba só acrescenta a causa.
 
+## `_apply_via_ipc` do `test led` (`cli/cmd_test.py`), 25/07/2026
+
+BUG-CLI-BRIGHTNESS-UNIDADE-01: o `--brightness` do comando é PORCENTAGEM (0-100) e mandava o número cru; o
+handler `led.set` valida FRAÇÃO (`0.0 <= brightness <= 1.0`). Dois erros mudos saíam daí: `--brightness 50` era
+recusado e o comando caía no aparelho sem dizer nada, e `--brightness 1` passava como `1.0`, isto é, 100%, o oposto
+do pedido. A conversão mora no comando porque a unidade amigável é dele: a janela já manda fração (`led_set` da
+ponte). O daemon valida e aplica o parâmetro desde a FEAT-LED-BRIGHTNESS-01 (a docstring antiga dizia que ele o ignorava).
+
 ## frases_banidas
 
 `src/hefesto_dualsense4unix/interface/frases_banidas.py (docstring do módulo)`. As frases e as palavras que saem da tela.

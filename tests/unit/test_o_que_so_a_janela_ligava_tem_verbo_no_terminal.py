@@ -29,9 +29,7 @@ _PELO_PERFIL = (
 _GESTO_DA_TELA = "gesto da tela, sem sentido fora da janela"
 
 ISENTOS: dict[str, str] = {
-    "trigger.set": _PELO_PERFIL + "; o instrumento é `test trigger`",
     "trigger.reset": _PELO_PERFIL,
-    "rumble.set": _PELO_PERFIL + "; o instrumento é `test rumble`",
     "rumble.stop": _PELO_PERFIL,
     "rumble.motores.set": _PELO_PERFIL,
     "led.player_set": _PELO_PERFIL,

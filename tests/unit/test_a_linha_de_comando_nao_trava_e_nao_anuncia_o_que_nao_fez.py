@@ -154,7 +154,7 @@ def test_o_doctor_com_o_servico_mudo_volta_e_reprova(
 def test_o_servico_ausente_segue_sendo_leitura_direta(
     monkeypatch: pytest.MonkeyPatch, sem_controle: type[_SemControle]
 ) -> None:
-    async def _fora() -> None:
+    def _fora() -> None:
         return None
 
     monkeypatch.setattr(cmd_status, "_daemon_status_via_ipc", _fora)
@@ -166,7 +166,7 @@ def test_o_servico_ausente_segue_sendo_leitura_direta(
 def test_status_sem_controle_nao_inventa_transporte_nem_bateria(
     monkeypatch: pytest.MonkeyPatch, sem_controle: type[_SemControle]
 ) -> None:
-    async def _fora() -> None:
+    def _fora() -> None:
         return None
 
     monkeypatch.setattr(cmd_status, "_daemon_status_via_ipc", _fora)
@@ -179,7 +179,7 @@ def test_status_sem_controle_nao_inventa_transporte_nem_bateria(
 def test_battery_sem_controle_nao_inventa_zero_por_cento(
     monkeypatch: pytest.MonkeyPatch, sem_controle: type[_SemControle]
 ) -> None:
-    async def _fora() -> None:
+    def _fora() -> None:
         return None
 
     monkeypatch.setattr(cmd_status, "_daemon_status_via_ipc", _fora)

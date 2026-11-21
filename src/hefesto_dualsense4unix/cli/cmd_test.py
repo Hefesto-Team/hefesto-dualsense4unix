@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import inspect
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -9,7 +10,7 @@ import typer
 from rich.console import Console
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.core.controller import IController
+    from hefesto_dualsense4unix.core.controller import IController, TriggerEffect
 
 
 app = typer.Typer(name="test", help="Exercita efeitos direto no hardware.", no_args_is_help=True)
@@ -48,17 +49,34 @@ MSG_RAW_COM_DAEMON = (
 
 
 def _recusar_raw_com_daemon_vivo() -> None:
-    """Recusa o `--raw` quando o daemon está no ar."""
-    from hefesto_dualsense4unix.app.ipc_bridge import daemon_status_basic
+    """Recusa o `--raw` quando o daemon está no ar: só o socket ausente prova que ele parou."""
+    from hefesto_dualsense4unix.app.ipc_bridge import PARADO, pedir_ao_servico
 
-    vivo = False
-    try:
-        vivo = daemon_status_basic() is not None
-    except Exception:
-        vivo = False
-    if vivo:
+    if pedir_ao_servico("daemon.status").estado != PARADO:
         console.print(f"[red]--raw recusado:[/red] {MSG_RAW_COM_DAEMON}")
         raise typer.Exit(code=1)
+
+
+def _montar_o_efeito(mode: str, params_list: list[int]) -> TriggerEffect:
+    """O efeito do preset; nome ou parâmetros que não servem saem com rc 2, antes do serviço."""
+    from hefesto_dualsense4unix.core.trigger_effects import PRESET_FACTORIES, build_from_name
+
+    try:
+        return build_from_name(mode, params_list)
+    except (ValueError, TypeError) as exc:
+        if mode not in PRESET_FACTORIES:
+            validos = ", ".join(sorted(PRESET_FACTORIES))
+            console.print(f"[red]modo desconhecido:[/red] {mode}. Modos válidos: {validos}")
+        elif isinstance(exc, ValueError):
+            console.print(f"[red]parâmetros inválidos para {mode}:[/red] {exc}")
+        else:
+            fabrica: Callable[..., Any] = PRESET_FACTORIES[mode]
+            pede = ", ".join(inspect.signature(fabrica).parameters) or "nenhum"
+            console.print(
+                f"[red]{mode} não aceita {len(params_list)} parâmetro(s):[/red] "
+                f"ele pede ({pede}). {exc}"
+            )
+        raise typer.Exit(code=2) from None
 
 
 @app.command("trigger")
@@ -70,8 +88,6 @@ def cmd_trigger(
         False, "--raw", help="mode e valor inteiro (0-255); params sao 7 bytes HID."
     ),
 ) -> None:
-    from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-
     if side not in ("left", "right"):
         raise typer.BadParameter("side deve ser left ou right")
     side_literal: Literal["left", "right"] = "left" if side == "left" else "right"
@@ -96,10 +112,19 @@ def cmd_trigger(
             ),
         )
     else:
-        effect = build_from_name(mode, params_list)
-        from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
+        effect = _montar_o_efeito(mode, params_list)
+        from hefesto_dualsense4unix.app.ipc_bridge import (
+            ATENDEU,
+            _payload_trigger_set,
+            pedir_ao_servico,
+        )
+        from hefesto_dualsense4unix.cli.chamada_ao_servico import sair_se_o_servico_vive
 
-        if trigger_set(side_literal, mode, params_list):
+        desfecho = pedir_ao_servico(
+            "trigger.set", _payload_trigger_set(side_literal, mode, params_list, None)
+        )
+        sair_se_o_servico_vive(console, desfecho)
+        if desfecho.estado == ATENDEU:
             console.print(
                 f"[green]trigger (via daemon):[/green] {side_literal} {mode} {params_list}"
             )
@@ -137,31 +162,21 @@ def cmd_led(
 
 
 def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
-    """Tenta enviar `led.set` via IPC; retorna True em sucesso, False em falha.
+    """Envia `led.set` via IPC; True se o serviço atendeu, False só com ele comprovadamente parado.
 
-    BUG-CLI-BRIGHTNESS-UNIDADE-01 (25/07): a CLI expõe `--brightness` em
-    PORCENTAGEM (0-100, `min=0, max=100` no typer) e mandava o número cru; o
-    handler `led.set` valida FRAÇÃO (`0.0 <= brightness <= 1.0`,
-    `ipc_handlers.py:852`). O resultado eram dois erros silenciosos:
-    `--brightness 50` fazia o IPC recusar e o comando caía no fallback de
-    hardware sem dizer nada, e `--brightness 1` passava na validação como
-    `1.0` — ou seja, era aplicado como **100%**, o oposto do pedido.
-    A conversão mora aqui porque a unidade amigável é da CLI: a GUI já manda
-    fração (`app/ipc_bridge.py:466` `led_set`), que é o contrato do daemon.
-    (O docstring antigo dizia que o daemon "ignora" o parâmetro; ele valida e
-    aplica desde a FEAT-LED-BRIGHTNESS-01.)
+    Recusa e serviço mudo saem do comando (rc 2 e rc 1): o aparelho segue com o serviço.
+    `--brightness` chega em porcentagem (0-100) e vai ao daemon como fração (0.0-1.0), o contrato
+    do `led.set`; a história do erro de unidade está em `docs/research/o-porque-dos-modulos.md`.
     """
-    from hefesto_dualsense4unix.app.ipc_bridge import _run_call, teto_da_linha_de_comando
-    from hefesto_dualsense4unix.cli.ipc_client import IpcError
+    from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, pedir_ao_servico
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import sair_se_o_servico_vive
 
-    params: dict[str, object] = {"rgb": list(rgb)}
+    params: dict[str, Any] = {"rgb": list(rgb)}
     if brightness is not None:
         params["brightness"] = max(0, min(100, int(brightness))) / 100.0
-    try:
-        _run_call("led.set", params, timeout=teto_da_linha_de_comando("led.set"))
-    except (IpcError, FileNotFoundError, ConnectionError, OSError):
-        return False
-    return True
+    desfecho = pedir_ao_servico("led.set", params)
+    sair_se_o_servico_vive(console, desfecho)
+    return desfecho.estado == ATENDEU
 
 
 def _scale_rgb(rgb: tuple[int, int, int], brightness: int) -> tuple[int, int, int]:
@@ -179,9 +194,12 @@ def cmd_rumble(
     weak: int = typer.Option(0, min=0, max=255),
     strong: int = typer.Option(0, min=0, max=255),
 ) -> None:
-    from hefesto_dualsense4unix.app.ipc_bridge import rumble_set
+    from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, pedir_ao_servico
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import sair_se_o_servico_vive
 
-    if rumble_set(weak, strong):
+    desfecho = pedir_ao_servico("rumble.set", {"weak": weak, "strong": strong})
+    sair_se_o_servico_vive(console, desfecho)
+    if desfecho.estado == ATENDEU:
         console.print(f"[green]rumble (via daemon):[/green] weak={weak} strong={strong}")
         return
 

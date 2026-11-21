@@ -48,9 +48,14 @@ def _listar_perfis() -> list[dict[str, Any]]:
 
 
 def _trocar_de_perfil(nome: str) -> bool:
-    """Troca pelo IPC; se o daemon não responder, tenta pela CLI."""
-    if _chamar("profile.switch", {"name": nome}) is not None:
+    """Troca pelo IPC; só com o serviço comprovadamente parado a CLI faz a troca por fora."""
+    from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, PARADO, pedir_ao_servico
+
+    desfecho = pedir_ao_servico("profile.switch", {"name": nome})
+    if desfecho.estado == ATENDEU:
         return True
+    if desfecho.estado != PARADO:
+        return False
     try:
         subprocess.Popen(
             ["hefesto-dualsense4unix", "profile", "activate", nome],

@@ -232,7 +232,11 @@ hefesto-dualsense4unix test led --color '#ff0000' --brightness 40
 hefesto-dualsense4unix test rumble --weak 128 --strong 64
 ```
 
-Os três pedem ao serviço primeiro e só vão direto ao controle com ele parado.
+Os três pedem ao serviço primeiro e só vão direto ao controle com ele parado
+(socket ausente ou conexão recusada). Se o serviço recusa, o comando diz o motivo
+e sai com 2; se não responde a tempo, diz isso e sai com 1. O mesmo vale para
+`profile activate`, `status` e `battery`. Modo ou parâmetros que não servem ao
+`test trigger` saem com 2 e a lista do que serve.
 `test trigger --raw` escreve o efeito cru e recusa com o serviço rodando: o
 serviço sobrescreveria o efeito em menos de meio segundo. Para usá-lo, pare o
 serviço (`systemctl --user stop hefesto-dualsense4unix`), rode e religue.

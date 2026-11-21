@@ -122,7 +122,9 @@ def test_a_recusa_imprime_a_mensagem_e_sai_com_codigo_1(
     """Com o daemon "vivo" (dublê), o `--raw` é recusado — sem tocar em hardware."""
     import hefesto_dualsense4unix.app.ipc_bridge as ipc_bridge
 
-    monkeypatch.setattr(ipc_bridge, "daemon_status_basic", lambda: {"status": "ok"})
+    monkeypatch.setattr(
+        ipc_bridge, "pedir_ao_servico", lambda *_a, **_k: ipc_bridge.Desfecho(ipc_bridge.ATENDEU)
+    )
     with pytest.raises(typer.Exit) as excinfo:
         cmd_test._recusar_raw_com_daemon_vivo()
     assert excinfo.value.exit_code == 1
@@ -138,5 +140,7 @@ def test_sem_daemon_o_raw_passa(monkeypatch: pytest.MonkeyPatch) -> None:
     """Contrapositivo: sem socket, o `--raw` tem o hidraw só para ele."""
     import hefesto_dualsense4unix.app.ipc_bridge as ipc_bridge
 
-    monkeypatch.setattr(ipc_bridge, "daemon_status_basic", lambda: None)
+    monkeypatch.setattr(
+        ipc_bridge, "pedir_ao_servico", lambda *_a, **_k: ipc_bridge.Desfecho(ipc_bridge.PARADO)
+    )
     cmd_test._recusar_raw_com_daemon_vivo()
