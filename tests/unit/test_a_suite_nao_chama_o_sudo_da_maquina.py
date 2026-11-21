@@ -118,17 +118,31 @@ def test_o_modo_de_registro_anota_o_teste_e_o_argv_sem_reprovar(tmp_path: Path) 
     ]
 
 
+def _o_que_a_suite_executa() -> list[Path]:
+    """Todo arquivo que um teste pode executar: o pacote, os scripts, os testes, os assets,
+    o empacotamento e os instaladores da raiz."""
+    arquivos = [RAIZ / nome for nome in ("install.sh", "uninstall.sh", "run.sh")]
+    for pasta in ("src", "scripts", "tests", "assets", "packaging", "flatpak"):
+        arquivos.extend(a for a in (RAIZ / pasta).rglob("*") if a.is_file())
+    return [a for a in arquivos if a.is_file() and "__pycache__" not in a.parts]
+
+
 def test_ninguem_chama_o_sudo_por_caminho_absoluto() -> None:
-    """O limite do dublê: quem chama `/usr/bin/sudo` escapa dele. Hoje ninguém chama."""
+    """O limite do dublê: o `Popen` da sessão troca até `/usr/bin/sudo`, mas o shell, o neto
+    e o `exec` que levam o caminho absoluto escapam dele. Hoje nenhum arquivo o leva. O outro
+    limite, que esta régua não vê: o neto de um `env` sem `PATH` acha o `sudo` pelo `PATH`
+    padrão do shell dele."""
     este = Path(__file__).resolve()
     achados = []
-    for pasta in ("src", "scripts", "tests"):
-        for arquivo in (RAIZ / pasta).rglob("*"):
-            if arquivo.suffix not in {".py", ".sh"} or arquivo.resolve() == este:
-                continue
-            texto = arquivo.read_text(encoding="utf-8", errors="replace")
-            if re.search(r"/(?:usr/)?(?:s?bin)/sudo\b", texto):
-                achados.append(str(arquivo.relative_to(RAIZ)))
+    for arquivo in _o_que_a_suite_executa():
+        if arquivo.resolve() == este:
+            continue
+        try:
+            texto = arquivo.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        if re.search(r"/(?:usr/)?(?:local/)?s?bin/sudo\b", texto):
+            achados.append(str(arquivo.relative_to(RAIZ)))
     assert not achados, (
         f"{SIGLA}: estes arquivos chamam o `sudo` por caminho absoluto, e o dublê da "
         f"suíte não os alcança: {sorted(achados)}"
