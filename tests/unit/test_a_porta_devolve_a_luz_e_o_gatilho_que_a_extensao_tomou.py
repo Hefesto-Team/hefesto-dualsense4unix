@@ -327,6 +327,90 @@ def test_o_hotplug_nao_traz_o_valor_da_extensao_e_a_troca_de_transporte_atravess
     _correr(tmp_path, monkeypatch, roteiro, transportes=transportes)
 
 
+ADAPTADORES = {PLANOS[0]: "hci0", PLANOS[1]: "hci0", PLANOS[2]: "hci1", PLANOS[3]: "hci2"}
+
+
+def test_quatro_no_radio_em_tres_adaptadores_o_cabo_no_meio_e_a_volta_pelo_caminho_do_servico(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Quatro no rádio, dois no mesmo adaptador. O P3 passa ao cabo e o prazo vence com ele fora
+    da mesa: o cabo chega com o perfil e nada se devolve de novo. O P4 vai ao cabo e volta ao
+    rádio pela marca que o cabo que sai deixa, sem marca à mão: atravessa e devolve uma vez. O P1
+    e o P2 seguem com o que a extensão pediu e voltam cada um ao seu quando a extensão cai."""
+    from hefesto_dualsense4unix.integrations import radio_da_mesa
+
+    async def roteiro(mesa: _Cena, pedir: Callable[..., Awaitable[dict[str, Any]]]) -> None:
+        monkeypatch.setattr(radio_da_mesa, "adaptador_por_uniq", lambda uniqs: {
+            u: ADAPTADORES.get(str(u).replace(":", "").lower(), "hci0") for u in uniqs})
+        backend, fios = mesa.backend, mesa.backend._handles
+        with backend._io_lock:
+            backend._aplicar_os_pisos_de_escrita_locked()
+            backend._anotar_os_transportes_locked(list(fios.items()), {})
+
+        def chegar(i: int, transporte: ConnectionType) -> None:
+            fios[MACS[i]] = _handle(transporte)
+            with backend._io_lock:
+                backend._anotar_os_transportes_locked([(MACS[i], fios[MACS[i]])], {})
+            backend._reapply_desired(MACS[i], fios[MACS[i]])
+
+        def sair(i: int) -> None:
+            backend._close_handles(keep={m for m in MACS if m != MACS[i]})
+
+        for i in range(4):
+            ate_ms = 3000 if i == 2 else 60000
+            await pedir("gatilho.set", _golpe(i, ate_ms=ate_ms))
+            await pedir("luz.set", _dano(i, ate_ms=ate_ms))
+        await mesa.andar(0.5)
+        assert [(mesa.r2(i), mesa.cor(i)) for i in range(4)] == [(IMPACTO, DANO)] * 4
+        desfechos: dict[str, list[str]] = {}
+        soltar = backend.release_extension_output_for
+
+        def contar(uniq: str, campos: Any) -> str:
+            desfecho = soltar(uniq, campos)
+            desfechos.setdefault(uniq, []).append(desfecho)
+            return desfecho
+
+        monkeypatch.setattr(backend, "release_extension_output_for", contar)
+
+        assert backend.iniciar_troca_de_transporte(PLANOS[2], motivo="o_cabo_chegou")
+        sair(2)
+        assert PLANOS[2] in backend._extensao_by_uniq, "a troca de transporte virou saída"
+        await mesa.andar(3.0)
+        assert desfechos.get(UNIQS[2]) == ["registrado", "registrado"], desfechos
+        assert PLANOS[2] not in backend._extensao_by_uniq, "o prazo venceu fora da mesa e ficou"
+        chegar(2, CABO)
+        assert (mesa.r2(2), mesa.cor(2)) == (mesa.perfil(2), CORES[2]), (
+            "o cabo trouxe o que venceu com o controle fora da mesa")
+
+        assert backend.iniciar_troca_de_transporte(PLANOS[3], motivo="o_cabo_chegou")
+        sair(3)
+        chegar(3, CABO)
+        assert (mesa.r2(3), mesa.cor(3)) == (IMPACTO, DANO), "o cabo perdeu o que a extensão tem"
+        backend.cancelar_troca_de_transporte(PLANOS[3], motivo="a_folga_acabou")
+        sair(3)
+        assert PLANOS[3] in backend._extensao_by_uniq, "o cabo que sai para o rádio virou saída"
+        chegar(3, RADIO)
+        assert (mesa.r2(3), mesa.cor(3)) == (IMPACTO, DANO), "a volta ao rádio perdeu o dano"
+        await pedir("gatilho.set", {"uniq": UNIQS[3], "lado": "direito", "modo": "Off"})
+        await pedir("luz.set", {"uniq": UNIQS[3], "rgb": [0, 0, 0]})
+        await mesa.andar(1.0)
+        assert (mesa.r2(3), mesa.cor(3)) == (mesa.perfil(3), CORES[3])
+        assert desfechos[UNIQS[3]].count("escreveu") == 2, f"devolveu em dobro: {desfechos}"
+
+        assert [(mesa.r2(i), mesa.cor(i)) for i in (0, 1)] == [(IMPACTO, DANO)] * 2, (
+            "a troca de outro mexeu no P1 ou no P2")
+        mesa.fonte.esquecer(EXT)
+        await mesa.andar(0.1)
+        for i in range(4):
+            assert (mesa.r2(i), mesa.cor(i)) == (mesa.perfil(i), CORES[i]), (
+                f"o controle {i} não voltou ao seu")
+        assert backend._extensao_by_uniq == {}
+        assert desfechos[UNIQS[2]] == ["registrado", "registrado"], "o P3 devolveu de novo"
+        assert desfechos[UNIQS[3]].count("escreveu") == 2, "a saída devolveu o P4 de novo"
+
+    _correr(tmp_path, monkeypatch, roteiro, transportes=(RADIO,) * 4)
+
+
 def test_o_gatilho_sem_efeito_no_perfil_volta_ao_off_e_soltar_duas_vezes_escreve_uma(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
