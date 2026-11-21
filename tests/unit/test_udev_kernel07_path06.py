@@ -106,7 +106,7 @@ def test_regra_80_coberta_nos_instaladores(arquivo: str) -> None:
 def test_uninstall_dispara_trigger_de_input() -> None:
     """Sem o trigger de input os js da 80 e as flags da 78 só voltam no replug."""
     texto = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
-    assert "--subsystem-match=input" in texto
+    assert 'sudo bash "${DISPARO_DO_UDEV}"' in texto
 
 
 def test_o_dono_do_disparo_dispara_trigger_de_input() -> None:

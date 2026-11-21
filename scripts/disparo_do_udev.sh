@@ -5,8 +5,6 @@ AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PASTA_DA_REMOCAO="${HEFESTO_RUN_DA_REMOCAO:-/run/hefesto-dualsense4unix-remocao}"
 MODO="${1:-}"
 
-command -v udevadm >/dev/null 2>&1 || exit 0
-
 decidir() {
     local candidato leitor=""
     for candidato in \
@@ -49,6 +47,14 @@ aplicar() {
         udevadm trigger 2>/dev/null || true
     fi
 }
+
+if [[ "${MODO}" == "--pode-reenumerar" ]]; then
+    decidir
+    [[ "${JOGO}" -eq 10 ]]
+    exit $?
+fi
+
+command -v udevadm >/dev/null 2>&1 || exit 0
 
 case "${MODO}" in
     --preparar-a-remocao)

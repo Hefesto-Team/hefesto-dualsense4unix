@@ -67,14 +67,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
         "`install.sh:3886` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
-        "`uninstall.sh:1762` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
+        "`uninstall.sh:1767` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1868` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
         "`install.sh:3751` (`PROTON_PIN_PY`, com `--ensure`) e "
-        "`uninstall.sh:1690` (`PROTON_PIN_PY`) o rodam; "
+        "`uninstall.sh:1695` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3916` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
@@ -93,7 +93,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3183` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:497` (`curar_audio_ks`) o roda a cada jogo lançado; "
-        "`uninstall.sh:1797-1798` (`AUDIO_KS_PY`) o "
+        "`uninstall.sh:1802-1803` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
@@ -3437,11 +3437,11 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "`uninstall.sh:1444` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
+            "`uninstall.sh:1449` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
             "o extrator engoliu o COMENTÁRIO de "
-            "`uninstall.sh:1429-1429` (`CMDLINE_OWNERS_FILE`) junto com o "
+            "`uninstall.sh:1434-1434` (`CMDLINE_OWNERS_FILE`) junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 

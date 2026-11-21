@@ -581,6 +581,8 @@ _abrir_a_regra_do_no_que_fica() {
     return 0
 }
 
+DISPARO_DO_UDEV="${ROOT_DIR}/scripts/disparo_do_udev.sh"
+_pendencias_do_udev=()
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     log "removendo udev rules + modules-load uinput (sudo)"
     if ! sudo -n true 2>/dev/null; then
@@ -611,9 +613,11 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
         sudo udevadm control --reload-rules
-        sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
-        sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
-        sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
+        if bash "${DISPARO_DO_UDEV}" --pode-reenumerar; then
+            sudo bash "${DISPARO_DO_UDEV}" || true
+        else
+            _pendencias_do_udev+=("sudo bash ${DISPARO_DO_UDEV}")
+        fi
         log "removendo grupo 'hefesto' (dono de /dev/uhid e /dev/uinput)"
         sudo gpasswd -d "$(id -un)" hefesto >/dev/null 2>&1 || true
         sudo groupdel hefesto 2>/dev/null || true
@@ -740,6 +744,7 @@ if sudo -n true 2>/dev/null; then
     sudo rm -rf /var/cache/hefesto-backport-bluez /var/cache/hefesto-backport-pipewire /var/cache/hefesto-backport-portal 2>/dev/null || true
     sudo rm -rf /var/cache/private/hefesto-backport-bluez /var/cache/private/hefesto-backport-pipewire /var/cache/private/hefesto-backport-portal 2>/dev/null || true
     sudo rm -rf /run/hefesto-dualsense4unix/placa 2>/dev/null || true
+    sudo rm -rf /run/hefesto-dualsense4unix-remocao 2>/dev/null || true
     sudo rm -rf /run/hefesto-bt-ponte /run/hefesto-bt-rebind /run/hefesto-bt-watchdog \
         /run/hefesto-bt-watchdog.restart-stamp 2>/dev/null || true
     if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf || -d /run/hefesto-dualsense4unix ]]; then
@@ -1963,8 +1968,12 @@ fi
 printf '\n─────────────────────────────────────────\n'
 if [[ "${DRY_RUN}" -eq 1 ]]; then
     printf ' Hefesto - DualSense4Unix: ENSAIO — nada foi removido; as linhas FARIA são o plano\n'
+elif [[ "${#_pendencias_da_steam[@]}" -gt 0 && "${#_pendencias_do_udev[@]}" -gt 0 ]]; then
+    printf ' Hefesto - DualSense4Unix desinstalado, com pendência na Steam e nas regras do controle\n'
 elif [[ "${#_pendencias_da_steam[@]}" -gt 0 ]]; then
     printf ' Hefesto - DualSense4Unix desinstalado, com pendência na Steam\n'
+elif [[ "${#_pendencias_do_udev[@]}" -gt 0 ]]; then
+    printf ' Hefesto - DualSense4Unix desinstalado, com pendência nas regras do controle\n'
 else
     printf ' Hefesto - DualSense4Unix desinstalado (wipe completo)\n'
 fi
@@ -1972,5 +1981,10 @@ printf '────────────────────────
 if [[ "${DRY_RUN}" -ne 1 && "${#_pendencias_da_steam[@]}" -gt 0 ]]; then
     printf ' Falta na Steam. Feche a Steam e o jogo e rode:\n'
     printf '   %s\n' "${_pendencias_da_steam[@]}"
+    printf '\n'
+fi
+if [[ "${DRY_RUN}" -ne 1 && "${#_pendencias_do_udev[@]}" -gt 0 ]]; then
+    printf ' Falta reaplicar as regras do controle, que o jogo aberto adiou. Feche o jogo e rode:\n'
+    printf '   %s\n' "${_pendencias_do_udev[@]}"
     printf '\n'
 fi
