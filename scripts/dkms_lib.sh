@@ -131,7 +131,7 @@ _dkms_srcversion_do_modulo() {
 _dkms_carregado_e_da_casa() {
     local _nome="$1" _carregado _arquivo
     [[ -n "${_nome}" ]] || return 1
-    _carregado="$(cat "${HEFESTO_DKMS_SYS_MODULE:-/sys/module}/${_nome//-/_}/srcversion" 2>/dev/null || true)"
+    _carregado="$(cat "${HEFESTO_SYS_MODULE:-/sys/module}/${_nome//-/_}/srcversion" 2>/dev/null || true)"
     [[ -n "${_carregado}" ]] || return 1
     _arquivo="$(modinfo -F filename "${_nome}" 2>/dev/null)" || return 1
     dkms_ko_da_casa "${_arquivo}" || return 1

@@ -76,7 +76,6 @@ def test_o_install_e_o_doctor_respondem_a_mesma_pergunta(
         "PATH": f"{tmp_path / 'bin'}:/usr/bin:/bin",
         "HOME": str(tmp_path),
         "HEFESTO_SYS_MODULE": str(raiz),
-        "HEFESTO_DOCTOR_SYS_MODULE": str(raiz),
         "HEFESTO_DKMS_TREE": str(arvore),
     }
     pergunta = 'if {f} hid-playstation; then echo pede; else echo nao-pede; fi'

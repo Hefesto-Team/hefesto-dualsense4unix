@@ -76,7 +76,7 @@ def _doctor(
                 "PATH": f"{bin_}:/usr/bin:/bin",
                 "HOME": str(tmp_path),
                 "HEFESTO_DOCTOR_KERNEL": kernel,
-                "HEFESTO_DOCTOR_SYS_MODULE": str(raiz),
+                "HEFESTO_SYS_MODULE": str(raiz),
                 "HEFESTO_EFIVARS_ROOT": str(efivars),
                 "HEFESTO_DKMS_TREE": str(arvore),
             },

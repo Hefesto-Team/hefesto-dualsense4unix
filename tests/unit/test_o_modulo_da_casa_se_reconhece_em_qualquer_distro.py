@@ -49,7 +49,7 @@ def _doctor(tmp_path: Path, ko: Path) -> str:
         [BASH, "-c", f'source "{DOCTOR}"; check_hefesto_hid_playstation_dkms'],
         env={"PATH": f"{bin_}:/usr/bin:/bin", "HOME": str(tmp_path),
              "HEFESTO_DOCTOR_KERNEL": KERNEL,
-             "HEFESTO_DOCTOR_SYS_MODULE": str(tmp_path / "sys-module"),
+             "HEFESTO_SYS_MODULE": str(tmp_path / "sys-module"),
              "HEFESTO_EFIVARS_ROOT": str(tmp_path / "sem-efi"),
              "HEFESTO_DKMS_TREE": str(tmp_path / "dkms")},
         capture_output=True, text=True, timeout=60, check=False,

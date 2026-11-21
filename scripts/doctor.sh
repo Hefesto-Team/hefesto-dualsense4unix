@@ -5578,7 +5578,7 @@ _hid_playstation_carregado_guarda_o_audio() {
 
 check_hefesto_hid_playstation_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
-    local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/hid_playstation"
+    local modulo="${HEFESTO_SYS_MODULE:-/sys/module}/hid_playstation"
     local baseline modpath staged=0 pulo passo
     baseline="$(_hid_playstation_baseline || true)"
     pulo="$(_dkms_veredito hefesto-hid-playstation 1.0.0 "${kver}")"
@@ -5615,7 +5615,7 @@ check_hefesto_hid_playstation_dkms() {
 
 check_hefesto_usb_f_hid_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
-    local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/usb_f_hid"
+    local modulo="${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid"
     local modpath staged=0 faltam pulo passo
     pulo="$(_dkms_veredito hefesto-usb-f-hid 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename usb_f_hid 2>/dev/null || true)"
@@ -5656,7 +5656,7 @@ check_hefesto_usb_f_hid_dkms() {
 }
 
 _modulo_pede_reinicio() {
-    local nome="$1" raiz="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}" carregado arquivo novo
+    local nome="$1" raiz="${HEFESTO_SYS_MODULE:-/sys/module}" carregado arquivo novo
     carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
     [[ -n "${carregado}" ]] || return 1
     arquivo="$(modinfo -F filename "${nome}" 2>/dev/null || true)"

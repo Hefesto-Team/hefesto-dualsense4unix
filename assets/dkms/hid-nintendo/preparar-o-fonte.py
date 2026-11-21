@@ -629,6 +629,13 @@ def _chave_do_dkms() -> Path:
     return Path(certificado or "/var/lib/dkms/mok.pub")
 
 
+def _raiz_dos_modulos_carregados() -> Path:
+    """O `/sys/module`; o botão de teste `HEFESTO_SYS_MODULE` só vale fora do root."""
+    if os.geteuid() != 0 and os.environ.get("HEFESTO_SYS_MODULE"):
+        return Path(os.environ["HEFESTO_SYS_MODULE"])
+    return Path("/sys/module")
+
+
 def _carregado_e_da_casa() -> bool:
     try:
         modulo = _conf("BUILT_MODULE_NAME[0]")
@@ -636,7 +643,7 @@ def _carregado_e_da_casa() -> bool:
         return False
     if not modulo:
         return False
-    raiz = Path(os.environ.get("HEFESTO_DKMS_SYS_MODULE", "/sys/module"))
+    raiz = _raiz_dos_modulos_carregados()
     try:
         carregado = (raiz / modulo.replace("-", "_") / "srcversion").read_text().strip()
     except OSError:

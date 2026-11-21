@@ -36,7 +36,7 @@ def _roda(
     env = dict(os.environ)
     env["PATH"] = path
     env["HEFESTO_EFIVARS_ROOT"] = "/nao-existe/efivars-sem-secure-boot"
-    env["HEFESTO_DKMS_SYS_MODULE"] = "/nao-existe/sys-module"
+    env["HEFESTO_SYS_MODULE"] = "/nao-existe/sys-module"
     env.update(env_extra or {})
     completo = f"source '{LIB_PATH}'\n{script}\n"
     return subprocess.run(
@@ -528,7 +528,7 @@ def _estado_do_secure_boot(
                                             else "mok.pub")),
         "HEFESTO_MOK_LISTAS": str(raiz / ("sem-lista" if leitura == "sem-lista"
                                           else "MokListRT")),
-        "HEFESTO_DKMS_SYS_MODULE": str(raiz / "sem-modulo-carregado"),
+        "HEFESTO_SYS_MODULE": str(raiz / "sem-modulo-carregado"),
     }
 
 
@@ -765,7 +765,7 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
         )
         ambiente = {
             **estado, "HEFESTO_DKMS_TREE": str(arvore),
-            "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sysmod"),
+            "HEFESTO_SYS_MODULE": str(tmp_path / "sysmod"),
         }
         return self.instalar(tmp_path, ambiente, self.STATUS, modinfo)
 
@@ -820,7 +820,7 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
         feito = _roda("dkms_estado_da_chave hid-teste", caminho,
                       {**estado, "HEFESTO_DKMS_KERNEL": "7.2.0-novo",
                        "HEFESTO_DKMS_TREE": str(arvore),
-                       "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sysmod")})
+                       "HEFESTO_SYS_MODULE": str(tmp_path / "sysmod")})
         assert feito.stdout == "fora", feito
 
     def test_o_python_tambem_so_desmente_o_fora_com_o_carregado(self, tmp_path: Path) -> None:
@@ -840,7 +840,7 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
         _stub(bin_, "mokutil", "exit 1")
         ambiente = {**os.environ, **estado, "PATH": f"{bin_}:/usr/bin:/bin",
                     "HEFESTO_DKMS_TREE": str(arvore),
-                    "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sysmod")}
+                    "HEFESTO_SYS_MODULE": str(tmp_path / "sysmod")}
         def python(arg: str) -> subprocess.CompletedProcess[str]:
             return subprocess.run(["python3", str(PREPARADOR), arg], env=ambiente,
                                   capture_output=True, text=True, check=False, timeout=60)

@@ -77,7 +77,7 @@ def _lib(
     tmp_path: Path, script: str, env_extra: dict[str, str]
 ) -> subprocess.CompletedProcess[str]:
     env = {"PATH": str(_bin(tmp_path)), "HOME": str(tmp_path), "LC_ALL": "C.UTF-8",
-           "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module")}
+           "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module")}
     env.update(env_extra)
     return subprocess.run(
         [BASH, "-c", f"set -euo pipefail\nsource '{LIB}'\n{script}\n"],
@@ -227,7 +227,7 @@ def _instalar(tmp_path: Path, *, ligado: bool, inscrita: bool) -> tuple[str, str
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
         "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
         "HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
-        "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
+        "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=inscrita),
     }
     r = subprocess.run(
@@ -304,14 +304,14 @@ def _rodar_reconhecimento(
         "HOME": str(tmp_path),
         "LC_ALL": "C.UTF-8",
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
-        "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
+        "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=False),
     }
     if pedida:
         (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
     if carregado:
         arvore = tmp_path / "arvore-do-dkms"
-        env["HEFESTO_DKMS_SYS_MODULE"] = _com_o_modulo_carregado(
+        env["HEFESTO_SYS_MODULE"] = _com_o_modulo_carregado(
             tmp_path, Path(env["PATH"]), arvore)
         env["HEFESTO_DKMS_TREE"] = str(arvore)
     r = subprocess.run(
@@ -365,13 +365,13 @@ def _doctor(
         "LC_ALL": "C.UTF-8",
         "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
         "HEFESTO_DKMS_TREE": str(arvore),
-        "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sem-sys-module"),
+        "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module"),
         **_mok(tmp_path, gerada=True, inscrita=inscrita),
     }
     if pedida:
         (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
     if carregado:
-        env["HEFESTO_DKMS_SYS_MODULE"] = _com_o_modulo_carregado(tmp_path, bin_, arvore)
+        env["HEFESTO_SYS_MODULE"] = _com_o_modulo_carregado(tmp_path, bin_, arvore)
     r = subprocess.run(
         [BASH, "-c", f"source '{DOCTOR}'\nuname() {{ echo k; }}\n{script}\n"],
         capture_output=True, text=True, timeout=60, check=False, env=env,
@@ -424,7 +424,7 @@ def test_o_check_do_dualsense_diz_o_passo_da_mok(tmp_path: Path) -> None:
     )
     saida = _doctor(
         tmp_path,
-        f"HEFESTO_DOCTOR_SYS_MODULE='{sys_module}' HEFESTO_DOCTOR_KERNEL=7.1.5-76070105-generic"
+        f"HEFESTO_SYS_MODULE='{sys_module}' HEFESTO_DOCTOR_KERNEL=7.1.5-76070105-generic"
         " check_hefesto_hid_playstation_dkms",
         ligado=True, inscrita=False,
     )
