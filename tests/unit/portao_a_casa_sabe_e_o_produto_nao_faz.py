@@ -1540,6 +1540,12 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "leitor do produto era o sino da Conexões, que saiu com tudo o que só ele usava em "
         "114ffb079 (D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS)."
     ),
+    "integrations/storm_doctor.py::laudo_dos_resets_do_diario": (
+        "21/11/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3309` "
+        "(`laudo_dos_resets_do_diario`), num heredoc Python, para contar por porta os resets do "
+        "cabo lidos do diário do USB (régua: "
+        "`tests/unit/test_o_reset_do_cabo_se_registra_por_porta.py`). Nenhuma tela lê a contagem."
+    ),
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
