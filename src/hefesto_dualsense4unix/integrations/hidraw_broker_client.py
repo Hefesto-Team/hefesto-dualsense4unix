@@ -270,13 +270,13 @@ class HidrawBrokerClient:
                     sock.sendall(line)
                     self._em_voo += 1
                     raw = self._read_line_locked(sock)
-                except TimeoutError:
-                    return None
                 except OSError:
                     self._close_locked()
                     if tentativa == 2:
                         return None
                     continue
+                if raw is None:
+                    return None
                 self._em_voo -= 1
                 break
             else:  # pragma: no cover
@@ -413,7 +413,8 @@ class HidrawBrokerClient:
         except OSError:
             self._close_locked()
 
-    def _read_line_locked(self, sock: socket.socket) -> bytes:
+    def _read_line_locked(self, sock: socket.socket) -> bytes | None:
+        """A linha da resposta; ``None`` quando o prazo estoura sem um byte (a conexão fica)."""
         chunks = bytearray()
         while b"\n" not in chunks:
             if len(chunks) > _MAX_RESPONSE_BYTES:
@@ -423,7 +424,7 @@ class HidrawBrokerClient:
             except TimeoutError:
                 if chunks:
                     raise OSError("resposta do broker pela metade") from None
-                raise
+                return None
             if not data:
                 raise OSError("broker fechou a conexão")
             chunks.extend(data)
