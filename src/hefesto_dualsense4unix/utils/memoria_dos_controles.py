@@ -559,6 +559,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
                                        "o porquê; não identifica controle"),
     "python-sem-roda.json": (CASA, "os pacotes Python cuja versão nova não montou roda, e o "
                                    "porquê; não identifica controle"),
+    "python-provado.txt": (CASA, "as versões das bibliotecas Python que o atualizador provou, "
+                                 "e o install lê como trava; não identifica controle"),
     "memoria_dos_jogos.json": (CASA, "a chave Memória de cada jogo; não identifica controle"),
     "peso_da_mira_dos_jogos.json": (CASA, "a chave do peso da mira de cada jogo com anticheat; "
                                           "não identifica controle"),

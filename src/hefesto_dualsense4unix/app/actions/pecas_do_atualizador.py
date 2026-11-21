@@ -1007,6 +1007,19 @@ def _anotar_as_que_nao_montam(falhas: dict[str, tuple[str, str]]) -> None:
             json.dumps(dado, ensure_ascii=False), encoding="utf-8")
 
 
+ARQUIVO_DAS_PROVADAS = "python-provado.txt"
+
+
+def _anotar_as_que_provou() -> None:
+    """Grava as versões das bibliotecas do produto que acabaram de provar que o Hefesto sobe, no
+    formato de trava do pip: o install as lê como ``-c`` e nunca rebaixa o que se provou."""
+    linhas = [f"{nome}=={versao}" for nome, versao in sorted(_rodas_de_agora().items())]
+    if linhas:
+        with contextlib.suppress(OSError):
+            (_cache() / ARQUIVO_DAS_PROVADAS).write_text("\n".join(linhas) + "\n",
+                                                          encoding="utf-8")
+
+
 def _instalar_rodas(pasta: Path, alvo: Sequence[str]) -> tuple[int, str]:
     return _pip("install", "--no-index", "--only-binary", ":all:", "--find-links", str(pasta),
                 *alvo)
@@ -1099,6 +1112,7 @@ def _trocar_o_python(dados: dict[str, Any]) -> None:
     if motivo:
         raise EtapaFalhouError(f"o Hefesto não sobe com as versões novas ({motivo}); "
                                f"{_a_volta(pacotes, corte)}")
+    _anotar_as_que_provou()
 
 
 def _rodas_de_agora() -> dict[str, str]:
@@ -1158,6 +1172,7 @@ def _voltar_o_python(anterior: dict[str, Any]) -> None:
     motivo = _o_produto_sobe()
     if motivo:
         raise EtapaFalhouError(f"voltou, e o Hefesto não sobe ({motivo})")
+    _anotar_as_que_provou()
     if not _reiniciar_o_servico():
         _anotar("python: voltou, e o serviço não reiniciou")
 

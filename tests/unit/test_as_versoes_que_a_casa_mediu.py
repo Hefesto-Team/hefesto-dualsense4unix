@@ -1,10 +1,17 @@
-"""As versões que rodam são as que a casa mediu no aparelho — B3 da O-PRODUTO."""
+"""As versões que rodam são as que a casa mediu no aparelho — B3 da O-PRODUTO.
+
+O ``constraints.txt`` é o piso da primeira instalação; a versão acima dele é a que o atualizador
+provou e gravou em ``python-provado.txt`` (O-INSTALL-NAO-REBAIXA-O-QUE-O-ATUALIZADOR-PROVOU-01).
+"""
 
 from __future__ import annotations
 
 import importlib.metadata
+import os
 import re
 from pathlib import Path
+
+from packaging.version import Version
 
 RAIZ = Path(__file__).resolve().parents[2]
 TRAVAS = RAIZ / "constraints.txt"
@@ -17,8 +24,8 @@ def _travas() -> dict[str, str]:
         linha = linha.split("#", 1)[0].strip()
         if not linha:
             continue
-        casou = re.fullmatch(r"([A-Za-z0-9_.-]+)==([0-9A-Za-z.+-]+)", linha)
-        assert casou, f"linha do constraints.txt fora da forma nome==versão: {linha!r}"
+        casou = re.fullmatch(r"([A-Za-z0-9_.-]+)>=([0-9A-Za-z.+-]+)", linha)
+        assert casou, f"linha do constraints.txt fora da forma nome>=versão: {linha!r}"
         saida[casou.group(1)] = casou.group(2)
     return saida
 
@@ -27,17 +34,32 @@ def test_as_quatro_que_a_casa_mediu_estao_travadas() -> None:
     assert set(_travas()) >= {"evdev", "hidapi-usb", "pydantic", "pydualsense"}
 
 
-def test_a_venv_roda_as_versoes_travadas() -> None:
+def _provadas() -> dict[str, str]:
+    """O que o atualizador provou, no cache do produto (vazio se ainda não subiu nada)."""
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    arquivo = Path(base) / "hefesto-dualsense4unix" / "atualizador" / "python-provado.txt"
+    try:
+        linhas = arquivo.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    return dict(linha.split("==", 1) for linha in linhas if "==" in linha)
+
+
+def test_a_venv_roda_o_piso_ou_o_que_o_atualizador_provou() -> None:
+    provadas = _provadas()
     divergentes = []
-    for nome, versao in _travas().items():
+    for nome, piso in _travas().items():
         try:
             instalada = importlib.metadata.version(nome)
         except importlib.metadata.PackageNotFoundError:
             instalada = "ausente"
-        if instalada != versao:
-            divergentes.append(f"{nome}: a .venv tem {instalada}, a casa mediu {versao}")
+        if instalada == "ausente" or Version(instalada) < Version(piso):
+            divergentes.append(f"{nome}: a .venv tem {instalada}, o piso medido é {piso}")
+        elif nome in provadas and instalada != provadas[nome]:
+            divergentes.append(
+                f"{nome}: a .venv tem {instalada}, o atualizador provou {provadas[nome]}")
     assert divergentes == [], (
-        "a .venv que roda o produto não é a que a casa mediu no aparelho — "
+        "a .venv que roda o produto não é a que a casa mediu nem a que o atualizador provou — "
         "instale com `pip install -c constraints.txt`: " + "; ".join(divergentes)
     )
 

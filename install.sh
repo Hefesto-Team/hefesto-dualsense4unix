@@ -1707,6 +1707,8 @@ _extras="emulation,cosmic"
 if [[ "${WITH_DEV}" -eq 1 ]]; then _extras="${_extras},dev"; fi
 _travas=()
 [[ -r "${ROOT_DIR}/constraints.txt" ]] && _travas=(-c "${ROOT_DIR}/constraints.txt")
+_provadas="${XDG_CACHE_HOME:-${HOME}/.cache}/hefesto-dualsense4unix/atualizador/python-provado.txt"
+[[ -r "${_provadas}" ]] && _travas+=(-c "${_provadas}")
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "atualizar pip e packaging dentro de ${VENV_DIR}"
     _faria "instalar o pacote em modo editável no venv: pip install ${_travas[*]} -e '${ROOT_DIR}[${_extras}]'"

@@ -59,7 +59,7 @@ def test_o_hidapi_usb_do_nix_e_o_que_a_casa_mediu() -> None:
     bloco = _bloco(texto, "hidapiUsb =")
     assert 'pname = "hidapi-usb"' in bloco
     versao = re.search(r'version\s*=\s*"([^"]+)"', bloco)
-    travada = re.search(r"^hidapi-usb==(\S+)", TRAVAS.read_text("utf-8"), re.M)
+    travada = re.search(r"^hidapi-usb(?:==|>=)(\S+)", TRAVAS.read_text("utf-8"), re.M)
     assert versao and travada
     assert versao.group(1) == travada.group(1), (
         "o Nix empacota outra versão do hidapi-usb que a medida em constraints.txt"
