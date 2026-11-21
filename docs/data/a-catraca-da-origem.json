@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1282176,
+      "piso": 1282717,
       "por_item": {
-        "docs": 107709,
-        "scripts": 115164,
-        "src": 325306,
-        "tests": 733997
+        "docs": 107710,
+        "scripts": 115235,
+        "src": 325322,
+        "tests": 734450
       },
-      "razao": "tamanho: +5 linhas (1282171 -> 1282176), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO; registrado no fecho, topo 08bfe4ada633",
+      "razao": "tamanho: +541 linhas (1282176 -> 1282717), pagas por Origem: D-1911-A-VERSAO-DE-FORA-ESPERA-TRES-DIAS, D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo b29abc50c8b2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2157,10 +2157,16 @@
           "de": 1282171,
           "para": 1282176,
           "razao": "tamanho: +5 linhas (1282171 -> 1282176), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO, D-1911-A-FILA-TEM-A-POSSE-DA-STEAM, D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO; registrado no fecho, topo 08bfe4ada633"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1282176,
+          "para": 1282717,
+          "razao": "tamanho: +541 linhas (1282176 -> 1282717), pagas por Origem: D-1911-A-VERSAO-DE-FORA-ESPERA-TRES-DIAS, D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo b29abc50c8b2"
         }
       ],
       "unidade": "linhas",
-      "universo": 3570
+      "universo": 3573
     }
   }
 }
