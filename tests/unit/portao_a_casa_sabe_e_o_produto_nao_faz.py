@@ -102,6 +102,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`scripts/doctor.sh:3857` (`check_exame_da_mesa`) o roda — e o "
         "`install.sh:3989` (`bash`) roda o doctor",
     ),
+    "mods/por_dentro_da_caixa.py": (
+        "src/hefesto_dualsense4unix/mods/supervisor.py",
+        'POR_DENTRO_DA_CAIXA = Path(__file__).with_name("por_dentro_da_caixa.py")',
+        "roda por caminho, num processo à parte (`python -I -S por_dentro_da_caixa.py <pid>`): "
+        "`src/hefesto_dualsense4unix/mods/supervisor.py:1244` (`mudar_por_dentro_da_caixa`) o "
+        "lança com `asyncio.create_subprocess_exec`, e o `main()` dele chama `entrar` e "
+        "`refazer_os_links`",
+    ),
 }
 
 _ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh", "scripts/lib/camada_de_maquina.sh")
