@@ -1066,6 +1066,8 @@ source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
 source "${ROOT_DIR}/scripts/lib/saude_da_venv.sh"
 # shellcheck source=scripts/lib/som_da_sessao.sh
 source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
+# shellcheck source=scripts/lib/a_steam_fechada_uma_vez.sh
+source "${ROOT_DIR}/scripts/lib/a_steam_fechada_uma_vez.sh"
 
 _ensaio_camada() {
     if _distro_so_leitura; then
@@ -3797,47 +3799,13 @@ fi
 
 step "11a-bis" "Steam: fechar uma vez só, para os passos que editam os arquivos da Steam"
 LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
-_steam_fechada_pelo_install=0
-_reabrir_a_steam_se_o_install_fechou() {
-    [[ "${_steam_fechada_pelo_install:-0}" -eq 1 ]] || return 0
-    _steam_fechada_pelo_install=0
-    python3 "${LAUNCH_MIGRATE_PY}" --reabrir-steam >/dev/null 2>&1 || true
-}
-_vigia_parado_pelo_install=0
-_religar_o_vigia_se_o_install_parou() {
-    [[ "${_vigia_parado_pelo_install:-0}" -eq 1 ]] || return 0
-    _vigia_parado_pelo_install=0
-    systemctl --user start hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
-}
+_janela_diz() { printf '      %s\n' "$*"; }
+_janela_avisa() { warn "$*"; }
 if [[ "${DRY_RUN:-0}" -ne 1 ]]; then
-    systemctl --user stop hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
-    _vigia_parado_pelo_install=1
-    trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou; _religar_o_vigia_se_o_install_parou' EXIT
+    trap '_cleanup_sudo_keepalive; reabrir_a_steam_se_fechei; religar_o_vigia_se_parei' EXIT
 fi
-if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    _faria "parar o vigia da Steam durante os passos 11 a 11c (ele escreve os mesmos arquivos) e religá-lo no fim"
-    _faria "FECHAR a Steam, se estiver aberta, UMA vez para os passos 11 a 11c (a Steam regrava os arquivos ao sair, e com a Steam viva as edições seriam engolidas), e reabri-la no fim. Com um JOGO aberto, nada é fechado e esses passos adiam."
-elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
-    printf '      se a Steam estiver aberta, a Steam fecha agora UMA vez e reabre no fim\n'
-    printf '      dos passos da Steam — pause downloads antes de seguir.\n'
-    printf '      (com um jogo aberto, nada é fechado e esses passos adiam.)\n'
-    _fs_rc=0
-    python3 "${LAUNCH_MIGRATE_PY}" --fechar-steam || _fs_rc=$?
-    case "${_fs_rc}" in
-        0)
-            _steam_fechada_pelo_install=1
-            ;;
-        4)
-            :
-            ;;
-        *)
-            warn "a Steam segue aberta (jogo aberto, ou a Steam não fechou) — os passos 11 a 11c adiam o que precisar da Steam fechada, cada um com o comando"
-            ;;
-    esac
-    unset _fs_rc
-else
-    warn "steam_launch_options.py ausente ou sem python3 — cada passo da Steam cuida da própria janela"
-fi
+parar_o_vigia_da_steam
+fechar_a_steam_uma_vez
 
 step "11/11" "Steam: desligar PSSupport do PlayStation Controller"
 if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
@@ -4004,11 +3972,11 @@ elif [[ "${DRY_RUN:-0}" -eq 1 && "${NO_PROTON_PIN}" -eq 0 ]]; then
     _faria "apontar para a mesma versão do Proton os jogos do Heroic (nativo e Flatpak) e os das extensões que dizem como fixar; o jogo que roda pelo Wine fica, e a aba Lançadores o mostra"
 fi
 
-if [[ "${_steam_fechada_pelo_install}" -eq 1 ]]; then
+if [[ "${_steam_fechada_por_nos}" -eq 1 ]]; then
     step "11d" "Steam: reabrir (a Steam estava aberta quando o install começou)"
-    _reabrir_a_steam_se_o_install_fechou
+    reabrir_a_steam_se_fechei
 fi
-_religar_o_vigia_se_o_install_parou
+religar_o_vigia_se_parei
 trap _cleanup_sudo_keepalive EXIT
 
 if [[ "${RUN_DOCTOR}" -eq 1 ]]; then

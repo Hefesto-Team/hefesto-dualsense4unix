@@ -21,6 +21,8 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 RAIZ = Path(__file__).resolve().parents[2]
 INSTALL = (RAIZ / "install.sh").read_text(encoding="utf-8")
+JANELA_DA_STEAM = (RAIZ / "scripts" / "lib" / "a_steam_fechada_uma_vez.sh").read_text(
+    encoding="utf-8")
 SERVICO = RAIZ / "assets" / "hefesto-steam-input-guard.service"
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
@@ -510,18 +512,19 @@ class TestOInstallLeCadaCodigo:
         unidades = "hefesto-steam-input-guard.path hefesto-steam-input-guard.timer"
         assert f"enable --now {unidades}" not in INSTALL
         ordem = [
-            f"systemctl --user stop {unidades}",
-            'python3 "${LAUNCH_MIGRATE_PY}" --fechar-steam',
+            "\nparar_o_vigia_da_steam\n",
+            "\nfechar_a_steam_uma_vez\n",
             'step "11/11"',
             f"systemctl --user enable {unidades}",
             'step "11b"', 'step "11c"', 'step "11d"',
-            "\n_religar_o_vigia_se_o_install_parou\n",
+            "\nreligar_o_vigia_se_parei\n",
         ]
         posicoes = [INSTALL.index(marco) for marco in ordem]
         assert posicoes == sorted(posicoes), list(zip(ordem, posicoes, strict=True))
-        corpo = INSTALL[INSTALL.index("_religar_o_vigia_se_o_install_parou() {"):]
-        corpo = corpo[: corpo.index("\n}\n")]
-        assert f"systemctl --user start {unidades}" in corpo, corpo
+        parar = JANELA_DA_STEAM[JANELA_DA_STEAM.index("parar_o_vigia_da_steam() {"):]
+        assert f"systemctl --user stop {unidades}" in parar[: parar.index("\n}\n")]
+        religar = JANELA_DA_STEAM[JANELA_DA_STEAM.index("religar_o_vigia_se_parei() {"):]
+        assert f"systemctl --user start {unidades}" in religar[: religar.index("\n}\n")]
 
     def test_o_conselho_de_falha_da_trava_pede_todos(self) -> None:
         """install.sh:4295 dizia `--lock` sem `--todos`."""
@@ -536,7 +539,7 @@ class TestOInstallLeCadaCodigo:
             'step "11a"',
             '_pp_saida="$(${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --ensure 2>&1)"',
             'step "11a-bis"',
-            'python3 "${LAUNCH_MIGRATE_PY}" --fechar-steam',
+            "\nfechar_a_steam_uma_vez\n",
             'step "11/11"', 'step "11b"', 'step "11b-bis"', 'step "11b-ter"',
             'step "11c"',
             '${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?',
@@ -548,9 +551,10 @@ class TestOInstallLeCadaCodigo:
     def test_a_steam_fechada_pelo_install_reabre_mesmo_se_ele_morrer(self) -> None:
         bloco = _bloco('step "11a-bis"', 'step "11/11"')
         assert (
-            "trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou; "
-            "_religar_o_vigia_se_o_install_parou' EXIT"
+            "trap '_cleanup_sudo_keepalive; reabrir_a_steam_se_fechei; "
+            "religar_o_vigia_se_parei' EXIT"
         ) in bloco
+        assert 'python3 "${LAUNCH_MIGRATE_PY}" --fechar-steam' in JANELA_DA_STEAM
 
 
 def test_steam_que_nunca_entrou_numa_conta_adia_e_nao_falha(

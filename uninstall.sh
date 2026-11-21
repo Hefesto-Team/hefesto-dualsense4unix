@@ -111,6 +111,8 @@ fi
 
 # shellcheck source=scripts/lib/som_da_sessao.sh
 source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
+# shellcheck source=scripts/lib/a_steam_fechada_uma_vez.sh
+source "${ROOT_DIR}/scripts/lib/a_steam_fechada_uma_vez.sh"
 
 SUDO_KEEPALIVE_PID=""
 _start_sudo_keepalive() {
@@ -1601,6 +1603,13 @@ log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compa
 log "  wvkbd / onboard (teclado na tela do L3)      — pacote do sistema, pode servir a outra coisa"
 log "    (mesma decisão do libopus0 da ponte de mic: o install instala, o uninstall não desinstala)"
 
+LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
+_pendencias_da_steam=()
+_janela_diz() { log "$*"; }
+_janela_avisa() { log "  AVISO: $*"; }
+trap '_cleanup_sudo_keepalive; reabrir_a_steam_se_fechei' EXIT
+fechar_a_steam_uma_vez
+
 DISABLE_STEAM_INPUT_SCRIPT="${ROOT_DIR}/scripts/disable_steam_input.sh"
 if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
     log "Steam Input PSSupport preservado (--keep-steam-input)"
@@ -1681,6 +1690,7 @@ if [[ -f "${PROTON_PIN_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     python3 "${PROTON_PIN_PY}" --unlock || _pp_rc=$?
     if [[ "${_pp_rc}" -eq 3 ]]; then
         log "  ADIADO: feche a Steam (e o jogo) e rode: python3 ${PROTON_PIN_PY} --unlock"
+        _pendencias_da_steam+=("python3 ${PROTON_PIN_PY} --unlock")
     elif [[ "${_pp_rc}" -ne 0 ]]; then
         log "  ERRO: unlock falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --unlock"
     fi
@@ -1754,11 +1764,14 @@ if [[ -f "${LAUNCH_STRIP_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     else
         log "  ERRO: strip adiado (Steam não fechou?) — rode com a Steam fechada:"
         log "        python3 ${LAUNCH_STRIP_PY} --strip"
+        _pendencias_da_steam+=("python3 ${LAUNCH_STRIP_PY} --strip")
     fi
 else
     log "steam_launch_options.py ausente ou sem python3 — pulei o strip das Launch Options"
     log "  (a string do wrapper degrada sozinha: o jogo continua abrindo sem ele)"
 fi
+reabrir_a_steam_se_fechei
+trap _cleanup_sudo_keepalive EXIT
 
 CAMADAS_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
 if [[ -f "${CAMADAS_PY}" ]] && command -v python3 >/dev/null 2>&1; then
@@ -1950,7 +1963,14 @@ fi
 printf '\n─────────────────────────────────────────\n'
 if [[ "${DRY_RUN}" -eq 1 ]]; then
     printf ' Hefesto - DualSense4Unix: ENSAIO — nada foi removido; as linhas FARIA são o plano\n'
+elif [[ "${#_pendencias_da_steam[@]}" -gt 0 ]]; then
+    printf ' Hefesto - DualSense4Unix desinstalado, com pendência na Steam\n'
 else
     printf ' Hefesto - DualSense4Unix desinstalado (wipe completo)\n'
 fi
 printf '─────────────────────────────────────────\n\n'
+if [[ "${DRY_RUN}" -ne 1 && "${#_pendencias_da_steam[@]}" -gt 0 ]]; then
+    printf ' Falta na Steam. Feche a Steam e o jogo e rode:\n'
+    printf '   %s\n' "${_pendencias_da_steam[@]}"
+    printf '\n'
+fi
