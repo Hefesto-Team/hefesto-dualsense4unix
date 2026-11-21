@@ -125,6 +125,22 @@ def test_de_controle_para_controle_a_memoria_continua_a_entrada_de_antes(
     assert eleitor.anterior == WEBCAM and pw.ativo == WEBCAM
 
 
+def test_o_canal_que_o_nome_nao_entrega_nao_vira_o_anterior(
+    mesa: Callable[..., _PipeWire], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MORDIDA: sem a identidade, o canal do J1 (nome sem marca de controle) vira o de antes."""
+    canais = {ROXO: "bluez_input.canal_do_j1", VERMELHO: "bluez_input.canal_do_j2"}
+    pw = mesa(_lista() + [_Fonte(290 + i, c) for i, c in enumerate(canais.values())], WEBCAM)
+    monkeypatch.setattr(elm, "escolher_fonte", lambda _f, uniq, _a, _usb: canais.get(uniq))
+    eleitor = elm.EleitorDeMicrofone()
+    for uniq, canal in canais.items():
+        assert eleitor.eleger_por_uniq(uniq, fontes=[canal], uniqs_com_audio=[uniq]).ok
+
+    _desligar(eleitor)
+
+    assert eleitor.anterior == WEBCAM and pw.ativo == WEBCAM
+
+
 @pytest.mark.parametrize(
     "caso",
     ["sumiu-da-lista", "porta-sem-captura", "era-controle", "era-monitor"],

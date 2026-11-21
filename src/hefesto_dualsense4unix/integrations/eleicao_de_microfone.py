@@ -410,14 +410,20 @@ class EleitorDeMicrofone:
 
     fonte_do_eleito: str | None = None
 
-    def guardar_anterior(self) -> str | None:
+    def guardar_anterior(self, alvo: str | None = None) -> str | None:
         """Guarda o padrão de agora como o `anterior`, se ele não é captura de controle.
 
         Vale a cada ida: a ida que parte de um canal de controle (de um controle para
-        outro) não reescreve a memória. Devolve o `anterior` guardado.
+        outro) não reescreve a memória. Controle é o que o nome diz e também o que este
+        eleitor sabe pela identidade: o canal que ele elegeu (`fonte_do_eleito`) e o
+        `alvo` que vai eleger agora. Devolve o `anterior` guardado.
         """
         ativo = fonte_ativa()
-        if ativo is not None and not fontes_dualsense(f"0\t{ativo}\n"):
+        if (
+            ativo is not None
+            and ativo not in (alvo, self.fonte_do_eleito)
+            and not fontes_dualsense(f"0\t{ativo}\n")
+        ):
             if ativo != self.anterior:
                 logger.info("eleicao_mic_guardou_anterior", anterior=ativo)
             self.anterior = ativo
@@ -500,7 +506,7 @@ class EleitorDeMicrofone:
         return resultado.ativo != self.fonte_do_eleito
 
     def _eleger_nome(self, alvo: str) -> ResultadoDaEleicao:
-        self.guardar_anterior()
+        self.guardar_anterior(alvo)
         sustenta = fonte_se_sustenta(alvo)
         if sustenta is None:
             return ResultadoDaEleicao(
