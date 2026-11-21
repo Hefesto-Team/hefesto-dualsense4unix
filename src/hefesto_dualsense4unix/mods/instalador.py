@@ -57,24 +57,58 @@ from hefesto_dualsense4unix.mods.manifesto import (
     permissoes_novas,
 )
 from hefesto_dualsense4unix.utils import xdg_paths
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
+from hefesto_dualsense4unix.utils.repo_files import NOME_NO_SHARE
+
+logger = get_logger(__name__)
 
 Origem = Literal["oficial", "comunidade", "local"]
 
 LISTA_DE_QUEM_ASSINA = "assets/assinaturas/quem-assina"
 
 
-def chaves_da_lista(relativo: str = LISTA_DE_QUEM_ASSINA) -> tuple[str, ...]:
-    """As linhas do ``allowed_signers`` que a instalação carrega; nenhuma sem a lista."""
-    from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+PACOTE = Path(__file__).resolve().parents[1]
 
-    caminho = encontrar_arquivo_do_repo(relativo)
-    try:
-        texto = caminho.read_text(encoding="utf-8") if caminho is not None else ""
-    except OSError:
-        return ()
-    return tuple(x.strip() for x in texto.splitlines()
-                 if x.strip() and not x.lstrip().startswith("#"))
+SHARE_DO_SISTEMA: tuple[Path, ...] = tuple(
+    Path(raiz) / "share" / NOME_NO_SHARE for raiz in ("/usr", "/usr/local", "/app"))
+
+_PASTAS_DO_PIP = frozenset({"site-packages", "dist-packages"})
+
+
+def bases_do_pacote(pacote: Path = PACOTE) -> tuple[Path, ...]:
+    """Onde o pacote que roda, ou o sistema, pôs os arquivos dele; nunca a pasta de dados.
+
+    A raiz do checkout em que o código mora (``<raiz>/src/<pacote>``), o ``share`` do prefixo
+    em que ele se instalou (``<prefixo>/lib/pythonX.Y/site-packages/<pacote>``, onde o wheel põe
+    o ``shared-data``) e os ``share`` do sistema. A pasta de dados de quem usa guarda o código
+    das extensões, ao alcance do ``preparar`` de cada uma.
+    """
+    casa = pacote.parent
+    proprias = ([casa.parent] if casa.name == "src" else
+                [pacote.parents[3] / "share" / NOME_NO_SHARE] if casa.name in _PASTAS_DO_PIP
+                else [])
+    return (*proprias, *SHARE_DO_SISTEMA)
+
+
+def chaves_da_lista(relativo: str = LISTA_DE_QUEM_ASSINA,
+                    pacote: Path = PACOTE) -> tuple[str, ...]:
+    """As linhas do ``allowed_signers`` que o pacote carrega (:func:`bases_do_pacote`).
+
+    Sem a lista, nenhuma chave confere: a recusa vai ao diário, e nada se procura fora do pacote.
+    """
+    bases = bases_do_pacote(pacote)
+    caminho = next((b / relativo for b in bases if (b / relativo).is_file()), None)
+    texto = ""
+    if caminho is not None:
+        with contextlib.suppress(OSError):
+            texto = caminho.read_text(encoding="utf-8")
+    chaves = tuple(x.strip() for x in texto.splitlines()
+                   if x.strip() and not x.lstrip().startswith("#"))
+    if not chaves:
+        logger.warning("instalador_sem_a_lista_de_quem_assina", lida=str(caminho or ""),
+                       procurada_em=[str(b) for b in bases])
+    return chaves
 
 
 CHAVES_OFICIAIS: tuple[str, ...] = chaves_da_lista()
@@ -1377,8 +1411,10 @@ __all__ = [
     "DIARIO_DO_PREPARO",
     "INTERVALO_DA_ATUALIZACAO_S",
     "LISTA_DE_QUEM_ASSINA",
+    "PACOTE",
     "PRAZO_DO_PREPARO_S",
     "PRAZO_PARA_PARAR_S",
+    "SHARE_DO_SISTEMA",
     "AvisoParaVerError",
     "Entrada",
     "InstalacaoRecusadaError",
@@ -1388,6 +1424,7 @@ __all__ = [
     "anotar_o_gesto",
     "atualizar",
     "aviso_por_ver",
+    "bases_do_pacote",
     "chaves_da_lista",
     "commit_novo",
     "commit_remoto",

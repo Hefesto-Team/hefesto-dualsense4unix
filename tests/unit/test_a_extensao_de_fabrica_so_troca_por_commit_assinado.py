@@ -127,3 +127,82 @@ def test_a_lista_de_quem_assina_viaja_no_pacote() -> None:
     lista = instalador.LISTA_DE_QUEM_ASSINA
     assert alvos["wheel"]["shared-data"].get(lista) == f"share/hefesto-dualsense4unix/{lista}"
     assert lista in alvos["sdist"]["only-include"]
+
+
+_CHAVE_DO_PACOTE = "pacote@hefesto.invalid ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAApacote"
+_CHAVE_PLANTADA = "plantada@hefesto.invalid ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAplantada"
+
+
+def _escrever_a_lista(base: Path, linha: str) -> None:
+    lista = base / instalador.LISTA_DE_QUEM_ASSINA
+    lista.parent.mkdir(parents=True, exist_ok=True)
+    lista.write_text(f"# quem assina\n{linha}\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize("forma", [
+    "checkout", "site-packages", "dist-packages", "user", "pacote-sem-a-lista"])
+def test_a_lista_plantada_na_pasta_de_dados_nao_vale(
+        curto: Path, monkeypatch: pytest.MonkeyPatch, forma: str) -> None:
+    """D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO: a lista se lê só de onde o
+    pacote que roda a pôs (a raiz do checkout, o ``share`` do prefixo do wheel); a da pasta de
+    dados, ao lado do código das extensões e ao alcance do ``preparar``, nunca vale, e sem a do
+    pacote nenhuma chave confere e a recusa vai ao diário."""
+    from hefesto_dualsense4unix.utils import repo_files, xdg_paths
+
+    prefixo = curto / "prefixo"
+    casa = {"checkout": prefixo / "src", "site-packages": prefixo / "lib/python3.12/site-packages",
+            "dist-packages": prefixo / "lib/python3/dist-packages",
+            "user": prefixo / "lib/python3.12/site-packages",
+            "pacote-sem-a-lista": prefixo / "lib/python3.12/site-packages"}[forma]
+    pacote = casa / "hefesto_dualsense4unix"
+    pacote.mkdir(parents=True)
+    dados = curto / "dados"
+    monkeypatch.setenv("XDG_DATA_HOME", str(prefixo / "share" if forma == "user" else dados))
+    monkeypatch.setattr(instalador, "SHARE_DO_SISTEMA", (curto / "usr/share/hefesto",))
+    monkeypatch.setattr(repo_files, "bases_de_instalacao",
+                        lambda: (pacote.parents[1], xdg_paths.data_dir()))
+    do_pacote = {"checkout": prefixo}.get(forma, prefixo / "share" / repo_files.NOME_NO_SHARE)
+    if forma == "pacote-sem-a-lista":
+        do_pacote.mkdir(parents=True)
+    else:
+        _escrever_a_lista(do_pacote, _CHAVE_DO_PACOTE)
+    if forma != "user":
+        _escrever_a_lista(xdg_paths.data_dir(), _CHAVE_PLANTADA)
+    avisos: list[dict[str, object]] = []
+    monkeypatch.setattr(instalador.logger, "warning",
+                        lambda evento, **campos: avisos.append({"evento": evento, **campos}))
+
+    chaves = instalador.chaves_da_lista(pacote=pacote)
+
+    assert _CHAVE_PLANTADA not in chaves
+    if forma == "pacote-sem-a-lista":
+        assert chaves == ()
+        assert [a["evento"] for a in avisos] == ["instalador_sem_a_lista_de_quem_assina"]
+        assert str(xdg_paths.data_dir()) not in avisos[0]["procurada_em"]  # type: ignore[operator]
+    else:
+        assert chaves == (_CHAVE_DO_PACOTE,) and not avisos
+
+
+@pytest.mark.parametrize("onde", ["pacote", "dados"])
+def test_a_de_fabrica_so_troca_pela_chave_da_lista_do_pacote(
+        lar: Lugares, mesa: dict[str, object], curto: Path,
+        monkeypatch: pytest.MonkeyPatch, onde: str) -> None:
+    """D-1911-A-EXTENSAO-DE-FABRICA-SO-TROCA-POR-COMMIT-ASSINADO: o commit assinado troca a de
+    fábrica com a chave na lista que o pacote trouxe, e não troca com a mesma chave plantada na
+    pasta de dados de uma instalação cujo pacote veio sem a lista."""
+    from hefesto_dualsense4unix.utils import repo_files, xdg_paths
+
+    prefixo = curto / "prefixo"
+    pacote = prefixo / "lib/python3.12/site-packages/hefesto_dualsense4unix"
+    pacote.mkdir(parents=True)
+    monkeypatch.setenv("XDG_DATA_HOME", str(curto / "dados"))
+    monkeypatch.setattr(instalador, "SHARE_DO_SISTEMA", ())
+    monkeypatch.setattr(repo_files, "bases_de_instalacao", lambda: (xdg_paths.data_dir(),))
+    base = {"pacote": prefixo / "share" / repo_files.NOME_NO_SHARE,
+            "dados": xdg_paths.data_dir()}[onde]
+    _escrever_a_lista(base, *mesa["chaves"])  # type: ignore[arg-type]
+    _publicar(mesa["origem"], "1.1.0", mesa["do_time"])  # type: ignore[arg-type]
+    feito = atualizar("exemplo", lugares=lar, chaves=instalador.chaves_da_lista(pacote=pacote),
+                      sozinha=True)
+    assert feito.trocou is (onde == "pacote")
+    assert _versao(lar) == {"pacote": "1.1.0", "dados": "1.0.0"}[onde]
