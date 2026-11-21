@@ -608,6 +608,69 @@ dkms_modulo_da_casa_sem_assinatura() {
     [[ "${_rc}" -eq 3 ]]
 }
 
+_dkms_serie_da_chave_publica() {
+    python3 - "$(_dkms_mok_pub)" <<'PYEOF'
+import base64
+import re
+import sys
+
+
+def corpo(dados, i):
+    tag = dados[i]
+    tamanho = dados[i + 1]
+    i += 2
+    if tamanho & 0x80:
+        n = tamanho & 0x7F
+        tamanho = int.from_bytes(dados[i:i + n], "big")
+        i += n
+    if tamanho <= 0 or i + tamanho > len(dados):
+        raise ValueError("tamanho fora do arquivo")
+    return tag, i, tamanho
+
+
+try:
+    with open(sys.argv[1], "rb") as arquivo:
+        dados = arquivo.read()
+    if dados.lstrip().startswith(b"-----BEGIN"):
+        achado = re.search(rb"-----BEGIN [^-]+-----(.*?)-----END", dados, re.S)
+        dados = base64.b64decode(achado.group(1))
+    tag, i, _ = corpo(dados, 0)
+    if tag != 0x30:
+        raise ValueError("não é um certificado")
+    tag, i, _ = corpo(dados, i)
+    if tag != 0x30:
+        raise ValueError("sem o corpo do certificado")
+    tag, inicio, tamanho = corpo(dados, i)
+    if tag == 0xA0:
+        tag, inicio, tamanho = corpo(dados, inicio + tamanho)
+    if tag != 0x02:
+        raise ValueError("sem o número de série")
+    print(dados[inicio:inicio + tamanho].hex())
+except BaseException:
+    raise SystemExit(2)
+PYEOF
+}
+
+_dkms_serie_normalizada() {
+    local _s="${1//:/}"
+    _s="${_s,,}"
+    while [[ "${_s}" == 00* ]]; do _s="${_s:2}"; done
+    printf '%s' "${_s}"
+}
+
+dkms_modulo_da_casa_de_outra_chave() {
+    local _path _do_modulo _da_chave
+    _path="$(_dkms_arquivo_do_modulo "$1")" || return 1
+    dkms_ko_da_casa "${_path}" || return 1
+    _dkms_marca_de_assinatura "${_path}" || return 1
+    _do_modulo="$(modinfo -F sig_key "${_path}" 2>/dev/null | head -n 1)" || return 1
+    _da_chave="$(_dkms_serie_da_chave_publica 2>/dev/null)" || return 1
+    _do_modulo="$(_dkms_serie_normalizada "${_do_modulo}")"
+    _da_chave="$(_dkms_serie_normalizada "${_da_chave}")"
+    [[ "${_do_modulo}" =~ ^[0-9a-f]+$ && "${_da_chave}" =~ ^[0-9a-f]+$ ]] || return 1
+    [[ "${_do_modulo}" != "${_da_chave}" ]]
+}
+
 DKMS_MARCAS_DO_USB_F_HID=(get_report_sized get_report_refuses)
 
 dkms_usb_f_hid_marcas_que_faltam() {
@@ -704,9 +767,14 @@ dkms_install_patched_module() {
             return 0
         fi
     fi
-    if dkms_secure_boot_ligado && dkms_modulo_da_casa_sem_assinatura "${_built}"; then
-        _refazer=1
-        _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
+    if dkms_secure_boot_ligado; then
+        if dkms_modulo_da_casa_sem_assinatura "${_built}"; then
+            _refazer=1
+            _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"
+        elif dkms_modulo_da_casa_de_outra_chave "${_built}"; then
+            _refazer=1
+            _dkms_log "${_pkg}: o módulo instalado foi assinado por outra chave que não a do DKMS de agora; refazendo para o kernel aceitá-lo"
+        fi
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then
         _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar cabecalhos "${_kver}")"
