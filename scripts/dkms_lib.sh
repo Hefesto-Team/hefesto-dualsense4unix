@@ -125,29 +125,21 @@ dkms_secure_boot_ligado() {
 }
 
 _dkms_srcversion_do_modulo() {
-    if [[ -n "${HEFESTO_DKMS_KERNEL:-}" ]]; then
-        modinfo -k "${HEFESTO_DKMS_KERNEL}" -F srcversion "$1" 2>/dev/null || true
-    else
-        modinfo -F srcversion "$1" 2>/dev/null || true
-    fi
+    modinfo -F srcversion "$1" 2>/dev/null || true
 }
 
 _dkms_carregado_e_da_casa() {
-    local _nome="$1" _carregado _novo
+    local _nome="$1" _carregado _arquivo
     [[ -n "${_nome}" ]] || return 1
     _carregado="$(cat "${HEFESTO_DKMS_SYS_MODULE:-/sys/module}/${_nome//-/_}/srcversion" 2>/dev/null || true)"
     [[ -n "${_carregado}" ]] || return 1
-    dkms_modulo_da_casa "${_nome}" || return 1
-    _novo="$(_dkms_srcversion_do_modulo "${_nome}")"
-    [[ -n "${_novo}" && "${_novo}" == "${_carregado}" ]]
+    _arquivo="$(modinfo -F filename "${_nome}" 2>/dev/null)" || return 1
+    dkms_ko_da_casa "${_arquivo}" || return 1
+    [[ "$(_dkms_srcversion_do_modulo "${_arquivo}")" == "${_carregado}" ]]
 }
 
 dkms_estado_da_chave() {
     local _pub _lista _resposta _leu=0 _rc
-    if _dkms_carregado_e_da_casa "${1:-}"; then
-        printf 'inscrita'
-        return 0
-    fi
     _pub="$(_dkms_mok_pub)"
     if [[ ! -r "${_pub}" || ! -s "${_pub}" ]]; then
         printf 'nao-sei'
@@ -179,7 +171,7 @@ PYEOF
         fi
         [[ "${_rc}" -eq 1 ]] && _leu=1
     done < <(_dkms_mok_listas)
-    if [[ "${_leu}" -eq 1 ]]; then printf 'fora'; else printf 'nao-sei'; fi
+    if [[ "${_leu}" -eq 1 ]] && ! _dkms_carregado_e_da_casa "${1:-}"; then printf 'fora'; else printf 'nao-sei'; fi
     return 0
 }
 
@@ -210,7 +202,15 @@ _dkms_como_instalar_o_mokutil() {
     if command -v apt-get >/dev/null 2>&1; then printf 'sudo apt install mokutil'
     elif command -v dnf >/dev/null 2>&1; then printf 'sudo dnf install mokutil'
     elif command -v pacman >/dev/null 2>&1; then printf 'sudo pacman -S --needed mokutil'
-    else printf 'instale o mokutil pela sua distribuição'; fi
+    else printf 'pelo gerenciador de pacotes da sua distribuição'; fi
+}
+
+_dkms_alguma_lista_se_le() {
+    local _lista
+    while IFS= read -r _lista; do
+        [[ -r "${_lista}" ]] && return 0
+    done < <(_dkms_mok_listas)
+    return 1
 }
 
 dkms_passo_para_ler_a_chave() {
@@ -219,8 +219,10 @@ dkms_passo_para_ler_a_chave() {
         dkms_passo_da_mok
     elif [[ ! -r "${_pub}" ]]; then
         printf 'deixe a chave %s legível para quem roda o install (a chave é pública) e rode ./install.sh de novo' "${_pub}"
-    else
+    elif ! command -v mokutil >/dev/null 2>&1 && ! _dkms_alguma_lista_se_le; then
         printf 'instale o mokutil (%s) e rode ./install.sh de novo' "$(_dkms_como_instalar_o_mokutil)"
+    else
+        dkms_passo_da_mok
     fi
 }
 

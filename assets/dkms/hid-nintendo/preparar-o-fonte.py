@@ -17,7 +17,8 @@ consegue saber, e `--sem-a-chave` sai com 0 só quando a leitura respondeu que a
 MOK (1 fora dele, inclusive no «não sei») para quem refaz o módulo por fora do DKMS. A leitura tem
 três respostas, `inscrita`, `fora` e `nao-sei` (a chave pública ou as listas que não se leem);
 `--estado-da-chave` as imprime e `--chave-nao-garantida` sai com 0 quando não é `inscrita`. O módulo
-da casa já carregado neste boot prova a assinatura e vale como `inscrita`.
+da casa já carregado no kernel que roda desmente o `fora` (vira `nao-sei`) e nunca vale `inscrita`:
+prova a chave que o assinou, não a que assina o próximo.
 
     preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
     preparar-o-fonte.py --sem-a-chave | --chave-nao-garantida | --estado-da-chave
@@ -641,21 +642,19 @@ def _carregado_e_da_casa() -> bool:
         return False
     if not carregado:
         return False
-    kernel = os.environ.get("HEFESTO_DKMS_KERNEL")
-    base = ["modinfo", *(["-k", kernel] if kernel else [])]
 
-    def campo(nome: str) -> str:
+    def campo(nome: str, alvo: str) -> str:
         try:
             feito = subprocess.run(
-                [*base, "-F", nome, modulo], capture_output=True, text=True, check=False,
+                ["modinfo", "-F", nome, alvo], capture_output=True, text=True, check=False,
                 timeout=30,
             )
         except (OSError, subprocess.SubprocessError):
             return ""
         return feito.stdout.strip()
 
-    arquivo = campo("filename")
-    if not arquivo or campo("srcversion") != carregado:
+    arquivo = campo("filename", modulo)
+    if not arquivo or campo("srcversion", arquivo) != carregado:
         return False
     arvore = os.environ.get("HEFESTO_DKMS_TREE", "/var/lib/dkms")
     for ligacao in glob.glob(f"{arvore}/hefesto-*/kernel-*"):
@@ -668,8 +667,6 @@ def _carregado_e_da_casa() -> bool:
 
 def _estado_da_chave() -> str:
     """`inscrita`, `fora` (a leitura respondeu que não está) ou `nao-sei` (não respondeu)."""
-    if _carregado_e_da_casa():
-        return "inscrita"
     chave = _chave_do_dkms()
     try:
         bytes_da_chave = chave.read_bytes()
@@ -701,7 +698,7 @@ def _estado_da_chave() -> str:
         if bytes_da_chave in conteudo:
             return "inscrita"
         leu = True
-    return "fora" if leu else "nao-sei"
+    return "fora" if leu and not _carregado_e_da_casa() else "nao-sei"
 
 
 def _sem_a_chave() -> bool:
