@@ -55,6 +55,9 @@ class ServicoDeMentira:
             self.alvo = params["index"]
         return True
 
+    def chamar_detalhado(self, metodo: str, **params: Any) -> tuple[bool, str | None]:
+        return self.chamar(metodo, **params), None
+
     def contexto(self) -> Any:
         from hefesto_dualsense4unix.interface import pacotes
 

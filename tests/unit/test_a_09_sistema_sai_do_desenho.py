@@ -448,9 +448,9 @@ def test_o_retomar_recusa_quando_nao_ha_pausa(a09, ctx):
         def __init__(self):
             self.chamou = []
 
-        def chamar(self, metodo, **kw):
+        def chamar_detalhado(self, metodo, **kw):
             self.chamou.append(metodo)
-            return True
+            return True, None
 
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as erro:

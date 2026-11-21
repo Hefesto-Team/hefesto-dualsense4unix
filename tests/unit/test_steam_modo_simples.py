@@ -45,7 +45,8 @@ class TestFormatFixSafe:
             }
         )
         assert "NÃO foi desligado" in msg
-        assert "Deixar tudo pronto" in msg
+        assert "duplo clique em «Permitir correções automáticas»" in msg
+        assert "Deixar tudo pronto" not in msg
 
     def test_aplicado_relata_o_que_mudou(self) -> None:
         """NOTA DATADA (05/08/2026, D-33): este teste exigia a frase literal"""

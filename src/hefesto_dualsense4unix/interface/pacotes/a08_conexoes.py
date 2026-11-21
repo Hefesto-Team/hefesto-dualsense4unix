@@ -1628,6 +1628,11 @@ def _declarar(p: Any, mesa: dict[str, Any]) -> None:
     raise RuntimeError(motivo or "não consegui gravar o que você declarou")
 
 
+SEM_RESPOSTA_PARA_MIRAR = (
+    "Não consegui falar com o serviço: o alvo pode não ter mudado. Clique de novo com o serviço "
+    "de pé.")
+
+
 @gesto("08-conexoes.html", "alvo")
 def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Só este": as ações de saída passam a mirar SÓ este controle.
@@ -1652,7 +1657,9 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             "Este controle não está na lista do serviço — sem ele, o alvo "
             "cairia noutro controle.")
-    p.chamar("controller.target.set", index=indice)
+    ok, motivo = _resposta(p.chamar_detalhado("controller.target.set", index=indice))
+    if not ok:
+        raise RuntimeError(motivo or SEM_RESPOSTA_PARA_MIRAR)
 
 
 @gesto("08-conexoes.html", "sala-altura")
@@ -3961,7 +3968,7 @@ def _vizinhos_sem_rede(cena: dict[str, Any]) -> list[dict[str, Any]]:
 NOTA_DO_USB_3_NO_2_4 = "USB 3.0 + 2,4 GHz"
 DICA_DO_USB_3_NO_2_4 = (
     "USB 3.0 e 2,4 GHz juntos: o link USB 3.0 fica colado na antena e costuma derrubar a "
-    "placa. Em 5 GHz ou numa porta USB 2.0 a placa não cai.")
+    "placa. Trocar para 5 GHz ou para uma porta USB 2.0 costuma ajudar.")
 
 
 def _o_vizinho_da_rede(
@@ -6030,7 +6037,7 @@ def entrada_parar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return {"armou": True}
 
 
-PONTE = {"chamar", "machine_declare", "resultado", "mic_canal_set_detalhado"}
+PONTE = {"chamar_detalhado", "machine_declare", "resultado", "mic_canal_set_detalhado"}
 METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui",
            "radio.busca.set", "radio.dispensar"}
 
@@ -6039,7 +6046,7 @@ PAGINA = "08-conexoes.html"
 PISO_DA_ABA = 52
 PROVAS = [
     {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento)
-     "chama": [("chamar", ["controller.target.set"], {"index": 0})]},
+     "chama": [("chamar_detalhado", ["controller.target.set"], {"index": 0})]},
     {"pagina": PAGINA, "gesto": "sala-altura", "clique": {"modo": "acima"},  # (noqa-acento)
      "chama": [("machine_declare", [{"mesa": {"altura_da_antena": "acima"}}], {})]},
     {"pagina": PAGINA, "gesto": "sala-visada", "clique": {"modo": ""},  # (noqa-acento)

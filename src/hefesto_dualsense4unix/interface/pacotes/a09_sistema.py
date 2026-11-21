@@ -1669,9 +1669,14 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     motivo = _trava(ctx, "retomar")
     if motivo:
         raise RuntimeError(motivo)
-    p.chamar("daemon.resume")
+    ok, recusa = _ok_e_motivo(p.chamar_detalhado("daemon.resume"))
+    if not ok:
+        raise RuntimeError(recusa or SEM_RESPOSTA_PARA_RETOMAR)
 
 
+SEM_RESPOSTA_PARA_RETOMAR = (
+    "Não consegui falar com o serviço: ele pode continuar pausado. Clique de novo com o "
+    "serviço de pé.")
 SEM_RESPOSTA_DO_SERVICO = (
     "Não consegui falar com o serviço: pode não ter reaplicado nada, e pode ter "
     "reaplicado sem me responder. Clique de novo com o serviço de pé.")
@@ -2611,6 +2616,13 @@ def _reaplicar_as_correcoes() -> str:
     return " ".join(p for p in partes if p)
 
 
+def _o_recibo_do_duplo_clique(state: Any) -> str:
+    """O recibo da reaplicação; a linha do anti-storm só entra com controle a reconectar."""
+    recibo = _reaplicar_as_correcoes()
+    anti_storm = _daemon.frase_do_anti_storm(_tela.quantos_controles(state))
+    return f"{recibo} {anti_storm}" if anti_storm else recibo
+
+
 @gesto("09-sistema.html", CAMPO_DAS_CORRECOES,
        grava="liga ou desliga as correções automáticas a cada jogo novo e, no duplo clique, "
              "reaplica agora o Steam Input, os lançadores, o Vulkan e o Proton fixado")
@@ -2635,7 +2647,7 @@ def correcoes_automaticas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _LENTO.clear()
     _BARATO.clear()
     if duplo:
-        _relatar_o_recibo(CAMPO_DAS_CORRECOES, _reaplicar_as_correcoes())
+        _relatar_o_recibo(CAMPO_DAS_CORRECOES, _o_recibo_do_duplo_clique(ctx.state))
 
 
 @gesto("09-sistema.html", CAMPO_DA_BANDEJA, grava="escolher_a_bandeja")

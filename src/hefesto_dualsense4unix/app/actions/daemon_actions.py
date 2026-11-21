@@ -424,6 +424,16 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
     )
 
 
+def frase_do_anti_storm(controles: int | None) -> str:
+    """A cura do áudio pega na sessão só no controle que reconecta: sem controle, a linha some."""
+    if not controles:
+        return ""
+    return (
+        "A cura anti-storm do áudio já é persistente (install) — reconecte o "
+        "controle para a cura pegar nesta sessão."
+    )
+
+
 def format_fix_safe_result(relatorio: object) -> str:
     """Toast do botão "Aplicar correções" (sem senha) — pura, testável."""
     if not isinstance(relatorio, dict):
@@ -443,15 +453,11 @@ def format_fix_safe_result(relatorio: object) -> str:
             partes.append(
                 "Só o Steam Input NÃO foi desligado: "
                 + _frase_steam_input(int(rc), tag, jogos)
-                + " Use o botão 'Deixar tudo pronto' — ele pede sua permissão "
-                "para fechar a Steam e faz o resto sozinho."
+                + " Feche a Steam e dê o duplo clique em «Permitir correções automáticas» "
+                "de novo."
             )
         else:
             partes.append("Steam Input: " + _frase_steam_input(int(rc), tag, jogos))
-    partes.append(
-        "A cura anti-storm do áudio já é persistente (install) — reconecte o "
-        "controle para a cura pegar nesta sessão."
-    )
     return " ".join(partes)
 
 
