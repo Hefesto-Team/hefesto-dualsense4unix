@@ -1251,7 +1251,7 @@ async def mudar_por_dentro_da_caixa(pid: int, pedido: dict[str, Any]) -> dict[st
     try:
         saida, _ = await asyncio.wait_for(processo.communicate(json.dumps(pedido).encode()),
                                           PRAZO_POR_DENTRO_S)
-    except TimeoutError:
+    except asyncio.TimeoutError:
         processo.kill()
         await processo.wait()
         logger.warning("mods_por_dentro_sem_resposta", pid=pid)
