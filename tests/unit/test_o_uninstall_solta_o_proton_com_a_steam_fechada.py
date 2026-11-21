@@ -156,6 +156,7 @@ def _gestos(diario: str) -> list[str]:
 
 
 def test_a_steam_aberta_fecha_uma_vez_solta_o_proton_e_reabre_no_fim(tmp_path: Path) -> None:
+    """D-2011-O-UNINSTALL-FECHA-A-STEAM-UMA-VEZ: fecha uma vez, solta o Proton e reabre no fim."""
     saida, diario, config_vdf = _desinstalar(tmp_path, A_STEAM)
 
     assert _gestos(diario) == ["STEAM fechou", "STEAM abriu"], diario

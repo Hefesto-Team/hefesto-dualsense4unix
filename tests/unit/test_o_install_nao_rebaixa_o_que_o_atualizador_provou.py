@@ -133,7 +133,9 @@ def test_a_troca_provada_grava_o_registro_e_o_install_o_le(
 
 
 def test_o_registro_velho_nao_barra_a_arvore_que_pede_mais(lar_do_atualizador: Path) -> None:
-    """A árvore nova que pede uma versão acima da provada (``pydantic>=2.15``) ainda instala: com o
+    """D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO.
+
+    A árvore nova que pede uma versão acima da provada (``pydantic>=2.15``) ainda instala: com o
     registro em ``==``, o pip recusa as duas travas juntas e o install morre no passo 2."""
     pa._anotar_as_que_provou()
     travas = _rodar_o_passo(lar_do_atualizador, None)
