@@ -59,7 +59,7 @@ def test_o_gameinput_do_pino_leva_a_receita(lar: Path) -> None:
 
 
 def test_o_gameinput_de_antes_segue_com_a_receita(lar: Path) -> None:
-    """O pino andou e o install não pôs a DLL nova: a de antes segue vibrando."""
+    """D-2111-O-GAMEINPUT-DE-ANTES-SEGUE-VIBRANDO: o pino andou e a DLL de antes segue vibrando."""
     _por(_casa(lar), "nativa/gameinput.dll", _GI_ANTES)
     raiz = _jogo(lar, "720002")
     assert rda.ambiente_do_jogo(raiz) == _TRIO, "a DLL de antes tira a vibração calada"
