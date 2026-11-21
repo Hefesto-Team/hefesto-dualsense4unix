@@ -23,7 +23,7 @@ def _lar(tmp_path, monkeypatch):
 
 
 def test_a_segunda_subida_nao_traz_de_volta_o_que_se_apagou(tmp_path, monkeypatch):
-    """OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO-01: perfil e bandeira apagados ficam apagados."""
+    """D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO: o perfil apagado fica apagado."""
     antigo, novo = _lar(tmp_path, monkeypatch)
     (antigo / "profiles" / "fps.json").write_text("{}", encoding="utf-8")
     (antigo / "native_mode.flag").write_text("x", encoding="utf-8")
@@ -55,3 +55,19 @@ def test_nome_desconhecido_de_outra_ferramenta_nao_se_copia(tmp_path, monkeypatc
 
     assert mlp.migrate_legacy_paths() == {"config": ["maquina.json"]}
     assert sorted(p.name for p in novo.iterdir() if not p.name.startswith(".")) == ["maquina.json"]
+
+
+def test_o_que_o_produto_grava_e_e_de_quem_usa_viaja_e_o_que_o_install_refaz_nao(
+    tmp_path, monkeypatch
+):
+    """D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO: só o nome classificado viaja."""
+    antigo, novo = _lar(tmp_path, monkeypatch)
+    for nome in ("controllers.json", "gui_preferences.json", "zeros-dos-sensores.json",
+                 "opcoes_por_jogo.txt", "gabinete.json"):
+        (antigo / nome).write_text("{}", encoding="utf-8")
+
+    assert sorted(mlp.migrate_legacy_paths()["config"]) == [
+        "controllers.json", "gui_preferences.json", "opcoes_por_jogo.txt",
+        "zeros-dos-sensores.json",
+    ]
+    assert not (novo / "gabinete.json").exists()

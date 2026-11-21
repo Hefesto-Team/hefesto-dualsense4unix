@@ -182,7 +182,10 @@ def test_os_perfis_atravessam_a_troca_de_app_id(tmp_path, monkeypatch) -> None:
     antigo_cfg = _sandbox(tmp_path, APP_ID_ANTIGO) / "config" / "hefesto-dualsense4unix"
     (antigo_cfg / "profiles").mkdir(parents=True)
     (antigo_cfg / "profiles" / "sackboy_nativo.json").write_text("{}", encoding="utf-8")
-    (antigo_cfg / "session.json").write_text('{"aba": 3}', encoding="utf-8")
+    (antigo_cfg / "gui_preferences.json").write_text('{"aba": 3}', encoding="utf-8")
+    antigo_data = _sandbox(tmp_path, APP_ID_ANTIGO) / "data" / "hefesto-dualsense4unix"
+    (antigo_data / "mods" / "luz").mkdir(parents=True)
+    (antigo_data / "mods" / "luz" / "mod.py").write_text("", encoding="utf-8")
 
     novo_cfg = _sandbox(tmp_path, APP_ID) / "config" / "hefesto-dualsense4unix"
     novo_data = _sandbox(tmp_path, APP_ID) / "data" / "hefesto-dualsense4unix"
@@ -193,11 +196,13 @@ def test_os_perfis_atravessam_a_troca_de_app_id(tmp_path, monkeypatch) -> None:
     resultado = mlp.migrate_legacy_paths()
 
     assert (novo_cfg / "profiles" / "sackboy_nativo.json").is_file()
-    assert (novo_cfg / "session.json").is_file()
+    assert (novo_cfg / "gui_preferences.json").is_file()
+    assert (novo_data / "mods" / "luz" / "mod.py").is_file()
     assert sorted(resultado["config_app_id_antigo"]) == [
+        "gui_preferences.json",
         "profiles/sackboy_nativo.json",
-        "session.json",
     ]
+    assert resultado["data_app_id_antigo"] == ["mods/luz/mod.py"]
 
 
 def test_a_migracao_nao_apaga_a_casa_antiga(tmp_path, monkeypatch) -> None:
