@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
+if [[ "${EUID}" -eq 0 ]]; then
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+fi
 set -euo pipefail
 
 SYSCTL_FILE=/etc/sysctl.d/99-hefesto-bt-coredump.conf

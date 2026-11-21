@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
+if [[ "${EUID}" -eq 0 ]]; then
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+fi
 set -euo pipefail
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
     unset HEFESTO_BT_SRC HEFESTO_BT_STAMP_DIR HEFESTO_HIDRAW_ROOT HEFESTO_RADIO_DIARIO_ROOT HEFESTO_RADIO_TRAVA HEFESTO_RADIO_TRAVA_PRAZO_S

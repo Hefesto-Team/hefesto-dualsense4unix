@@ -1,8 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/bash
+if [[ "${EUID}" -eq 0 ]]; then
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+fi
 set -u
 
-if [[ "$(id -u)" -eq 0 ]]; then
-    export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+if [[ "${EUID}" -eq 0 ]]; then
     PASTA=/var/lib/hefesto-dualsense4unix/acionadores
 else
     PASTA="${HEFESTO_ACIONADOR_PASTA:-}"

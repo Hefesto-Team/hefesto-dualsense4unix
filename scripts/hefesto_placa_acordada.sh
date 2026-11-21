@@ -1,13 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/bash
+if [[ "${EUID}" -eq 0 ]]; then
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+fi
 set -u
 
 ALVO_INSTALADO=/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh
 
-if [[ "$(id -u)" -eq 0 ]]; then
+if [[ "${EUID}" -eq 0 ]]; then
     ESTADO=/run/hefesto-dualsense4unix/placa
     SYS=/sys
     NVSMI="nvidia-smi"
-    export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 else
     ESTADO="${HEFESTO_PLACA_ESTADO:-}"
     SYS="${HEFESTO_PLACA_SYS:-/sys}"
@@ -173,6 +176,7 @@ Cmnd_Alias HEFESTO_PLACA = \\
     ${ALVO_INSTALADO} acordar, \\
     ${ALVO_INSTALADO} devolver, \\
     ${ALVO_INSTALADO} estado
+Defaults!HEFESTO_PLACA secure_path="/usr/sbin:/usr/bin:/sbin:/bin", env_reset
 ${usuaria} ALL=(root) NOPASSWD: HEFESTO_PLACA
 FIM
 }

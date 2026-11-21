@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
+if [[ "${EUID}" -eq 0 ]]; then
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+fi
 set -euo pipefail
 
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
@@ -23,7 +27,7 @@ LAPIDES_REAIS="/var/lib/hefesto-dualsense4unix/bt-bonds/.lapides"
 DIARIO_REAL="/var/lib/hefesto-dualsense4unix/radio-diario.jsonl"
 
 BIN_DE_TESTE="${HEFESTO_BT_BIN:-}"
-if [[ -n "${BIN_DE_TESTE}" ]]; then
+if [[ -n "${BIN_DE_TESTE}" && "${EUID}" -ne 0 ]]; then
     PATH="${BIN_DE_TESTE}:${PATH}"
     export PATH
 fi
@@ -783,6 +787,7 @@ Cmnd_Alias HEFESTO_BT_PONTE = \\
     ${ALVO_INSTALADO} descobrir [0-9][0-9], \\
     ${ALVO_INSTALADO} descobrir [0-9][0-9][0-9]
 
+Defaults!HEFESTO_BT_PONTE secure_path="/usr/sbin:/usr/bin:/sbin:/bin", env_reset
 FIM
     for principal in "$@"; do
         printf '%s ALL=(root) NOPASSWD: HEFESTO_BT_PONTE\n' "${principal}"

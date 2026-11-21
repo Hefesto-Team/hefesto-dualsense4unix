@@ -1,4 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
+if [[ "${EUID}" -eq 0 ]]; then
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin
+    export PATH
+fi
 set -u
 
 ALVO_INSTALADO=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
@@ -15,8 +19,7 @@ RC_APT_FALHOU=100
 RC_TRAVA_OCUPADA=11
 RC_CONSERTO_FALHOU=12
 
-if [[ "$(id -u)" -eq 0 ]]; then
-    export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+if [[ "${EUID}" -eq 0 ]]; then
     export DEBIAN_FRONTEND=noninteractive
     CACHE=/var/cache/hefesto-dualsense4unix
     SRC=/usr/src
@@ -795,7 +798,7 @@ _versao_do_portal_no_apt() {
 }
 
 _obra_da_caixa() {
-    if [[ "$(id -u)" -eq 0 ]]; then
+    if [[ "${EUID}" -eq 0 ]]; then
         printf '/var/cache/hefesto-backport-%s' "$1"
     else
         printf '%s/backports/%s/obra' "${CACHE}" "$1"
@@ -807,7 +810,7 @@ _construir_na_caixa() {
     local -a receita=(python3 -I "${RECEITAS}/scripts/hefesto_receita_nova.py" construir
         --peca "${peca}" --receitas "${RECEITAS}" --portal-do-apt "${ver}"
         --obra "$(_obra_da_caixa "${peca}")")
-    if [[ "$(id -u)" -ne 0 ]]; then
+    if [[ "${EUID}" -ne 0 ]]; then
         "${receita[@]}" </dev/null
         return
     fi
@@ -820,7 +823,7 @@ _construir_na_caixa() {
 }
 
 _limpar_a_caixa() {
-    [[ "$(id -u)" -eq 0 ]] || return 0
+    [[ "${EUID}" -eq 0 ]] || return 0
     rm -rf --one-file-system -- "/var/cache/private/hefesto-backport-$1"
 }
 
@@ -1054,6 +1057,7 @@ verbo_regra_sudo() {
     done
     printf '    %s kernel-metas, \\\n' "${ALVO_INSTALADO}"
     printf '    %s kernel-anterior\n' "${ALVO_INSTALADO}"
+    printf '%s\n' 'Defaults!HEFESTO_ATUALIZADOR secure_path="/usr/sbin:/usr/bin:/sbin:/bin", env_reset'
     printf '%s ALL=(root) NOPASSWD: HEFESTO_ATUALIZADOR\n' "${usuaria}"
 }
 

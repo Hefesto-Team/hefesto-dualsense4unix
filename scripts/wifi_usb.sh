@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -u
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
-if [ -n "${HEFESTO_WIFI_BIN:-}" ]; then
+if [ -n "${HEFESTO_WIFI_BIN:-}" ] && [ "${EUID}" != 0 ]; then
   if [ -z "${HEFESTO_WIFI_SYSFS:-}" ] || [ -z "${HEFESTO_WIFI_DEV:-}" ]; then
     echo "wifi_usb.sh: HEFESTO_WIFI_BIN sem HEFESTO_WIFI_SYSFS e HEFESTO_WIFI_DEV — recuso (o dublê falaria do dongle de verdade)" >&2
     exit 97
