@@ -91,7 +91,7 @@ def nome_do_canal(uniq: str) -> str:
 def propriedades_do_canal(uniq: str) -> dict[str, str]:
     """As propriedades do ALIMENTADOR — no ESPAÇO DE NOME, nunca combinadas."""
     props = {f"{PREFIXO_PROPRIEDADE_HEFESTO}papel": PAPEL_DO_ALIMENTADOR}
-    props.update(item.split("=", 1) for item in campo_do_controle(uniq))
+    props.update((c, v) for c, _, v in (item.partition("=") for item in campo_do_controle(uniq)))
     return props
 
 

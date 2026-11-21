@@ -52,7 +52,7 @@ def propriedades_do_medidor(uniq: str = "") -> dict[str, str]:
         "application.id": APLICACAO_ID,
         CHAVE_DO_PAPEL: PAPEL_DO_MEDIDOR,
     }
-    props.update(item.split("=", 1) for item in campo_do_controle(uniq))
+    props.update((c, v) for c, _, v in (item.partition("=") for item in campo_do_controle(uniq)))
     return props
 
 
