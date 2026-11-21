@@ -19,7 +19,7 @@ import struct
 import subprocess
 import threading
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -299,8 +299,8 @@ class NivelDoMicrofone:
         self._thread = None
         with self._lock:
             self._desejado = {}
-            for uniq in list(self._canais):
-                self._fechar(uniq)
+            soltos = [self._tirar(uniq) for uniq in list(self._canais)]
+        self._largar(soltos)
         with contextlib.suppress(OSError):  # pragma: no cover
             self._seletor.close()
 
@@ -348,13 +348,14 @@ class NivelDoMicrofone:
 
     def _reconciliar(self) -> None:
         agora = self._agora()
+        soltos: list[_Canal | None] = []
         with self._lock:
             desejado = dict(self._desejado)
             for uniq, canal in list(self._canais.items()):
                 if desejado.get(uniq) != canal.fonte or not canal.fluxo.vivo():
-                    self._fechar(uniq)
+                    soltos.append(self._tirar(uniq))
                 elif (agora - canal.ultimo_dado) >= self._mudez_s:
-                    self._fechar(uniq)
+                    soltos.append(self._tirar(uniq))
                     self._proxima_tentativa[uniq] = agora + _ESPERA_APOS_MUDEZ_S
                     logger.warning(
                         "nivel_do_mic_fluxo_emudeceu",
@@ -366,6 +367,7 @@ class NivelDoMicrofone:
                 for u, f in desejado.items()
                 if f and u not in self._canais
             ]
+        self._largar(soltos)
         for uniq, fonte in faltam:
             if agora < self._proxima_tentativa.get(uniq, 0.0):
                 continue
@@ -400,17 +402,28 @@ class NivelDoMicrofone:
         self._proxima_tentativa.pop(uniq, None)
         logger.info("nivel_do_mic_abriu", uniq=uniq, fonte=fonte)
 
-    def _fechar(self, uniq: str) -> None:
-        """Chamado SEMPRE com o lock tomado."""
+    def _tirar(self, uniq: str) -> _Canal | None:
+        """Tira o canal do dicionário e do seletor. Chamado SEMPRE com o lock tomado.
+
+        Não espera o `parec`: devolve o canal para quem chamou o largar DEPOIS de soltar o lock.
+        """
         canal = self._canais.pop(uniq, None)
         if canal is None:
-            return
+            return None
         with contextlib.suppress(  # pragma: no cover
             KeyError, ValueError, OSError
         ):
             self._seletor.unregister(canal.fluxo.fd)
-        canal.fluxo.parar()
-        logger.info("nivel_do_mic_fechou", uniq=uniq, fonte=canal.fonte)
+        return canal
+
+    @staticmethod
+    def _largar(canais: Iterable[_Canal | None]) -> None:
+        """Para o fluxo de cada canal tirado (espera o `parec` morrer). Sem o lock tomado."""
+        for canal in canais:
+            if canal is None:
+                continue
+            canal.fluxo.parar()
+            logger.info("nivel_do_mic_fechou", uniq=canal.uniq, fonte=canal.fonte)
 
     def _comer(self, uniq: str, agora: float) -> None:
         with self._lock:
@@ -425,7 +438,8 @@ class NivelDoMicrofone:
             dados = b""
         if not dados:
             with self._lock:
-                self._fechar(uniq)
+                solto = self._tirar(uniq)
+            self._largar([solto])
             self._proxima_tentativa[uniq] = agora + _ESPERA_APOS_MORTE_S
             logger.info("nivel_do_mic_fluxo_morreu", uniq=uniq)
             return
