@@ -403,9 +403,10 @@ def quem_segura_a_vez(name: str) -> int | None:
     velho; se não, o número é de quem segura. Nunca cria nem apaga o arquivo.
     """
     path = _pid_file(name)
-    if not path.exists():
+    try:
+        fd = os.open(str(path), os.O_RDONLY)
+    except FileNotFoundError:
         return None
-    fd = os.open(str(path), os.O_RDONLY)
     try:
         try:
             fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)

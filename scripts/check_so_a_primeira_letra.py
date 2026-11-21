@@ -80,7 +80,7 @@ sys.path.insert(0, str(RAIZ / "scripts"))
 
 MARCAS = frozenset({
     "DualSense", "DualSense4Unix", "Hefesto", "Steam", "Linux", "Unix", "Proton",
-    "Xbox", "Freestyle", "Nintendo", "Pro", "Sony", "PlayStation", "Windows",
+    "Xbox", "Freestyle", "Nintendo", "Pro", "Controller", "Sony", "PlayStation", "Windows",
     "Wi-Fi", "Bluetooth", "Vulkan", "Big", "Picture", "Input", "Ryujinx",
     "Lutris", "Heroic", "Wayland", "AppImage", "Flatpak", "Edge",
     "Lovense", "Intiface", "Kyty", "Nvidia",

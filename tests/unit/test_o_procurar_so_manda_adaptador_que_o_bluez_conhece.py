@@ -100,3 +100,35 @@ def test_o_procurar_liga_no_primeiro_clique_e_o_pedido_leva_so_o_adaptador_conhe
     with pytest.raises(RuntimeError, match=r"sem_destino"):
         a08.radio_procurar(None, {"evento": "click"}, recusa)
     assert recusa.pedidos == [{"ligada": True}]
+
+
+def test_a_cena_marca_so_o_adaptador_que_o_bluez_descreve(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2011-O-PROCURAR-SO-MANDA-ADAPTADOR-QUE-O-BLUEZ-CONHECE: a cena marca quem o BlueZ tem.
+
+    O BlueZ de mentira descreve um adaptador; o ``radio_governador`` publica outro, que segue na
+    lista da tela e não é destino.
+
+    MORDIDA: marque ``no_bluez`` como verdadeiro em todo lugar de ``cena_do_radio``.
+    """
+    from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    monkeypatch.setattr(em_fundo, "_FUNDO", {})
+    for nome in ("_ABERTO", "_CENA_NA_TELA", "_NIVEL_NA_TELA"):
+        monkeypatch.setattr(a08, nome, {})
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: Mesa())
+    descrito = AdaptadorDoBluez("/org/bluez/hci1", "hci1", "aa:bb:cc:00:00:f2", varrendo=False)
+    monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((descrito,), ()))
+    monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
+    monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
+    monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
+    estado = {"controllers": [], "radio_governador": {"aa:bb:cc:00:00:f1": {}}}
+    cena = a08.cena_do_radio(pacotes.Contexto(state=estado, mesa=[], conectados=[]))
+    marcas = {a08._so_hex(lug["id"]).upper(): lug["no_bluez"] for lug in cena["lugares"]}
+    assert marcas == {REAL: True, FANTASMA: False}
+    assert a08._so_hex(cena["destino_do_conectar"]).upper() == REAL

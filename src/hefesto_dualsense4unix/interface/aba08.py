@@ -1542,25 +1542,33 @@ def _desenho_do_modelo(modelo: str) -> str:
 
     Os `id` ganham o prefixo do modelo (`PREFIXO_DA_PECA`), a folha do arquivo fica escopada ao
     próprio `<svg>`, os comentários do arquivo ficam de fora (o mockup não tem comentário), o
-    balão não grita (a sigla em caixa alta vira só a primeira letra maiúscula) e cada peça que a
-    tabela do modelo conhece vira o gesto ``acionador-botao``.
+    título do arquivo e o `data-modelo` saem (a marca só chega à tela pelo aparelho, nunca
+    digitada), só a peça que a janela troca leva balão (o das outras peças do arquivo é ficha
+    técnica, não tela), o balão não grita (a sigla em caixa alta vira só a primeira letra
+    maiúscula) e cada peça que a tabela do modelo conhece vira o gesto ``acionador-botao``.
     A janela mostra um só: o do `data-modelo` da opção marcada no seletor (CSS, sem gesto).
     """
     prefixo = _pacote08.PREFIXO_DA_PECA[modelo]
     cru = (R / "assets" / "control-svg" / _ARTE_DO_ACIONADOR[modelo]).read_text(encoding="utf-8")
     cru = cru[cru.index("<svg"):cru.rindex("</svg>") + len("</svg>")]
     cru = re.sub(r"<!--.*?-->", "", cru, flags=re.S)
-    cru = re.sub(
-        r"<title>([^<]*)</title>",
-        lambda m: "<title>" + re.sub(r"\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}\b", lambda g: g.group(0).capitalize(),
-                                    m.group(1)) + "</title>", cru)
+    cru = re.sub(r'<title id="[^"]*">[^<]*</title>|\s(?:role|aria-labelledby|data-modelo)="[^"]*"',
+                 "", cru)
+    trocam = {entrada for entrada, _ in _pacote08.ENTRADAS_DO_MODELO[modelo].values()}
+
+    def balao(m: re.Match) -> str:
+        entrada = re.search(r'data-entrada="([^"]+)"', m.group(1))
+        if entrada is None or entrada.group(1) not in trocam:
+            return m.group(1)
+        return m.group(1) + "<title>" + re.sub(
+            r"\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}\b", lambda g: g.group(0).capitalize(), m.group(2)) + "</title>"
+
+    cru = re.sub(r"(<g [^>]*>\s*)<title>([^<]*)</title>", balao, cru)
     cru = re.sub(r'(\sid=")([^"]+)"', rf'\g<1>{prefixo}\2"', cru)
-    cru = re.sub(r'aria-labelledby="([^"]+)"', rf'aria-labelledby="{prefixo}\1"', cru)
     cru = re.sub(r"<style>(.*?)</style>",
                  lambda m: "<style>" + _escopa_o_estilo(m.group(1), f"#acionador svg.ac-{modelo}")
                  + "</style>", cru, flags=re.S)
     cru = re.sub(r"<svg\s", f'<svg class="ac-svg ac-{modelo}" ', cru, count=1)
-    trocam = {entrada for entrada, _ in _pacote08.ENTRADAS_DO_MODELO[modelo].values()}
     return re.sub(
         r'<g ([^>]*)data-entrada="([^"]+)"',
         lambda m: (f'<g {m.group(1)}data-entrada="{m.group(2)}" data-gesto="acionador-botao" '
