@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1284613,
+      "piso": 1285533,
       "por_item": {
-        "docs": 107759,
-        "scripts": 115240,
-        "src": 325689,
-        "tests": 735925
+        "docs": 107760,
+        "scripts": 115288,
+        "src": 325727,
+        "tests": 736758
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +920 linhas (1284613 -> 1285533), pagas por Origem: D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA, D-1911-O-CHECK-UP-CONTA-SO-PAREAMENTO-DE-CONTROLE, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 5aaee85c7170",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2187,10 +2187,16 @@
           "de": 1284024,
           "para": 1284638,
           "razao": "tamanho: +614 linhas (1284024 -> 1284638), pagas por Origem: D-2011-A-VOLTA-NAO-ESPERA-O-SOM-DO-CABO-SOLTAR-O-APARELHO, D-2011-O-CENSO-LE-SOB-A-TRAVA-UMA-VEZ-POR-APARELHO; registrado no fecho, topo 1256b3fc0a3a"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1284613,
+          "para": 1285533,
+          "razao": "tamanho: +920 linhas (1284613 -> 1285533), pagas por Origem: D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA, D-1911-O-CHECK-UP-CONTA-SO-PAREAMENTO-DE-CONTROLE, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 5aaee85c7170"
         }
       ],
       "unidade": "linhas",
-      "universo": 3580
+      "universo": 3584
     }
   }
 }
