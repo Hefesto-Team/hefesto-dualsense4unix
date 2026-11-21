@@ -6,9 +6,9 @@ import os
 import shutil
 import subprocess
 
-import structlog
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 __all__ = ["fonte_do_controle"]
 

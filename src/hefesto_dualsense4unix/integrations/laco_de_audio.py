@@ -8,9 +8,9 @@ import shutil
 import subprocess
 import threading
 
-import structlog
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 __all__ = ["LATENCIA_MS", "Lacos", "fechar_tudo"]
 

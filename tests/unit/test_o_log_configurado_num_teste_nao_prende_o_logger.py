@@ -8,8 +8,10 @@ guardando a montagem no primeiro uso.
 """
 from __future__ import annotations
 
+import ast
 import io
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 import structlog
@@ -76,3 +78,48 @@ def test_o_reload_do_modulo_nao_perde_os_entregues() -> None:
         assert lc._ENTREGUES is entregues
     finally:
         lc._configured = configurado
+
+
+_SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
+_DONO_DO_LOG = _SRC / "utils" / "logging_config.py"
+
+
+def _quem_pega_o_logger_do_structlog(arvore: ast.AST) -> list[int]:
+    """As linhas que chamam `structlog.get_logger` ou importam `get_logger` do structlog."""
+    linhas: list[int] = []
+    for no in ast.walk(arvore):
+        if (
+            isinstance(no, ast.Attribute)
+            and no.attr in {"get_logger", "getLogger"}
+            and isinstance(no.value, ast.Name)
+            and no.value.id == "structlog"
+        ):
+            linhas.append(no.lineno)
+        if (
+            isinstance(no, ast.ImportFrom)
+            and no.module == "structlog"
+            and any(a.name in {"get_logger", "getLogger"} for a in no.names)
+        ):
+            linhas.append(no.lineno)
+    return linhas
+
+
+def test_so_o_dono_do_log_pega_o_logger_do_structlog() -> None:
+    """D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG: o reset só alcança o logger da casa."""
+    fora_do_dono: dict[str, list[int]] = {}
+    for arquivo in sorted(_SRC.rglob("*.py")):
+        if arquivo == _DONO_DO_LOG:
+            continue
+        linhas = _quem_pega_o_logger_do_structlog(ast.parse(arquivo.read_text(encoding="utf-8")))
+        if linhas:
+            fora_do_dono[str(arquivo.relative_to(_SRC))] = linhas
+    assert fora_do_dono == {}
+
+
+def test_a_regua_do_logger_enxerga_as_duas_formas() -> None:
+    direta = ast.parse("import structlog\nlogger = structlog.get_logger(__name__)\n")
+    importada = ast.parse("from structlog import get_logger\n")
+    da_casa = ast.parse("from hefesto_dualsense4unix.utils.logging_config import get_logger\n")
+    assert _quem_pega_o_logger_do_structlog(direta) == [2]
+    assert _quem_pega_o_logger_do_structlog(importada) == [1]
+    assert _quem_pega_o_logger_do_structlog(da_casa) == []
