@@ -203,6 +203,19 @@ def test_a_mesma_linha_do_kernel_nao_entra_duas_vezes(
     assert len(_resets(diario)) == 2
 
 
+def test_a_hora_do_kernel_que_nao_se_le_nao_perde_o_reset_calada(tmp_path: Path) -> None:
+    """A hora ilegível sai com um código que o vigia confessa no ``kernel.log``, nunca com o 3."""
+    diario = tmp_path / du.NOME_DO_DIARIO
+    rc = du.main([
+        "reset", "--quando", "ontem de tarde", "--mensagem", _linha_do_kernel(NO_COMPUTADOR),
+        "--diario", str(diario), "--raiz-usb", str(tmp_path / "sem-sys")])
+    assert rc not in (0, 3), "a hora ilegível perdeu o reset sem o vigia dizer"
+    assert not diario.exists()
+    assert du.main([
+        "reset", "--quando", "ontem de tarde", "--mensagem", "usb 3-2: new high-speed USB device",
+        "--diario", str(diario)]) == 3
+
+
 def test_porta_do_computador_leva_hubs_vazio_e_aparelho_ausente_leva_so_a_porta(
         sys_usb: SysDeMentira, tmp_path: Path) -> None:
     sys_usb.por(NO_COMPUTADOR, _controle("2", "usb3", 41))

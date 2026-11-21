@@ -227,11 +227,15 @@ def ler_o_reset(mensagem: str) -> ResetDoKernel | None:
 
 
 def carimbo_do_kernel(quando: str) -> float | None:
-    """``2026-11-21T11:25:18-0300`` (ou ``-03:00``) em segundos; ``None`` se não se lê."""
+    """``2026-11-21T11:25:18-0300`` (ou ``-03:00``) em segundos.
+
+    ``None`` quando não se lê, e a hora ilegível vai ao log.
+    """
     try:
         normal = _FUSO_SEM_DOIS_PONTOS.sub(r"\1:\2", quando.strip())
         return datetime.fromisoformat(normal).timestamp()
-    except ValueError:
+    except ValueError as erro:
+        logger.warning("usb_reset_hora_ilegivel", quando=quando, erro=str(erro))
         return None
 
 
@@ -481,8 +485,9 @@ __all__ = [
 def main(argv: Sequence[str] | None = None) -> int:
     """``reset --quando <hora do kernel> --mensagem <texto>``: grava o reset no diário.
 
-    Sai com 0 quando a linha entrou, 3 quando a mensagem não é um reset, a hora não se lê ou a linha
-    já estava lá, e 1 quando o censo ou o diário falharam.
+    Sai com 0 quando a linha entrou, 3 quando a mensagem não é um reset ou a linha já estava lá, 4
+    quando a hora do kernel não se lê (o reset não entrou, e o vigia diz isso) e 1 quando o censo ou
+    o diário falharam.
     """
     parser = argparse.ArgumentParser(prog="diario_do_usb")
     sub = parser.add_subparsers(dest="comando", required=True)
@@ -492,9 +497,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     reset.add_argument("--diario", default="")
     reset.add_argument("--raiz-usb", default="")
     args = parser.parse_args(argv)
-    quando = carimbo_do_kernel(args.quando)
-    if quando is None or ler_o_reset(args.mensagem) is None:
+    if ler_o_reset(args.mensagem) is None:
         return 3
+    quando = carimbo_do_kernel(args.quando)
+    if quando is None:
+        return 4
     try:
         entrada = registrar_o_reset(
             args.mensagem, quando=quando,
