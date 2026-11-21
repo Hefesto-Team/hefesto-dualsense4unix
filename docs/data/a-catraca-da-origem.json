@@ -259,14 +259,14 @@
       "data": "2026-11-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1282717,
+      "piso": 1283758,
       "por_item": {
-        "docs": 107710,
+        "docs": 107745,
         "scripts": 115235,
-        "src": 325322,
-        "tests": 734450
+        "src": 325514,
+        "tests": 735264
       },
-      "razao": "tamanho: +541 linhas (1282176 -> 1282717), pagas por Origem: D-1911-A-VERSAO-DE-FORA-ESPERA-TRES-DIAS, D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo b29abc50c8b2",
+      "razao": "tamanho: +1041 linhas (1282717 -> 1283758), pagas por Origem: D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL, D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE, D-2011-A-EDICAO-DO-MAPA-SO-SE-LARGA-AO-SAIR, D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO, D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO; registrado no fecho, topo 39c5e863bdbd",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2163,10 +2163,16 @@
           "de": 1282176,
           "para": 1282717,
           "razao": "tamanho: +541 linhas (1282176 -> 1282717), pagas por Origem: D-1911-A-VERSAO-DE-FORA-ESPERA-TRES-DIAS, D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo b29abc50c8b2"
+        },
+        {
+          "data": "2026-11-20",
+          "de": 1282717,
+          "para": 1283758,
+          "razao": "tamanho: +1041 linhas (1282717 -> 1283758), pagas por Origem: D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL, D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE, D-2011-A-EDICAO-DO-MAPA-SO-SE-LARGA-AO-SAIR, D-2011-O-PERFIL-COM-TECLA-LIGA-O-TECLADO, D-2909-O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO; registrado no fecho, topo 39c5e863bdbd"
         }
       ],
       "unidade": "linhas",
-      "universo": 3573
+      "universo": 3576
     }
   }
 }
