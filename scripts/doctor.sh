@@ -6412,6 +6412,16 @@ check_o_portal_de_captura_do_cosmic() {
     fi
 }
 
+check_emulacao_de_mouse_e_teclado() {
+    local py; py="$(_python_do_produto)"
+    [[ -z "${py}" ]] && { warn "sem python para conferir o módulo uinput"; return; }
+    if "${py}" -c "import uinput" >/dev/null 2>&1; then
+        pass "módulo uinput presente (emulação de mouse e teclado)"
+    else
+        warn "emulação de mouse e teclado: módulo uinput ausente nesta instalação — o mouse, o cursor pelo touchpad e o teclado emulado não funcionam; $(conselho_de_instalacao)"
+    fi
+}
+
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
@@ -6454,6 +6464,7 @@ main() {
     check_usb_quirk
     check_usb_storm_config_conflict
     check_uinput
+    check_emulacao_de_mouse_e_teclado
     check_uhid
     check_uhid_contrapressao
     check_hid_playstation

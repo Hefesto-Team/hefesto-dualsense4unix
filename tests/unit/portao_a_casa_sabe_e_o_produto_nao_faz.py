@@ -643,7 +643,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "`loginctl` ele não atende ninguém. Nas distros do install os caminhos fixos "
         "`/usr/bin` e `/bin` bastam; o NixOS não tem nenhum dos dois, e quem LIGA a chave é o "
         "pacote Nix, que acrescenta o `Environment=` à unit com o `sed` do "
-        "`packaging/nix/package.nix:263` (`HEFESTO_BROKER_LOGINCTL`). Os testes também a escrevem, "
+        "`packaging/nix/package.nix:281` (`HEFESTO_BROKER_LOGINCTL`). Os testes também a escrevem, "
         "para simular o logind "
         "ausente, mas não são eles que a sustentam."
     ),
@@ -670,7 +670,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que quem usa QUER o DualSense como microfone padrão do sistema "
         "(`HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED` em "
-        "`src/hefesto_dualsense4unix/core/system_check.py:143`), e com isso cala o alarme do "
+        "`src/hefesto_dualsense4unix/core/system_check.py:144`), e com isso cala o alarme do "
         "doctor. É "
         "escolha de quem usa por definição. REMEDIDO em 03/10/2026: a mão existe e não "
         "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
@@ -811,9 +811,9 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "`fix_wireplumber_default_source` em `install.sh:3674`), e as duas perguntas leem o mesmo "
         "dono em cinco "
         "degraus — `system_warnings` pelo "
-        "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:110` "
+        "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:111` "
         "(chamada por `avisar_da_infra_no_boot` em "
-        "`src/hefesto_dualsense4unix/core/system_check.py:301-310`, que o boot do daemon roda) "
+        "`src/hefesto_dualsense4unix/core/system_check.py:315-324`, que o boot do daemon roda) "
         "e o doctor pelo "
         "`_prefere_mic_do_dualsense`. A env é o degrau 2 desses cinco, o atalho "
         "de quem exporta à mão; gravá-la no instalador daria uma SEGUNDA fonte "
@@ -3483,7 +3483,7 @@ class TestOPortaoMorde:
         )
         assert portas_que_ligam("HEFESTO_BROKER_LOGINCTL") == ["empacotamento"], (
             "o detector não vê a linha que o "
-            "`packaging/nix/package.nix:263` (`HEFESTO_BROKER_LOGINCTL`) acrescenta à "
+            "`packaging/nix/package.nix:281` (`HEFESTO_BROKER_LOGINCTL`) acrescenta à "
             "unit do broker"
         )
 

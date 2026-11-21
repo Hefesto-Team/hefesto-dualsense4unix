@@ -215,7 +215,11 @@ def test_o_deb_instala_o_pacote_no_venv_e_copia_os_assets() -> None:
     MORDIDA: trocar o `pip install .` por cópia dos fontes — o `share/` do wheel se perde.
     """
     texto = _le("scripts/build_deb.sh")
-    assert re.search(r"\"\$\{VENV_PIP\}\" install [^\n]*--no-cache-dir \.\s*$", texto, re.M)
+    assert re.search(
+        r"\"\$\{VENV_PIP\}\" install [^\n]*--no-cache-dir \"\.\[emulation,cosmic\]\"\s*$",
+        texto,
+        re.M,
+    )
     copia = "git ls-files -z -- assets | xargs -0 -r cp -P --parents -t "
     assert copia + '"${STAGING}/usr/share/hefesto-dualsense4unix/"' in texto
     for relativo in ("control", "postinst", "postrm", "prerm"):

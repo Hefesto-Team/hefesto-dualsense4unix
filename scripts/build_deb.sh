@@ -59,7 +59,7 @@ echo "Atualizando pip dentro do venv ..."
 "${VENV_PY}" -m pip install --quiet --upgrade pip setuptools wheel
 
 echo "Instalando hefesto-dualsense4unix + deps no venv (off-line para o usuário final) ..."
-"${VENV_PIP}" install --quiet --no-cache-dir .
+"${VENV_PIP}" install --quiet --no-cache-dir ".[emulation,cosmic]"
 
 echo "Adicionando shim PyGObject -> dist-packages do sistema ..."
 PY_SITE_DIR=$(find "${VENV_DIR}/lib" -mindepth 1 -maxdepth 1 -type d -name 'python*' | head -1)/site-packages

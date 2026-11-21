@@ -19,7 +19,7 @@ pkgrel=1
 # o único jeito de a série 0.x suceder a 4.0. Mesmo valor do .deb e do RPM.
 epoch=1
 pkgdesc="DualSense controller manager for Linux (GTK3 GUI + CLI + TUI)"
-arch=('any')
+arch=('x86_64' 'aarch64')
 url="https://github.com/Hefesto-Team/hefesto-dualsense4unix"
 license=('GPL-3.0-or-later')
 depends=(
@@ -59,7 +59,12 @@ depends=(
     'python-yaml'
     'python-jeepney'
     'python-numpy'
-    # Sem python-pydualsense no Arch — vamos puxar via pip.
+    # O `hidapi-usb` (módulo `hidapi`, que o pydualsense importa) é CFFI e o
+    # pip o instala com --no-deps: o `cffi` vem do pacman. O `python-uinput`
+    # (mouse, cursor pelo touchpad, teclado emulado) liga na libudev.
+    'python-cffi'
+    'systemd-libs'
+    # Sem pacote no Arch para pydualsense, hidapi-usb e python-uinput — vêm pelo pip.
 )
 makedepends=(
     'python-build'
@@ -67,6 +72,8 @@ makedepends=(
     'python-wheel'
     'python-hatchling'
     'python-pip'
+    'python-setuptools'
+    'gcc'
     'gettext'
 )
 optdepends=(
@@ -112,15 +119,18 @@ package() {
         --prefix=/usr \
         dist/*.whl
 
-    # pydualsense via pip (--root cobre o destdir; --no-deps para evitar
-    # reinstalar coisas que ja vem do pacman).
+    # pydualsense, o hidapi-usb que ele importa e o python-uinput via pip
+    # (--root cobre o destdir; --no-deps para evitar reinstalar coisas que ja
+    # vem do pacman).
     pip install \
         --root="$pkgdir" \
         --prefix=/usr \
         --no-deps \
         --no-build-isolation \
         --no-compile \
-        "pydualsense>=0.7.5"
+        "pydualsense>=0.7.5" \
+        "hidapi-usb>=0.3.2,<0.4.0" \
+        "python-uinput>=0.11"
 
     # Desktop entry + icones.
     install -Dm644 packaging/hefesto-dualsense4unix.desktop \

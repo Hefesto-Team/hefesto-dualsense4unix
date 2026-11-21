@@ -123,6 +123,23 @@ python3Packages.buildPythonApplication rec {
       pythonImportsCheck = [ "hidapi" ];
       doCheck = false;
     };
+    # O módulo `uinput` (mouse, cursor pelo touchpad, teclado emulado) é uma extensão em C que liga na
+    # libudev. O sdist do PyPI (1.0.1) traz o cabeçalho da libudev; o sha256 em hexa (85369734…8b6eba)
+    # é o que o PyPI publica para o arquivo, e foi conferido contra o download em 20/11/2026.
+    pythonUinput = python3Packages.buildPythonPackage {
+      pname = "python-uinput";
+      version = "1.0.1";
+      pyproject = true;
+      src = python3Packages.fetchPypi {
+        pname = "python-uinput";
+        version = "1.0.1";
+        hash = "sha256-hTaXNEtk31U31K4yum+88FFdUakBCRD11QGZWQOLbro=";
+      };
+      build-system = with python3Packages; [ setuptools wheel ];
+      buildInputs = [ systemd ];
+      pythonImportsCheck = [ "uinput" ];
+      doCheck = false;
+    };
     in
     with python3Packages; [
     pygobject3
@@ -138,6 +155,7 @@ python3Packages.buildPythonApplication rec {
     jeepney
     pyyaml
     numpy
+    pythonUinput
     # pydualsense nao esta em nixpkgs ainda — buildPythonPackage extra
     # abaixo dentro do propagatedBuildInputs como deriv inline.
     (python3Packages.buildPythonPackage rec {

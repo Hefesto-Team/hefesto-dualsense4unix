@@ -120,7 +120,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'pyproject.toml'
       - name: Instalar dpkg-deb + python3-venv do sistema
-        run: sudo apt-get update && sudo apt-get install -y dpkg python3-venv
+        run: sudo apt-get update && sudo apt-get install -y dpkg python3-venv build-essential python3-dev libudev-dev
       - name: Build .deb
         run: bash scripts/build_deb.sh
       - name: Upload pacote .deb
@@ -164,6 +164,8 @@ jobs:
           # Venv bundlado é autocontido — roda direto, sem PYTHONPATH.
           # 'version' é subcomando (não existe '--version' top-level).
           hefesto-dualsense4unix version
+      - name: Validar os módulos que o produto importa
+        run: /opt/hefesto-dualsense4unix/venv/bin/python -c 'import hidapi, pydualsense, uinput, jeepney'
       - name: Validar binário hefesto-dualsense4unix-gui
         run: |
           which hefesto-dualsense4unix-gui
@@ -172,6 +174,62 @@ jobs:
           hefesto-dualsense4unix-gui --help || echo "gui --help retornou não-zero em headless (esperado)"
       - name: Desinstalar (valida postrm)
         run: sudo apt-get remove -y hefesto-dualsense4unix
+
+  arch-smoke:
+    name: Smoke do pacote do Arch
+    runs-on: ubuntu-latest
+    needs: build
+    container: archlinux:latest
+    steps:
+      - name: Preparar o Arch
+        run: pacman -Syu --noconfirm base-devel git sudo
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Construir o pacote
+        run: |
+          git config --global --add safe.directory "$PWD"
+          VERSAO="$(sed -n 's/^pkgver=//p' packaging/arch/PKGBUILD)"
+          useradd -m construtor
+          echo 'construtor ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/construtor
+          install -d -o construtor /home/construtor/pkg
+          git archive --prefix="hefesto-dualsense4unix-${VERSAO}/" \
+            -o "/home/construtor/pkg/hefesto-dualsense4unix-${VERSAO}.tar.gz" HEAD
+          cp packaging/arch/PKGBUILD packaging/arch/hefesto-dualsense4unix.install /home/construtor/pkg/
+          chown -R construtor /home/construtor/pkg
+          su construtor -c 'cd ~/pkg && makepkg --syncdeps --noconfirm'
+      - name: Instalar e importar o que o produto usa
+        run: |
+          pacman -U --noconfirm /home/construtor/pkg/hefesto-dualsense4unix-*.pkg.tar.zst
+          python -c 'import hidapi, pydualsense, uinput, jeepney'
+          hefesto-dualsense4unix version
+
+  fedora-smoke:
+    name: Smoke do pacote do Fedora
+    runs-on: ubuntu-latest
+    needs: build
+    container: fedora:latest
+    steps:
+      - name: Preparar o Fedora
+        run: dnf install -y rpm-build dnf-plugins-core git
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Construir o pacote
+        run: |
+          git config --global --add safe.directory "$PWD"
+          SPEC=packaging/fedora/hefesto-dualsense4unix.spec
+          VERSAO="$(sed -n 's/^Version:[[:space:]]*//p' "$SPEC")"
+          mkdir -p "$HOME/rpmbuild/SOURCES"
+          git archive --prefix="hefesto-dualsense4unix-${VERSAO}/" \
+            -o "$HOME/rpmbuild/SOURCES/hefesto-dualsense4unix-${VERSAO}.tar.gz" HEAD
+          dnf builddep -y "$SPEC"
+          rpmbuild -bb "$SPEC"
+      - name: Instalar e importar o que o produto usa
+        run: |
+          dnf install -y "$HOME"/rpmbuild/RPMS/*/hefesto-dualsense4unix-*.rpm
+          python3 -c 'import hidapi, pydualsense, uinput, jeepney'
+          hefesto-dualsense4unix version
 
   flatpak:
     name: Build Flatpak bundle
@@ -358,7 +416,7 @@ jobs:
   # no instante em que a versão é pública, e apagar e recriar a versão (o que este job fazia a cada re-execução) o
   # GitHub recusa. `scripts/release/publicar.py` faz os passos e recusa o que não confere.
   github-release:
-    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci, integridade, peca-gdk]
+    needs: [build, appimage, deb, deb-install-smoke, arch-smoke, fedora-smoke, flatpak, guarda-ci, integridade, peca-gdk]
     runs-on: ubuntu-latest
     environment: release
     permissions:

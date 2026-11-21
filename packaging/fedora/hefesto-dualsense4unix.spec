@@ -8,6 +8,7 @@
 
 %global pypi_name hefesto-dualsense4unix
 %global app_id    hefesto-dualsense4unix
+%global debug_package %{nil}
 
 Name:           %{pypi_name}
 # PACKAGING-EPOCH-DOWNGRADE-01: a numeracao voltou de 4.0.0 para 0.1.0 em
@@ -23,7 +24,6 @@ License:        GPL-3.0-or-later
 URL:            https://github.com/Hefesto-Team/%{pypi_name}
 Source0:        %{url}/archive/v%{version}/%{pypi_name}-%{version}.tar.gz
 
-BuildArch:      noarch
 
 BuildRequires:  python3-devel >= 3.10
 BuildRequires:  python3-build
@@ -31,6 +31,9 @@ BuildRequires:  python3-wheel
 BuildRequires:  python3-installer
 BuildRequires:  python3-hatchling
 BuildRequires:  python3-pip
+BuildRequires:  python3-setuptools
+BuildRequires:  gcc
+BuildRequires:  systemd-devel
 BuildRequires:  gettext
 
 # Runtime deps — packages no Fedora 40+.
@@ -66,7 +69,11 @@ Requires:       python3-filelock
 Requires:       python3-pyyaml
 Requires:       python3-numpy
 Requires:       python3-jeepney
-# pydualsense puxado via pip no %install (sem RPM Fedora ainda).
+Requires:       python3-cffi
+Requires:       bubblewrap
+# pydualsense, hidapi-usb e python-uinput puxados via pip no %install (sem RPM
+# no Fedora): o hidapi-usb e CFFI (o cffi vem do RPM) e o python-uinput liga
+# na libudev (o rpm acha a dependencia pelo .so).
 
 Recommends:     wlrctl
 # Onda T: modulo hid-nintendo patchado via DKMS (cura de raiz do probe BT
@@ -130,14 +137,16 @@ python3 -m installer --destdir=%{buildroot} \
     --prefix=%{_prefix} \
     dist/*.whl
 
-# pydualsense via pip (sem RPM Fedora). --no-deps porque deps Python
-# core ja vieram via RPM Requires.
+# pydualsense, o hidapi-usb que ele importa e o python-uinput via pip (sem RPM
+# Fedora). --no-deps porque deps Python core ja vieram via RPM Requires.
 pip3 install --root=%{buildroot} \
     --prefix=%{_prefix} \
     --no-deps \
     --no-build-isolation \
     --no-compile \
-    "pydualsense>=0.7.5"
+    "pydualsense>=0.7.5" \
+    "hidapi-usb>=0.3.2,<0.4.0" \
+    "python-uinput>=0.11"
 
 # Desktop entry.
 install -Dm644 packaging/hefesto-dualsense4unix.desktop \
@@ -527,6 +536,11 @@ fi
 %{python3_sitelib}/hefesto_dualsense4unix-*.dist-info/
 %{python3_sitelib}/pydualsense/
 %{python3_sitelib}/pydualsense-*.dist-info/
+%pycached %{python3_sitelib}/hidapi.py
+%{python3_sitelib}/hidapi_usb-*.dist-info/
+%{python3_sitearch}/uinput/
+%{python3_sitearch}/_libsuinput*.so
+%{python3_sitearch}/python_uinput-*.dist-info/
 %{_datadir}/applications/%{app_id}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/hefesto.png
 %{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png

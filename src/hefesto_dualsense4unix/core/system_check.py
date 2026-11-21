@@ -9,6 +9,7 @@ sugerido. O reparo de fato fica a cargo do usuário (`doctor --fix`).
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import os
 from collections.abc import Callable
 from pathlib import Path
@@ -201,6 +202,18 @@ def system_warnings() -> list[str]:
     return warnings
 
 
+LINHA_EMULACAO_SEM_MODULO = "emulação de mouse e teclado: módulo uinput ausente nesta instalação"
+
+
+def emulacao_sem_modulo() -> str | None:
+    """A linha que diz a falta do módulo `uinput`, ou `None` com ele presente; nunca levanta."""
+    try:
+        presente = importlib.util.find_spec("uinput") is not None
+    except (ImportError, ValueError):
+        presente = False
+    return None if presente else LINHA_EMULACAO_SEM_MODULO
+
+
 LINHA_LE_A_ENTRADA = "o Hefesto lê o teclado e o pedal declarados em «Usar como botões de»"
 LINHA_SEM_ACIONADOR_DECLARADO = "nenhum teclado ou pedal declarado em «Usar como botões de»"
 LINHA_ACIONADOR_FORA = "o teclado ou o pedal declarado não está ligado nesta máquina"
@@ -287,6 +300,7 @@ def vagas_do_pad_em_usb(*, raiz_modulos: str = "/sys/module") -> tuple[int | Non
 
 __all__ = [
     "contrato_do_pad_em_usb",
+    "emulacao_sem_modulo",
     "fonte_configurada_do_wireplumber",
     "permissao_de_ler_a_entrada",
     "system_warnings",
@@ -307,8 +321,9 @@ def avisar_da_infra_no_boot(dormir: Callable[[float], Any] | None = None) -> Non
     from hefesto_dualsense4unix.utils.logging_config import get_logger
 
     logger = get_logger(__name__)
-    for detail in system_warnings():
-        logger.warning("system_check_warning", detail=detail)
+    for detail in [*system_warnings(), emulacao_sem_modulo()]:
+        if detail is not None:
+            logger.warning("system_check_warning", detail=detail)
     espera = dormir or time.sleep
     for tentativa in range(TENTATIVAS_DO_AVISO_DAS_CURAS):
         if curas_da_casa.avisar_uma_vez_por_kernel() is not False:

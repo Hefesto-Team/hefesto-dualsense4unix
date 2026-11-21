@@ -69,7 +69,7 @@ install -Dm644 -t "$WORK_DIR/usr/share/hefesto-dualsense4unix/scripts/sondas/" \
 
 WHEEL=$(ls -t "$HERE/dist"/hefesto_dualsense4unix-*.whl | head -1)
 cat > "$WORK_DIR/requirements.txt" <<EOF
-$WHEEL
+$WHEEL[emulation,cosmic]
 EOF
 
 mkdir -p "$OUT_DIR"

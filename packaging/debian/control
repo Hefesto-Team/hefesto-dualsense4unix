@@ -9,7 +9,8 @@ Depends: python3 (>= 3.10), python3-venv,
          gir1.2-webkit2-4.1,
          gir1.2-ayatanaappindicator3-0.1,
          libhidapi-hidraw0, libnotify-bin,
-         libopus0,
+         libopus0, libudev1,
+         bubblewrap,
          librsvg2-common
 Recommends: ydotool | wlrctl, dkms, pulseaudio-utils, wvkbd | onboard,
             alsa-ucm-conf, libspa-0.2-modules
