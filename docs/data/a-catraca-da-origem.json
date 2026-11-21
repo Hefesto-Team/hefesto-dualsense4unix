@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1296086,
+      "piso": 1297203,
       "por_item": {
-        "docs": 107885,
-        "scripts": 115931,
-        "src": 327794,
-        "tests": 744476
+        "docs": 107886,
+        "scripts": 116010,
+        "src": 328149,
+        "tests": 745158
       },
-      "razao": "tamanho: +308 linhas (1295778 -> 1296086), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo aef18ec3fccf",
+      "razao": "tamanho: +1117 linhas (1296086 -> 1297203), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-O-RESET-DO-CABO-ENTRA-NO-USB-DIARIO-POR-PORTA, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo f47a7629aa44",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2307,10 +2307,16 @@
           "de": 1295778,
           "para": 1296086,
           "razao": "tamanho: +308 linhas (1295778 -> 1296086), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo aef18ec3fccf"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1296086,
+          "para": 1297203,
+          "razao": "tamanho: +1117 linhas (1296086 -> 1297203), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-LEITURA-DA-FEATURE-SOLTA-A-TRAVA, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-O-RESET-DO-CABO-ENTRA-NO-USB-DIARIO-POR-PORTA, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo f47a7629aa44"
         }
       ],
       "unidade": "linhas",
-      "universo": 3616
+      "universo": 3618
     }
   }
 }
