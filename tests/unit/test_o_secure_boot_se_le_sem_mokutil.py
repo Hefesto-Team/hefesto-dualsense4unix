@@ -342,6 +342,65 @@ def test_o_reconhecimento_diz_que_o_modulo_carregado_segue_como_esta(tmp_path: P
     assert "O módulo hid-playstation do Hefesto carregado agora segue como está." in saida, saida
 
 
+PASSOS_DO_DKMS = (
+    "install_dkms_hid_nintendo_host", "install_dkms_rtw88_usb_host",
+    "install_dkms_hid_playstation_host", "install_dkms_uhid_host", "install_dkms_usb_f_hid_host",
+)
+
+
+@pytest.mark.parametrize("pedida", [False, True], ids=["chave-fora", "inscricao-pedida"])
+def test_o_install_inteiro_le_a_chave_uma_vez(tmp_path: Path, pedida: bool) -> None:
+    """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ: o reconhecimento e os cinco passos
+    do DKMS do install, na ordem e no mesmo shell em que o install os chama, perguntam ao
+    ``mokutil`` uma vez só; nada roda de verdade (o ``PATH`` só tem dublês)."""
+    bin_ = _bin(tmp_path)
+    chamadas = tmp_path / "chamadas.log"
+    contador = tmp_path / "mokutil.log"
+    for nome, corpo in (
+        ("mokutil", f'echo x >> "{contador}"\necho "mok.pub is not enrolled"\nexit 1'),
+        ("sudo", f'echo "sudo $*" >> "{chamadas}"\nexit 0'),
+        ("dkms", f'echo "dkms $*" >> "{chamadas}"\nexit 0'),
+        ("modinfo", "exit 1"),
+        ("uname", "echo 7.1.5-generic"),
+    ):
+        (bin_ / nome).write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
+        (bin_ / nome).chmod(0o755)
+    script = "\n".join((
+        "set -uo pipefail",
+        f"ROOT_DIR='{RAIZ}'",
+        "NO_DKMS=0",
+        "COM_UHID_CONTRAPRESSAO=1",
+        'warn() { printf "WARN: %s\\n" "$*"; }',
+        "_familia_pacotes() { echo apt; }",
+        f"source '{RAIZ / 'scripts' / 'lib' / 'camada_de_maquina.sh'}'",
+        "_pula_por_so_leitura() { return 1; }",
+        "_rtw88_adaptadores_presentes() { echo 0bda:b812; }",
+        _reconhecimento(),
+        "_reconhecimento",
+        *PASSOS_DO_DKMS,
+    ))
+    env = {
+        "PATH": str(bin_), "HOME": str(tmp_path), "LC_ALL": "C.UTF-8",
+        "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, True)),
+        "HEFESTO_SYS_MODULE": str(tmp_path / "sem-sys-module"),
+        "HEFESTO_DKMS_TREE": str(tmp_path / "arvore-do-dkms"),
+        "HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
+        "HEFESTO_DKMS_MODULES_ROOT": str(tmp_path / "modules"),
+        **_mok(tmp_path, gerada=True, inscrita=False),
+    }
+    if pedida:
+        (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
+    feito = subprocess.run(
+        [BASH, "-c", script], capture_output=True, text=True, timeout=120, check=False, env=env
+    )
+    saida = feito.stdout + feito.stderr
+    assert "espera o reinício" in saida if pedida else "não está inscrita" in saida, saida
+    lidas = chamadas.read_text(encoding="utf-8") if chamadas.exists() else ""
+    if pedida:
+        assert "dkms remove" not in lidas and "dkms build" not in lidas, lidas
+    assert len(contador.read_text(encoding="utf-8").split()) == 1, saida
+
+
 def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
     saida = _rodar_reconhecimento(tmp_path, ligado=False)
     assert "Secure Boot" not in saida.replace("distro, bluez e Secure Boot", ""), saida
