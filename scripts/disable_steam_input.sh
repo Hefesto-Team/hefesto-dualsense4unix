@@ -343,6 +343,27 @@ needs_real_fix() {
     return 0
 }
 
+_ponte_instalada() {
+    local py origem
+    for py in "${HOME}/.local/share/hefesto-dualsense4unix/venv/bin/python" \
+              "/opt/hefesto-dualsense4unix/venv/bin/python" \
+              python3; do
+        command -v "${py}" >/dev/null 2>&1 || continue
+        origem="$("${py}" -c 'import importlib.util as u
+s = u.find_spec("hefesto_dualsense4unix.integrations.steam_input_ponte")
+print(s.origin if s is not None and s.origin else "")' 2>/dev/null)" || continue
+        if [[ -n "${origem}" && -f "${origem}" ]]; then
+            printf '%s\n' "${origem}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+if [[ ! -f "${PONTE_PY}" ]]; then
+    PONTE_PY="$(_ponte_instalada)" || PONTE_PY=""
+fi
+
 case "${MODE}" in
     status)
         log "${#VDFS[@]} localconfig.vdf encontrado(s):"
