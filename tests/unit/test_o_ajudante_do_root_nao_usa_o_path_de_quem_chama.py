@@ -76,6 +76,13 @@ def test_o_broker_abre_com_o_python_do_sistema() -> None:
     assert BROKER.read_text(encoding="utf-8").splitlines()[0] == "#!/usr/bin/python3"
 
 
+def test_o_pacote_nix_troca_o_shebang_que_o_broker_tem() -> None:
+    """D-2011-O-AJUDANTE-DO-ROOT-FIXA-O-PROPRIO-PATH: o Nix reescreve o shebang que a fonte traz."""
+    shebang = BROKER.read_text(encoding="utf-8").splitlines()[0]
+    nix = (RAIZ / "packaging" / "nix" / "package.nix").read_text(encoding="utf-8")
+    assert f'--replace-fail "{shebang}"' in nix
+
+
 def test_o_duble_de_bin_so_vale_fora_do_root() -> None:
     ponte = _script("bt_ponte_privilegiada").read_text(encoding="utf-8")
     assert 'if [[ -n "${BIN_DE_TESTE}" && "${EUID}" -ne 0 ]]; then' in ponte

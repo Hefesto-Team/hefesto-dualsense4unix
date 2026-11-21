@@ -275,7 +275,7 @@ python3Packages.buildPythonApplication rec {
     install -Dm755 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
         $out/libexec/hefesto-dualsense4unix/hefesto-hidraw-broker
     substituteInPlace $out/libexec/hefesto-dualsense4unix/hefesto-hidraw-broker \
-        --replace-fail "#!/usr/bin/env python3" "#!${python3Packages.python.interpreter}"
+        --replace-fail "#!/usr/bin/python3" "#!${python3Packages.python.interpreter}"
     bash scripts/broker_do_pacote.sh $out/lib/systemd/system \
         $out/libexec/hefesto-dualsense4unix/hefesto-hidraw-broker
     sed -i "/^Environment=HEFESTO_BROKER_NO_NASCE_FECHADO=1/a Environment=HEFESTO_BROKER_LOGINCTL=${systemd}/bin/loginctl" \
