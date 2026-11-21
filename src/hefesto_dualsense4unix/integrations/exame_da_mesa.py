@@ -13,14 +13,14 @@ instala `install-host-udev.sh` e `dkms_lib.sh`, e o manifesto Flatpak não o
 menciona. Uma aba que dependesse dele nasceria VAZIA para quem instalou por
 pacote — que é a maioria futura. O padrão que a casa já usa três vezes é o
 inverso: o módulo viaja dentro do wheel e o doctor é que o consome
-(`sentinela_do_wrapper.py` ← `scripts/doctor.sh:1673`).
+(`sentinela_do_wrapper.py` ← `scripts/doctor.sh:1683`).
 
 A DISCIPLINA, herdada de `storm_doctor.py:1-9` e válida linha a linha aqui:
 
 - **Somente leitura.** Nenhuma função deste arquivo escreve em lugar nenhum.
 - **Sem root, nunca.** Checagem que precisaria de `sudo` devolve
   ``ESTADO_NAO_SEI`` — jamais falha. O `/var/lib/bluetooth` é proibido por
-  isso: `check_bt_bonds_persistidos` (`scripts/doctor.sh:3111-3114`) começa
+  isso: `check_bt_bonds_persistidos` (`scripts/doctor.sh:3121-3124`) começa
   com `sudo -n true` e desiste sem ele.
 - **Cada caminho entra por argumento**, com default igual ao sistema real. É o
   que permite testar com fixture e é o que permite ao retrato das abas montar
@@ -32,7 +32,7 @@ A DISCIPLINA, herdada de `storm_doctor.py:1-9` e válida linha a linha aqui:
 O QUE ESTE MÓDULO NÃO FAZ, e é deliberado: ele não devolve frase de tela
 pronta nem cor. Devolve chave, estado e um "porquê" curto em português —
 escrito AQUI, nunca copiado da mensagem do doctor. As mensagens de lá carregam
-`sudo` e carregam endereço de rádio (`scripts/doctor.sh:3288` imprime o MAC),
+`sudo` e carregam endereço de rádio (`scripts/doctor.sh:3298` imprime o MAC),
 e as duas coisas acabariam num PNG versionado pelo caminho do retrato das abas.
 """
 from __future__ import annotations
@@ -369,7 +369,7 @@ def suporte_ao_controle(
 def pareamentos(
     *, executar: Callable[[Sequence[str]], str | None] | None = None
 ) -> Item:
-    """Algum controle com pareamento pela metade? (`doctor.sh:3274-3292`)"""
+    """Algum controle com pareamento pela metade? (`doctor.sh:3284-3302`)"""
     from hefesto_dualsense4unix.integrations import bluez_dbus
     from hefesto_dualsense4unix.integrations.central_do_radio import _o_bluez_diz_controle
 

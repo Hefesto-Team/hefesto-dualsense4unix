@@ -1589,15 +1589,25 @@ check_launch_wrapper() {
 
 check_copias_do_wrapper() {
     local bin="${HOME}/.local/share/hefesto-dualsense4unix/bin"
-    local par nome fonte alvo razao velhas="" instaladas=0
+    local par nome fonte razao modo alvo velhas="" instaladas=0 total=0
     for par in \
-        "hefesto-launch|assets/hefesto-launch.sh|" \
-        "hefesto-camadas|src/hefesto_dualsense4unix/integrations/camadas_vulkan.py|as sobreposições Vulkan não saem no lançamento dos jogos" \
-        "hefesto-audio-ks|src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py|a vibração dos jogos da Sony pelo DualSense não chega ao jogo sob Proton"; do
-        IFS='|' read -r nome fonte razao <<<"${par}"
+        "hefesto-launch|assets/hefesto-launch.sh||x" \
+        "hefesto-camadas|src/hefesto_dualsense4unix/integrations/camadas_vulkan.py|as sobreposições Vulkan não saem no lançamento dos jogos|x" \
+        "arquivo_de_terceiro.py|src/hefesto_dualsense4unix/utils/arquivo_de_terceiro.py|as sobreposições Vulkan não saem no lançamento dos jogos|" \
+        "hefesto-audio-ks|src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py|a vibração dos jogos da Sony pelo DualSense não chega ao jogo sob Proton|x" \
+        "hefesto-leitor-do-estado|src/hefesto_dualsense4unix/integrations/leitor_do_estado.py|a chave Memória do modo imersão não lê o jogo|x" \
+        "anticheat_conhecido.json|src/hefesto_dualsense4unix/integrations/anticheat_conhecido.json|a chave Memória do modo imersão não lê o jogo|"; do
+        IFS='|' read -r nome fonte razao modo <<<"${par}"
         alvo="${bin}/${nome}"
-        if [[ ! -x "${alvo}" ]]; then
-            [[ -n "${razao}" ]] && warn "curador ${nome} ausente ou sem permissão de execução em ${bin} — ${razao}; $(conselho_de_instalacao)"
+        total=$((total + 1))
+        if { [[ "${modo}" == "x" ]] && [[ ! -x "${alvo}" ]]; } || [[ ! -f "${alvo}" ]]; then
+            if [[ -n "${razao}" ]]; then
+                if [[ "${modo}" == "x" ]]; then
+                    warn "curador ${nome} ausente ou sem permissão de execução em ${bin} — ${razao}; $(conselho_de_instalacao)"
+                else
+                    warn "arquivo ${nome} ausente em ${bin} — ${razao}; $(conselho_de_instalacao)"
+                fi
+            fi
             continue
         fi
         instaladas=$((instaladas + 1))
@@ -1607,8 +1617,8 @@ check_copias_do_wrapper() {
         cmp -s "${ROOT_DIR}/${fonte}" "${alvo}" || velhas="${velhas}${velhas:+, }${nome}"
     done
     if [[ -n "${velhas}" ]]; then
-        warn "cópia em ${bin} diferente deste checkout: ${velhas} — o lançamento roda a versão velha até reinstalar; $(conselho_de_instalacao) (as cópias em bin/ só se refazem no install)"
-    elif [[ "${instaladas}" -eq 3 ]]; then
+        warn "cópia em ${bin} diferente deste checkout: ${velhas} — o jogo roda com a versão velha dessas peças até reinstalar; $(conselho_de_instalacao) (as cópias em bin/ só se refazem no install)"
+    elif [[ "${instaladas}" -eq "${total}" ]]; then
         if esta_instalacao_e_um_checkout; then
             pass "wrapper e curadores do lançamento instalados e iguais a este checkout"
         else

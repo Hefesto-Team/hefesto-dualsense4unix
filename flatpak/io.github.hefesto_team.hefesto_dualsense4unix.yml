@@ -493,7 +493,7 @@ modules:
       #
       # Quem consome cada um (medido em `src/`, não citado de memória):
       #   doctor.sh                          cli/cmd_doctor.py:32 (o exame)
-      #   bluez_config.sh                    doctor.sh:2484 — dono único da
+      #   bluez_config.sh                    doctor.sh:2494 — dono único da
       #                                      config do BlueZ; quem leva o
       #                                      doctor leva ele (regra de PAR)
       #   disable_steam_input.sh             daemon_actions.py:913 e :1604

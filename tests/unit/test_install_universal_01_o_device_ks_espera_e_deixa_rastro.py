@@ -373,7 +373,10 @@ def test_doctor_sem_rastro_nao_inventa(tmp_path: Path) -> None:
 _COPIAS = {
     "hefesto-launch": RAIZ / "assets" / "hefesto-launch.sh",
     "hefesto-camadas": _MODULO.with_name("camadas_vulkan.py"),
+    "arquivo_de_terceiro.py": _MODULO.parents[1] / "utils" / "arquivo_de_terceiro.py",
     "hefesto-audio-ks": _MODULO,
+    "hefesto-leitor-do-estado": _MODULO.with_name("leitor_do_estado.py"),
+    "anticheat_conhecido.json": _MODULO.with_name("anticheat_conhecido.json"),
 }
 
 
@@ -388,7 +391,7 @@ def _instalar_copias(tmp_path: Path, *, sem: str = "", velha: str = "") -> None:
         if nome == velha:
             dado += "\n# a cópia de antes do git pull\n".encode()
         (binario / nome).write_bytes(dado)
-        (binario / nome).chmod(0o755)
+        (binario / nome).chmod(0o644 if nome.endswith((".py", ".json")) else 0o755)
 
 
 def test_doctor_copias_iguais_ao_checkout_passam(tmp_path: Path) -> None:
@@ -398,7 +401,7 @@ def test_doctor_copias_iguais_ao_checkout_passam(tmp_path: Path) -> None:
     assert "[ OK ] wrapper e curadores do lançamento instalados e iguais a este checkout" in saida
 
 
-def test_doctor_acusa_a_copia_velha_de_qualquer_dos_tres(tmp_path: Path) -> None:
+def test_doctor_acusa_a_copia_velha_de_qualquer_peca(tmp_path: Path) -> None:
     """A MORDIDA do `cmp`: tire a comparação e a cópia velha passa em verde."""
     for nome in _COPIAS:
         caso = tmp_path / nome

@@ -344,7 +344,7 @@ síntese ficou com o eixo 08 contra o 09).
 
 Médios: o backport do BlueZ trava as atualizações de segurança da distro (o
 apt nunca aplica, sobre a 5.86 da casa, a 5.72 que a distro publica em
-`noble-updates`), e o `scripts/doctor.sh:4741` dá FAIL e manda compilar; o
+`noble-updates`), e o `scripts/doctor.sh:4751` dá FAIL e manda compilar; o
 `.deb` não instala o broker e o Flatpak usa o runtime GNOME 47, fora de
 suporte; nenhuma distro imutável é reconhecida e a
 matriz do CI tem Fedora 40; o uninstall deixa 1,1 GB de tarballs do Proton e o
