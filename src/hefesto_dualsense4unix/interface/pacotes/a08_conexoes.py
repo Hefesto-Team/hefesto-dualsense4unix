@@ -2572,6 +2572,10 @@ ENTRADAS_DO_MODELO: dict[str, dict[str, tuple[str, str]]] = {
                "BTN_SELECT": ("select", "Select"), "BTN_START": ("start", "Start")},
 }
 O_DPAD_INTEIRO = {"8bitdo": "dpad"}
+MARCADA_DO_MODELO: dict[str, tuple[tuple[str, str], ...]] = {
+    "pro": ((".peca", "fill:#bd93f9"), (".regiao", "fill:#bd93f9;opacity:.55")),
+    "8bitdo": ((".peca", "stroke:#bd93f9"),),
+}
 _MODELO_DO_SIMBOLO = {"ext-pro": "pro", "ext-8bitdo": "8bitdo"}
 
 
@@ -2706,7 +2710,9 @@ def html_de_quem_recebe(r: _Rascunho | None, quem: list[tuple[str, str]],
 
 def css_do_brilho(r: _Rascunho | None, modelos: tuple[str, ...] = (MODELO_DUALSENSE,)) -> str:
     """Os botões que já recebem uma tecla acendem (o roxo do desenho), uma regra por desenho; a
-    janela só mostra o desenho do controle escolhido no seletor."""
+    janela só mostra o desenho do controle escolhido no seletor. No controle de fora a peça
+    acesa também se pinta como a ``g.marcada`` do próprio arquivo (`MARCADA_DO_MODELO`): o ZL do
+    Pro é uma região transparente, e só o brilho não o mostraria."""
     regras = []
     for modelo in modelos:
         pecas = [] if r is None else list(dict.fromkeys(
@@ -2714,6 +2720,9 @@ def css_do_brilho(r: _Rascunho | None, modelos: tuple[str, ...] = (MODELO_DUALSE
         if pecas:
             regras.append(",".join(f"#acionador #{PREFIXO_DA_PECA[modelo]}{p}" for p in pecas)
                           + _BRILHO_DO_DESTINO.format())
+            regras.extend(",".join(f"#acionador #{PREFIXO_DA_PECA[modelo]}{p}>{filho}"
+                                   for p in pecas) + "{" + cor + "}"
+                          for filho, cor in MARCADA_DO_MODELO.get(modelo, ()))
     return "".join(regras)
 
 

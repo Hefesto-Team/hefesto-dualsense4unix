@@ -235,6 +235,24 @@ def test_a_linha_do_servico_mudando_tem_o_texto_do_desenho() -> None:
         "Parando; volta sozinho quando o reinício terminar")
 
 
+def test_a_dica_do_parando_com_outro_aviso_do_servico_fecha_a_frase(a09: Any) -> None:
+    """D-2011-O-SERVICO-IMPROVISADO-SO-SE-DIZ-COM-PROVA: a dica sem ponto não cola na seguinte.
+
+    A dica do parando é a do desenho, sem ponto final; com outro aviso do tema na mesma linha, as
+    duas frases ficam separadas por ponto, nunca «terminar A captura».
+
+    MORDIDA: junte a dica principal às outras sem o ponto em ``_na_linha_do_tema``.
+    """
+    from hefesto_dualsense4unix.interface import sistema
+
+    cara = sistema.status_do_servico("mudando", {})
+    aviso = {"cls": "aviso", "txt": "A captura de tela voltou à da distribuição",
+             "curta": "A captura de tela voltou à da distribuição"}
+    linha = a09._na_linha_do_tema("serviço", cara, [aviso])
+    assert linha["dica"] == (f"{sistema.DICA_DO_SERVICO_MUDANDO}. "
+                             "A captura de tela voltou à da distribuição.")
+
+
 def test_o_estado_novo_e_de_pe_para_a_tela_mas_nao_para_o_corrigir() -> None:
     """D-2011-O-SERVICO-IMPROVISADO-SO-SE-DIZ-COM-PROVA: ``mudando`` está nos estados de pé."""
     from hefesto_dualsense4unix.interface import sistema

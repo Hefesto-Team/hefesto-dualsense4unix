@@ -1381,7 +1381,8 @@ def _na_linha_do_tema(tema: str, cara: dict[str, Any],
     curta, destino = _cabeca_e_destino(pior)
     longa = _sem_o_prefixo_da_cura(str(pior.get("dica") or pior.get("txt") or ""))
     outras = [_cabeca_e_destino(a)[0] for a in todas if a is not pior]
-    dica = " ".join([longa, *(f"{o.rstrip('.')}." for o in outras if o)])
+    fecho = "" if longa.endswith((".", "!", "?", "…")) or not outras else "."
+    dica = " ".join([longa + fecho, *(f"{o.rstrip('.')}." for o in outras if o)])
     return {**pior, "id": cara.get("id", ""), "tema": tema, "txt": curta, "curta": curta,
             "dica": dica, "href": destino}
 

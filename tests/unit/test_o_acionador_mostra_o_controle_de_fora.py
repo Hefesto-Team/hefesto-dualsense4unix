@@ -186,6 +186,37 @@ def test_as_tabelas_do_pacote_sao_as_do_arquivo_e_cobrem_todo_botao_que_troca(
             assert a08.botao_da_peca(peca, modelo) == motor
 
 
+def _marcada_do_arquivo(arquivo: str) -> tuple[tuple[str, str], ...]:
+    estilo = re.search(r"<style>(.*?)</style>", (ARTE / arquivo).read_text(encoding="utf-8"), re.S)
+    assert estilo is not None
+    achadas = []
+    for seletores, corpo in re.findall(r"([^{}]+)\{([^{}]*)\}", estilo.group(1)):
+        cor = ";".join(d.replace(" ", "") for d in corpo.split(";") if d.strip())
+        achadas += [(s.split(">", 1)[1].strip(), cor) for s in seletores.split(",")
+                    if s.strip().startswith("g.marcada")]
+    return tuple(achadas)
+
+
+@pytest.mark.parametrize(("modelo", "arquivo"), [("pro", "nintendo-pro.svg"),
+                                                 ("8bitdo", "8bitdo-sn30-pro.svg")])
+def test_a_peca_acesa_do_controle_de_fora_se_pinta_como_a_marcada_do_arquivo(
+        a08: Any, monkeypatch: pytest.MonkeyPatch, modelo: str, arquivo: str) -> None:
+    """D-2011-O-ACIONADOR-DESENHA-O-CONTROLE-DE-FORA-PELO-MODELO: o ZL do Pro acende de roxo.
+
+    O ZL do Pro é uma região transparente: só o brilho não o mostra. A peça acesa leva o
+    preenchimento (ou o contorno, no 8BitDo) da ``g.marcada`` do próprio arquivo, como no desenho.
+
+    MORDIDA: tire de ``css_do_brilho`` as regras de ``MARCADA_DO_MODELO``.
+    """
+    assert a08.MARCADA_DO_MODELO[modelo] == _marcada_do_arquivo(arquivo)
+    de_fora = a08.campos_do_acionador(_cena(a08, monkeypatch, PRO, TECLAS))[
+        "acionador-brilho-de-fora"]
+    prefixo = a08.PREFIXO_DA_PECA[modelo]
+    for filho, cor in a08.MARCADA_DO_MODELO[modelo]:
+        assert (f"#acionador #{prefixo}b>{filho},#acionador #{prefixo}a>{filho},"
+                f"#acionador #{prefixo}zl>{filho}{{{cor}}}") in de_fora
+
+
 def test_a_janela_do_mockup_traz_os_tres_desenhos_e_o_seletor_escolhe_o_que_aparece(
         a08: Any) -> None:
     """D-2011-O-ACIONADOR-DESENHA-O-CONTROLE-DE-FORA-PELO-MODELO: os três desenhos na janela.
