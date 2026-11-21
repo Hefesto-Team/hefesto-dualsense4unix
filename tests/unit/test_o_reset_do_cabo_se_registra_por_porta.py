@@ -440,6 +440,8 @@ def test_o_doctor_diz_a_porta_a_contagem_e_o_hub(tmp_path: Path) -> None:
     assert f"INFO   porta {ATRAS_DO_HUB}, atrás do hub 3-1.1 (Controle): 2 vez(es)" in saida, saida
     assert "WARN todos os resets foram em portas atrás de hub (3-1.1)" in saida, saida
     assert "nenhum em porta do computador: a queda acompanha o hub" in saida, saida
+    assert "ligue o aparelho direto numa porta do computador" in saida, (
+        "o reset atrás do hub pode ser do adaptador de rádio, não só do controle")
 
 
 def test_o_doctor_sem_diario_nao_inventa_contagem(tmp_path: Path) -> None:

@@ -3319,7 +3319,7 @@ PY
         case "${marca}" in
             total) warn "${texto}" ;;
             porta) info "  ${texto}" ;;
-            hub) warn "${texto}. É o suspeito a trocar primeiro: ligue o controle direto numa porta do computador, ou troque o hub (de preferência um com fonte própria)" ;;
+            hub) warn "${texto}. É o suspeito a trocar primeiro: ligue o aparelho direto numa porta do computador, ou troque o hub (de preferência um com fonte própria)" ;;
             vazio) info "${texto}" ;;
         esac
     done <<<"${saida}"
