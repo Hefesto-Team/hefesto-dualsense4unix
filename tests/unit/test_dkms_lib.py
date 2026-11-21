@@ -558,6 +558,7 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
     def test_sem_a_chave_o_modulo_instalado_sai_de_cada_kernel_e_o_initramfs_se_refaz(
         self, tmp_path: Path
     ) -> None:
+        """D-2011-SEM-A-CHAVE-NA-MOK-O-MODULO-DA-CASA-SAI."""
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
         saida, lidas = self._instalar(tmp_path, estado, self.STATUS)
         for kernel in ("7.1.5-generic", "7.0.1-generic", "6.9.0-generic"):
