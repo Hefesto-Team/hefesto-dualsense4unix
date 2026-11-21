@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shutil
 import tempfile
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -165,6 +166,7 @@ def _correr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         finally:
             cliente.fechar()
             await porta.parar()
+            shutil.rmtree(caminho.parent, ignore_errors=True)
 
     return asyncio.run(corrida())
 
