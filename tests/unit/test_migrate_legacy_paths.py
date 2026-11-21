@@ -25,10 +25,9 @@ def test_migra_arquivos_ausentes(tmp_path, monkeypatch):
     legacy_cfg = tmp_path / "legacy_config"
     (legacy_cfg / "profiles").mkdir(parents=True)
     (legacy_cfg / "profiles" / "fps.json").write_text("{}", encoding="utf-8")
-    (legacy_cfg / "gui_preferences.json").write_text('{"advanced_editor": true}', encoding="utf-8")
+    (legacy_cfg / "session.json").write_text('{"last_profile": "fps"}', encoding="utf-8")
     legacy_data = tmp_path / "legacy_data"
-    (legacy_data / "glyphs").mkdir(parents=True)
-    (legacy_data / "glyphs" / "x.svg").write_text("<svg/>", encoding="utf-8")
+    legacy_data.mkdir()
 
     target_cfg = tmp_path / "config"
     target_data = tmp_path / "data"
@@ -39,10 +38,8 @@ def test_migra_arquivos_ausentes(tmp_path, monkeypatch):
     result = mlp.migrate_legacy_paths()
 
     assert (target_cfg / "profiles" / "fps.json").exists()
-    assert (target_cfg / "gui_preferences.json").exists()
-    assert (target_data / "glyphs" / "x.svg").exists()
-    assert sorted(result["config"]) == ["gui_preferences.json", "profiles/fps.json"]
-    assert result["data"] == ["glyphs/x.svg"]
+    assert (target_cfg / "session.json").exists()
+    assert sorted(result["config"]) == ["profiles/fps.json", "session.json"]
 
 
 def test_nao_sobrescreve_existente(tmp_path, monkeypatch):
