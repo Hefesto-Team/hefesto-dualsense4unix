@@ -141,8 +141,12 @@ class Ouvido:
             subiu_em=relogio(),
             relogio=relogio,
             agora=agora,
+            reset_da_porta=self._o_ultimo_reset_da,
         )
         self._gravado: dict[str, Any] = {}
+
+    def _o_ultimo_reset_da(self, porta: str) -> float | None:
+        return diario_do_usb.ultimo_reset_da_porta(diario_do_usb.ler(self.diario), porta)
 
     def _registrar(self, o_que: str, campos: dict[str, Any], **extras: Any) -> None:
         diario_do_usb.registrar(

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)|playstation 0005:[0-9a-f:.]+: probe with driver playstation failed"
+GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)|: reset [a-z -]+ usb device number [0-9]+ using|playstation 0005:[0-9a-f:.]+: probe with driver playstation failed"
 
 _escolher_awk() {
     if [[ -z "$(awk -W interactive 'BEGIN { exit 0 }' </dev/null 2>&1 || echo falhou)" ]]; then
@@ -43,6 +43,7 @@ classify() {
         if (low ~ /joycon_enforce_subcmd_rate/) tag = "[JOYCON]"
         else if (low ~ /probe - fail = -|failed to get joycon info|init over bluetooth failed/) tag = "[JOYCON-PROBE]"
         else if (low ~ /playstation 0005:[0-9a-f:.]+: probe with driver playstation failed/) tag = "[PROBE-PERDIDA]"
+        else if (low ~ /: reset [a-z -]+ usb device number [0-9]+ using/) tag = "[USB-RESET]"
         else if (low ~ /error -71|can.t add hid device|device descriptor read\/64, error|not accepting address|unable to enumerate usb device/) tag = "[USB-71]"
         else if (low ~ /output queue is full/) { tag = "[FILA-CHEIA]"; borda = 1 }
         else if (low ~ /bt socket write error/) { tag = "[BT-SOCKET]"; borda = 1 }
@@ -189,6 +190,36 @@ lugar_da_porta() {
     return 0
 }
 
+python_do_produto() {
+    local py="${HEFESTO_KERNELWATCH_PYTHON:-}" lancador linha=""
+    lancador="${HEFESTO_KERNELWATCH_LANCADOR:-${HOME}/.local/bin/hefesto-dualsense4unix}"
+    if [[ -z "${py}" && -r "${lancador}" ]]; then
+        IFS= read -r linha <"${lancador}" || true
+        [[ "${linha}" == "#!"* ]] && py="${linha#\#!}"
+    fi
+    [[ -n "${py}" && -x "${py}" ]] && printf '%s\n' "${py}"
+    return 0
+}
+
+registrar_o_reset() {
+    local quando="$1" mensagem="$2" py rc
+    py="$(python_do_produto)"
+    if [[ -z "${py}" ]]; then
+        printf '# %s kernel-watch: o reset não entrou no usb-diario, o python do produto não foi achado: %s\n' \
+            "$(date '+%F %T')" "${mensagem}"
+        return 0
+    fi
+    timeout 30 "${py}" -m hefesto_dualsense4unix.integrations.diario_do_usb reset \
+        --quando "${quando}" --mensagem "${mensagem}" --raiz-usb "${SYSFS_USB}" \
+        </dev/null >/dev/null 2>&1
+    rc=$?
+    if (( rc != 0 && rc != 3 )); then
+        printf '# %s kernel-watch: o reset não entrou no usb-diario (saída %d): %s\n' \
+            "$(date '+%F %T')" "${rc}" "${mensagem}"
+    fi
+    return 0
+}
+
 _RELIGA_O_CABO='\[usb-71\] usbhid [0-9.:-]+: (can.t add hid device|probe with driver usbhid failed)'
 pede_religar() {
     local baixa="${1,,}"
@@ -227,15 +258,24 @@ religar_em_fundo() {
 }
 
 anotar() {
-    local trava="${1:-}" linha porta lugar
+    local trava="${1:-}" linha porta lugar reset_de="" reset_em=""
     while IFS= read -r linha || [[ -n "${linha}" ]]; do
-        if [[ "${linha}" == *" [USB-71] "* && "${linha}" != *" · lugar "* ]]; then
+        reset_de=""
+        if [[ "${linha}" == *" [USB-RESET] "* && "${linha}" != *" · lugar "* ]]; then
+            reset_em="${linha%% *}"
+            reset_de="${linha#* \[USB-RESET\] }"
+            porta="$(porta_da_mensagem "${reset_de}")"
+            lugar=""
+            [[ -n "${porta}" ]] && lugar="$(lugar_da_porta "${porta}")"
+            [[ -n "${lugar}" ]] && linha="${linha} · lugar ${lugar}"
+        elif [[ "${linha}" == *" [USB-71] "* && "${linha}" != *" · lugar "* ]]; then
             porta="$(porta_da_mensagem "${linha#* \[USB-71\] }")"
             lugar=""
             [[ -n "${porta}" ]] && lugar="$(lugar_da_porta "${porta}")"
             [[ -n "${lugar}" ]] && linha="${linha} · lugar ${lugar}"
         fi
         printf '%s\n' "${linha}"
+        [[ -n "${reset_de}" ]] && registrar_o_reset "${reset_em}" "${reset_de}"
         if [[ -n "${trava}" ]] && pede_religar "${linha}"; then
             religar_em_fundo "${trava}"
         fi
@@ -315,7 +355,7 @@ mapfile -t DESDE < <(desde_do_journal "${STATE_DIR}/kernel-watch.boot" \
 if [[ "${DESDE[0]:-}" == "-b" ]]; then
     echo "# $(date '+%F %T') kernel-watch: primeira volta deste boot — relendo o arranque (o -71 da enumeração nasce antes da vigia)" >>"${LOG}"
 fi
-echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE PROBE-PERDIDA FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo; o -71 leva o lugar; a probe perdida chama o religar)" >>"${LOG}"
+echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 USB-RESET JOYCON JOYCON-PROBE PROBE-PERDIDA FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo; o -71 e o reset levam o lugar, e o reset entra no usb-diario; a probe perdida chama o religar)" >>"${LOG}"
 
 bt_delta_loop &
 trap 'kill $(jobs -p) 2>/dev/null' EXIT

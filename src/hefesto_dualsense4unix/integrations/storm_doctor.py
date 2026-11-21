@@ -22,8 +22,9 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import warnings
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -869,6 +870,97 @@ def quedas(eventos: Iterable[EventoDoRadio]) -> list[EventoDoRadio]:
     return [e for e in eventos if e.familia == FAMILIA_DA_QUEDA and e.borda]
 
 
+JANELA_DOS_RESETS_DIAS = 7
+
+
+@dataclass(frozen=True)
+class ResetsDaPorta:
+    """Os resets do kernel numa porta, na janela: quantos, quando o último, atrás de que hubs."""
+
+    lugar: str
+    porta: str
+    quantos: int
+    ultimo: float
+    hubs: tuple[str, ...]
+    tipos: tuple[str, ...]
+
+
+def _lugar_da_entrada(entrada: Mapping[str, Any]) -> str:
+    from hefesto_dualsense4unix.utils.lugar import lugar_de
+
+    porta = str(entrada.get("no") or "")
+    controladora = str(entrada.get("controladora") or "")
+    devpath = porta.partition("-")[2]
+    return lugar_de(controladora, devpath) or porta
+
+
+def contar_os_resets(
+    entradas: Iterable[Mapping[str, Any]],
+    *,
+    agora: float,
+    dias: int = JANELA_DOS_RESETS_DIAS,
+) -> list[ResetsDaPorta]:
+    """Os ``resetou`` do ``usb-diario`` dos últimos ``dias``, por porta, do mais frequente ao menos.
+
+    A porta é o lugar físico (controladora e caminho), não o número do barramento, que muda de boot
+    para boot. Cada porta conta só os resets da própria porta, seja qual for o aparelho encaixado.
+    """
+    corte = agora - dias * 86400.0
+    por_lugar: dict[str, list[Mapping[str, Any]]] = {}
+    for entrada in entradas:
+        if entrada.get("o_que") != "resetou" or float(entrada.get("carimbo") or 0.0) < corte:
+            continue
+        por_lugar.setdefault(_lugar_da_entrada(entrada), []).append(entrada)
+    contagem: list[ResetsDaPorta] = []
+    for lugar, linhas in por_lugar.items():
+        ultima = max(linhas, key=lambda e: float(e["carimbo"]))
+        contagem.append(ResetsDaPorta(
+            lugar=lugar,
+            porta=str(ultima.get("no") or ""),
+            quantos=len(linhas),
+            ultimo=float(ultima["carimbo"]),
+            hubs=tuple(str(h) for h in ultima.get("hubs") or ()),
+            tipos=tuple(sorted({str(e["tipo"]) for e in linhas if e.get("tipo")})),
+        ))
+    return sorted(contagem, key=lambda c: (-c.quantos, c.porta))
+
+
+def laudo_dos_resets(contagem: Sequence[ResetsDaPorta]) -> list[tuple[str, str]]:
+    """``(marca, texto)``: ``total``, ``porta`` (uma por porta), ``hub`` ou ``vazio``.
+
+    O ``hub`` só sai quando há reset atrás de hub e nenhum em porta do computador.
+    """
+    if not contagem:
+        return [("vazio", "nenhum reset de aparelho USB registrado nos últimos "
+                 f"{JANELA_DOS_RESETS_DIAS} dias")]
+    total = sum(c.quantos for c in contagem)
+    laudo = [("total", f"{total} reset(s) de aparelho USB nos últimos {JANELA_DOS_RESETS_DIAS} "
+              f"dias, em {len(contagem)} porta(s)")]
+    for c in contagem:
+        atras = f", atrás do hub {c.hubs[0]}" if c.hubs else ", direto no computador"
+        quem = f" ({', '.join(c.tipos)})" if c.tipos else ""
+        quando = datetime.fromtimestamp(c.ultimo).strftime("%d/%m")
+        laudo.append((
+            "porta", f"porta {c.porta}{atras}{quem}: {c.quantos} vez(es), a última em {quando}"))
+    com_hub = [c for c in contagem if c.hubs]
+    if com_hub and len(com_hub) == len(contagem):
+        hubs = sorted({c.hubs[0] for c in com_hub})
+        laudo.append(("hub", f"todos os resets foram em portas atrás de hub ({', '.join(hubs)}) e "
+                      "nenhum em porta do computador: a queda acompanha o hub"))
+    return laudo
+
+
+def laudo_dos_resets_do_diario(
+    caminho: Path | None = None, *, agora: float | None = None
+) -> list[tuple[str, str]]:
+    """O laudo dos resets lido do ``usb-diario`` (com o girado)."""
+    from hefesto_dualsense4unix.integrations import diario_do_usb
+
+    entradas = diario_do_usb.ler(caminho)
+    return laudo_dos_resets(
+        contar_os_resets(entradas, agora=time.time() if agora is None else agora))
+
+
 def _safe_read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="ignore")
@@ -883,11 +975,13 @@ __all__ = [
     "GESTO_DE_ATUALIZAR",
     "GESTO_DE_INSTALAR",
     "JANELA_DA_RAJADA_S",
+    "JANELA_DOS_RESETS_DIAS",
     "NOME_DA_DEPENDENCIA",
     "PACOTE_POR_FORMATO",
     "PREFIXO_DA_CURA",
     "ContagemDaFamilia",
     "EventoDoRadio",
+    "ResetsDaPorta",
     "check_authorized_rule",
     "check_quirk",
     "check_snd_audio_healthy",
@@ -895,12 +989,15 @@ __all__ = [
     "check_steam_input",
     "check_wireplumber",
     "classificar_o_historico",
+    "contar_os_resets",
     "contar_placas_dualsense",
     "controles_no_cabo",
     "find_localconfig_vdfs",
     "formato_desta_instalacao",
     "gesto_de_atualizar",
     "gesto_de_instalar",
+    "laudo_dos_resets",
+    "laudo_dos_resets_do_diario",
     "ler_eventos_do_radio",
     "quedas",
     "rotulo_do_botao",

@@ -75,7 +75,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
         "`install.sh:3754` (`PROTON_PIN_PY`, com `--ensure`) e "
         "`uninstall.sh:1695` (`PROTON_PIN_PY`) o rodam; "
-        "`scripts/doctor.sh:3926` (`check_proton_pin`, --report) também",
+        "`scripts/doctor.sh:3964` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
@@ -99,7 +99,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "`scripts/doctor.sh:3867` (`check_exame_da_mesa`) o roda — e o "
+        "`scripts/doctor.sh:3905` (`check_exame_da_mesa`) o roda — e o "
         "`install.sh:3996` (`bash`) roda o doctor",
     ),
     "mods/por_dentro_da_caixa.py": (

@@ -3287,6 +3287,44 @@ PY
     fi
 }
 
+check_resets_do_usb() {
+    local diario="${HEFESTO_USB_DIARIO:-${HOME}/.local/state/hefesto-dualsense4unix/usb-diario.jsonl}"
+    local py saida marca texto
+    [[ -f "${diario}" ]] || return 0
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python para contar os resets USB por porta"; return; }
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - "${diario}" <<'PY' 2>/dev/null
+import os
+import sys
+from pathlib import Path
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.integrations.storm_doctor import laudo_dos_resets_do_diario
+except Exception:  # noqa: BLE001
+    print("sem-produto")
+    raise SystemExit(0)
+for marca, texto in laudo_dos_resets_do_diario(Path(sys.argv[1])):
+    print(f"{marca}\t{texto}")
+PY
+)" || saida=""
+    if [[ -z "${saida}" || "${saida}" == "sem-produto" ]]; then
+        info "NÃO SEI contar os resets USB por porta: o storm_doctor não está ao alcance do python ${py}"
+        return
+    fi
+    while IFS=$'\t' read -r marca texto; do
+        [[ -n "${texto}" ]] || continue
+        case "${marca}" in
+            total) warn "${texto}" ;;
+            porta) info "  ${texto}" ;;
+            hub) warn "${texto}. É o suspeito a trocar primeiro: ligue o controle direto numa porta do computador, ou troque o hub (de preferência um com fonte própria)" ;;
+            vazio) info "${texto}" ;;
+        esac
+    done <<<"${saida}"
+}
+
 check_cmdline_platform() {
     local owners="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
     local tok ativo agendado bateria=0 lido backend seguintes recusa
@@ -6497,6 +6535,7 @@ main() {
     check_bt_crc_counters
     check_kernel_watch
     check_familias_do_radio
+    check_resets_do_usb
     check_cmdline_platform
     check_cmdline_pad_virtual
     hdr "rádio e pareamento (G2)"
