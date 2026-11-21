@@ -353,3 +353,25 @@ def test_cada_leitor_do_grafo_tem_a_sua_memoria() -> None:
     assert _nome_de_cada(ps.completar_o_json(pactl, um)) == {1: JOGOS[1]}
     assert _nome_de_cada(ps.completar_o_json(pactl, outro)) == {1: "Outro™"}
     assert (um.lidas, outro.lidas) == (1, 1)
+
+
+class _GrafoSemReferenciaFraca:
+    """Um leitor que não aceita referência fraca: completa, sem memória."""
+
+    __slots__ = ("grafo",)
+
+    def __init__(self, grafo: _Grafo) -> None:
+        self.grafo = grafo
+
+    def ler(self) -> str | None:
+        return self.grafo()
+
+
+def test_o_leitor_sem_referencia_fraca_completa_e_rele_a_cada_nulo() -> None:
+    grafo = _Grafo([_no_do_grafo(1, JOGOS[1])])
+    leitor = _GrafoSemReferenciaFraca(grafo).ler
+    pactl = _lista({1: JOGOS[1]})
+
+    assert _nome_de_cada(ps.completar_o_json(pactl, leitor)) == {1: JOGOS[1]}
+    assert _nome_de_cada(ps.completar_o_json(pactl, leitor)) == {1: JOGOS[1]}
+    assert grafo.lidas == 2, "sem memória, cada releitura com nulo vai ao grafo"

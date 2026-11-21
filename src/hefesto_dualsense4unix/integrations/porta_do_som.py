@@ -431,17 +431,17 @@ def _memoria_de(leitor: Grafo) -> Memoria | None:
     """A memória deste leitor do grafo: cada leitor (e cada grafo de mentira) tem a sua.
 
     O leitor padrão é o do retrato, que se resolve na hora da pergunta: trocá-lo dá memória nova.
+    Leitor que não aceita referência fraca fica sem memória e relê o grafo a cada nulo.
     """
     dono: object = getattr(leitor, "__self__", leitor)
     if dono is ler_o_grafo:
         from hefesto_dualsense4unix.integrations import retrato_do_som
 
         dono = retrato_do_som.ler_o_pw_dump
-    try:
-        with _TRAVA_DA_MEMORIA:
-            return _MEMORIAS_DO_GRAFO.setdefault(dono, {})
-    except TypeError:
+    if type(dono).__weakrefoffset__ == 0:
         return None
+    with _TRAVA_DA_MEMORIA:
+        return _MEMORIAS_DO_GRAFO.setdefault(dono, {})
 
 
 def _esquecer_os_que_sairam(memoria: Memoria, objetos: Iterable[Mapping[str, Any]]) -> None:
