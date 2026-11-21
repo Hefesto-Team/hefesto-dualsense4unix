@@ -106,7 +106,7 @@ def test_mouse_daemon_offline_mensagem_clara(mock_ipc: dict[str, Any]) -> None:
     mock_ipc["raise"] = FileNotFoundError("no socket")
     result = runner.invoke(app, ["mouse", "on"])
     assert result.exit_code == 3
-    assert "offline" in result.output
+    assert "parado" in result.output
 
 
 def test_mouse_ipc_error_mensagem_clara(mock_ipc: dict[str, Any]) -> None:

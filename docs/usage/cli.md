@@ -223,6 +223,20 @@ valores vivos de cada controle.
 um jogo, prioridades empatadas) e sai com `1` quando acha algo grave. Ele avisa e
 não reescreve arquivo nenhum.
 
+## Códigos de saída
+
+| Código | Quando |
+|---|---|
+| `0` | o pedido foi atendido |
+| `1` | o serviço não respondeu a tempo, ou nenhum controle recebeu o pedido |
+| `2` | o serviço recusou o pedido, ou o comando recebeu argumento que não serve |
+| `3` | o serviço está parado |
+
+Com o serviço parado, todo comando que precisa dele diz a mesma frase, «O serviço do
+Hefesto está parado. Suba com `hefesto-dualsense4unix daemon start`.», e sai com `3`.
+Os que têm leitura ou aplicação direta no controle (`status`, `battery`, `test`,
+`profile activate`) seguem direto ao controle nesse caso.
+
 ## `esquecer-controles`
 
 Faz o Hefesto esquecer os controles, como numa máquina nova, e os devolve

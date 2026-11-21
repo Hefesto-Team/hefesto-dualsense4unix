@@ -152,7 +152,7 @@ def test_apply_daemon_recusa_ipc_error(
     draft.write_text(json.dumps(_draft_json_valido()), encoding="utf-8")
 
     result = runner.invoke(app, ["profile", "apply", "--file", str(draft)])
-    assert result.exit_code == 0
+    assert result.exit_code == 2
     assert "recusou" in result.output
 
     from hefesto_dualsense4unix.utils import session, xdg_paths

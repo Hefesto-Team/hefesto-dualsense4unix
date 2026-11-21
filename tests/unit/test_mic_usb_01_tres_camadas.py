@@ -434,7 +434,7 @@ class TestCliMicFirmware:
         )
         with pytest.raises(typer.Exit) as exc:
             cmd_mic.mic_cmd("unmute")
-        assert exc.value.exit_code == 1
+        assert exc.value.exit_code == 3
 
     def test_promote_e_demote_mapeiam_para_o_script(self) -> None:
         """Entrega 3: rebaixar por default só é política se houver a subida."""

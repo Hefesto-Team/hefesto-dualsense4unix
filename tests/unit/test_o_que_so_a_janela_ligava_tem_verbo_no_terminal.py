@@ -257,7 +257,7 @@ def test_servico_fora_do_ar_sai_com_3(monkeypatch: pytest.MonkeyPatch) -> None:
     _com_cliente(monkeypatch, erro=FileNotFoundError("socket"))
     resultado = _rodar("freestyle", "on")
     assert resultado.exit_code == 3
-    assert "fora do ar" in resultado.output
+    assert "parado" in resultado.output
 
 
 def test_recusa_do_servico_diz_o_motivo_e_sai_com_2(monkeypatch: pytest.MonkeyPatch) -> None:
