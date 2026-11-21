@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1286579,
+      "piso": 1287454,
       "por_item": {
-        "docs": 107794,
+        "docs": 107801,
         "scripts": 115288,
-        "src": 325963,
-        "tests": 737534
+        "src": 326127,
+        "tests": 738238
       },
-      "razao": "tamanho: +1046 linhas (1285533 -> 1286579), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO; registrado no fecho, topo 29be09ef0fb0",
+      "razao": "tamanho: +875 linhas (1286579 -> 1287454), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO, D-2011-A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES, D-2011-O-LACO-DE-AUDIO-MORRE-COM-A-JANELA, D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG; registrado no fecho, topo 564f53118a39",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2199,10 +2199,16 @@
           "de": 1285533,
           "para": 1286579,
           "razao": "tamanho: +1046 linhas (1285533 -> 1286579), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO; registrado no fecho, topo 29be09ef0fb0"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1286579,
+          "para": 1287454,
+          "razao": "tamanho: +875 linhas (1286579 -> 1287454), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO, D-2011-A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES, D-2011-O-LACO-DE-AUDIO-MORRE-COM-A-JANELA, D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG; registrado no fecho, topo 564f53118a39"
         }
       ],
       "unidade": "linhas",
-      "universo": 3589
+      "universo": 3592
     }
   }
 }
