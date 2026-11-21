@@ -135,7 +135,7 @@ _ATRIBUTO_LIDO = re.compile(
     r"\b(?:title|placeholder|aria-label|alt)\s*=\s*(\"[^\"]*\"|'[^']*')", re.I
 )
 
-_TAG = re.compile(r"<[^>]*>", re.S)
+_TAG = re.compile(r"<(?:\"[^\"]*\"|'[^']*'|[^>\"'])*>", re.S)
 
 
 def _apagar(alvo: list[str], inicio: int, fim: int) -> None:
