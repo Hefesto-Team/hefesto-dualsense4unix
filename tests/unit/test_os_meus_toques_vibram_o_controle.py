@@ -406,8 +406,7 @@ class _MesaDeQuatro(Mesa):
 
 
 def test_a_haptica_do_jogo_de_um_controle_solta_so_o_motor_dele_nos_quatro() -> None:
-    """D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO: o zero é de cada controle, e o
-    estado dos toques mora no endereço, que atravessa a troca de cabo e rádio."""
+    """D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO: o zero é de cada controle."""
     mesa = _MesaDeQuatro()
     meus = _meus(mesa)
     todos = lambda _t: [Entrada(u, lx=255) for u in UNIQS]  # noqa: E731
