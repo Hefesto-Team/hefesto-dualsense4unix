@@ -75,22 +75,11 @@ def _bruto_para_pct(volume: int) -> int:
     return percentual_do_volume(volume)
 
 
-def _chamar(metodo: str, params: dict[str, Any]) -> tuple[str, Any]:
-    """Fala com o daemon. Devolve ("ok", resultado) | ("offline", None) | ("erro", msg)."""
-    import asyncio
+def _chamar(metodo: str, params: dict[str, Any]) -> Any:
+    """Fala com o serviço pelo invólucro único: parado sai com rc 3, recusa com rc 2."""
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import chamar
 
-    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
-
-    async def _rodar() -> tuple[str, Any]:
-        try:
-            async with IpcClient.connect() as client:
-                return "ok", await client.call(metodo, params)
-        except IpcError as exc:
-            return "erro", exc.message
-        except (FileNotFoundError, ConnectionError, OSError):
-            return "offline", None
-
-    return asyncio.run(_rodar())
+    return chamar(metodo, params, console_do_comando=console)
 
 
 def _bloco_speaker(payload: Any, uniq: str | None) -> dict[str, Any] | None:
@@ -152,9 +141,7 @@ def speaker_cmd(
     alvo: dict[str, Any] = {"uniq": uniq} if uniq else {}
 
     if action == "status":
-        estado, payload = _chamar("daemon.state_full", {})
-        if estado != "ok":
-            raise typer.Exit(code=_reclamar_do_daemon(estado, payload))
+        payload = _chamar("daemon.state_full", {})
         _imprimir_status(_bloco_speaker(payload, uniq))
         raise typer.Exit(code=0)
 
@@ -169,12 +156,12 @@ def speaker_cmd(
             console.print(f"[red]volume fora de 0-100: {value}[/red]")
             raise typer.Exit(code=2)
         bruto = _pct_para_bruto(value)
-        estado, resposta = _chamar("speaker.set", {"volume": bruto, **alvo})
-        raise typer.Exit(code=_relatar(estado, resposta, f"volume {value} %"))
+        resposta = _chamar("speaker.set", {"volume": bruto, **alvo})
+        raise typer.Exit(code=_relatar(resposta, f"volume {value} %"))
 
     if action == "release":
-        estado, resposta = _chamar("speaker.set", {"release": True, **alvo})
-        codigo = _relatar(estado, resposta, "posse devolvida")
+        resposta = _chamar("speaker.set", {"release": True, **alvo})
+        codigo = _relatar(resposta, "posse devolvida")
         if codigo == 0:
             console.print(
                 "  [dim]o hefesto parou de mandar o volume. O que estiver "
@@ -183,9 +170,7 @@ def speaker_cmd(
             )
         raise typer.Exit(code=codigo)
 
-    estado, payload = _chamar("daemon.state_full", {})
-    if estado != "ok":
-        raise typer.Exit(code=_reclamar_do_daemon(estado, payload))
+    payload = _chamar("daemon.state_full", {})
     if _bloco_speaker(payload, uniq) is None:
         console.print(
             "[yellow]não há volume conhecido para este controle[/yellow] — "
@@ -197,26 +182,12 @@ def speaker_cmd(
         )
         raise typer.Exit(code=1)
     mudo = action == "mute"
-    estado, resposta = _chamar("speaker.set", {"muted": mudo, **alvo})
-    raise typer.Exit(code=_relatar(estado, resposta, "mudo" if mudo else "ativo"))
+    resposta = _chamar("speaker.set", {"muted": mudo, **alvo})
+    raise typer.Exit(code=_relatar(resposta, "mudo" if mudo else "ativo"))
 
 
-def _reclamar_do_daemon(estado: str, mensagem: Any) -> int:
-    """Mensagem única para "daemon offline" e "daemon recusou". Devolve o rc."""
-    if estado == "offline":
-        console.print(
-            "[red]daemon offline[/red] — o volume do alto-falante só se altera "
-            "pelo daemon (inicie com 'hefesto-dualsense4unix daemon start')."
-        )
-    else:
-        console.print(f"[red]o daemon recusou o pedido[/red] — {mensagem}")
-    return 1
-
-
-def _relatar(estado: str, resposta: Any, pedido: str) -> int:
+def _relatar(resposta: Any, pedido: str) -> int:
     """Imprime o desfecho de um `speaker.set` e devolve o código de saída."""
-    if estado != "ok":
-        return _reclamar_do_daemon(estado, resposta)
     if not isinstance(resposta, dict) or resposta.get("status") != "ok":
         console.print(
             "[yellow]nenhum controle recebeu o pedido[/yellow] — conecte o "

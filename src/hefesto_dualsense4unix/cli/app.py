@@ -437,26 +437,10 @@ def daemon_status() -> None:
 
 def _toggle_pause(method: str, label: str) -> None:
     """Chama daemon.pause/resume via IPC (FEAT-DAEMON-PAUSE-RESUME-01)."""
-    import asyncio
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import chamar
 
-    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
-
-    async def _call() -> bool:
-        try:
-            async with IpcClient.connect() as client:
-                await client.call(method)
-                return True
-        except (FileNotFoundError, ConnectionError, IpcError):
-            return False
-
-    if asyncio.run(_call()):
-        typer.echo(f"daemon {label}")
-    else:
-        typer.echo(
-            "daemon offline — pausar/retomar exige o daemon rodando "
-            "(inicie com 'hefesto-dualsense4unix daemon start')"
-        )
-        raise typer.Exit(code=1)
+    chamar(method)
+    typer.echo(f"daemon {label}")
 
 
 @daemon_app.command("pause")

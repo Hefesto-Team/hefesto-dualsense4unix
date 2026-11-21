@@ -81,6 +81,10 @@ _ACOES_DE_VALOR = ("canal", "volume")
 
 _ACOES_BT = ("bt", "bt-status")
 
+_ACOES_ACEITAS = " | ".join(
+    (*_ACTION_FLAG, *_ACOES_FIRMWARE, *_ACOES_LED, *_ACOES_BT, *_ACOES_DE_VALOR)
+)
+
 _RECONCILIA_S = 5.0
 
 
@@ -121,11 +125,7 @@ def mic_cmd(
 
     flag = _ACTION_FLAG.get(action)
     if flag is None:
-        console.print(
-            f"[red]ação inválida: {action}[/red] — use: on | off | status | "
-            "promote | demote | mute | unmute | release | "
-            "led-on | led-off | led-release | bt | bt-status"
-        )
+        console.print(f"[red]ação inválida: {action}[/red] — use: {_ACOES_ACEITAS}")
         raise typer.Exit(code=2)
 
     script = _find_script()
@@ -192,29 +192,13 @@ def _mic_canal_ou_volume(action: str, valor: str | None, uniq: str | None) -> in
 
 def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
     """Manda `mic.led.set` ao daemon (MIC-DA-MESA-ELEICAO-01)."""
-    import asyncio
-
-    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import chamar
 
     payload: dict[str, object] = {"aceso": aceso}
     if uniq:
         payload["uniq"] = uniq
-
-    async def _chamar() -> dict[str, object] | None:
-        try:
-            async with IpcClient.connect() as client:
-                resposta = await client.call("mic.led.set", payload)
-        except (FileNotFoundError, ConnectionError, IpcError, OSError):
-            return None
-        return resposta if isinstance(resposta, dict) else {}
-
-    resultado = asyncio.run(_chamar())
-    if resultado is None:
-        console.print(
-            "[red]daemon offline[/red] — o LED do microfone só se altera pelo "
-            "daemon (inicie com 'hefesto-dualsense4unix daemon start')."
-        )
-        return 1
+    resposta = chamar("mic.led.set", payload)
+    resultado = resposta if isinstance(resposta, dict) else {}
     if resultado.get("status") != "ok":
         console.print(
             "[yellow]nenhum controle recebeu o pedido[/yellow] — conecte o "
@@ -232,30 +216,13 @@ def _mic_led(aceso: bool | None, *, uniq: str | None = None) -> int:
 
 def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:
     """Manda `mic.set` ao daemon e imprime o que o controle passou a declarar."""
-    import asyncio
-
-    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import chamar
 
     payload: dict[str, object] = {"muted": muted}
     if uniq:
         payload["uniq"] = uniq
-
-    async def _chamar() -> dict[str, object] | None:
-        try:
-            async with IpcClient.connect() as client:
-                resposta = await client.call("mic.set", payload)
-        except (FileNotFoundError, ConnectionError, IpcError, OSError):
-            return None
-        return resposta if isinstance(resposta, dict) else {}
-
-    resultado = asyncio.run(_chamar())
-    if resultado is None:
-        console.print(
-            "[red]daemon offline[/red] — o mudo do firmware só se altera pelo "
-            "daemon (inicie com 'hefesto-dualsense4unix daemon start'), ou "
-            "aperte o botão de microfone do controle."
-        )
-        return 1
+    resposta = chamar("mic.set", payload)
+    resultado = resposta if isinstance(resposta, dict) else {}
     if resultado.get("status") != "ok":
         console.print(
             "[yellow]nenhum controle recebeu o pedido[/yellow] — conecte o "

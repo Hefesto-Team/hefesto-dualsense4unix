@@ -236,25 +236,39 @@ def test_as_variantes_declaradas_existem_e_nao_sao_a_copia() -> None:
 
 COPIAS_DA_CHAMADA = {
     "cli/cmd_native.py::_call_sync": "é de outra sprint: migra quando o `cmd_native` mudar",
+    "cli/cmd_lightbar_reset.py::cmd_lightbar_reset": "é de outra sprint: migra com o módulo",
+    "cli/cmd_lightbar_reset.py::cmd_player_leds": "é de outra sprint: migra com o módulo",
 }
 
 
-def _copias_da_chamada(pasta: Path) -> set[str]:
-    """Toda função de `cli/` (fora do dono) cujo corpo é, inteiro, o de `chamar_o_daemon`."""
-    dono_ = ast.parse((SRC / "cli" / "chamada_ao_daemon.py").read_text(encoding="utf-8"))
-    funcao = next(
-        n for n in dono_.body if isinstance(n, ast.FunctionDef) and n.name == "chamar_o_daemon"
+def _sai_com_o_servico_parado(no: ast.AST) -> bool:
+    return any(
+        isinstance(x, ast.Raise)
+        and isinstance(x.exc, ast.Call)
+        and any(
+            kw.arg == "code" and isinstance(kw.value, ast.Constant) and kw.value.value == 3
+            for kw in x.exc.keywords
+        )
+        for x in ast.walk(no)
     )
-    alvo = ast.dump(ast.Module(body=funcao.body[1:], type_ignores=[]))
+
+
+def _chama_o_ipc_direto(no: ast.AST) -> bool:
+    return any(
+        isinstance(x, ast.Call) and isinstance(x.func, ast.Name) and x.func.id == "_run_call"
+        for x in ast.walk(no)
+    )
+
+
+def _copias_da_chamada(pasta: Path) -> set[str]:
+    """As funções de `cli/`, fora dos donos, que chamam o IPC e saem com o rc do serviço parado."""
     achados: set[str] = set()
     for arquivo in sorted(pasta.glob("*.py")):
-        if arquivo.name == "chamada_ao_daemon.py":
+        if arquivo.name in ("chamada_ao_daemon.py", "chamada_ao_servico.py"):
             continue
         for no in ast.walk(ast.parse(arquivo.read_text(encoding="utf-8"))):
-            if not isinstance(no, ast.FunctionDef) or not no.body:
-                continue
-            corpo = no.body[1:] if ast.get_docstring(no) is not None else no.body
-            if ast.dump(ast.Module(body=corpo, type_ignores=[])) == alvo:
+            if isinstance(no, ast.FunctionDef) and _chama_o_ipc_direto(no) \
+                    and _sai_com_o_servico_parado(no):
                 achados.add(f"cli/{arquivo.name}::{no.name}")
     return achados
 
@@ -288,6 +302,7 @@ def test_o_dono_da_chamada_responde_o_prazo_a_recusa_e_o_daemon_fora(
 
     from hefesto_dualsense4unix.app import ipc_bridge
     from hefesto_dualsense4unix.cli.chamada_ao_daemon import chamar_o_daemon
+    from hefesto_dualsense4unix.cli.chamada_ao_servico import FRASE_DO_SERVICO_PARADO
     from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     def com(excecao: BaseException | None, devolve: Any = None) -> None:
@@ -308,13 +323,13 @@ def test_o_dono_da_chamada_responde_o_prazo_a_recusa_e_o_daemon_fora(
     with pytest.raises(typer.Exit) as recusa:
         chamar_o_daemon(console, "coop.set", {"enabled": True})
     assert recusa.value.exit_code == 2
-    assert "daemon recusou chamada" in saida.getvalue()
+    assert "o serviço recusou o pedido" in saida.getvalue()
 
     com(ConnectionRefusedError("sem socket"))
     with pytest.raises(typer.Exit) as fora:
         chamar_o_daemon(console, "daemon.state_full")
     assert fora.value.exit_code == 3
-    assert "daemon offline" in saida.getvalue()
+    assert FRASE_DO_SERVICO_PARADO in saida.getvalue()
 
 
 def test_as_duas_bordas_do_custom_mult_chamam_a_mesma_regra() -> None:

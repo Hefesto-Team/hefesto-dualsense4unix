@@ -522,7 +522,7 @@ class TestCliSpeaker:
         )
         with pytest.raises(typer.Exit) as exc:
             cmd_speaker.speaker_cmd("release")
-        assert exc.value.exit_code == 1
+        assert exc.value.exit_code == 3
 
     def test_o_comando_esta_registrado_no_cli(self) -> None:
         """O verbo tem de existir no app Typer — sem isso nada acima é alcançável."""
