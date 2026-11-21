@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import pwd
 import re
 import shutil
 import subprocess
@@ -16,6 +18,8 @@ PDP_ESTREITA = (
     'ACTION!="remove", KERNEL=="hidraw*", ATTRS{idVendor}=="0e6f", '
     'ATTRS{idProduct}=="0185", MODE="0666", TAG+="uaccess"'
 )
+CONTA = pwd.getpwuid(os.getuid()).pw_name
+
 MANTA = 'KERNEL=="hidraw*", MODE="0666"'
 
 
@@ -264,12 +268,12 @@ class TestACuraAge:
     def test_a_cura_preserva_a_acl_do_uaccess(self, ensaio: Ensaio) -> None:
         """O uaccess do logind é uma ACL nomeada, e tem de sobreviver."""
         p = ensaio.no("hidraw0", 0o666, "1234", "5678")
-        subprocess.run(["setfacl", "-m", "u:nobody:rw", str(p)], check=True, timeout=30)
+        subprocess.run(["setfacl", "-m", f"u:{CONTA}:rw", str(p)], check=True, timeout=30)
         ensaio.cura()
         acl = subprocess.run(
             ["getfacl", "-p", str(p)], capture_output=True, text=True, check=True, timeout=30
         ).stdout
-        assert "user:nobody:rw-" in acl, acl
+        assert f"user:{CONTA}:rw-" in acl, acl
         assert "mask::rw-" in acl, acl
         assert "other::---" in acl, acl
 
@@ -280,14 +284,14 @@ class TestACuraAge:
     def test_a_cura_nao_alarga_a_mascara_da_acl(self, ensaio: Ensaio) -> None:
         """É por isto que o mecanismo é `chmod o=` e não `chmod 0660`."""
         p = ensaio.no("hidraw0", 0o666, "1234", "5678")
-        subprocess.run(["setfacl", "-m", "u:nobody:rwx", str(p)], check=True, timeout=30)
+        subprocess.run(["setfacl", "-m", f"u:{CONTA}:rwx", str(p)], check=True, timeout=30)
         subprocess.run(["setfacl", "-m", "m::r", str(p)], check=True, timeout=30)
         ensaio.cura()
         acl = subprocess.run(
             ["getfacl", "-p", str(p)], capture_output=True, text=True, check=True, timeout=30
         ).stdout
         assert "mask::r--" in acl, f"a máscara foi ALARGADA pelo restauro:\n{acl}"
-        assert "#effective:r--" in acl, f"nobody ganhou escrita que estava mascarada:\n{acl}"
+        assert "#effective:r--" in acl, f"{CONTA} ganhou escrita que estava mascarada:\n{acl}"
         assert "other::---" in acl, acl
 
 

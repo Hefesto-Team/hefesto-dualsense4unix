@@ -266,6 +266,11 @@ def _fazer_dubles(raiz: Path) -> Dubles:
             "echo 'TX bytes:50 acl:1 sco:0 commands:3 errors:0'",
         ),
     )
+    chown_real = shutil.which("chown", path="/usr/bin:/bin")
+    assert chown_real
+    _executavel(
+        bin_ / "chown", _REGISTRA.format(nome="chown", resto=f'exec {chown_real} "$@"')
+    )
     for recusado in ("hcitool", "bluetoothctl"):
         _executavel(bin_ / recusado, _REGISTRA.format(nome=recusado, resto="exit 1"))
     return d
@@ -276,10 +281,30 @@ def dubles(tmp_path: Path) -> Dubles:
     return _fazer_dubles(tmp_path)
 
 
+def _gid_existe(gid: int) -> bool:
+    """O grupo está no espaço de usuário de quem roda (na ilha só o primário está)."""
+    with open("/proc/self/gid_map", encoding="utf-8") as mapa:
+        for linha in mapa:
+            dentro, _, quantos = (int(x) for x in linha.split())
+            if dentro <= gid < dentro + quantos:
+                return True
+    return False
+
+
 def _grupo_secundario() -> int | None:
-    """Um grupo de quem mede que não é o primário — o ``chown`` sem root o aceita."""
-    outros = [g for g in os.getgroups() if g != os.getgid()]
+    """Um grupo de quem mede que não é o primário e existe aqui: o ``chown`` sem root o aceita."""
+    outros = [g for g in os.getgroups() if g != os.getgid() and _gid_existe(g)]
     return outros[0] if outros else None
+
+
+def _grupo_esperado() -> int:
+    """O grupo que o ``SUDO_GID`` dos ensaios leva: o secundário, ou o primário se só ele existe."""
+    grupo = _grupo_secundario()
+    return grupo if grupo is not None else os.getgid()
+
+
+def _chamadas(dubles: Dubles) -> list[str]:
+    return dubles.log_chamadas.read_text(encoding="utf-8").splitlines()
 
 
 def _modo(caminho: Path) -> int:
@@ -305,11 +330,10 @@ def _morreu(pid: int, segundos: float = 3.0) -> bool:
 def _rodar_lightbar(
     dubles: Dubles, destino: Path, *args: str
 ) -> subprocess.CompletedProcess[str]:
-    grupo = _grupo_secundario()
     amb = dubles.ambiente(
         HEFESTO_CAPTURA_DIR=str(destino),
         SUDO_UID=str(os.getuid()),
-        SUDO_GID=str(grupo if grupo is not None else os.getgid()),
+        SUDO_GID=str(_grupo_esperado()),
     )
     return subprocess.run(
         [BASH, str(LIGHTBAR), *args],
@@ -374,11 +398,12 @@ class TestALightbarGravaFechadoLeEApaga:
         leitura = braco_limpo.destino / "probe-limpo.txt"
         assert _modo(leitura) == 0o600
         assert leitura.stat().st_uid == os.getuid()
-        grupo = _grupo_secundario()
-        if grupo is not None:
-            assert leitura.stat().st_gid == grupo, (
-                "a leitura é de quem chamou o sudo: sem o chown, o comparar sem root não a lê"
-            )
+        assert f"chown {os.getuid()}:{_grupo_esperado()} {leitura}" in _chamadas(
+            braco_limpo.dubles
+        ), "o chown para quem chamou o sudo não foi pedido"
+        assert leitura.stat().st_gid == _grupo_esperado(), (
+            "a leitura é de quem chamou o sudo: sem o chown, o comparar sem root não a lê"
+        )
         texto = leitura.read_text(encoding="utf-8")
         assert "1 report(s) 0x31 de saída" in texto, texto
         assert "11 22 33" in texto, texto
@@ -426,10 +451,9 @@ def corrida_do_w3(tmp_path_factory: pytest.TempPathFactory) -> CorridaDoW3:
     raiz = tmp_path_factory.mktemp("w3")
     dubles = _fazer_dubles(raiz)
     relatorio = raiz / "relatorio.txt"
-    grupo = _grupo_secundario()
     amb = dubles.ambiente(
         SUDO_UID=str(os.getuid()),
-        SUDO_GID=str(grupo if grupo is not None else os.getgid()),
+        SUDO_GID=str(_grupo_esperado()),
     )
     resultado = subprocess.run(
         [BASH, str(W3), "--run", "--dur", "1", "--out", str(relatorio)],
@@ -468,9 +492,10 @@ class TestOW3GravaFechadoLeEApaga:
         relatorio = corrida_do_w3.relatorio
         assert _modo(relatorio) == 0o600
         assert relatorio.stat().st_uid == os.getuid()
-        grupo = _grupo_secundario()
-        if grupo is not None:
-            assert relatorio.stat().st_gid == grupo
+        assert f"chown {os.getuid()}:{_grupo_esperado()} {relatorio}" in _chamadas(
+            corrida_do_w3.dubles
+        ), "o chown para quem chamou o sudo não foi pedido"
+        assert relatorio.stat().st_gid == _grupo_esperado()
 
     def test_o_wifi_continua_voltando(self, corrida_do_w3: CorridaDoW3) -> None:
         """A limpeza entrou no mesmo ``restaurar`` do ``rfkill unblock``; ele segue."""
