@@ -399,26 +399,47 @@ def nos_dos_pads_virtuais(
     return {ino: no for no in nos if (ino := _inode(no))}
 
 
+class NaoSeiError(Exception):
+    """A pergunta do jogo ficou sem resposta: «não sei» é jogo para quem pergunta."""
+
+
+def _pids_da_raiz(raiz: str) -> list[int]:
+    """Os pids da raiz do ``/proc``; ``NaoSeiError`` quando a raiz não se lê."""
+    try:
+        nomes = os.listdir(raiz)
+    except OSError as erro:
+        raise NaoSeiError(f"{raiz} não se lê") from erro
+    return [int(nome) for nome in nomes if nome.isdigit()]
+
+
 def ha_jogo_aberto(
     raiz_proc: str | None = None,
     raiz_sys: str | None = None,
     raiz_dev: str | None = None,
     *,
     meu_pid: int | None = None,
+    levanta_na_duvida: bool = False,
 ) -> bool:
     """Há jogo: a assinatura de jogo no ambiente, ou quem segura um pad virtual e conta como jogo.
 
-    A varredura que estoura o orçamento é «não sei», e «não sei» é jogo.
+    «Não sei» é jogo: a raiz do ``/proc`` que não se lê e a varredura que estoura o orçamento.
+    Com ``levanta_na_duvida``, o «não sei» levanta ``NaoSeiError``.
     """
     raiz = RAIZ_PROC if raiz_proc is None else raiz_proc
     eu = os.getpid() if meu_pid is None else meu_pid
-    candidatos = {
-        int(e) for e in _entradas(raiz) if e.isdigit() and _assinatura_de_jogo(raiz, int(e))
-    }
+    try:
+        pids = _pids_da_raiz(raiz)
+    except NaoSeiError:
+        if levanta_na_duvida:
+            raise
+        return True
+    candidatos = {pid for pid in pids if _assinatura_de_jogo(raiz, pid)}
     alvos = nos_dos_pads_virtuais(raiz_sys, raiz_dev)
     if alvos:
         achados, inteira = _varrer(alvos, raiz, False)
         if not inteira:
+            if levanta_na_duvida:
+                raise NaoSeiError("a varredura dos pads virtuais estourou o orçamento")
             return True
         candidatos.update(s.pid for s in achados)
     return any(
@@ -459,9 +480,9 @@ def main(argv: list[str] | None = None) -> int:
     """``--ha-jogo [--proc RAIZ] [--sys RAIZ] [--dev RAIZ]``: o que a saída diz.
 
     ``COM_JOGO`` (0) com jogo em cena, ``SEM_JOGO`` (10) sem jogo, ``USO`` (2) para argumento
-    inválido e ``NAO_SEI`` (3) quando a leitura levantou. Só o ``SEM_JOGO`` exato libera quem
-    pergunta: qualquer outra saída, inclusive o 1 de um interpretador que morreu antes do
-    ``main``, é jogo aberto.
+    inválido e ``NAO_SEI`` (3) quando a leitura levantou ou não soube (``NaoSeiError``). Só o
+    ``SEM_JOGO`` exato libera quem pergunta: qualquer outra saída, inclusive o 1 de um
+    interpretador que morreu antes do ``main``, é jogo aberto.
     """
     args = list(sys.argv[1:] if argv is None else argv)
     raizes = dict(zip(args[1::2], args[2::2], strict=False))
@@ -470,7 +491,8 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return USO
     try:
-        jogo = ha_jogo_aberto(raizes.get("--proc"), raizes.get("--sys"), raizes.get("--dev"))
+        jogo = ha_jogo_aberto(raizes.get("--proc"), raizes.get("--sys"), raizes.get("--dev"),
+                              levanta_na_duvida=True)
     except Exception as erro:
         print(f"quem_o_jogo_le.py: não sei se há jogo ({type(erro).__name__})", file=sys.stderr)
         return NAO_SEI

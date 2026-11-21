@@ -71,6 +71,7 @@ class _Maquina:
     def __init__(self, raiz: pathlib.Path) -> None:
         self.raiz = raiz
         self.proc, self.sys, self.dev = raiz / "proc", raiz / "sys", raiz / "dev"
+        self.proc.mkdir(parents=True)
         self.proximo = 500
         self.pad = self._hidraw("hidraw7", "HID_PHYS=hefesto-vpad-1\nHID_UNIQ=02:fe:00:00:00:01\n")
         self.fisico = self._hidraw("hidraw2", "HID_PHYS=usb-0000:00:14.0-1/input3\n"

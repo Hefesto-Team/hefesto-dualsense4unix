@@ -177,3 +177,46 @@ def test_o_jogo_em_cena_do_install_trata_o_nao_sei_como_jogo(tmp_path: Path, sai
 
 def test_o_jogo_em_cena_do_install_so_libera_no_sem_jogo_exato(tmp_path: Path) -> None:
     assert _jogo_em_cena_com(tmp_path, quem_o_jogo_le.SEM_JOGO) is False
+
+
+def _raizes_que_nao_se_leem(raiz: Path) -> dict[str, Path]:
+    fechada = raiz / "proc-fechado"
+    (fechada / "42").mkdir(parents=True)
+    fechada.chmod(0)
+    return {"ausente": raiz / "proc-que-nao-existe", "fechada": fechada}
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="o root lê a pasta fechada")
+def test_o_proc_que_nao_se_le_e_nao_sei_e_nao_sem_jogo(tmp_path: Path) -> None:
+    """MORDIDA: liste a raiz pelo `_entradas`, que engole o erro, e o ilegível vira `SEM_JOGO`."""
+    raizes = _raizes_que_nao_se_leem(tmp_path)
+    try:
+        for nome, raiz in raizes.items():
+            assert quem_o_jogo_le.ha_jogo_aberto(str(raiz)) is True, nome
+            assert quem_o_jogo_le.main(["--ha-jogo", "--proc", str(raiz)]) == (
+                quem_o_jogo_le.NAO_SEI
+            ), nome
+            feito = subprocess.run(
+                ["python3", "-I", str(LEITOR), "--ha-jogo", "--proc", str(raiz)],
+                capture_output=True, check=False, timeout=30,
+            )
+            assert feito.returncode == quem_o_jogo_le.NAO_SEI, (nome, feito.stderr)
+    finally:
+        raizes["fechada"].chmod(0o755)
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="o root lê a pasta fechada")
+def test_o_dono_com_o_proc_que_nao_se_le_nao_reenumera(tmp_path: Path) -> None:
+    """O leitor real e o dono: o `/proc` ausente ou fechado não dispara nada que reenumera."""
+    raizes = _raizes_que_nao_se_leem(tmp_path)
+    try:
+        for nome, raiz in raizes.items():
+            pasta = tmp_path / nome / "pacote"
+            pasta.mkdir(parents=True)
+            (pasta / LEITOR.name).write_text(LEITOR.read_text(encoding="utf-8"), encoding="utf-8")
+            dono = _dono_ao_lado_de(pasta)
+            chamadas, saida = _dispara(dono, tmp_path / nome, raiz)
+            assert not _reenumerou(chamadas), (nome, chamadas)
+            assert "não deu para saber" in saida, nome
+    finally:
+        raizes["fechada"].chmod(0o755)
