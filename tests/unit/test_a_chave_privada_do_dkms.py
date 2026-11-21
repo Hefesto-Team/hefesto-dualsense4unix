@@ -313,3 +313,57 @@ class TestSemAChavePrivadaNadaSeConstroi:
         else:
             assert not refez and not [x for x in lidas if x.startswith("dkms remove")], lidas
             assert "falta a chave privada do DKMS" in feito.stdout, feito.stdout
+
+
+GUARDA_DA_CHAVE_PRIVADA = (
+    'if "${BASH_SOURCE[0]%/*}/preparar-o-fonte.py" --sem-a-chave-privada "$kernelver" '
+    "2>/dev/null; then"
+)
+CINCO_DKMS_CONF = [preparador.parent / "dkms.conf" for preparador in CINCO_PREPARADORES]
+
+
+class TestOAutoinstallNemChegaAoBuildSemAChavePrivada:
+    """D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI, no ``autoinstall`` do kernel novo.
+
+    Do DKMS 3.0.4 ao 3.1.6 o ``do_build`` roda o ``prepare_signing`` (que gera o par novo por cima
+    da chave pública) antes de ler o ``dkms.conf`` que sai com 77: o ``--exclusivo`` chega tarde.
+    O ``autoinstall`` lê o ``AUTOINSTALL`` antes do build, então o ``dkms.conf`` o zera quando falta
+    a chave privada, e o DKMS nem começa o build do módulo.
+    """
+
+    def test_os_cinco_dkms_conf_perguntam_pela_chave_privada(self) -> None:
+        assert len(CINCO_DKMS_CONF) == 5, CINCO_DKMS_CONF
+        for conf in CINCO_DKMS_CONF:
+            linhas = conf.read_text(encoding="utf-8").splitlines()
+            assert GUARDA_DA_CHAVE_PRIVADA in linhas, f"{conf}: o autoinstall gera o par novo"
+            depois = linhas[linhas.index(GUARDA_DA_CHAVE_PRIVADA) + 1:][:2]
+            assert depois == ['    AUTOINSTALL=""', "fi"], (conf, depois)
+
+    @pytest.mark.parametrize(
+        ("ligado", "com_privada", "config", "esperado"),
+        [(True, False, CONFIG_QUE_ASSINA, ""), (True, True, CONFIG_QUE_ASSINA, "yes"),
+         (False, False, CONFIG_QUE_ASSINA, "yes"), (True, False, CONFIG_QUE_NAO_ASSINA, "yes")],
+        ids=["ligado-sem-privada", "ligado-com-privada", "desligado", "kernel-nao-assina"],
+    )
+    def test_sem_a_privada_o_dkms_conf_lido_pelo_autoinstall_zera_o_autoinstall(
+        self, tmp_path: Path, ligado: bool, com_privada: bool, config: str, esperado: str
+    ) -> None:
+        """D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI."""
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=ligado, inscrita=True, chave_privada=com_privada)
+        modulos = tmp_path / "modules"
+        (modulos / KERNEL / "build").mkdir(parents=True)
+        (modulos / KERNEL / "build" / ".config").write_text(config, encoding="utf-8")
+        ambiente = {**os.environ, **estado, "PATH": _sem_mokutil(estado, os.environ["PATH"]),
+                    "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
+                    "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "sem-boot")}
+        for conf in CINCO_DKMS_CONF:
+            lido = subprocess.run(
+                ["bash", "-c",
+                 'autoinstall() { [ "$s" = 77 ]; }\n'
+                 f"kernelver={KERNEL}\nkernel_source_dir='{tmp_path / 'sem-fonte'}'\n"
+                 f"dkms_tree='{tmp_path / 'arvore'}'\n. '{conf}'\n"
+                 'printf "%s" "$AUTOINSTALL"'],
+                capture_output=True, text=True, check=False, timeout=120, env=ambiente)
+            assert lido.returncode == 0, (conf, lido.stderr)
+            assert lido.stdout == esperado, (conf, lido.stdout, lido.stderr)

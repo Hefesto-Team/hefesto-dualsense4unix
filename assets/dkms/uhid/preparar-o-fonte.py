@@ -24,10 +24,11 @@ prova a chave que o assinou, não a que assina o próximo.
 Com o Secure Boot ligado e a chave inscrita, falta ainda a chave privada para assinar: sem a
 privada o DKMS 3 gera um par novo por cima da pública (desde a 3.0.4) e assina com uma chave
 fora da MOK.
-`--sem-a-chave-privada [<kernelver>]` sai com 0 nesse caso, e o `--exclusivo` devolve o mesmo
-padrão que nenhum kernel casa: nada se constrói, e o que estava instalado fica. O DKMS só assina (e
-só gera par) quando o `.config` do kernel traz `CONFIG_MODULE_SIG_HASH=`: o kernel cujo `.config`
-se lê sem essa linha não assina, e a falta da chave privada não pesa nele.
+`--sem-a-chave-privada [<kernelver>]` sai com 0 nesse caso, e por essa resposta o `dkms.conf`
+zera o `AUTOINSTALL`: do DKMS 3.0.4 ao 3.1.6 o build gera o par antes de ler o `--exclusivo`,
+que devolve o padrão que nenhum kernel casa. Nada se constrói, e o que estava instalado fica.
+O DKMS só assina (e só gera par) quando o `.config` do kernel traz `CONFIG_MODULE_SIG_HASH=`: o
+kernel cujo `.config` se lê sem essa linha não assina, e a falta da chave privada não pesa nele.
 
     preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
     preparar-o-fonte.py --sem-a-chave | --chave-nao-garantida | --estado-da-chave
