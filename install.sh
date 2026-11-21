@@ -3171,12 +3171,12 @@ fi
 
 readonly CAMADAS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
 readonly CAMADAS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
+readonly TERCEIRO_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/arquivo_de_terceiro.py"
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${CAMADAS_SRC}" ]]; then
     _faria "instalar o curador de camadas Vulkan em ${CAMADAS_TARGET}, com o dono dos arquivos de terceiro ao lado"
 elif [[ -f "${CAMADAS_SRC}" ]]; then
     install -Dm755 "${CAMADAS_SRC}" "${CAMADAS_TARGET}"
-    install -Dm644 "${ROOT_DIR}/src/hefesto_dualsense4unix/utils/arquivo_de_terceiro.py" \
-        "${CAMADAS_TARGET%/*}/arquivo_de_terceiro.py"
+    install -Dm644 "${ROOT_DIR}/src/hefesto_dualsense4unix/utils/arquivo_de_terceiro.py" "${TERCEIRO_TARGET}"
 else
     warn "camadas_vulkan.py ausente — as sobreposições Vulkan não vão sair no lançamento dos jogos"
 fi

@@ -93,7 +93,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3185` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:497` (`curar_audio_ks`) o roda a cada jogo lançado; "
-        "`uninstall.sh:1802-1803` (`AUDIO_KS_PY`) o "
+        "`uninstall.sh:1806-1807` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (

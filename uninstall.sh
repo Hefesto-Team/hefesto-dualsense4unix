@@ -1791,6 +1791,11 @@ if [[ -e "${CAMADAS_TARGET}" ]]; then
     log "removendo curador de camadas ${CAMADAS_TARGET}"
     rm -f "${CAMADAS_TARGET}"
 fi
+readonly TERCEIRO_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/arquivo_de_terceiro.py"
+if [[ -e "${TERCEIRO_TARGET}" ]]; then
+    log "removendo o dono dos arquivos de terceiro ${TERCEIRO_TARGET}"
+    rm -f "${TERCEIRO_TARGET}"
+fi
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/camadas-vulkan.json" ]]; then
         log "removendo o registro das sobreposições (${_estado}/camadas-vulkan.json)"
