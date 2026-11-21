@@ -655,6 +655,8 @@ CSS_TELA = """
   .op3.gravar{grid-column:1 / -1;justify-content:center;border-color:var(--red);color:var(--red);font-weight:600}
   .op3.gravar .ponto{width:9px;height:9px;border-radius:50%;background:var(--red)}
   .op3.gravar.ouvindo{background:rgba(255,85,85,.12)}
+  .op3.gravar.recusou{border-color:var(--orange);color:var(--orange);background:rgba(255,184,108,.10)}
+  .op3.gravar.recusou .ponto{background:transparent;box-shadow:inset 0 0 0 2px var(--orange)}
   .op3.gravar[data-gravando="sim"]{background:rgba(255,85,85,.12)}
   .seq-grade{grid-template-columns:repeat(2,1fr)}
   .seq-passos{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:42px;padding:6px 10px;border-radius:8px;
@@ -728,26 +730,33 @@ JS = r"""
 
   const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
     AltLeft: 'LEFTALT', AltRight: 'RIGHTALT', MetaLeft: 'LEFTMETA', MetaRight: 'RIGHTMETA'};
-  const NOMEADA = {ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', Space: 'SPACE', Enter: 'ENTER',
-    NumpadEnter: 'ENTER', Tab: 'TAB', Backspace: 'BACKSPACE', Delete: 'DELETE', Home: 'HOME', End: 'END', PageUp: 'PAGEUP',
-    PageDown: 'PAGEDOWN', Insert: 'INSERT', Comma: 'COMMA', Period: 'DOT', PrintScreen: 'SYSRQ'};
+  const CODIGOS = __CODIGOS__;
+  const FRASE_DA_RECUSA = __FRASE__;
   const tecla = e => {
     const c = e.code;
     if (/^Key[A-Z]$/.test(c)) return 'KEY_' + c.slice(3);
     if (/^Digit[0-9]$/.test(c)) return 'KEY_' + c.slice(5);
     if (/^F([1-9]|1[0-2])$/.test(c)) return 'KEY_' + c;
-    return NOMEADA[c] ? 'KEY_' + NOMEADA[c] : '';
+    return CODIGOS[c] || '';
   };
   const modificadores = e => [e.ctrlKey && 'KEY_LEFTCTRL', e.altKey && 'KEY_LEFTALT', e.shiftKey && 'KEY_LEFTSHIFT',
     e.metaKey && 'KEY_LEFTMETA'].filter(Boolean);
   const escuta = on => {
     ouvindo = on; soModificador = null;
     gravar.classList.toggle('ouvindo', on);
+    gravar.classList.remove('recusou'); gravar.removeAttribute('title');
     gravar.querySelector('span:last-child').textContent = on ? 'Aperte uma tecla ou um botão' : ROTULO;
+  };
+  let enviada = null;
+  const recusa = nome => {
+    gravar.classList.add('recusou');
+    gravar.title = FRASE_DA_RECUSA.replace('{}', nome);
+    gravar.querySelector('span:last-child').textContent = nome + ' não está no teclado virtual';
   };
   const manda = (campo, valor) => {
     delete captura.dataset.tecla; delete captura.dataset.troca;
     captura.dataset[campo] = valor;
+    enviada = campo === 'tecla' ? {b: linha, nome: valor.split('+').pop().replace(/^KEY_/, '')} : null;
     escuta(false); pop.hidden = true;
     captura.click();
     solta();
@@ -757,8 +766,9 @@ JS = r"""
     e.preventDefault(); e.stopPropagation();
     if (e.code === 'Escape' && !modificadores(e).length) { escuta(false); return; }
     if (MODIFICADOR[e.code]) { soModificador = 'KEY_' + MODIFICADOR[e.code]; return; }
-    const k = tecla(e);
-    if (k) { soModificador = null; manda('tecla', [...modificadores(e), k].join('+')); }
+    const c = e.code;
+    if (!c || c === 'Unidentified') { recusa(e.key || '?'); return; }
+    soModificador = null; manda('tecla', [...modificadores(e), tecla(e) || c].join('+'));
   }, true);
   document.addEventListener('keyup', e => {
     if (!ouvindo || !soModificador || !MODIFICADOR[e.code]) return;
@@ -772,6 +782,13 @@ JS = r"""
     if (BOTAO_DO_MOUSE[e.button]) { e.preventDefault(); e.stopPropagation(); manda('tecla', BOTAO_DO_MOUSE[e.button]); }
   }, true);
   document.addEventListener('contextmenu', e => { if (ouvindo) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  new MutationObserver(lista => {
+    for (const m of lista) {
+      if (!enviada || !m.target.classList.contains('hef-recusou') || (m.oldValue || '').includes('hef-recusou')) continue;
+      const u = enviada; enviada = null;
+      abre(u.b); mostra('teclado'); recusa(u.nome);
+    }
+  }).observe(captura, {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
   const olho = new MutationObserver(lista => {
     if (!ouvindo) return;
     for (const m of lista) {
@@ -967,6 +984,13 @@ def main():
     moldes = "".join(f'<option value="molde:{m.chave}">{m.nome}</option>' for m in loader.moldes_a_vista())
     perfis = ('<optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup>'
               f'<optgroup label="Moldes">{moldes}</optgroup><option value="novo">+ Novo perfil…</option>')
+    import json
+
+    from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
+
+    codigos = {c: k for c, k in a13.CODIGO_DA_TECLA.items() if k in SUPPORTED_KEYS}
+    js = (JS.replace("__CODIGOS__", json.dumps(codigos))
+          .replace("__FRASE__", json.dumps(a13.FRASE_DA_RECUSA, ensure_ascii=False)))
     doc = f'''<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -1033,7 +1057,7 @@ def main():
   <button id="mapa-captura" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-gravar-tecla"></button>
   <button id="mapa-solta" hidden tabindex="-1" aria-hidden="true" data-gesto="mapa-botao" data-b=""></button>
 </div>
-<script>{JS}</script>
+<script>{js}</script>
 </body>
 </html>
 '''

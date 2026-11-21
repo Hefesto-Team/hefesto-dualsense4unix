@@ -129,6 +129,23 @@ OPCOES_DE_TECLADO: tuple[tuple[str, str], ...] = (
 
 ROTULO_DA_ACAO: dict[str, str] = dict(OPCOES_DE_MOUSE + OPCOES_DE_TECLADO)
 
+FRASE_DA_RECUSA = "A tecla {} não está entre as do teclado virtual: escolha outra"
+
+CODIGO_DA_TECLA: dict[str, str] = {
+    "ArrowUp": "KEY_UP", "ArrowDown": "KEY_DOWN", "ArrowLeft": "KEY_LEFT",
+    "ArrowRight": "KEY_RIGHT", "Space": "KEY_SPACE", "Enter": "KEY_ENTER",
+    "NumpadEnter": "KEY_ENTER", "Tab": "KEY_TAB", "Backspace": "KEY_BACKSPACE",
+    "Delete": "KEY_DELETE", "Home": "KEY_HOME", "End": "KEY_END", "PageUp": "KEY_PAGEUP",
+    "PageDown": "KEY_PAGEDOWN", "Insert": "KEY_INSERT", "Comma": "KEY_COMMA",
+    "Period": "KEY_DOT", "PrintScreen": "KEY_SYSRQ", "Minus": "KEY_MINUS",
+    "Equal": "KEY_EQUAL", "Slash": "KEY_SLASH", "Semicolon": "KEY_SEMICOLON",
+    "Quote": "KEY_APOSTROPHE", "BracketLeft": "KEY_LEFTBRACE", "BracketRight": "KEY_RIGHTBRACE",
+    "Backslash": "KEY_BACKSLASH", "Backquote": "KEY_GRAVE", "CapsLock": "KEY_CAPSLOCK",
+    "NumpadDecimal": "KEY_KPDOT", "NumpadAdd": "KEY_KPPLUS", "NumpadSubtract": "KEY_KPMINUS",
+    "NumpadMultiply": "KEY_KPASTERISK", "NumpadDivide": "KEY_KPSLASH",
+    **{f"Numpad{n}": f"KEY_KP{n}" for n in range(10)},
+}
+
 SEQUENCIA = "sequencia"
 ATIVACAO = "ativacao"  # (noqa-acento)
 
@@ -798,6 +815,31 @@ def _grava_na_edicao(ctx: Contexto, tipo: str, valor: str) -> None:
     estado["seq"].pop(b, None)
 
 
+def _tecla_do_navegador(tecla: str) -> str:
+    """A tecla como o motor a conhece: o `KeyboardEvent.code` cru vira o `KEY_*` dele.
+
+    A página manda `KEY_*` para o que sabe nomear e o `code` cru para o resto; a combinação
+    chega com os modificadores na frente. O que não tem nome fica como veio, e a recusa o diz.
+    """
+    def uma(parte: str) -> str:
+        if parte.startswith("KEY_"):
+            return parte
+        if len(parte) == 4 and parte.startswith("Key") and parte[3].isalpha():
+            return "KEY_" + parte[3].upper()
+        if len(parte) == 6 and parte.startswith("Digit") and parte[5].isdigit():
+            return "KEY_" + parte[5]
+        if parte[:1] == "F" and parte[1:].isdigit() and 1 <= int(parte[1:]) <= 12:
+            return "KEY_" + parte
+        return CODIGO_DA_TECLA.get(parte, parte)
+
+    return "+".join(uma(p) for p in tecla.split("+"))
+
+
+def _nome_da_tecla(parte: str) -> str:
+    """O nome que a frase da recusa diz: `KEY_PAUSE` é «Pause»; o `code` cru fica como veio."""
+    return parte.removeprefix("KEY_").title() if parte.startswith("KEY_") else parte
+
+
 def _e_combinacao(valor: str) -> bool:
     from hefesto_dualsense4unix.profiles.schema import _e_combinacao_de_teclas
 
@@ -828,10 +870,12 @@ def mapa_gravar_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
             raise RuntimeError("esse botão do mouse não tem como virar um botão do controle.")
         _grava_na_edicao(ctx, ACAO, tecla)
         return _repinta(ctx)
-    if not _e_combinacao(tecla):
-        raise RuntimeError(
-            f"A tecla {tecla.removeprefix('KEY_').title()} não está entre as do teclado virtual: "
-            "escolha outra.")
+    tecla = _tecla_do_navegador(tecla)
+    for parte in tecla.split("+"):
+        if not _e_combinacao(parte):
+            raise RuntimeError(
+                f"A tecla {_nome_da_tecla(parte)} não está entre as do teclado virtual: "
+                "escolha outra")
     _grava_na_edicao(ctx, ACAO, tecla)
     return _repinta(ctx)
 

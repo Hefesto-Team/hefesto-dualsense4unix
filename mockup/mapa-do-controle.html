@@ -136,6 +136,8 @@
   .op3.gravar{grid-column:1 / -1;justify-content:center;border-color:var(--red);color:var(--red);font-weight:600}
   .op3.gravar .ponto{width:9px;height:9px;border-radius:50%;background:var(--red)}
   .op3.gravar.ouvindo{background:rgba(255,85,85,.12)}
+  .op3.gravar.recusou{border-color:var(--orange);color:var(--orange);background:rgba(255,184,108,.10)}
+  .op3.gravar.recusou .ponto{background:transparent;box-shadow:inset 0 0 0 2px var(--orange)}
   .op3.gravar[data-gravando="sim"]{background:rgba(255,85,85,.12)}
   .seq-grade{grid-template-columns:repeat(2,1fr)}
   .seq-passos{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:42px;padding:6px 10px;border-radius:8px;
@@ -1275,26 +1277,33 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
     AltLeft: 'LEFTALT', AltRight: 'RIGHTALT', MetaLeft: 'LEFTMETA', MetaRight: 'RIGHTMETA'};
-  const NOMEADA = {ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', Space: 'SPACE', Enter: 'ENTER',
-    NumpadEnter: 'ENTER', Tab: 'TAB', Backspace: 'BACKSPACE', Delete: 'DELETE', Home: 'HOME', End: 'END', PageUp: 'PAGEUP',
-    PageDown: 'PAGEDOWN', Insert: 'INSERT', Comma: 'COMMA', Period: 'DOT', PrintScreen: 'SYSRQ'};
+  const CODIGOS = {"ArrowUp": "KEY_UP", "ArrowDown": "KEY_DOWN", "ArrowLeft": "KEY_LEFT", "ArrowRight": "KEY_RIGHT", "Space": "KEY_SPACE", "Enter": "KEY_ENTER", "NumpadEnter": "KEY_ENTER", "Tab": "KEY_TAB", "Backspace": "KEY_BACKSPACE", "Delete": "KEY_DELETE", "Home": "KEY_HOME", "End": "KEY_END", "PageUp": "KEY_PAGEUP", "PageDown": "KEY_PAGEDOWN", "Insert": "KEY_INSERT", "Comma": "KEY_COMMA", "Period": "KEY_DOT", "PrintScreen": "KEY_SYSRQ", "Minus": "KEY_MINUS", "Equal": "KEY_EQUAL", "Slash": "KEY_SLASH", "Semicolon": "KEY_SEMICOLON", "Quote": "KEY_APOSTROPHE", "BracketLeft": "KEY_LEFTBRACE", "BracketRight": "KEY_RIGHTBRACE", "Backslash": "KEY_BACKSLASH", "Backquote": "KEY_GRAVE", "CapsLock": "KEY_CAPSLOCK", "NumpadDecimal": "KEY_KPDOT", "NumpadAdd": "KEY_KPPLUS", "NumpadSubtract": "KEY_KPMINUS", "NumpadMultiply": "KEY_KPASTERISK", "NumpadDivide": "KEY_KPSLASH", "Numpad0": "KEY_KP0", "Numpad1": "KEY_KP1", "Numpad2": "KEY_KP2", "Numpad3": "KEY_KP3", "Numpad4": "KEY_KP4", "Numpad5": "KEY_KP5", "Numpad6": "KEY_KP6", "Numpad7": "KEY_KP7", "Numpad8": "KEY_KP8", "Numpad9": "KEY_KP9"};
+  const FRASE_DA_RECUSA = "A tecla {} não está entre as do teclado virtual: escolha outra";
   const tecla = e => {
     const c = e.code;
     if (/^Key[A-Z]$/.test(c)) return 'KEY_' + c.slice(3);
     if (/^Digit[0-9]$/.test(c)) return 'KEY_' + c.slice(5);
     if (/^F([1-9]|1[0-2])$/.test(c)) return 'KEY_' + c;
-    return NOMEADA[c] ? 'KEY_' + NOMEADA[c] : '';
+    return CODIGOS[c] || '';
   };
   const modificadores = e => [e.ctrlKey && 'KEY_LEFTCTRL', e.altKey && 'KEY_LEFTALT', e.shiftKey && 'KEY_LEFTSHIFT',
     e.metaKey && 'KEY_LEFTMETA'].filter(Boolean);
   const escuta = on => {
     ouvindo = on; soModificador = null;
     gravar.classList.toggle('ouvindo', on);
+    gravar.classList.remove('recusou'); gravar.removeAttribute('title');
     gravar.querySelector('span:last-child').textContent = on ? 'Aperte uma tecla ou um botão' : ROTULO;
+  };
+  let enviada = null;
+  const recusa = nome => {
+    gravar.classList.add('recusou');
+    gravar.title = FRASE_DA_RECUSA.replace('{}', nome);
+    gravar.querySelector('span:last-child').textContent = nome + ' não está no teclado virtual';
   };
   const manda = (campo, valor) => {
     delete captura.dataset.tecla; delete captura.dataset.troca;
     captura.dataset[campo] = valor;
+    enviada = campo === 'tecla' ? {b: linha, nome: valor.split('+').pop().replace(/^KEY_/, '')} : null;
     escuta(false); pop.hidden = true;
     captura.click();
     solta();
@@ -1304,8 +1313,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     e.preventDefault(); e.stopPropagation();
     if (e.code === 'Escape' && !modificadores(e).length) { escuta(false); return; }
     if (MODIFICADOR[e.code]) { soModificador = 'KEY_' + MODIFICADOR[e.code]; return; }
-    const k = tecla(e);
-    if (k) { soModificador = null; manda('tecla', [...modificadores(e), k].join('+')); }
+    const c = e.code;
+    if (!c || c === 'Unidentified') { recusa(e.key || '?'); return; }
+    soModificador = null; manda('tecla', [...modificadores(e), tecla(e) || c].join('+'));
   }, true);
   document.addEventListener('keyup', e => {
     if (!ouvindo || !soModificador || !MODIFICADOR[e.code]) return;
@@ -1319,6 +1329,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (BOTAO_DO_MOUSE[e.button]) { e.preventDefault(); e.stopPropagation(); manda('tecla', BOTAO_DO_MOUSE[e.button]); }
   }, true);
   document.addEventListener('contextmenu', e => { if (ouvindo) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  new MutationObserver(lista => {
+    for (const m of lista) {
+      if (!enviada || !m.target.classList.contains('hef-recusou') || (m.oldValue || '').includes('hef-recusou')) continue;
+      const u = enviada; enviada = null;
+      abre(u.b); mostra('teclado'); recusa(u.nome);
+    }
+  }).observe(captura, {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
   const olho = new MutationObserver(lista => {
     if (!ouvindo) return;
     for (const m of lista) {
