@@ -291,6 +291,13 @@ COLISOES_DECLARADAS = {
         "chama de processo pela palavra «versão», que aqui é a versão nova da extensão que alarga "
         "o alcance (20/11/2026)."
     ),
+    "D-2111-O-SANDBOX-DO-FLATPAK-VE-O-MARCADOR-DE-IMAGEM-SO-LEITURA": (
+        "É de PRODUTO: a decisão diz o que o sandbox do Flatpak enxerga do host, e "
+        "`test_o_flatpak_alcanca_o_broker.py::test_dentro_do_sandbox_o_os_release_e_o_do_host_"
+        "e_o_marcador_decide_o_gesto` mede a resposta dentro do sandbox. A triagem a chama de "
+        "processo porque «release» é o fim do nome do arquivo `os-release`, e «Flatpak» e "
+        "«sandbox» não estão no vocabulário de produto (21/11/2026)."
+    ),
 }
 
 
