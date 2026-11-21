@@ -1269,10 +1269,25 @@ class TestModuloSemAssinaturaComAChaveInscrita:
         if os.geteuid() == 0:
             pytest.skip("o root lê qualquer arquivo")
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
-        (tmp_path / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
-        (tmp_path / "mok.key").chmod(0)
-        lidas = self._instalar(tmp_path, estado, chave_privada=False)
-        assert f"sudo test -s {tmp_path / 'mok.key'}" in lidas, lidas
+        cofre = tmp_path / "cofre"
+        cofre.mkdir()
+        (cofre / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+        (tmp_path / "framework-do-cofre.conf").write_text(
+            f'mok_signing_key="{cofre / "mok.key"}"\n', encoding="utf-8")
+        cofre.chmod(0)
+        chamadas = tmp_path / "chamadas.log"
+        root = (
+            f'echo "sudo $*" >> "{chamadas}"\n[ "$1" = -n ] && shift\n'
+            f'/bin/chmod 700 "{cofre}"\n"$@"\nrc=$?\n/bin/chmod 000 "{cofre}"\nexit $rc'
+        )
+        try:
+            lidas = self._instalar(
+                tmp_path, estado, chave_privada=False, dubles={"sudo": root},
+                ambiente={
+                    "HEFESTO_DKMS_FRAMEWORK_CONFS": str(tmp_path / "framework-do-cofre.conf")})
+        finally:
+            cofre.chmod(0o700)
+        assert "sudo -n sh -c" in lidas and str(cofre / "mok.key") in lidas, lidas
         assert f"dkms build hefesto-teste/9.9.9 -k {KERNEL_DO_TESTE} --force" in lidas, lidas
 
 

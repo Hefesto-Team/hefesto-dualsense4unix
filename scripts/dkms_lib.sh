@@ -133,11 +133,30 @@ _dkms_mok_chave_privada() {
     printf '%s' "${_chave:-/var/lib/dkms/mok.key}"
 }
 
-_dkms_assina_com_a_chave_privada() {
-    local _chave; _chave="$(_dkms_mok_chave_privada)"
-    [[ "${_chave}" == pkcs11:* ]] && return 0
-    [[ -r "${_chave}" && -s "${_chave}" ]] && return 0
-    sudo test -s "${_chave}" 2>/dev/null
+_dkms_leitura_da_chave_privada() {
+    local _chave _pasta _lido=""
+    _chave="$(_dkms_mok_chave_privada)"
+    if [[ "${_chave}" == pkcs11:* || -s "${_chave}" ]]; then
+        printf 'presente'
+        return 0
+    fi
+    _pasta="${_chave}"
+    while [[ "${_pasta}" == /?* ]]; do
+        _pasta="${_pasta%/*}"
+        [[ -n "${_pasta}" ]] || _pasta="/"
+        if [[ -e "${_pasta}" ]]; then
+            if [[ -d "${_pasta}" && -x "${_pasta}" ]]; then
+                printf 'falta'
+                return 0
+            fi
+            break
+        fi
+    done
+    _lido="$(sudo -n sh -c 'if [ -s "$1" ]; then echo presente; else echo falta; fi' sh "${_chave}" 2>/dev/null)" || true
+    case "${_lido}" in
+        presente | falta) printf '%s' "${_lido}" ;;
+        *) printf 'nao-sei' ;;
+    esac
 }
 
 dkms_kernel_assina_modulo() {
@@ -152,13 +171,21 @@ dkms_kernel_assina_modulo() {
     return 2
 }
 
-dkms_sem_a_chave_privada() {
+dkms_estado_da_chave_privada() {
     local _assina=0
-    dkms_secure_boot_ligado || return 1
-    dkms_kernel_assina_modulo "${1:-}" || _assina=$?
-    [[ "${_assina}" -eq 1 ]] && return 1
-    ! _dkms_assina_com_a_chave_privada
+    if dkms_secure_boot_ligado; then
+        dkms_kernel_assina_modulo "${1:-}" || _assina=$?
+    else
+        _assina=1
+    fi
+    if [[ "${_assina}" -eq 1 ]]; then
+        printf 'dispensada'
+    else
+        _dkms_leitura_da_chave_privada
+    fi
 }
+
+dkms_sem_a_chave_privada() { [[ "$(dkms_estado_da_chave_privada "${1:-}")" == "falta" ]]; }
 _dkms_mok_listas() {
     local _l
     # shellcheck disable=SC2086
@@ -777,11 +804,17 @@ dkms_install_patched_module() {
             esac
             return 0
         fi
-        if dkms_sem_a_chave_privada "${_kver}"; then
-            dkms_avisa_a_chave_privada_uma_vez
-            _dkms_log "${_pkg} pulado: falta a chave privada do DKMS, então nada se instala nem se tira"
-            return 0
-        fi
+        case "$(dkms_estado_da_chave_privada "${_kver}")" in
+            falta)
+                dkms_avisa_a_chave_privada_uma_vez
+                _dkms_log "${_pkg} pulado: falta a chave privada do DKMS, então nada se instala nem se tira"
+                return 0
+                ;;
+            nao-sei)
+                _dkms_log "${_pkg} pulado: não li a chave privada do DKMS ($(_dkms_mok_chave_privada)), então nada se instala nem se tira"
+                return 0
+                ;;
+        esac
     fi
     if dkms_secure_boot_ligado && dkms_kernel_assina_modulo "${_kver}"; then
         if dkms_modulo_da_casa_sem_assinatura "${_built}"; then

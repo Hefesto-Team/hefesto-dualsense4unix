@@ -44,6 +44,7 @@ def _instalar(
     framework: str | None = None,
     extra: dict[str, str] | None = None,
     config: str | None = None,
+    dubles: dict[str, str] | None = None,
 ) -> tuple[str, str]:
     """Roda o ``dkms_install_patched_module`` num módulo ainda não construído, com o fonte
     instalado diferente do novo: sem a guarda, o ``dkms remove --all`` tiraria o que estava."""
@@ -52,11 +53,13 @@ def _instalar(
     chamadas = tmp_path / "chamadas.log"
     for nome in ("chown", "chmod", "depmod"):
         _stub(bin_, nome, f'echo "{nome} $*" >> "{chamadas}"')
-    _stub(bin_, "sudo", f'echo "sudo $*" >> "{chamadas}"\nexec "$@"')
+    _stub(bin_, "sudo", f'echo "sudo $*" >> "{chamadas}"\n[ "$1" = -n ] && shift\nexec "$@"')
     _stub(bin_, "dkms", f'echo "dkms $*" >> "{chamadas}"\nexit 0')
     _stub(bin_, "modinfo", 'echo "/nao-existe/hid-teste.ko"')
     _stub(bin_, "uname", f'echo "{KERNEL}"')
     _stub(bin_, "mokutil", "exit 1")
+    for nome, corpo in (dubles or {}).items():
+        _stub(bin_, nome, corpo)
     modulos = tmp_path / "modules"
     (modulos / KERNEL / "build").mkdir(parents=True)
     if config is not None:
@@ -90,6 +93,12 @@ def _com_sudo_de_mentira(tmp_path: Path, caminho: str) -> str:
     pasta.mkdir(exist_ok=True)
     _stub(pasta, "sudo", f'echo "sudo $*" >> "{tmp_path / "sudo.log"}"\nexec "$@"')
     return f"{pasta}:{caminho}"
+
+
+def _sem_kernel_da_maquina(tmp_path: Path) -> dict[str, str]:
+    """Raízes de mentira para o ``.config`` do kernel: a pergunta nunca lê o kernel que roda."""
+    return {"HEFESTO_DKMS_MODULES_ROOT": str(tmp_path / "sem-modules"),
+            "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "sem-boot"), "HEFESTO_DKMS_KERNEL": KERNEL}
 
 
 def _framework(tmp_path: Path, chave: str) -> str:
@@ -141,12 +150,56 @@ class TestSemAChavePrivadaNadaSeConstroi:
         assert "falta a chave privada" not in saida, saida
 
     @pytest.mark.skipif(os.geteuid() == 0, reason="o root lê qualquer arquivo")
-    def test_a_privada_que_so_o_root_le_se_confere_pelo_sudo(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        ("no_cofre", "sudo_responde", "constroi", "frase"),
+        [(True, True, True, ""), (False, True, False, "falta a chave privada do DKMS ("),
+         (True, False, False, "não li a chave privada do DKMS (")],
+        ids=["o-root-le-a-chave", "o-root-diz-que-falta", "o-sudo-nao-responde"],
+    )
+    def test_a_privada_na_pasta_que_so_o_root_abre_se_le_pelo_sudo_e_falha_e_nao_sei(
+        self, tmp_path: Path, no_cofre: bool, sudo_responde: bool, constroi: bool, frase: str
+    ) -> None:
+        """D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI: o ``sudo`` que não responde é «não sei»,
+        e o «não sei» não diz que a chave falta nem manda gerar outra: nada se mexe."""
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=True)
-        (tmp_path / "mok.key").chmod(0)
-        _saida, lidas = _instalar(tmp_path, estado)
-        assert f"sudo test -s {tmp_path / 'mok.key'}" in lidas, lidas
-        assert "dkms build" in lidas, lidas
+        cofre = tmp_path / "cofre"
+        cofre.mkdir()
+        if no_cofre:
+            (cofre / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+        cofre.chmod(0)
+        chamadas = tmp_path / "chamadas.log"
+        root = (
+            f'echo "sudo $*" >> "{chamadas}"\n[ "$1" = -n ] && shift\n'
+            f'/bin/chmod 700 "{cofre}"\n"$@"\nrc=$?\n/bin/chmod 000 "{cofre}"\nexit $rc'
+        )
+        calado = (f'case "$1 $2" in "-n sh") exit 1;; esac\n'
+                  f'echo "sudo $*" >> "{chamadas}"\nexec "$@"')
+        framework = _framework(tmp_path, str(cofre / "mok.key"))
+        try:
+            saida, lidas = _instalar(
+                tmp_path, estado, framework=framework,
+                dubles={"sudo": root if sudo_responde else calado})
+            dito = _roda(
+                "dkms_passo_se_a_chave_falta hid-playstation",
+                f"{tmp_path / 'bin'}:/usr/bin:/bin",
+                {**estado, "HEFESTO_DKMS_FRAMEWORK_CONFS": framework,
+                 "HEFESTO_DKMS_MODULES_ROOT": str(tmp_path / "modules"),
+                 "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "boot-de-mentira"),
+                 "HEFESTO_DKMS_KERNEL": KERNEL},
+            )
+        finally:
+            cofre.chmod(0o700)
+        assert ("dkms build" in lidas) is constroi, lidas
+        if sudo_responde:
+            assert "sudo -n sh -c" in lidas, lidas
+        if frase:
+            assert frase in saida, saida
+        if not sudo_responde:
+            assert "falta a chave privada" not in saida and "dkms remove" not in lidas, saida
+        if sudo_responde:
+            assert ("falta a chave privada" in dito.stdout) is (not constroi), dito
+        else:
+            assert dito.stdout == "", dito
 
     @pytest.mark.parametrize("estado_da_chave", ["fora", "nao-sei"])
     def test_a_chave_fora_ou_ilegivel_segue_o_caminho_de_antes(
@@ -237,8 +290,9 @@ class TestSemAChavePrivadaNadaSeConstroi:
     def test_a_pergunta_do_python_e_a_do_bash_dizem_o_mesmo(
         self, tmp_path: Path, ligado: bool, com_privada: bool, esperado: int
     ) -> None:
-        estado = _estado_do_secure_boot(
-            tmp_path, ligado=ligado, inscrita=True, chave_privada=com_privada)
+        estado = {**_estado_do_secure_boot(
+            tmp_path, ligado=ligado, inscrita=True, chave_privada=com_privada),
+            **_sem_kernel_da_maquina(tmp_path)}
         caminho = _com_sudo_de_mentira(tmp_path, _sem_mokutil(estado))
         ambiente = {**os.environ, **estado, "PATH": caminho}
         python = subprocess.run(
@@ -269,8 +323,9 @@ class TestSemAChavePrivadaNadaSeConstroi:
     def test_o_doctor_diz_o_passo_quando_so_falta_a_privada(
         self, tmp_path: Path, ligado: bool, com_privada: bool, diz: bool
     ) -> None:
-        estado = _estado_do_secure_boot(
-            tmp_path, ligado=ligado, inscrita=ligado, chave_privada=com_privada)
+        estado = {**_estado_do_secure_boot(
+            tmp_path, ligado=ligado, inscrita=ligado, chave_privada=com_privada),
+            **_sem_kernel_da_maquina(tmp_path)}
         dito = _roda(
             "dkms_passo_se_a_chave_falta hid-playstation",
             _com_sudo_de_mentira(tmp_path, _sem_mokutil(estado)), estado)
