@@ -73,6 +73,7 @@ makedepends=(
     'python-hatchling'
     'python-pip'
     'python-setuptools'
+    'python-poetry-core'
     'gcc'
     'gettext'
 )

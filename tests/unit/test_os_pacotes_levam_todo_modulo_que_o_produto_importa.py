@@ -183,6 +183,24 @@ def test_o_fedora_declara_o_que_o_python_uinput_precisa_para_compilar() -> None:
     assert "%{python3_sitearch}/_libsuinput*.so" in texto
 
 
+def _backend_que_construiu(dist: str) -> str:
+    roda = metadados.distribution(dist).read_text("WHEEL") or ""
+    gerador = re.search(r"^Generator: ([A-Za-z0-9_-]+)", roda, re.M)
+    assert gerador, dist
+    return {"bdist_wheel": "setuptools"}.get(gerador.group(1), gerador.group(1))
+
+
+def test_o_pip_sem_isolamento_acha_o_backend_de_cada_sdist() -> None:
+    """MORDIDA: tire o `poetry-core` do PKGBUILD ou do spec e o pydualsense não constrói."""
+    arch = re.search(r"\nmakedepends=\((.*?)\n\)", PKGBUILD.read_text(encoding="utf-8"), re.S)
+    assert arch
+    spec = SPEC.read_text(encoding="utf-8")
+    for dist in ("pydualsense", "hidapi-usb"):
+        backend = _backend_que_construiu(dist)
+        assert f"'python-{backend}'" in arch.group(1), f"o PKGBUILD não constrói {dist}"
+        assert re.search(rf"^BuildRequires:\s+python3-{backend}\b", spec, re.M), dist
+
+
 def test_o_nix_compila_o_python_uinput_com_a_libudev() -> None:
     texto = NIX.read_text(encoding="utf-8")
     bloco = texto[texto.index('pname = "python-uinput"'):]

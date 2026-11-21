@@ -24,7 +24,6 @@ License:        GPL-3.0-or-later
 URL:            https://github.com/Hefesto-Team/%{pypi_name}
 Source0:        %{url}/archive/v%{version}/%{pypi_name}-%{version}.tar.gz
 
-
 BuildRequires:  python3-devel >= 3.10
 BuildRequires:  python3-build
 BuildRequires:  python3-wheel
@@ -32,6 +31,7 @@ BuildRequires:  python3-installer
 BuildRequires:  python3-hatchling
 BuildRequires:  python3-pip
 BuildRequires:  python3-setuptools
+BuildRequires:  python3-poetry-core
 BuildRequires:  gcc
 BuildRequires:  systemd-devel
 BuildRequires:  gettext
