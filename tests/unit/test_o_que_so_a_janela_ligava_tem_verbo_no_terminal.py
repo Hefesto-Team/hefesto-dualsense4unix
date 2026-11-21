@@ -245,7 +245,7 @@ def test_prazo_vencido_manda_conferir_com_status_e_nunca_diz_que_nada_mudou(
 ) -> None:
     _com_cliente(monkeypatch, erro=_prazo_vencido())
     resultado = _rodar(*argv)
-    assert resultado.exit_code == 2
+    assert resultado.exit_code == 1
     assert "sem resposta a tempo" in resultado.output
     assert "confira com" in resultado.output
     assert FRASE_DO_PRAZO_VENCIDO.split(";")[0] in resultado.output

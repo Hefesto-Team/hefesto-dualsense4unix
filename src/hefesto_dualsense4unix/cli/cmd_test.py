@@ -4,7 +4,7 @@ from __future__ import annotations
 import contextlib
 import inspect
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import typer
 from rich.console import Console
@@ -70,7 +70,7 @@ def _montar_o_efeito(mode: str, params_list: list[int]) -> TriggerEffect:
         elif isinstance(exc, ValueError):
             console.print(f"[red]parâmetros inválidos para {mode}:[/red] {exc}")
         else:
-            fabrica: Callable[..., Any] = PRESET_FACTORIES[mode]
+            fabrica = cast("Callable[..., Any]", PRESET_FACTORIES[mode])
             pede = ", ".join(inspect.signature(fabrica).parameters) or "nenhum"
             console.print(
                 f"[red]{mode} não aceita {len(params_list)} parâmetro(s):[/red] "

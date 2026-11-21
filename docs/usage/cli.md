@@ -208,8 +208,8 @@ volume já escrito. `--uniq` escolhe o controle.
 Sai com `0` quando tudo está certo, `1` com algum aviso e `2` com alguma falha.
 Um serviço que atende e não responde conta como falha, e o serviço habilitado e
 parado também. Os demais comandos que
-falam com o serviço esperam no máximo o prazo do método e dizem «o daemon não
-respondeu»; sem controle ao alcance, `battery` e `test led` dizem «nenhum
+falam com o serviço esperam no máximo o prazo do método e dizem «sem resposta a
+tempo», com `1`; sem controle ao alcance, `battery` e `test led` dizem «nenhum
 controle ao alcance» e saem com `1`. O terminal só mostra avisos e erros do
 diário; `HEFESTO_DUALSENSE4UNIX_LOG_LEVEL=DEBUG` traz o resto.
 `status` e `battery` mostram um controle por linha, pelo número, pela cor do

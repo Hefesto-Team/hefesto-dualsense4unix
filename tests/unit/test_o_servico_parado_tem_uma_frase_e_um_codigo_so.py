@@ -55,6 +55,29 @@ def test_o_servico_parado_diz_a_mesma_frase_e_sai_com_3(comando: list[str]) -> N
     assert "Traceback" not in resultado.output
 
 
+@pytest.mark.parametrize(
+    "erro", [PermissionError(13, "negado"), ConnectionResetError(104, "caiu")],
+    ids=["socket-de-outro-dono", "conexao-caida"],
+)
+@pytest.mark.parametrize("comando", [["speaker", "status"], ["mouse", "status"]],
+                         ids=["speaker", "mouse"])
+def test_so_o_socket_ausente_ou_recusado_diz_que_o_servico_parou(
+    monkeypatch: pytest.MonkeyPatch, erro: OSError, comando: list[str]
+) -> None:
+    """O-SERVICO-PARADO-TEM-UMA-FRASE-E-UM-CODIGO-SO-01: o serviço vivo não manda subir outro."""
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    def _falha(*_a: object, **_k: object) -> None:
+        raise erro
+
+    monkeypatch.setattr(ipc_bridge, "_run_call", _falha)
+    resultado = runner.invoke(app, comando)
+
+    assert resultado.exit_code == 1, resultado.output
+    assert "parado" not in resultado.output
+    assert "sem resposta a tempo" in resultado.output
+
+
 def test_toda_acao_aceita_pelo_mic_aparece_na_mensagem_de_acao_invalida() -> None:
     resultado = runner.invoke(app, ["mic", "inexistente"])
 
