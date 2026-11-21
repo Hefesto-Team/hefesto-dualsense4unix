@@ -262,14 +262,17 @@ def _a_palavra_do_usuario(uniq: str) -> bool | None:
     return palavra_no_ar(uniq)
 
 
-def escrever_o_mudo(uniq: str, mudo: bool, *, rodar: Any = None) -> bool:
+def escrever_o_mudo(uniq: str, mudo: bool, *, rodar: Any = None, lancar: Any = None) -> bool:
     """O mudo da palavra de produto chega ao nó deste controle, e SÓ quando difere do
     último escrito.
 
     `True` = escreveu. Escrever a cada volta desfaria um mudo posto de fora
     (a tecla de mudo do sistema, o `pavucontrol`); a memória por canal é o que
-    separa o ato do usuário do gesto de terceiros.
+    separa o ato do usuário do gesto de terceiros. O alimentador do cabo segue a
+    palavra antes disso, mesmo quando o mudo já estava escrito
+    (:func:`_alimentador_segue_a_palavra`).
     """
+    _alimentador_segue_a_palavra(uniq, mudo, lancar=lancar)
     with _TRANCA:
         source = _DE_PE.get(uniq)
         if source is None or _MUDO_ESCRITO.get(uniq) is mudo:
@@ -329,16 +332,64 @@ def abrir(
 
 
 def _ligar_o_canal(uniq: str, source: Any, fonte: str | None, *, lancar: Any, rodar: Any) -> None:
-    """O mudo escrito e o alimentador no ar, no canal que acabou de subir. Chamado com a trava."""
+    """O mudo escrito e o alimentador no ar, no canal que acabou de subir. Chamado com a trava.
+
+    Com o microfone desligado por quem usa (a palavra `False`), o nó nasce calado e o alimentador
+    não nasce: a captura do aparelho no cabo fica fechada até a palavra mudar
+    (D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO).
+    """
     mudo = _a_palavra_do_usuario(uniq) is False
     if escrever_o_mudo_no_no(source.nome, mudo, rodar=rodar):
         _MUDO_ESCRITO[uniq] = mudo
     else:
         logger.warning("canal_do_mic_nao_escreveu_o_mudo_ao_nascer", extra={"source": source.nome})
-    if fonte:
-        alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
-        if alimentador.iniciar():
-            _ALIMENTANDO[uniq] = alimentador
+    if not fonte:
+        return
+    if mudo:
+        logger.info("canal_do_mic_alimentador_espera_a_palavra", extra={"uniq": uniq})
+        return
+    _erguer_o_alimentador(uniq, source, fonte, lancar=lancar)
+
+
+def _erguer_o_alimentador(uniq: str, source: Any, fonte: str, *, lancar: Any) -> bool:
+    """O `parec` deste canal no ar, pela fonte pedida. Chamado com a trava."""
+    alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
+    if not alimentador.iniciar():
+        return False
+    _ALIMENTANDO[uniq] = alimentador
+    return True
+
+
+def _alimentador_segue_a_palavra(uniq: str, calado: bool, *, lancar: Any = None) -> None:
+    """O alimentador do cabo acompanha a palavra: calado, o `parec` sai; aberto, sobe na hora.
+
+    Só o canal de pé com fonte pedida (o cabo) tem alimentador; o do rádio é enchido pela ponte e
+    não muda aqui. Nunca levanta: o gesto de quem usa não vira traceback.
+    """
+    sair: _Alimentador | None = None
+    with _TRANCA:
+        source = _DE_PE.get(uniq)
+        fonte = _FONTE_PEDIDA.get(uniq) or ""
+        if source is None or not fonte:
+            return
+        if calado:
+            sair = _ALIMENTANDO.pop(uniq, None)
+        elif uniq not in _ALIMENTANDO:
+            try:
+                subiu = _erguer_o_alimentador(uniq, source, fonte, lancar=lancar)
+            except Exception:
+                logger.warning("canal_do_mic_alimentador_nao_subiu", exc_info=True)
+                return
+            if subiu:
+                logger.info("canal_do_mic_alimentador_pela_palavra", extra={"uniq": uniq})
+    if sair is None:
+        return
+    try:
+        sair.parar()
+    except Exception:
+        logger.warning("canal_do_mic_alimentador_nao_parou", exc_info=True)
+        return
+    logger.info("canal_do_mic_alimentador_calado_pela_palavra", extra={"uniq": uniq})
 
 
 def reerguer_o_que_sumiu(
