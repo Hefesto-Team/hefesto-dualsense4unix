@@ -124,7 +124,8 @@ gesto de quem usa, como o aceite de uma página, e se pinta laranja, «Esperando
 estado pode levar `acoes`, `{id da ação: texto}`, até 32: as ações `pedida` do manifesto que aparecem agora, e o
 texto que vai ao lado de cada botão (vazio, nenhum). O texto vem de fora (o endereço de uma página, que pode ser a
 palavra `null`), corta-se em 120 letras sem recusar o estado e se mostra como texto, nunca como marcação; o
-`acoes` que não é objeto de textos recusa o estado.
+`acoes` que não é objeto de textos recusa o estado. O Hefesto de antes descarta o `acoes` e recusa o estado com
+`esperando`.
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -718,7 +719,8 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   nunca vira a fileira de chaves. O `cartao` que nenhuma opção declara recusa o manifesto. A ação dos aparelhos não o declara.
   Desde 20/11/2026, a ação pode levar `dica` (até 120 letras, o texto do ponteiro sobre o botão) e `pedida: true`: o
   botão só aparece quando o `acoes` do estado nomeia a ação, com o texto dele ao lado. A `pedida` mora na barra da
-  aba: com `cartao`, ou numa ação dos aparelhos, recusa o manifesto.
+  aba: com `cartao`, ou numa ação dos aparelhos, recusa o manifesto. Entram na mesma `api` 2; o Hefesto de antes
+  recusa o manifesto pelo campo.
 - **`aparelhos_acoes`**: `{grupo?, acoes: [{id, rotulo, icone?}]}` (de 1 a 6 ações), as ações de cada aparelho que a extensão
   devolve em `acessorios.estado` com `id`. A ação `ligar` é a chave do cartão (o clique pede o contrário do
   `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com
