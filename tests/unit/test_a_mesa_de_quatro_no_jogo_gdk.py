@@ -78,12 +78,20 @@ def test_o_aparelho_que_sai_leva_o_rumble_dele() -> None:
 
 
 def test_o_aparelho_que_volta_nasce_calado() -> None:
-    """Reabrir o mesmo caminho zera o par: o vigia não reenvia o tranco de antes da saída."""
+    """Reabrir o caminho que saiu zera o par: o vigia não reenvia o tranco de antes da saída.
+
+    A reabertura de um aparelho que segue conectado para o jogo (a leitura caiu e o caminho
+    voltou antes da lista seguinte, sem aviso de saída) guarda o par que o jogo pediu.
+    """
     abrir = _corpo(_fonte(), "static int abrir(aparelho *a)\n{")
     trava = abrir.find("EnterCriticalSection(&a->wlock);")
     solta = abrir.find("LeaveCriticalSection(&a->wlock);")
     for linha in ("a->fraco = 0;", "a->forte = 0;"):
         assert trava < abrir.find(linha) < solta, "quem volta reenvia o rumble velho"
+    guarda = abrir.find("if (a->status != STATUS_CONNECTED) {")
+    assert trava < guarda < abrir.find("a->fraco = 0;"), (
+        "a reabertura sem saída cala o tranco que o jogo segue pedindo"
+    )
 
 
 def test_cabem_os_quatro_jogadores_e_as_voltas_deles() -> None:

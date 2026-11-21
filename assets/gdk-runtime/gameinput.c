@@ -608,7 +608,8 @@ static aparelho *ap_por_caminho(const WCHAR *caminho)
 }
 
 /* Abre (ou reabre) o aparelho e põe a leitura para andar. Chamado com g_lock; a troca do handle
- * vai sob o wlock, porque o SetRumbleState do jogo escreve nele de outra thread. */
+ * vai sob o wlock, porque o SetRumbleState do jogo escreve nele de outra thread. O que volta de
+ * uma saída nasce calado; a reabertura que o jogo não viu como saída guarda o par que ele pediu. */
 static int abrir(aparelho *a)
 {
     HANDLE t;
@@ -616,8 +617,10 @@ static int abrir(aparelho *a)
     if (a->escrita != INVALID_HANDLE_VALUE) CloseHandle(a->escrita);
     a->escrita = CreateFileW(a->caminho, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                              NULL, OPEN_EXISTING, 0, NULL);
-    a->fraco = 0;
-    a->forte = 0;
+    if (a->status != STATUS_CONNECTED) {
+        a->fraco = 0;
+        a->forte = 0;
+    }
     LeaveCriticalSection(&a->wlock);
     if (a->escrita == INVALID_HANDLE_VALUE) return 0;
     InterlockedExchange(&a->perdido, 0);
