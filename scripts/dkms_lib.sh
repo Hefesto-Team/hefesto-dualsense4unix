@@ -154,11 +154,11 @@ _dkms_mok_pedido() {
     printf '%s' "$(_dkms_efivars_root)/MokNew-605dab50-e046-4300-abb6-3dd810dd8b23"
 }
 
-dkms_estado_da_chave() {
+_dkms_leitura_da_chave() {
     local _pub _lista _resposta _leu=0 _rc _pedida=0
     _pub="$(_dkms_mok_pub)"
     if [[ ! -r "${_pub}" || ! -s "${_pub}" ]]; then
-        printf 'nao-sei'
+        printf 'nao-lida'
         return 0
     fi
     if command -v mokutil >/dev/null 2>&1; then
@@ -185,11 +185,54 @@ dkms_estado_da_chave() {
     fi
     if [[ "${_pedida}" -eq 1 ]]; then
         printf 'pedida'
-    elif [[ "${_leu}" -eq 1 ]] && ! _dkms_carregado_e_da_casa "${1:-}"; then
-        printf 'fora'
+    elif [[ "${_leu}" -eq 1 ]]; then
+        printf 'lida-fora'
     else
-        printf 'nao-sei'
+        printf 'nao-lida'
     fi
+    return 0
+}
+
+_dkms_leitura_lida() {
+    if [[ -n "${_DKMS_LEITURA:-}" ]]; then
+        printf '%s' "${_DKMS_LEITURA}"
+    else
+        _dkms_leitura_da_chave
+    fi
+}
+
+dkms_ler_a_chave() {
+    [[ -n "${_DKMS_LEITURA:-}" ]] || _DKMS_LEITURA="$(_dkms_leitura_da_chave)"
+    DKMS_ESTADO="$(dkms_estado_da_chave "${1:-}")"
+}
+
+dkms_estado_da_chave() {
+    local _leitura
+    _leitura="$(_dkms_leitura_lida)"
+    case "${_leitura}" in
+        lida-fora)
+            if _dkms_carregado_e_da_casa "${1:-}"; then printf 'nao-sei'; else printf 'fora'; fi
+            ;;
+        nao-lida) printf 'nao-sei' ;;
+        *) printf '%s' "${_leitura}" ;;
+    esac
+    return 0
+}
+
+DKMS_MODULOS_DA_CASA="hid-nintendo uhid hid-playstation usb_f_hid rtw88_usb"
+
+dkms_ler_a_chave_da_casa() {
+    local _m _primeiro=""
+    DKMS_ESTADO="" DKMS_MODULO=""
+    for _m in ${DKMS_MODULOS_DA_CASA}; do
+        dkms_ler_a_chave "${_m}"
+        [[ -n "${_primeiro}" ]] || _primeiro="${_m}"
+        if [[ "${DKMS_ESTADO}" != "nao-sei" ]]; then
+            DKMS_MODULO="${_m}"
+            return 0
+        fi
+    done
+    DKMS_MODULO="${_primeiro}"
     return 0
 }
 
@@ -270,15 +313,55 @@ dkms_titulo_da_chave() {
     fi
 }
 
+_dkms_frase_do_carregado() {
+    local _m _nomes=() _n
+    for _m in "${1:-}" ${DKMS_MODULOS_DA_CASA}; do
+        [[ -n "${_m}" ]] || continue
+        [[ " ${_nomes[*]:-} " == *" ${_m} "* ]] && continue
+        _dkms_carregado_e_da_casa "${_m}" && _nomes+=("${_m}")
+    done
+    _n="${#_nomes[@]}"
+    if [[ "${_n}" -eq 1 ]]; then
+        printf ' O módulo %s do Hefesto carregado agora segue como está.' "${_nomes[0]}"
+    elif [[ "${_n}" -gt 1 ]]; then
+        printf ' Os módulos %s do Hefesto carregados agora seguem como estão.' "${_nomes[*]}"
+    fi
+    return 0
+}
+
 dkms_modulos_sem_a_chave() {
     local _estado; _estado="$(dkms_estado_da_chave "${1:-}")"
     if [[ "${_estado}" == "pedida" ]]; then
         printf 'Até a inscrição se confirmar, os módulos do Hefesto não são instalados nem trocados.'
     elif [[ "${_estado}" == "fora" ]]; then
-        printf 'Os módulos do Hefesto não vão ser instalados, porque o kernel os recusaria no boot. Os que já estavam instalados saem e o driver de fábrica volta.'
+        printf 'Os módulos do Hefesto não vão ser instalados, porque o kernel os recusaria no boot. Os que já estavam instalados saem e o driver de fábrica volta.%s' "$(_dkms_frase_do_carregado "${1:-}")"
     else
-        printf 'Sem saber, os módulos do Hefesto não são instalados nem trocados.'
+        printf 'Sem saber, os módulos do Hefesto não são instalados nem trocados.%s' "$(_dkms_frase_do_carregado "${1:-}")"
     fi
+}
+
+dkms_passo_se_a_chave_falta() {
+    dkms_secure_boot_ligado || return 0
+    dkms_ler_a_chave "${1:-}"
+    [[ "${DKMS_ESTADO}" == "inscrita" ]] && return 0
+    dkms_chave_e_o_passo "${1:-}"
+}
+
+dkms_aviso_do_doctor() {
+    dkms_secure_boot_ligado || return 0
+    dkms_ler_a_chave_da_casa
+    case "${DKMS_ESTADO}" in
+        inscrita) return 0 ;;
+        pedida)
+            printf 'Secure Boot ligado, e a inscrição da chave do DKMS espera o reinício para ser confirmada, e há módulos do Hefesto instalados neste kernel — a atualização não os tira nem os troca. Para confirmar: %s' "$(dkms_passo_da_inscricao_pedida)"
+            ;;
+        fora)
+            printf 'Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto instalados neste kernel — o kernel os RECUSA no boot e o driver de fábrica vale no lugar (a atualização tira esses módulos): %s.%s Para ganhar as curas: %s' "$(dkms_efeito_sem_a_chave)" "$(_dkms_frase_do_carregado)" "$(dkms_passo_da_mok)"
+            ;;
+        *)
+            printf 'Secure Boot ligado, e não consegui ler a chave do DKMS para saber se está inscrita, e há módulos do Hefesto instalados neste kernel — a atualização não os tira nem os troca.%s Para ler a chave: %s' "$(_dkms_frase_do_carregado)" "$(dkms_passo_para_ler_a_chave)"
+            ;;
+    esac
 }
 
 dkms_efeito_do_estado() {
@@ -304,7 +387,8 @@ dkms_passo_da_chave() {
 dkms_warn_secureboot_once() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
     dkms_secure_boot_ligado || return 0
-    dkms_chave_mok_inscrita "${1:-}" && return 0
+    dkms_ler_a_chave "${1:-}"
+    [[ "${DKMS_ESTADO}" == "inscrita" ]] && return 0
     _DKMS_SB_WARNED=1
     _dkms_warn "$(dkms_titulo_da_chave "${1:-}"). $(dkms_modulos_sem_a_chave "${1:-}") $(dkms_efeito_do_estado "${1:-}") $(dkms_passo_da_chave "${1:-}")"
     return 0
@@ -534,14 +618,17 @@ dkms_install_patched_module() {
         _dkms_warn "dkms ausente — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar dkms)"
         return 0
     fi
-    if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita "${_built}"; then
-        dkms_warn_secureboot_once "${_built}"
-        case "$(dkms_estado_da_chave "${_built}")" in
-            fora) dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}" ;;
-            pedida) _dkms_log "${_pkg} pulado: a inscrição da chave do DKMS espera o reinício, então nada se instala nem se tira" ;;
-            *) _dkms_log "${_pkg} pulado: não li a chave do DKMS, então nada se instala nem se tira" ;;
-        esac
-        return 0
+    if dkms_secure_boot_ligado; then
+        dkms_ler_a_chave "${_built}"
+        if [[ "${DKMS_ESTADO}" != "inscrita" ]]; then
+            dkms_warn_secureboot_once "${_built}"
+            case "${DKMS_ESTADO}" in
+                fora) dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}" ;;
+                pedida) _dkms_log "${_pkg} pulado: a inscrição da chave do DKMS espera o reinício, então nada se instala nem se tira" ;;
+                *) _dkms_log "${_pkg} pulado: não li a chave do DKMS, então nada se instala nem se tira" ;;
+            esac
+            return 0
+        fi
     fi
     if dkms_secure_boot_ligado && dkms_modulo_da_casa_sem_assinatura "${_built}"; then
         _refazer=1

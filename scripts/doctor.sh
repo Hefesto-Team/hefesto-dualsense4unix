@@ -5416,19 +5416,12 @@ _DKMS_SB_WARNED=0
 _check_dkms_secureboot() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return
     [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] || return
-    ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ) \
-        || return
-    local kver; kver="$(uname -r)"
-    if compgen -G "${HEFESTO_DKMS_TREE:-/var/lib/dkms}/hefesto-*/kernel-${kver}-*" >/dev/null 2>&1; then
-        _DKMS_SB_WARNED=1
-        if ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_chave_mok_fora ); then
-            warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto instalados neste kernel — o kernel os RECUSA no boot e o driver de fábrica vale no lugar (a atualização tira esses módulos): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_efeito_sem_a_chave ). Para ganhar as curas: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
-        elif ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; [[ "$(dkms_estado_da_chave)" == "pedida" ]] ); then
-            warn "Secure Boot ligado, e a inscrição da chave do DKMS espera o reinício para ser confirmada, e há módulos do Hefesto instalados neste kernel — a atualização não os tira nem os troca. Para confirmar: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_inscricao_pedida )"
-        else
-            warn "Secure Boot ligado, e não consegui ler a chave do DKMS para saber se está inscrita, e há módulos do Hefesto instalados neste kernel — a atualização não os tira nem os troca. Para ler a chave: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_para_ler_a_chave )"
-        fi
-    fi
+    local kver aviso; kver="$(uname -r)"
+    compgen -G "${HEFESTO_DKMS_TREE:-/var/lib/dkms}/hefesto-*/kernel-${kver}-*" >/dev/null 2>&1 || return
+    aviso="$( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_aviso_do_doctor )"
+    [[ -n "${aviso}" ]] || return
+    _DKMS_SB_WARNED=1
+    warn "${aviso}"
 }
 
 _hid_nintendo_dense_exceeded_scan() {
@@ -5586,7 +5579,7 @@ _hid_playstation_carregado_guarda_o_audio() {
 check_hefesto_hid_playstation_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
     local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/hid_playstation"
-    local baseline modpath staged=0 pulo
+    local baseline modpath staged=0 pulo passo
     baseline="$(_hid_playstation_baseline || true)"
     pulo="$(_dkms_veredito hefesto-hid-playstation 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename hid_playstation 2>/dev/null || true)"
@@ -5610,8 +5603,9 @@ check_hefesto_hid_playstation_dkms() {
     elif [[ -n "${pulo}" ]]; then
         warn "${efeito} — ${pulo}"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
-         && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita "hid-playstation" ); then
-        warn "${efeito} — $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_chave_e_o_passo hid-playstation )"
+         && passo="$( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_se_a_chave_falta hid-playstation )" \
+         && [[ -n "${passo}" ]]; then
+        warn "${efeito} — ${passo}"
     elif ! command -v dkms >/dev/null 2>&1; then
         warn "${efeito} — falta o dkms (e os headers do kernel) para construir o driver do Hefesto: instale os dois e $(conselho_de_instalacao)"
     else
@@ -5622,7 +5616,7 @@ check_hefesto_hid_playstation_dkms() {
 check_hefesto_usb_f_hid_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
     local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/usb_f_hid"
-    local modpath staged=0 faltam pulo
+    local modpath staged=0 faltam pulo passo
     pulo="$(_dkms_veredito hefesto-usb-f-hid 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename usb_f_hid 2>/dev/null || true)"
     _ko_da_casa "${modpath}" && staged=1
@@ -5651,8 +5645,9 @@ check_hefesto_usb_f_hid_dkms() {
     elif [[ -n "${pulo}" ]]; then
         fail "${efeito} — ${pulo}"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
-         && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita "usb-f-hid" ); then
-        fail "${efeito} — $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_chave_e_o_passo usb-f-hid )"
+         && passo="$( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_se_a_chave_falta usb-f-hid )" \
+         && [[ -n "${passo}" ]]; then
+        fail "${efeito} — ${passo}"
     elif ! command -v dkms >/dev/null 2>&1; then
         fail "${efeito} — falta o dkms (e os headers do kernel) para construir a do Hefesto: instale os dois e $(conselho_de_instalacao)"
     else

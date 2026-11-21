@@ -261,13 +261,33 @@ def test_sem_secure_boot_o_dkms_segue(tmp_path: Path) -> None:
     assert "dkms add" in chamadas, chamadas
 
 
+def _com_o_modulo_carregado(tmp_path: Path, bin_: Path, arvore: Path) -> str:
+    """O hid-playstation da casa carregado agora: ``modinfo`` de mentira e o ``/sys/module``."""
+    ko = ko_do_dkms(tmp_path, arvore, "hefesto-hid-playstation", "hid-playstation.ko.zst")
+    sysmod = tmp_path / "sysmod"
+    (sysmod / "hid_playstation").mkdir(parents=True)
+    (sysmod / "hid_playstation" / "srcversion").write_text("SRC123\n", encoding="ascii")
+    modinfo = bin_ / "modinfo"
+    modinfo.write_text(
+        f'#!/bin/sh\ncase "$*" in *filename*) echo "{ko}";; *srcversion*) echo SRC123;; esac\n',
+        encoding="utf-8",
+    )
+    modinfo.chmod(0o755)
+    cmp_ = shutil.which("cmp")
+    if cmp_ and not (bin_ / "cmp").exists():
+        os.symlink(cmp_, bin_ / "cmp")
+    return str(sysmod)
+
+
 def _reconhecimento() -> str:
     inicio = INSTALL.index("_reconhecimento() {\n")
     fim = INSTALL.index("\n}\n", inicio) + 3
     return INSTALL[inicio:fim]
 
 
-def _rodar_reconhecimento(tmp_path: Path, *, ligado: bool, pedida: bool = False) -> str:
+def _rodar_reconhecimento(
+    tmp_path: Path, *, ligado: bool, pedida: bool = False, carregado: bool = False
+) -> str:
     script = "\n".join(
         (
             "set -euo pipefail",
@@ -289,6 +309,11 @@ def _rodar_reconhecimento(tmp_path: Path, *, ligado: bool, pedida: bool = False)
     }
     if pedida:
         (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
+    if carregado:
+        arvore = tmp_path / "arvore-do-dkms"
+        env["HEFESTO_DKMS_SYS_MODULE"] = _com_o_modulo_carregado(
+            tmp_path, Path(env["PATH"]), arvore)
+        env["HEFESTO_DKMS_TREE"] = str(arvore)
     r = subprocess.run(
         [BASH, "-c", script], capture_output=True, text=True, timeout=60, check=False, env=env
     )
@@ -310,6 +335,13 @@ def test_o_reconhecimento_com_a_inscricao_pedida_diz_o_reinicio(tmp_path: Path) 
     assert "mokutil --import" not in saida and "não consegui ler" not in saida, saida
 
 
+def test_o_reconhecimento_diz_que_o_modulo_carregado_segue_como_esta(tmp_path: Path) -> None:
+    """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ: o carregado fica, os outros saem."""
+    saida = _rodar_reconhecimento(tmp_path, ligado=True, carregado=True)
+    assert "saem e o driver de fábrica volta" in saida, saida
+    assert "O módulo hid-playstation do Hefesto carregado agora segue como está." in saida, saida
+
+
 def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
     saida = _rodar_reconhecimento(tmp_path, ligado=False)
     assert "Secure Boot" not in saida.replace("distro, bluez e Secure Boot", ""), saida
@@ -319,12 +351,13 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 
 def _doctor(
-    tmp_path: Path, script: str, *, ligado: bool, inscrita: bool, pedida: bool = False
+    tmp_path: Path, script: str, *, ligado: bool, inscrita: bool, pedida: bool = False,
+    carregado: bool = False, mokutil: str = "exit 1",
 ) -> str:
     arvore = tmp_path / "arvore-do-dkms"
     ko_do_dkms(tmp_path, arvore, "hefesto-hid-playstation", "hid-playstation.ko.zst")
     bin_ = _bin(tmp_path)
-    (bin_ / "mokutil").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    (bin_ / "mokutil").write_text(f"#!/bin/sh\n{mokutil}\n", encoding="utf-8")
     (bin_ / "mokutil").chmod(0o755)
     env = {
         "PATH": f"{bin_}:/usr/bin:/bin",
@@ -337,6 +370,8 @@ def _doctor(
     }
     if pedida:
         (Path(env["HEFESTO_EFIVARS_ROOT"]) / MOK_NEW).write_bytes(b"\x07\x00\x00\x00" + CHAVE)
+    if carregado:
+        env["HEFESTO_DKMS_SYS_MODULE"] = _com_o_modulo_carregado(tmp_path, bin_, arvore)
     r = subprocess.run(
         [BASH, "-c", f"source '{DOCTOR}'\nuname() {{ echo k; }}\n{script}\n"],
         capture_output=True, text=True, timeout=60, check=False, env=env,
@@ -355,6 +390,24 @@ def test_o_doctor_com_a_inscricao_pedida_diz_o_reinicio(tmp_path: Path) -> None:
     saida = _doctor(tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=False, pedida=True)
     assert "[WARN]" in saida and "espera o reinício" in saida and "Enroll MOK" in saida, saida
     assert "mokutil --import" not in saida and "não consegui ler" not in saida, saida
+
+
+def test_o_doctor_diz_que_o_modulo_carregado_segue_como_esta(tmp_path: Path) -> None:
+    """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ."""
+    saida = _doctor(tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=False, carregado=True)
+    assert "O módulo hid-playstation do Hefesto carregado agora segue como está." in saida, saida
+    assert "mokutil --import" in saida, saida
+
+
+def test_o_doctor_le_a_chave_uma_vez(tmp_path: Path) -> None:
+    """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ: um `mokutil` por execução."""
+    contador = tmp_path / "mokutil.log"
+    saida = _doctor(
+        tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=False,
+        mokutil=f'echo x >> "{contador}"\necho "chave is not enrolled"\nexit 1',
+    )
+    assert "[WARN]" in saida, saida
+    assert len(contador.read_text(encoding="utf-8").split()) == 1, saida
 
 
 def test_o_doctor_calado_com_a_chave_inscrita(tmp_path: Path) -> None:

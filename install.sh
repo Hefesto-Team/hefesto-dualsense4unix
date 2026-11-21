@@ -1451,12 +1451,12 @@ _reconhecimento() {
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
     if [[ "${NO_DKMS}" -eq 0 ]] && [[ "${_fam}" != "imutavel" ]] \
-        && dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
+        && dkms_secure_boot_ligado && dkms_ler_a_chave_da_casa && [[ "${DKMS_ESTADO}" != "inscrita" ]]; then
         warn \
-            "$(dkms_titulo_da_chave)"
-        printf '      %s\n' "$(dkms_modulos_sem_a_chave)"
-        printf '      %s\n' "$(dkms_efeito_do_estado)"
-        printf '      %s\n' "$(dkms_passo_da_chave)"
+            "$(dkms_titulo_da_chave "${DKMS_MODULO}")"
+        printf '      %s\n' "$(dkms_modulos_sem_a_chave "${DKMS_MODULO}")"
+        printf '      %s\n' "$(dkms_efeito_do_estado "${DKMS_MODULO}")"
+        printf '      %s\n' "$(dkms_passo_da_chave "${DKMS_MODULO}")"
         achou_algo=1
     fi
 

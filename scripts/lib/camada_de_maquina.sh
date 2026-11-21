@@ -786,7 +786,7 @@ install_dkms_hid_nintendo_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once
+    dkms_warn_secureboot_once hid-nintendo
     local _hidn_src="${ROOT_DIR}/assets/dkms/hid-nintendo"
     dkms_install_patched_module hefesto-hid-nintendo \
         "$(dkms_pkg_version "${_hidn_src}")" "${_hidn_src}" hid-nintendo
@@ -856,7 +856,7 @@ install_dkms_uhid_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once
+    dkms_warn_secureboot_once uhid
     local _uhid_src="${ROOT_DIR}/assets/dkms/uhid"
     dkms_install_patched_module hefesto-uhid \
         "$(dkms_pkg_version "${_uhid_src}")" "${_uhid_src}" uhid
@@ -903,7 +903,7 @@ install_dkms_hid_playstation_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once
+    dkms_warn_secureboot_once hid-playstation
     local _hidp_src="${ROOT_DIR}/assets/dkms/hid-playstation"
     dkms_install_patched_module hefesto-hid-playstation \
         "$(dkms_pkg_version "${_hidp_src}")" "${_hidp_src}" hid-playstation
@@ -973,7 +973,7 @@ install_dkms_usb_f_hid_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once
+    dkms_warn_secureboot_once usb_f_hid
     local _fhid_src="${ROOT_DIR}/assets/dkms/usb-f-hid"
     dkms_install_patched_module hefesto-usb-f-hid \
         "$(dkms_pkg_version "${_fhid_src}")" "${_fhid_src}" usb_f_hid
@@ -1191,7 +1191,7 @@ install_dkms_rtw88_usb_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once
+    dkms_warn_secureboot_once rtw88_usb
     local _rtw_src="${ROOT_DIR}/assets/dkms/rtw88-usb"
     dkms_install_patched_module hefesto-rtw88-usb \
         "$(dkms_pkg_version "${_rtw_src}")" "${_rtw_src}" rtw88_usb

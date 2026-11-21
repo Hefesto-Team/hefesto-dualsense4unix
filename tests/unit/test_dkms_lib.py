@@ -1177,6 +1177,68 @@ class TestModuloSemAssinaturaComAChaveInscrita:
         assert "dkms build" not in lidas and "dkms install" not in lidas, lidas
 
 
+class TestAvisoDaChaveNomeiaOModuloELeUmaVez:
+    """O-AVISO-DA-CHAVE-DIZ-O-MODULO-E-A-LEITURA-SE-FAZ-UMA-VEZ-01.
+
+    D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ: o aviso diz o que acontece com o módulo
+    da casa carregado agora, e a chave se lê uma vez por execução, com os textos recebendo o estado.
+    """
+
+    instalar = TestSecureBootLigadoDevolveODriverDeFabrica._instalar
+    STATUS = TestSecureBootLigadoDevolveODriverDeFabrica.STATUS
+    _modulo_carregado = TestChaveQueNaoSeLeNaoTiraOModulo._modulo_carregado
+
+    def test_o_aviso_do_install_diz_que_o_modulo_carregado_segue_como_esta(
+        self, tmp_path: Path
+    ) -> None:
+        """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ."""
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        saida, lidas = self._modulo_carregado(tmp_path, estado, "SRC123")
+        assert "dkms remove" not in lidas, lidas
+        assert "O módulo hid-teste do Hefesto carregado agora segue como está." in saida, saida
+        assert "saem e o driver de fábrica volta" not in saida, saida
+
+    def test_sem_modulo_carregado_o_aviso_nao_fala_de_carregado(self, tmp_path: Path) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        saida, _lidas = self.instalar(tmp_path, estado, self.STATUS)
+        assert "carregado agora" not in saida, saida
+        assert "saem e o driver de fábrica volta" in saida, saida
+
+    @pytest.mark.parametrize("nome", ["hid-a", "hid-b", ""])
+    def test_a_chave_se_le_uma_vez_e_os_textos_recebem_o_estado(
+        self, tmp_path: Path, nome: str
+    ) -> None:
+        """D-2111-O-AVISO-DA-CHAVE-NOMEIA-O-MODULO-E-LE-UMA-VEZ: um `mokutil` por execução."""
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        pasta = tmp_path / "mokutil-contado"
+        pasta.mkdir()
+        contador = tmp_path / "mokutil.log"
+        _stub(pasta, "mokutil", f'echo x >> "{contador}"\necho "chave is not enrolled"\nexit 1')
+        feito = _roda(
+            f"dkms_warn_secureboot_once hid-a\ndkms_ler_a_chave '{nome}'\n"
+            f"dkms_titulo_da_chave '{nome}'; dkms_modulos_sem_a_chave '{nome}'\n"
+            f"dkms_efeito_do_estado '{nome}'; dkms_passo_da_chave '{nome}'\n"
+            f"dkms_chave_e_o_passo '{nome}'",
+            f"{pasta}:/usr/bin:/bin", estado,
+        )
+        assert "não está inscrita" in feito.stdout + feito.stderr, feito
+        assert len(contador.read_text(encoding="utf-8").split()) == 1, feito
+
+    def test_os_cinco_pontos_do_aviso_dizem_o_modulo_que_se_instala_logo_depois(self) -> None:
+        texto = (REPO_ROOT / "scripts" / "lib" / "camada_de_maquina.sh").read_text(
+            encoding="utf-8")
+        pontos = re.findall(
+            r"dkms_warn_secureboot_once([^\n]*)\n    local \w+=\"[^\"]*\"\n"
+            r"    dkms_install_patched_module [^\n]*\n\s+\"[^\n]*\" (\S+)\n", texto)
+        assert len(pontos) == 5, pontos
+        for dito, instalado in pontos:
+            assert dito.strip() == instalado, (dito, instalado)
+        assert not re.search(r"dkms_warn_secureboot_once\s*\n", texto)
+        install = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
+        assert 'dkms_titulo_da_chave "${DKMS_MODULO}"' in install
+        assert "dkms_chave_mok_inscrita" not in install
+
+
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:
     assert len(CINCO_PREPARADORES) == 5
     assert len({p.read_bytes() for p in CINCO_PREPARADORES}) == 1
