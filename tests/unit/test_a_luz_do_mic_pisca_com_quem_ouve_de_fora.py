@@ -208,7 +208,6 @@ def test_o_laco_inteiro_pisca_o_a_pelo_gravador_da_placa(
     for nome, valor in (
         ("INTERVALO_S", 0.001),
         ("INTERVALO_DE_QUEM_OUVE_S", 0.0),
-        ("ESPERA_DO_REPORT_S", 0.001),
         ("SEM_RESPOSTA_ATE_SOLTAR_S", 0.05),
     ):
         monkeypatch.setattr(luz, nome, valor)

@@ -97,7 +97,6 @@ def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """Encolhe as cadências, e deixa o MUNDO do lado de fora."""
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
-    monkeypatch.setattr(mod, "ESPERA_DO_REPORT_S", 0.001)
     monkeypatch.setattr(mod, "SEM_RESPOSTA_ATE_SOLTAR_S", 0.05)
     monkeypatch.setattr(mod, "_fontes_para", lambda _uniqs, _mesa: {})
     for caminho in (mod.MODULO_DE_QUEM_OUVE, mod.MODULO_DO_NIVEL):
@@ -364,7 +363,7 @@ async def test_o_laco_nunca_toca_o_mudo(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 @pytest.mark.asyncio
-async def test_o_desligamento_repinta_na_lingua_do_kernel_e_so_entao_solta(
+async def test_o_desligamento_solta_numa_chamada_so_e_o_backend_repinta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O microfone está MUDO: a posse volta com a luz ACESA — o contrário do que pintamos."""
@@ -375,8 +374,8 @@ async def test_o_desligamento_repinta_na_lingua_do_kernel_e_so_entao_solta(
     await _rodar(daemon, voltas=60)
 
     assert controle.escritas[0] == (UM, mod.APAGADA), "muda = apagada, enquanto é nossa"
-    assert controle.escritas[-2:] == [(UM, mod.ACESA), (UM, None)], (
-        "a posse tem de voltar REPINTADA na língua do kernel, e só então solta"
+    assert controle.escritas[-1] == (UM, None), (
+        "a posse volta numa chamada só: o backend repinta na língua do kernel e solta"
     )
 
 

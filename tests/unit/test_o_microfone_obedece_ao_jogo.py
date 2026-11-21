@@ -338,7 +338,6 @@ def _o_ensaio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]
         monkeypatch.setenv(nome, str(tmp_path / nome.lower()))
     monkeypatch.setattr(luz, "INTERVALO_S", 0.001)
     monkeypatch.setattr(luz, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
-    monkeypatch.setattr(luz, "ESPERA_DO_REPORT_S", 0.001)
     monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 0.2)
     monkeypatch.setattr(luz, "_fontes_para", lambda _uniqs, _mesa: {})
     peca_a = types.ModuleType(luz.MODULO_DE_QUEM_OUVE)

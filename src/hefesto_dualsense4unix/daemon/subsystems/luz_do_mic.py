@@ -230,8 +230,6 @@ SEGURA_A_BORDA_S: float = 1.0
 
 LIMIAR_DE_BATERIA_PCT: int = 30
 
-ESPERA_DO_REPORT_S: float = 0.15
-
 SEM_RESPOSTA_ATE_SOLTAR_S: float = 3.0
 
 MODULO_DE_QUEM_OUVE: str = "hefesto_dualsense4unix.integrations.quem_ouve_o_microfone"
@@ -652,23 +650,21 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
     return True
 
 
-async def _devolver(
+def _devolver(
     backend: Any,
     uniqs: list[str],
     escrito: dict[str, int],
     posse: set[str],
 ) -> int:
-    """REPINTA na língua do kernel, espera o report sair, e SOLTA a posse."""
+    """SOLTA a posse de cada controle, sem esperar nada: o backend repinta e solta numa chamada só.
+
+    `set_microphone_led(None)` entrega o mudo real na língua do kernel e só então derruba o bit
+    `0x01` do flag1 (`_repintar_antes_de_soltar`); não há ponto de suspensão entre a repintura e a
+    soltura, então o cancelamento do desligamento, repetido quantas vezes for, não retém posse.
+    """
     alvos = [uniq for uniq in uniqs if uniq in posse]
     if backend is None or not alvos:
         return 0
-    for uniq in alvos:
-        _escrever(backend, uniq, ACESA if _mudo(backend, uniq) else APAGADA)
-    try:
-        await asyncio.sleep(ESPERA_DO_REPORT_S)
-    except asyncio.CancelledError:
-        logger.warning("luz_do_mic_posse_retida", controles=len(alvos))
-        raise
     for uniq in alvos:
         _escrever(backend, uniq, None)
         escrito.pop(uniq, None)
@@ -804,7 +800,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     desde = sem_resposta_desde.setdefault(uniq, agora)
                     if (agora - desde) >= SEM_RESPOSTA_ATE_SOLTAR_S:
                         logger.info("luz_do_mic_sem_resposta", uniq=uniq)
-                        await _devolver(backend, [uniq], escrito, posse)
+                        _devolver(backend, [uniq], escrito, posse)
                         sem_resposta_desde.pop(uniq, None)
                     continue
 
@@ -824,9 +820,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                         with contextlib.suppress(Exception):
                             desinscrever(topico, aberta)
             with contextlib.suppress(Exception):
-                await _devolver(
-                    getattr(daemon, "controller", None), sorted(posse), escrito, posse
-                )
+                _devolver(getattr(daemon, "controller", None), sorted(posse), escrito, posse)
         finally:
             _parar_medidor(medidor)
 
@@ -962,7 +956,6 @@ def _drenar_o_jogo(fila: Any) -> list[str]:
 __all__ = [
     "ACESA",
     "APAGADA",
-    "ESPERA_DO_REPORT_S",
     "INTERVALO_DE_QUEM_OUVE_S",
     "INTERVALO_S",
     "LIMIAR_DE_BATERIA_PCT",

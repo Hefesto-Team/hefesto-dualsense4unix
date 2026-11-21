@@ -106,7 +106,6 @@ class _Medidor:
 def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
-    monkeypatch.setattr(mod, "ESPERA_DO_REPORT_S", 0.001)
     monkeypatch.setattr(mod, "SEGURA_A_BORDA_S", 0.01)
     monkeypatch.setattr(mod, "SEM_RESPOSTA_ATE_SOLTAR_S", 0.05)
     monkeypatch.setattr(mod, "_fontes_para", lambda uniqs, _mesa: {u: f"fonte-{u}" for u in uniqs})

@@ -587,7 +587,6 @@ def luz_no_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """As cadências encolhidas, e as peças irmãs de mentira (ninguém ouve)."""
     monkeypatch.setattr(luz, "INTERVALO_S", 0.001)
     monkeypatch.setattr(luz, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
-    monkeypatch.setattr(luz, "ESPERA_DO_REPORT_S", 0.001)
     monkeypatch.setattr(luz, "_fontes_para", lambda _uniqs, _mesa: {})
     peca_a = types.ModuleType(luz.MODULO_DE_QUEM_OUVE)
     peca_a.quem_ouve_agora = lambda _uniqs: {UM: []}  # type: ignore[attr-defined]

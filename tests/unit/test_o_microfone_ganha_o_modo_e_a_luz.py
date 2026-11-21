@@ -52,7 +52,6 @@ def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """As cadências encolhidas e o mundo de fora (as peças A e B) fora do teste."""
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
-    monkeypatch.setattr(mod, "ESPERA_DO_REPORT_S", 0.001)
     monkeypatch.setattr(mod, "SEM_RESPOSTA_ATE_SOLTAR_S", 0.05)
     monkeypatch.setattr(
         mod, "_fontes_para", lambda uniqs, _mesa: {u: f"fonte-de-{u}" for u in uniqs}
