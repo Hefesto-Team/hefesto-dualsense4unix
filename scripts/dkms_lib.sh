@@ -61,7 +61,21 @@ _dkms_como_instalar() {
     fi
 }
 
-_dkms_efivars_root() { printf '%s' "${HEFESTO_EFIVARS_ROOT:-/sys/firmware/efi/efivars}"; }
+_dkms_efivars_root() {
+    if [[ "${EUID}" -ne 0 && -n "${HEFESTO_EFIVARS_ROOT:-}" ]]; then
+        printf '%s' "${HEFESTO_EFIVARS_ROOT}"
+    else
+        printf '%s' /sys/firmware/efi/efivars
+    fi
+}
+
+_dkms_sys_module() {
+    if [[ "${EUID}" -ne 0 && -n "${HEFESTO_SYS_MODULE:-}" ]]; then
+        printf '%s' "${HEFESTO_SYS_MODULE}"
+    else
+        printf '%s' /sys/module
+    fi
+}
 
 _dkms_familia_da_distro() {
     local _os="${HEFESTO_OS_RELEASE:-/etc/os-release}"
@@ -149,7 +163,7 @@ _dkms_srcversion_do_modulo() {
 _dkms_carregado_e_da_casa() {
     local _nome="$1" _carregado _arquivo
     [[ -n "${_nome}" ]] || return 1
-    _carregado="$(cat "${HEFESTO_SYS_MODULE:-/sys/module}/${_nome//-/_}/srcversion" 2>/dev/null || true)"
+    _carregado="$(cat "$(_dkms_sys_module)/${_nome//-/_}/srcversion" 2>/dev/null || true)"
     [[ -n "${_carregado}" ]] || return 1
     _arquivo="$(modinfo -F filename "${_nome}" 2>/dev/null)" || return 1
     dkms_ko_da_casa "${_arquivo}" || return 1

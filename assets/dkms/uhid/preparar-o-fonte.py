@@ -596,9 +596,15 @@ def _valor_do_arquivo(arquivo: Path, chave: str) -> str:
     return valor.replace('"', "").replace("'", "")
 
 
+def _raiz_das_efivars() -> Path:
+    """As efivars; o botão de teste `HEFESTO_EFIVARS_ROOT` só vale fora do root."""
+    if os.geteuid() != 0 and os.environ.get("HEFESTO_EFIVARS_ROOT"):
+        return Path(os.environ["HEFESTO_EFIVARS_ROOT"])
+    return Path("/sys/firmware/efi/efivars")
+
+
 def _secure_boot_ligado() -> bool:
-    raiz = Path(os.environ.get("HEFESTO_EFIVARS_ROOT", "/sys/firmware/efi/efivars"))
-    for variavel in sorted(raiz.glob("SecureBoot-*")):
+    for variavel in sorted(_raiz_das_efivars().glob("SecureBoot-*")):
         try:
             dados = variavel.read_bytes()
         except OSError:
@@ -709,10 +715,9 @@ def _estado_da_chave() -> str:
         if bytes_da_chave in conteudo:
             return "inscrita"
         leu = True
-    raiz = Path(os.environ.get("HEFESTO_EFIVARS_ROOT", "/sys/firmware/efi/efivars"))
     with contextlib.suppress(OSError):
         pedida = pedida or bytes_da_chave in (
-            raiz / "MokNew-605dab50-e046-4300-abb6-3dd810dd8b23").read_bytes()
+            _raiz_das_efivars() / "MokNew-605dab50-e046-4300-abb6-3dd810dd8b23").read_bytes()
     if pedida:
         return "pedida"
     return "fora" if leu and not _carregado_e_da_casa() else "nao-sei"
