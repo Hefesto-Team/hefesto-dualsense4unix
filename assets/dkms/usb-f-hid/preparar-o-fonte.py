@@ -753,15 +753,23 @@ def _chave_nao_garantida() -> bool:
 
 
 def _kernel_assina(kver: str) -> bool | None:
-    """Se o kernel assina módulo, pelo `.config` que o DKMS lê; `None` quando nenhum se lê."""
-    boot = Path(os.environ.get("HEFESTO_DKMS_BOOT_ROOT", "/boot"))
-    for config in (_modulos_root() / kver / "build" / ".config", boot / f"config-{kver}"):
-        try:
-            texto = config.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        return any(linha.startswith("CONFIG_MODULE_SIG_HASH=") for linha in texto.splitlines())
-    return None
+    """Se o kernel assina módulo, pelo `.config` que o DKMS lê: com a pasta `build`, o
+    `build/.config` (sem o arquivo o DKMS não assina); sem a pasta, o de `/boot`; `None` quando não
+    se lê."""
+    build = _modulos_root() / kver / "build"
+    if build.is_dir():
+        if not os.access(build, os.X_OK):
+            return None
+        config = build / ".config"
+        if not config.is_file():
+            return False
+    else:
+        config = Path(os.environ.get("HEFESTO_DKMS_BOOT_ROOT", "/boot")) / f"config-{kver}"
+    try:
+        texto = config.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    return any(linha.startswith("CONFIG_MODULE_SIG_HASH=") for linha in texto.splitlines())
 
 
 def _sem_a_chave_privada(kver: str = "") -> bool:

@@ -33,6 +33,7 @@ from tests.unit.test_dkms_lib import (
 )
 
 KERNEL = "7.1.5-generic"
+CONFIG_ILEGIVEL = "o .config que não se lê"
 PROIBIDOS = ("dkms add", "dkms build", "dkms install", "dkms remove")
 
 
@@ -43,7 +44,7 @@ def _instalar(
     vezes: int = 1,
     framework: str | None = None,
     extra: dict[str, str] | None = None,
-    config: str | None = None,
+    config: str | None = CONFIG_QUE_ASSINA,
     dubles: dict[str, str] | None = None,
 ) -> tuple[str, str]:
     """Roda o ``dkms_install_patched_module`` num módulo ainda não construído, com o fonte
@@ -62,8 +63,7 @@ def _instalar(
         _stub(bin_, nome, corpo)
     modulos = tmp_path / "modules"
     (modulos / KERNEL / "build").mkdir(parents=True)
-    if config is not None:
-        (modulos / KERNEL / "build" / ".config").write_text(config, encoding="utf-8")
+    _escreve_o_config(modulos / KERNEL / "build", config)
     fonte = tmp_path / "fonte"
     instalado = tmp_path / "usr-src" / "hefesto-teste-9.9.9"
     for pasta, versao in ((fonte, "novo"), (instalado, "velho")):
@@ -85,6 +85,17 @@ def _instalar(
     assert feito.returncode == 0, feito.stderr
     lidas = chamadas.read_text(encoding="utf-8") if chamadas.exists() else ""
     return feito.stdout + feito.stderr, lidas
+
+
+def _escreve_o_config(build: Path, config: str | None) -> None:
+    """O ``.config`` de mentira dos cabeçalhos: ``None`` não escreve, ``CONFIG_ILEGIVEL`` escreve
+    um que assina e o tira da leitura."""
+    if config is None:
+        return
+    alvo = build / ".config"
+    alvo.write_text(CONFIG_QUE_ASSINA if config == CONFIG_ILEGIVEL else config, encoding="utf-8")
+    if config == CONFIG_ILEGIVEL:
+        alvo.chmod(0)
 
 
 def _com_sudo_de_mentira(tmp_path: Path, caminho: str) -> str:
@@ -216,14 +227,18 @@ class TestSemAChavePrivadaNadaSeConstroi:
 
     @pytest.mark.parametrize(
         ("config", "constroi"),
-        [(CONFIG_QUE_ASSINA, False), (CONFIG_QUE_NAO_ASSINA, True), (None, False)],
-        ids=["kernel-assina", "kernel-nao-assina", "config-ilegivel"],
+        [(CONFIG_QUE_ASSINA, False), (CONFIG_QUE_NAO_ASSINA, True), (None, True),
+         (CONFIG_ILEGIVEL, False)],
+        ids=["kernel-assina", "kernel-nao-assina", "build-sem-config", "config-ilegivel"],
     )
     def test_o_kernel_que_nao_assina_nao_pede_a_chave_privada(
         self, tmp_path: Path, config: str | None, constroi: bool
     ) -> None:
         """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: o DKMS não assina nem gera par
-        onde o kernel não assina; sem ler o ``.config``, a falta da privada segue valendo."""
+        onde o kernel não assina, nem nos cabeçalhos sem ``.config`` (o DKMS lê só o deles); o
+        ``.config`` que existe e não se lê é «não sei», e a falta da privada segue valendo."""
+        if config == CONFIG_ILEGIVEL and os.geteuid() == 0:
+            pytest.skip("o root lê qualquer arquivo")
         estado = _estado_do_secure_boot(
             tmp_path, ligado=True, inscrita=True, chave_privada=False)
         saida, lidas = _instalar(tmp_path, estado, config=config)
@@ -236,14 +251,16 @@ class TestSemAChavePrivadaNadaSeConstroi:
         """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: o preparador diz o mesmo."""
         veredito = tmp_path / "dkms" / "pacote" / "1.0.0"
         veredito.mkdir(parents=True)
-        for config, esperado, rc in ((CONFIG_QUE_ASSINA, "^/", 0), (CONFIG_QUE_NAO_ASSINA, "", 1),
-                                     (None, "^/", 0)):
-            raiz = tmp_path / f"c{rc}-{esperado.strip('^/') or 'x'}-{bool(config)}"
+        casos = [("assina", CONFIG_QUE_ASSINA, "^/"), ("nao-assina", CONFIG_QUE_NAO_ASSINA, ""),
+                 ("build-sem-config", None, "")]
+        if os.geteuid() != 0:
+            casos.append(("config-ilegivel", CONFIG_ILEGIVEL, "^/"))
+        for nome, config, esperado in casos:
+            raiz = tmp_path / nome
             raiz.mkdir()
             modulos = raiz / "modules"
             (modulos / KERNEL / "build").mkdir(parents=True)
-            if config is not None:
-                (modulos / KERNEL / "build" / ".config").write_text(config, encoding="utf-8")
+            _escreve_o_config(modulos / KERNEL / "build", config)
             estado = _estado_do_secure_boot(
                 raiz, ligado=True, inscrita=True, chave_privada=False)
             ambiente = {**os.environ, **estado, "PATH": _sem_mokutil(estado, os.environ["PATH"]),
@@ -278,7 +295,8 @@ class TestSemAChavePrivadaNadaSeConstroi:
                     ["python3", str(preparador), "--exclusivo", KERNEL,
                      str(tmp_path / "sem-fonte"), str(veredito)],
                     capture_output=True, text=True, check=False, timeout=60,
-                    env={**os.environ, **estado, "PATH": _sem_mokutil(estado, os.environ["PATH"])},
+                    env={**os.environ, **estado, **_sem_kernel_da_maquina(raiz),
+                         "PATH": _sem_mokutil(estado, os.environ["PATH"])},
                 )
                 assert feito.stdout.strip() == esperado, (preparador, ligado, com_privada, feito)
 

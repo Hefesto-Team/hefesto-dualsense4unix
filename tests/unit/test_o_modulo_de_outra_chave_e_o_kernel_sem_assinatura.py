@@ -13,6 +13,7 @@ raízes de mentira, módulo de mentira e certificado montado byte a byte no pró
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -269,16 +270,14 @@ class TestKernelSemAssinaturaDeModulo:
         for verbo in FALHA_DE_REFAZER:
             assert verbo not in lidas, lidas
 
-    def test_o_config_do_boot_vale_quando_o_dos_cabecalhos_nao_se_le(
+    def test_os_cabecalhos_sem_config_nao_assinam_nem_com_o_boot_dizendo_que_sim(
         self, tmp_path: Path
     ) -> None:
-        (tmp_path / "com").mkdir()
-        _dito, com = self._instalar(tmp_path / "com", None, boot=CONFIG_QUE_ASSINA)
-        assert "dkms build" in com, com
-        (tmp_path / "sem").mkdir()
-        _dito, sem = self._instalar(tmp_path / "sem", None, boot=CONFIG_QUE_NAO_ASSINA)
+        """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: o DKMS lê só o ``.config`` dos
+        cabeçalhos e, sem ele, não assina; refazer pelo ``/boot`` repetiria a cada install."""
+        _dito, lidas = self._instalar(tmp_path, None, boot=CONFIG_QUE_ASSINA)
         for verbo in FALHA_DE_REFAZER:
-            assert verbo not in sem, sem
+            assert verbo not in lidas, lidas
 
     def test_o_config_dos_cabecalhos_vence_o_do_boot(self, tmp_path: Path) -> None:
         _dito, lidas = self._instalar(tmp_path, CONFIG_QUE_NAO_ASSINA, boot=CONFIG_QUE_ASSINA)
@@ -286,19 +285,35 @@ class TestKernelSemAssinaturaDeModulo:
             assert verbo not in lidas, lidas
 
     @pytest.mark.parametrize(
-        ("config", "esperado"),
-        [(CONFIG_QUE_ASSINA, 0), (CONFIG_QUE_NAO_ASSINA, 1), (None, 2)],
-        ids=["com", "sem", "ilegivel"],
+        ("build", "config", "boot", "esperado"),
+        [(True, CONFIG_QUE_ASSINA, None, 0), (True, CONFIG_QUE_NAO_ASSINA, None, 1),
+         (True, None, CONFIG_QUE_ASSINA, 1), (True, "ilegivel", None, 2),
+         (False, None, CONFIG_QUE_ASSINA, 0), (False, None, CONFIG_QUE_NAO_ASSINA, 1),
+         (False, None, None, 2)],
+        ids=["com", "sem", "build-sem-config", "ilegivel", "sem-build-boot-com",
+             "sem-build-boot-sem", "sem-build-sem-boot"],
     )
     def test_o_kernel_assina_em_tres_respostas(
-        self, tmp_path: Path, config: str | None, esperado: int
+        self, tmp_path: Path, build: bool, config: str | None, boot: str | None, esperado: int
     ) -> None:
+        """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: com a pasta ``build``, só o
+        ``.config`` da pasta decide; sem a pasta, o de ``/boot``; o que não se lê é «não sei»."""
+        if config == "ilegivel" and os.geteuid() == 0:
+            pytest.skip("o root lê qualquer arquivo")
         modulos = tmp_path / "modules"
-        (modulos / KERNEL_DO_TESTE / "build").mkdir(parents=True)
+        pasta = modulos / KERNEL_DO_TESTE / "build"
+        if build:
+            pasta.mkdir(parents=True)
         if config is not None:
-            (modulos / KERNEL_DO_TESTE / "build" / ".config").write_text(config, encoding="utf-8")
+            (pasta / ".config").write_text(
+                CONFIG_QUE_ASSINA if config == "ilegivel" else config, encoding="utf-8")
+            if config == "ilegivel":
+                (pasta / ".config").chmod(0)
+        if boot is not None:
+            (tmp_path / "boot").mkdir()
+            (tmp_path / "boot" / f"config-{KERNEL_DO_TESTE}").write_text(boot, encoding="utf-8")
         feito = _roda(
             f"dkms_kernel_assina_modulo {KERNEL_DO_TESTE}", "/usr/bin:/bin",
             {"HEFESTO_DKMS_MODULES_ROOT": str(modulos),
-             "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "sem-boot")})
+             "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "boot")})
         assert feito.returncode == esperado, feito

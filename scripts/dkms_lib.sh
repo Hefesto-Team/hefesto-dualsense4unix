@@ -160,15 +160,19 @@ _dkms_leitura_da_chave_privada() {
 }
 
 dkms_kernel_assina_modulo() {
-    local _k="${1:-$(_dkms_kernel_alvo)}" _config _rc
-    for _config in "$(_dkms_modules_root)/${_k}/build/.config" "$(_dkms_boot_root)/config-${_k}"; do
-        [[ -r "${_config}" ]] || continue
-        _rc=0
-        grep -q '^CONFIG_MODULE_SIG_HASH=' "${_config}" 2>/dev/null || _rc=$?
-        [[ "${_rc}" -eq 0 ]] && return 0
-        [[ "${_rc}" -eq 1 ]] && return 1
-    done
-    return 2
+    local _k="${1:-$(_dkms_kernel_alvo)}" _build _config _rc=0
+    _build="$(_dkms_modules_root)/${_k}/build"
+    if [[ -d "${_build}" ]]; then
+        [[ -x "${_build}" ]] || return 2
+        [[ -f "${_build}/.config" ]] || return 1
+        _config="${_build}/.config"
+    else
+        _config="$(_dkms_boot_root)/config-${_k}"
+    fi
+    [[ -r "${_config}" ]] || return 2
+    grep -q '^CONFIG_MODULE_SIG_HASH=' "${_config}" 2>/dev/null || _rc=$?
+    [[ "${_rc}" -le 1 ]] || return 2
+    return "${_rc}"
 }
 
 dkms_estado_da_chave_privada() {
