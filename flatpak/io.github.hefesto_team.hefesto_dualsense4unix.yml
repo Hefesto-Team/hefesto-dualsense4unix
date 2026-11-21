@@ -120,6 +120,14 @@ finish-args:
   - --filesystem=/run/hefesto-hidraw-broker:ro
   - --filesystem=/run/hefesto-dualsense4unix
   - --filesystem=/run/udev/data:ro
+  #   - O marcador de sistema de imagem, `:ro`. O atualizador pergunta se o
+  #     `/run/ostree-booted` existe para não oferecer ao SteamOS, ao Silverblue e
+  #     afins um comando de pacote que não vale lá; o Flatpak não o leva ao
+  #     sandbox, e sem a linha a resposta de dentro seria sempre «não». É um
+  #     arquivo vazio, só a existência é lida; se o host não o tem, é pulado em
+  #     silêncio. O `/run/host/os-release` não pede linha: o próprio Flatpak o
+  #     monta.
+  - --filesystem=/run/ostree-booted:ro
   # O BLUEZ (O-FLATPAK-ALCANCA-O-BLUEZ-01, 24/09/2026). O daemon fala com o
   # BlueZ pelo barramento de SISTEMA (`integrations/bluez_dbus.py`): parear,
   # reconectar, remover, mover de adaptador e dar nome ao adaptador. Sem esta

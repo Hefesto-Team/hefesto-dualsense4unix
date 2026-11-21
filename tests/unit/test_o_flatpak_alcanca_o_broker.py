@@ -36,6 +36,14 @@ NAO_SE_EXPOE: dict[str, str] = {
     ),
 }
 
+MONTADO_PELO_FLATPAK: dict[str, str] = {
+    "/run/host/os-release": (
+        "o próprio Flatpak o monta, com o os-release do host (medido no 1.18.1: a lista de "
+        "`/run/host` do libflatpak traz `os-release`); sem ele, o `/etc/os-release` de dentro "
+        "é o do runtime, e a distribuição dita seria a errada"
+    ),
+}
+
 LIDOS_PELA_BIBLIOTECA: dict[str, str] = {
     "/run/udev/data": "libudev.so.1",
 }
@@ -116,12 +124,14 @@ def linhas_de_run_do_manifesto() -> dict[str, str]:
 
 def expostos() -> dict[str, str]:
     """O que o Flatpak monta, e com que modo — o caminho vem do DONO de cada um."""
+    from hefesto_dualsense4unix.app.actions.pecas_do_atualizador import MARCA_DO_OSTREE
     from hefesto_dualsense4unix.integrations.diario_do_radio import TRAVA_COMUM
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
         DEFAULT_SOCKET_PATH,
     )
 
     return {
+        str(MARCA_DO_OSTREE): "ro",
         str(PurePosixPath(DEFAULT_SOCKET_PATH).parent): "ro",
         str(TRAVA_COMUM.parent): "rw",
         **dict.fromkeys(LIDOS_PELA_BIBLIOTECA, "ro"),
@@ -156,14 +166,15 @@ def test_a_leitura_do_codigo_enxerga_os_tres_donos() -> None:
 
 @pytest.mark.parametrize("caminho", sorted(CAMINHOS))
 def test_cada_caminho_de_run_do_daemon_tem_a_sua_linha(caminho: str) -> None:
-    if any(_debaixo_de(caminho, pasta) for pasta in NAO_SE_EXPOE):
+    if any(_debaixo_de(caminho, pasta) for pasta in (*NAO_SE_EXPOE, *MONTADO_PELO_FLATPAK)):
         return
     linhas = linhas_de_run_do_manifesto()
     cobre = [linha for linha in linhas if _debaixo_de(caminho, linha)]
     assert cobre, (
         f"o daemon abre {caminho} ({', '.join(CAMINHOS[caminho])}) e o finish-args "
         "não o monta: dentro do sandbox ele responde ENOENT. Acrescente a linha "
-        "`--filesystem=` ao manifesto, ou a razão de não expor em NAO_SE_EXPOE"
+        "`--filesystem=` ao manifesto, ou a razão de não expor em NAO_SE_EXPOE, ou, se o "
+        "Flatpak já o monta, em MONTADO_PELO_FLATPAK"
     )
 
 
@@ -231,6 +242,59 @@ def test_a_trava_do_radio_escreve_e_por_isso_a_linha_nao_e_ro(
     assert modo == "rw", (
         f"a trava está montada como {modo!r}: o daemon abre o radio.lock com O_RDWR, "
         "e numa montagem só de leitura o EROFS derruba a trava inteira"
+    )
+
+
+def test_o_que_o_flatpak_ja_monta_nao_ganha_linha() -> None:
+    linhas = linhas_de_run_do_manifesto()
+    for pasta, porque in MONTADO_PELO_FLATPAK.items():
+        assert not [linha for linha in linhas if _debaixo_de(pasta, linha) or
+                    _debaixo_de(linha, pasta)], (
+            f"{pasta} não pede linha, e dar uma é dar mais do que o código usa: {porque}"
+        )
+        assert pasta in CAMINHOS, (
+            f"o código não abre mais {pasta}: tire a razão de MONTADO_PELO_FLATPAK"
+        )
+
+
+def _os_release_de(tmp_path: Path, id_: str) -> Path:
+    arquivo = tmp_path / f"os-release-{id_}"
+    arquivo.write_text(f'ID={id_}\nPRETTY_NAME="Sistema {id_}"\n', encoding="utf-8")
+    return arquivo
+
+
+def test_dentro_do_sandbox_o_os_release_e_o_do_host_e_o_marcador_decide_o_gesto(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As duas respostas de dentro: o host vem do Flatpak; o marcador vem da linha do manifesto."""
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    assert str(pa.OS_RELEASE[0]) in MONTADO_PELO_FLATPAK, (
+        "o primeiro os-release lido deixou de ser o que o Flatpak monta"
+    )
+    marca_do_produto = str(pa.MARCA_DO_OSTREE)
+    host = _os_release_de(tmp_path, "fedora")
+    runtime = _os_release_de(tmp_path, "freedesktop-sdk")
+    monkeypatch.setattr(pa, "OS_RELEASE", (host, runtime))
+    assert pa._nome_da_distro() == "Sistema fedora"
+
+    monkeypatch.setattr(pa, "OS_RELEASE", (tmp_path / "ausente", runtime))
+    assert pa._nome_da_distro() == "Sistema freedesktop-sdk", (
+        "controle: sem o arquivo do host a resposta cai no runtime"
+    )
+
+    monkeypatch.setattr(pa, "OS_RELEASE", (host, runtime))
+    marcador = tmp_path / "ostree-booted"
+    monkeypatch.setattr(pa, "MARCA_DO_OSTREE", marcador)
+    assert pa._gesto_do_sistema().endswith("sudo dnf upgrade"), (
+        "controle: sem o marcador, o host Fedora recebe o comando do dnf"
+    )
+    marcador.write_text("", encoding="utf-8")
+    assert pa._gesto_do_sistema() == "Atualize pelo gerenciador da distribuição", (
+        "com o marcador visível, o sistema de imagem não leva comando de pacote"
+    )
+    assert linhas_de_run_do_manifesto().get(marca_do_produto) == "ro", (
+        "o marcador só chega ao sandbox pela linha `:ro` do manifesto"
     )
 
 
