@@ -411,14 +411,10 @@ class EleitorDeMicrofone:
     fonte_do_eleito: str | None = None
 
     def guardar_anterior(self) -> str | None:
-        """Guarda o padrão de antes, a cada ida que parte de uma fonte que não é controle.
+        """Guarda o padrão de agora como o `anterior`, se ele não é captura de controle.
 
-        A-VOLTA-DO-MICROFONE-DEVOLVE-A-FONTE-DE-ANTES-01 (20/11/2026). Quem escolheu
-        o microfone foi quem usa, e o que a volta devolve é essa escolha: o padrão
-        de agora vira o `anterior` sempre que não é canal de controle (nem
-        monitor), e a ida de um controle para outro, que parte de um canal nosso,
-        não reescreve a memória. Antes valia a primeira leitura da sessão, e quem
-        trocava de webcam para headset no meio da sessão voltava à webcam.
+        Vale a cada ida: a ida que parte de um canal de controle (de um controle para
+        outro) não reescreve a memória. Devolve o `anterior` guardado.
         """
         ativo = fonte_ativa()
         if ativo is not None and not fontes_dualsense(f"0\t{ativo}\n"):
