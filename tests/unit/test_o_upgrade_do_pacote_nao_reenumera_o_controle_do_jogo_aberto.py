@@ -191,7 +191,7 @@ def test_a_remocao_decide_antes_dos_arquivos_sairem_e_dispara_depois(
 ) -> None:
     """MORDIDA: tire a decisão do `pre_remove`/`%preun` e o gancho seguinte dispara sem veredito."""
     assert "disparo_do_udev.sh --preparar-a-remocao" in _corpo(arquivo, *pre)
-    assert "disparo_do_udev.sh --apos-a-remocao" in _corpo(arquivo, *pos)
+    assert 'disparo_do_udev.sh" --apos-a-remocao' in _corpo(arquivo, *pos)
     assert "udevadm trigger" not in _corpo(arquivo, *pos)
 
 
@@ -279,3 +279,161 @@ def test_remover_o_pacote_com_o_veredito_perdido_nao_reenumera(tmp_path: Path) -
     assert not _alguma_casa(chamadas, QUE_REENUMERAM)
     assert "trigger" not in chamadas
     assert "não deu para saber" in saida
+
+
+PASTA_DO_RUN = "/run/hefesto-dualsense4unix-remocao"
+GANCHOS_DA_REMOCAO = {
+    "arch": (INSTALL_DO_ARCH, "post_remove() {", "\n}\n", ["bash", "-c"]),
+    "fedora": (SPEC, "\n%postun\n", "\n%files\n", ["sh", "-c"]),
+}
+
+
+def _stat_que_ve_o_root(raiz: Path) -> Path:
+    """Um `stat` que mostra o dono deste usuário como root: o gancho roda como root."""
+    bin_ = raiz / "bin-root"
+    bin_.mkdir(parents=True, exist_ok=True)
+    real = shutil.which("stat")
+    assert real
+    falso = bin_ / "stat"
+    falso.write_text(
+        f'#!/bin/sh\nsaida=$("{real}" "$@") || exit $?\n'
+        f'printf "%s\\n" "$saida" | sed "s/^{os.getuid()} /0 /"\n',
+        encoding="utf-8",
+    )
+    falso.chmod(0o755)
+    return bin_
+
+
+def _gancho_da_remocao(
+    raiz: Path, formato: str, run: Path, *, como_root: bool
+) -> tuple[list[str], bool]:
+    """Roda o `post_remove`/`%postun` de verdade, com o /run e o udevadm de mentira."""
+    arquivo, inicio, fim, interprete = GANCHOS_DA_REMOCAO[formato]
+    corpo = arquivo.read_text(encoding="utf-8").split(inicio, 1)[1].split(fim, 1)[0]
+    corpo = corpo.replace("%%", "%").replace(PASTA_DO_RUN, str(run))
+    corpo = corpo.replace("/usr/sbin/udevadm", "udevadm")
+    ambiente, diario = _udevadm_de_mentira(raiz)
+    ambiente["HEFESTO_RUN_DA_REMOCAO"] = str(run)
+    if como_root:
+        ambiente["PATH"] = f"{_stat_que_ve_o_root(raiz)}:{ambiente['PATH']}"
+    feito = subprocess.run(
+        [*interprete, corpo, "gancho", "0"], env=ambiente, capture_output=True, text=True,
+        check=False, timeout=60,
+    )
+    assert feito.returncode == 0, feito.stderr
+    chamadas = diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
+    return [c for c in chamadas if not c.startswith("control")], (raiz / "executou").exists()
+
+
+def _preparar(raiz: Path, run: Path, *, jogo: bool) -> None:
+    pacote = raiz / "pacote"
+    pacote.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(DONO, pacote / DONO.name)
+    shutil.copy2(LEITOR, pacote / LEITOR.name)
+    ambiente, diario = _udevadm_de_mentira(raiz)
+    ambiente["HEFESTO_RAIZ_PROC"] = str(_proc(raiz, jogo=jogo))
+    ambiente["HEFESTO_RUN_DA_REMOCAO"] = str(run)
+    feito = subprocess.run(
+        ["bash", str(pacote / DONO.name), "--preparar-a-remocao"],
+        env=ambiente, capture_output=True, text=True, check=False, timeout=60,
+    )
+    assert feito.returncode == 0, feito.stderr
+    assert not diario.exists()
+
+
+def _copia_alheia(pasta: Path, raiz: Path) -> Path:
+    copia = pasta / DONO.name
+    copia.write_text(f'#!/bin/sh\ntouch "{raiz}/executou"\n', encoding="utf-8")
+    copia.chmod(0o700)
+    return copia
+
+
+@pytest.mark.parametrize("formato", list(GANCHOS_DA_REMOCAO))
+@pytest.mark.parametrize("jogo", [True, False], ids=["com-jogo", "sem-jogo"])
+def test_o_gancho_da_remocao_roda_a_copia_que_o_root_guardou(
+    tmp_path: Path, formato: str, jogo: bool
+) -> None:
+    run = tmp_path / "run" / "hefesto-dualsense4unix-remocao"
+    _preparar(tmp_path, run, jogo=jogo)
+    assert f"{run.stat().st_mode & 0o777:o}" == "700"
+    assert f"{(run / DONO.name).stat().st_mode & 0o777:o}" == "700"
+    chamadas, _ = _gancho_da_remocao(tmp_path, formato, run, como_root=True)
+    assert _alguma_casa(chamadas, QUE_REENUMERAM) == (not jogo)
+    assert not run.exists()
+
+
+@pytest.mark.parametrize("formato", list(GANCHOS_DA_REMOCAO))
+def test_o_gancho_recusa_a_pasta_que_nao_e_do_root(tmp_path: Path, formato: str) -> None:
+    """MORDIDA: tire a conferência do dono do gancho e a pasta de outro usuário roda como root."""
+    run = tmp_path / "run" / "hefesto-dualsense4unix-remocao"
+    run.mkdir(parents=True, mode=0o700)
+    _copia_alheia(run, tmp_path)
+    chamadas, executou = _gancho_da_remocao(tmp_path, formato, run, como_root=False)
+    assert not executou
+    assert chamadas == []
+
+
+@pytest.mark.parametrize("formato", list(GANCHOS_DA_REMOCAO))
+@pytest.mark.parametrize(
+    ("modo_da_pasta", "modo_da_copia"),
+    [(0o770, 0o700), (0o707, 0o700), (0o755, 0o700), (0o700, 0o720), (0o700, 0o702)],
+    ids=["pasta-grupo", "pasta-outros", "pasta-legivel", "copia-grupo", "copia-outros"],
+)
+def test_o_gancho_recusa_escrita_de_grupo_ou_de_outros(
+    tmp_path: Path, formato: str, modo_da_pasta: int, modo_da_copia: int
+) -> None:
+    """MORDIDA: tire a conferência do modo do gancho e a cópia que outro escreve roda como root."""
+    run = tmp_path / "run" / "hefesto-dualsense4unix-remocao"
+    run.mkdir(parents=True)
+    _copia_alheia(run, tmp_path).chmod(modo_da_copia)
+    run.chmod(modo_da_pasta)
+    chamadas, executou = _gancho_da_remocao(tmp_path, formato, run, como_root=True)
+    assert not executou
+    assert chamadas == []
+
+
+@pytest.mark.parametrize("formato", list(GANCHOS_DA_REMOCAO))
+@pytest.mark.parametrize("onde", ["pasta", "copia"])
+def test_o_gancho_nao_segue_link(tmp_path: Path, formato: str, onde: str) -> None:
+    """MORDIDA: o gancho que segue link roda a cópia que mora fora da pasta do root."""
+    alheia = tmp_path / "alheia"
+    alheia.mkdir(mode=0o700)
+    alvo = _copia_alheia(alheia, tmp_path)
+    run = tmp_path / "run" / "hefesto-dualsense4unix-remocao"
+    run.parent.mkdir(parents=True)
+    if onde == "pasta":
+        run.symlink_to(alheia)
+    else:
+        run.mkdir(mode=0o700)
+        (run / DONO.name).symlink_to(alvo)
+    chamadas, executou = _gancho_da_remocao(tmp_path, formato, run, como_root=True)
+    assert not executou
+    assert chamadas == []
+
+
+def test_a_preparacao_nao_escreve_pelo_link_plantado(tmp_path: Path) -> None:
+    """MORDIDA: crie a pasta com `mkdir -p` sem apagar o que estava e o veredito vai para o alvo."""
+    alheia = tmp_path / "alheia"
+    alheia.mkdir()
+    run = tmp_path / "run" / "hefesto-dualsense4unix-remocao"
+    run.parent.mkdir(parents=True)
+    run.symlink_to(alheia)
+    _preparar(tmp_path, run, jogo=False)
+    assert list(alheia.iterdir()) == []
+    assert run.is_dir() and not run.is_symlink()
+    assert f"{run.stat().st_mode & 0o777:o}" == "700"
+    assert sorted(p.name for p in run.iterdir()) == [DONO.name, "veredito"]
+
+
+def test_a_preparacao_troca_a_pasta_plantada_e_o_veredito_velho(tmp_path: Path) -> None:
+    """MORDIDA: aproveite a pasta que já estava e a cópia alheia e o «sem jogo» velho ficam."""
+    run = tmp_path / "run" / "hefesto-dualsense4unix-remocao"
+    run.mkdir(parents=True, mode=0o777)
+    run.chmod(0o777)
+    (run / "veredito").write_text("10\n", encoding="utf-8")
+    (run / "outro").write_text("x", encoding="utf-8")
+    _preparar(tmp_path, run, jogo=True)
+    assert f"{run.stat().st_mode & 0o777:o}" == "700"
+    assert (run / "veredito").read_text(encoding="utf-8") == "0\n"
+    assert not (run / "outro").exists()
+    assert (run / DONO.name).read_bytes() == DONO.read_bytes()

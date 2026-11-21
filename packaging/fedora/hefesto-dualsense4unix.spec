@@ -527,7 +527,12 @@ fi
 if [ $1 -eq 0 ]; then
     # Remocao final — recarrega udev sem nossas regras.
     /usr/sbin/udevadm control --reload-rules || :
-    /run/hefesto-dualsense4unix-remocao/disparo_do_udev.sh --apos-a-remocao || :
+    _remocao=/run/hefesto-dualsense4unix-remocao
+    if [ ! -L "${_remocao}" ] && [ ! -L "${_remocao}/disparo_do_udev.sh" ] \
+            && [ "$(stat -c '%%u %%a' "${_remocao}" 2>/dev/null)" = "0 700" ] \
+            && [ "$(stat -c '%%u %%a' "${_remocao}/disparo_do_udev.sh" 2>/dev/null)" = "0 700" ]; then
+        bash "${_remocao}/disparo_do_udev.sh" --apos-a-remocao || :
+    fi
 fi
 
 %files

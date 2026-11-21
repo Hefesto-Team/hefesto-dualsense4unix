@@ -58,10 +58,12 @@ command -v udevadm >/dev/null 2>&1 || exit 0
 
 case "${MODO}" in
     --preparar-a-remocao)
+        rm -rf -- "${PASTA_DA_REMOCAO}" 2>/dev/null || exit 0
         decidir
-        mkdir -p "${PASTA_DA_REMOCAO}" 2>/dev/null || exit 0
+        install -d -m 0700 "${PASTA_DA_REMOCAO}" 2>/dev/null || exit 0
+        [[ -d "${PASTA_DA_REMOCAO}" && ! -L "${PASTA_DA_REMOCAO}" && -O "${PASTA_DA_REMOCAO}" ]] || exit 0
         printf '%s\n' "${JOGO}" > "${PASTA_DA_REMOCAO}/veredito" 2>/dev/null || true
-        install -m 0755 "${BASH_SOURCE[0]}" "${PASTA_DA_REMOCAO}/disparo_do_udev.sh" 2>/dev/null || true
+        install -m 0700 "${BASH_SOURCE[0]}" "${PASTA_DA_REMOCAO}/disparo_do_udev.sh" 2>/dev/null || true
         ;;
     --apos-a-remocao)
         JOGO=3
