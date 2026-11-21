@@ -807,10 +807,10 @@ def _baixar_o_umu(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
 
 
 def _extrair_sem_sair(tar: tarfile.TarFile, pasta: Path) -> None:
-    for membro in tar.getmembers():
-        alvo = (pasta / membro.name).resolve()
-        if pasta.resolve() not in (alvo, *alvo.parents) or membro.issym() or membro.islnk():
-            raise EtapaFalhouError(f"o pacote do umu traz um caminho de fora: {membro.name}")
+    for m in tar.getmembers():
+        elo = str(Path(m.name).parent / m.linkname) if m.issym() else m.linkname or m.name
+        if not all((pasta / n).resolve().is_relative_to(pasta.resolve()) for n in (m.name, elo)):
+            raise EtapaFalhouError(f"o pacote do umu traz um caminho de fora: {m.name}")
     tar.extractall(pasta, filter="data")
 
 

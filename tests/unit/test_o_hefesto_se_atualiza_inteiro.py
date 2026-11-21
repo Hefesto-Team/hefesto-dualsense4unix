@@ -12,6 +12,10 @@ caso do jogo aberto; a trava de um processo arrancada reprova o caso da segunda 
 ignorada reprova o caso do voltar; o umu que extrai caminho de fora reprova o caso do tar mau; o
 download sem conferir a soma reprova o caso do sha256 errado; o voltar que chama a peça direto
 reprova o caso do jogo aberto e da fila rodando.
+
+O ELO DO PACOTE DO UMU (21/11/2026): o zipapp 1.4.4 traz ``umu/umu_run.py -> umu-run`` e o dublê
+passou a ter essa forma. A recusa de todo elo reprova o caso do instalar; o elo aceito sem
+conferir o alvo reprova o caso do elo que aponta para fora.
 """
 from __future__ import annotations
 
@@ -486,7 +490,8 @@ def test_o_ativo_sem_soma_publicada_nao_se_baixa() -> None:
         "MangoHud-0.8.5.tar.gz", "u", "b" * 64)
 
 
-def _tar_do_umu(caminho: Path, *, mau: bool = False) -> Path:
+def _tar_do_umu(caminho: Path, *, mau: bool = False, elo: str = "umu-run",
+                tipo: bytes = tarfile.SYMTYPE) -> Path:
     with tarfile.open(caminho, "w") as tar:
         for nome, conteudo in (("umu/umu-run", b"#!/bin/sh\n"),
                                *([("../fora", b"x")] if mau else [])):
@@ -494,6 +499,9 @@ def _tar_do_umu(caminho: Path, *, mau: bool = False) -> Path:
             info.size = len(conteudo)
             info.mode = 0o755
             tar.addfile(info, io.BytesIO(conteudo))
+        info = tarfile.TarInfo("umu/umu_run.py")
+        info.type, info.linkname = tipo, elo
+        tar.addfile(info)
     return caminho
 
 
@@ -504,6 +512,8 @@ def test_o_umu_instala_aponta_e_volta(lar: Path, tmp_path: Path) -> None:
         pa._aplicar_o_umu(at.Passo(), dados)
     casa = lar / ".local" / "bin" / "umu-run"
     assert casa.is_symlink() and "1.4.4" in str(casa.resolve())
+    elo = pa._pasta_do_umu() / "1.4.4" / "umu" / "umu_run.py"
+    assert elo.is_symlink() and elo.resolve() == casa.resolve()
     assert dados["anterior_dir"] == "1.4.3"
     pa._voltar_o_umu({"dados": dados})
     assert "1.4.3" in str(casa.resolve())
@@ -514,6 +524,17 @@ def test_o_umu_recusa_o_pacote_com_caminho_de_fora(lar: Path, tmp_path: Path) ->
     with pytest.raises(at.EtapaFalhouError, match="de fora"):
         pa._instalar_o_umu(at.Passo(), dados)
     assert not (lar / "fora").exists()
+    assert not (pa._pasta_do_umu() / "9.9").exists()
+
+
+@pytest.mark.parametrize(("elo", "tipo"), [
+    ("../../fora", tarfile.SYMTYPE), ("/etc/hostname", tarfile.SYMTYPE),
+    ("../fora", tarfile.LNKTYPE), ("/etc/hostname", tarfile.LNKTYPE)])
+def test_o_umu_recusa_o_elo_que_aponta_para_fora(lar: Path, tmp_path: Path, elo: str,
+                                                 tipo: bytes) -> None:
+    dados = {"tar": str(_tar_do_umu(tmp_path / "elo.tar", elo=elo, tipo=tipo)), "tag": "9.9"}
+    with pytest.raises(at.EtapaFalhouError, match="de fora: umu/umu_run"):
+        pa._instalar_o_umu(at.Passo(), dados)
     assert not (pa._pasta_do_umu() / "9.9").exists()
 
 
