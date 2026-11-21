@@ -572,6 +572,54 @@ def test_nenhuma_vista_rola_na_vertical_nem_corta_texto(largura: int) -> None:
     assert not cortam, f"a {largura} px cortam texto: {cortam}"
 
 
+APELIDO_DE_38_LETRAS = "Adaptador da sala de estar perto da TV"
+PERTO, LONGE = "aa:bb:cc:00:00:0a", "aa:bb:cc:00:00:0b"
+
+
+def _a_sala_com_o_apelido_longo() -> str:
+    """Três controles num adaptador e o segundo adaptador com o apelido de 38 letras: a linha
+    que sobra ouve «Cabe em <apelido>»."""
+    linhas = [{"id": f"aabbcc0000{n:02x}", "tipo": "controle", "lugar": PERTO,
+               "pede_ponte": True, "ponte": None, "rotulo": f"Player {n}", "nome": "",
+               "esperando": False, "hz_mov": 150.0, "sinal": -40, "mic": False}
+              for n in range(3)]
+    cena = {"aparelhos": linhas,
+            "lugares": [{"id": e, "nome": nome, "entrada": "Entrada", "lugar": e, "hub": False}
+                        for e, nome in ((PERTO, ""), (LONGE, APELIDO_DE_38_LETRAS))]}
+    return a08.campos_da_secao(cena)["radio-sala"]
+
+
+_LER_AS_FRASES_DA_FALTA = r"""JSON.stringify([...document.querySelectorAll('.radio .ponte .falta')]
+  .filter(e => e.offsetParent).map(e => {
+    const dono = e.closest('[data-dica],[data-hef-dica],[title]');
+    return {texto: e.textContent.trim(), corta: e.scrollWidth > e.clientWidth + 1,
+            dica: dono ? (dono.getAttribute('data-dica') || dono.getAttribute('data-hef-dica')
+                          || dono.getAttribute('title') || '') : ''};
+  }))"""
+
+
+@pytest.mark.parametrize("largura", sorted(LARGURAS))
+def test_a_frase_da_ponte_cortada_traz_o_apelido_inteiro_na_dica(
+    monkeypatch: pytest.MonkeyPatch, largura: int,
+) -> None:
+    """D-2111-A-FRASE-DA-PONTE-CORTADA-GUARDA-O-NOME-NA-DICA: no WebKit, a frase «Cabe em
+    <apelido de 38 letras>» corta com reticência a 1272 px, e em toda largura a dica da frase
+    abre com a frase inteira."""
+    monkeypatch.setattr(a08, "OPCAO_DA_FALTA", "a")
+    sala = _a_sala_com_o_apelido_longo()
+    lidas = _no_webkit(onde.pagina("08-conexoes.html"), (largura, LARGURAS[largura]), [
+        f"String(window.__hef.pintar({json.dumps({'mesa': {'radio-sala': sala}})}))",
+        _clicar('label[for="cx8-3"]'), _clicar(".lugar .abre-lugar"), _LER_AS_FRASES_DA_FALTA])
+    assert lidas[1:3] == ["clicou", "clicou"], lidas[1:3]
+    frases = [f for f in json.loads(lidas[3]) if f["texto"].endswith(APELIDO_DE_38_LETRAS)]
+    assert len(frases) == 1, f"a {largura} px a frase do apelido não aparece: {lidas[3]}"
+    [frase] = frases
+    if largura == min(LARGURAS):
+        assert frase["corta"], f"a {largura} px a frase cabe inteira e não prova a dica: {frase}"
+    assert frase["dica"].startswith(f"{frase['texto']}. "), (
+        f"a {largura} px a frase cortada perde o nome do lugar: a dica é {frase['dica']!r}")
+
+
 @pytest.mark.parametrize("largura", sorted(LARGURAS))
 def test_os_cartoes_tem_a_mesma_altura_e_o_porque_nao_estica_os_vizinhos(largura: int) -> None:
     vistas = _vistas(largura)
