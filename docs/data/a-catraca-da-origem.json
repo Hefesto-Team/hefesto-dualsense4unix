@@ -259,14 +259,14 @@
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1295771,
+      "piso": 1295778,
       "por_item": {
         "docs": 107883,
-        "scripts": 115924,
+        "scripts": 115931,
         "src": 327794,
         "tests": 744170
       },
-      "razao": "tamanho: +1007 linhas (1294764 -> 1295771), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo 44a803e434d1",
+      "razao": "tamanho: +7 linhas (1295771 -> 1295778), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo e5036ccae116",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2295,6 +2295,12 @@
           "de": 1294764,
           "para": 1295771,
           "razao": "tamanho: +1007 linhas (1294764 -> 1295771), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo 44a803e434d1"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1295771,
+          "para": 1295778,
+          "razao": "tamanho: +7 linhas (1295771 -> 1295778), pagas por Origem: D-2011-O-PACOTE-LEVA-TODO-MODULO-QUE-O-PRODUTO-IMPORTA, D-2111-A-FALA-DA-FALTA-DA-PONTE-CABE-EM-TODA-LARGURA, D-2111-A-INSCRICAO-PEDIDA-ESPERA-O-REINICIO, D-2111-O-DOCTOR-COMPARA-TODA-PECA-QUE-O-INSTALL-POE-NO-BIN, D-2111-SEM-A-CHAVE-PRIVADA-O-DKMS-NAO-CONSTROI; registrado no fecho, topo e5036ccae116"
         }
       ],
       "unidade": "linhas",
