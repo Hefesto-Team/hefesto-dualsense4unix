@@ -1089,6 +1089,8 @@ class TestInscricaoPedidaEAindaNaoReiniciada:
 
 MARCA_DE_ASSINATURA = b"~Module signature appended~\n"
 KERNEL_DO_TESTE = "7.1.5-generic"
+CONFIG_QUE_ASSINA = 'CONFIG_MODULE_SIG=y\nCONFIG_MODULE_SIG_HASH="sha512"\n'
+CONFIG_QUE_NAO_ASSINA = "# CONFIG_MODULE_SIG is not set\nCONFIG_MODULES=y\n"
 
 
 def _escreve_o_ko(destino: Path, nome: str, *, assinado: bool) -> None:
@@ -1119,6 +1121,7 @@ class TestModuloSemAssinaturaComAChaveInscrita:
         self, tmp_path: Path, estado: dict[str, str], *, arquivo: str = "hid-teste.ko",
         assinado: bool = False, corrompido: bool = False, chave_privada: bool = True,
         dubles: dict[str, str] | None = None, ambiente: dict[str, str] | None = None,
+        config: str | None = CONFIG_QUE_ASSINA,
     ) -> str:
         bin_ = tmp_path / "bin"
         bin_.mkdir()
@@ -1156,6 +1159,8 @@ class TestModuloSemAssinaturaComAChaveInscrita:
             _stub(bin_, nome, corpo)
         modulos = tmp_path / "modules"
         (modulos / KERNEL_DO_TESTE / "build").mkdir(parents=True)
+        if config is not None:
+            (modulos / KERNEL_DO_TESTE / "build" / ".config").write_text(config, encoding="utf-8")
         fonte = tmp_path / "fonte"
         sincronizado = tmp_path / "usr-src" / "hefesto-teste-9.9.9"
         for pasta in (fonte, sincronizado):
@@ -1166,6 +1171,7 @@ class TestModuloSemAssinaturaComAChaveInscrita:
             f"{bin_}:/usr/bin:/bin",
             {"HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"),
              "HEFESTO_DKMS_MODULES_ROOT": str(modulos), "HEFESTO_DKMS_TREE": str(arvore),
+             "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "boot-de-mentira"),
              "HEFESTO_DKMS_KERNEL": KERNEL_DO_TESTE, **estado,
              "HEFESTO_DKMS_FRAMEWORK_CONFS": str(framework), **(ambiente or {})},
         )

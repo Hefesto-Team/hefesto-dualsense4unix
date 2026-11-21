@@ -20,6 +20,8 @@ from pathlib import Path
 import pytest
 
 from tests.unit.test_dkms_lib import (
+    CONFIG_QUE_ASSINA,
+    CONFIG_QUE_NAO_ASSINA,
     KERNEL_DO_TESTE,
     TestModuloSemAssinaturaComAChaveInscrita,
     _estado_do_secure_boot,
@@ -72,6 +74,7 @@ class TestModuloAssinadoPorOutraChave:
     def _instalar(
         self, tmp_path: Path, estado: dict[str, str], sig_key: str, *,
         arquivo: str = "hid-teste.ko", status: int = 0, chave_privada: bool = True,
+        config: str | None = CONFIG_QUE_ASSINA,
     ) -> tuple[str, str]:
         ko = (tmp_path / "lib" / "modules" / KERNEL_DO_TESTE / "updates" / "dkms" / arquivo)
         feito = TestModuloSemAssinaturaComAChaveInscrita()
@@ -79,7 +82,7 @@ class TestModuloAssinadoPorOutraChave:
         dubles["modinfo"] = dubles["modinfo"].replace("$MODULO_DE_MENTIRA", str(ko))
         lidas = feito._instalar(
             tmp_path, estado, arquivo=arquivo, assinado=True, dubles=dubles,
-            chave_privada=chave_privada)
+            chave_privada=chave_privada, config=config)
         return feito.dito, lidas
 
     def test_assinado_por_outra_chave_o_modulo_se_refaz(self, tmp_path: Path) -> None:
@@ -175,3 +178,89 @@ class TestModuloAssinadoPorOutraChave:
         lido = _roda("_dkms_serie_normalizada \"$(_dkms_serie_da_chave_publica)\"", "/usr/bin:/bin",
                      {"HEFESTO_DKMS_MOK_PUB": str(cert)})
         assert lido.stdout.lstrip("0") == esperado, (lido, esperado)
+
+
+class TestKernelSemAssinaturaDeModulo:
+    """O-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-FAZ-O-INSTALL-REFAZER-TODA-VEZ-01.
+
+    D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: o DKMS só assina quando o ``.config`` do
+    kernel traz ``CONFIG_MODULE_SIG_HASH=``. Num kernel cujo ``.config`` se lê sem essa linha, o
+    módulo sem assinatura não é defeito e refazer repetiria a cada install; sem ler o ``.config``
+    (nem o de ``/boot``), é «não sei» e nada se refaz.
+    """
+
+    def _instalar(
+        self, tmp_path: Path, config: str | None, *, boot: str | None = None,
+        assinado: bool = False, outra_chave: bool = False,
+    ) -> tuple[str, str]:
+        estado = _com_a_chave_de(tmp_path, SERIE_DA_CHAVE)
+        if boot is not None:
+            (tmp_path / "boot-de-mentira").mkdir()
+            (tmp_path / "boot-de-mentira" / f"config-{KERNEL_DO_TESTE}").write_text(
+                boot, encoding="utf-8")
+        ko = tmp_path / "lib" / "modules" / KERNEL_DO_TESTE / "updates" / "dkms" / "hid-teste.ko"
+        sig_key = _serie_do_modinfo(SERIE_DE_OUTRA if outra_chave else SERIE_DA_CHAVE)
+        dubles = _com_sig_key(sig_key)
+        dubles["modinfo"] = dubles["modinfo"].replace("$MODULO_DE_MENTIRA", str(ko))
+        feito = TestModuloSemAssinaturaComAChaveInscrita()
+        lidas = feito._instalar(
+            tmp_path, estado, assinado=assinado, dubles=dubles, config=config)
+        return feito.dito, lidas
+
+    def test_o_kernel_que_assina_refaz_o_modulo_sem_assinatura(self, tmp_path: Path) -> None:
+        """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ."""
+        _dito, lidas = self._instalar(tmp_path, CONFIG_QUE_ASSINA)
+        assert "dkms build" in lidas and "dkms install" in lidas, lidas
+
+    @pytest.mark.parametrize("outra_chave", [False, True], ids=["sem-marca", "outra-chave"])
+    def test_o_kernel_que_nao_assina_nao_refaz_o_modulo(
+        self, tmp_path: Path, outra_chave: bool
+    ) -> None:
+        """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ."""
+        _dito, lidas = self._instalar(
+            tmp_path, CONFIG_QUE_NAO_ASSINA, assinado=outra_chave, outra_chave=outra_chave)
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in lidas, lidas
+
+    @pytest.mark.parametrize("outra_chave", [False, True], ids=["sem-marca", "outra-chave"])
+    def test_sem_ler_o_config_do_kernel_nada_se_refaz(
+        self, tmp_path: Path, outra_chave: bool
+    ) -> None:
+        _dito, lidas = self._instalar(
+            tmp_path, None, assinado=outra_chave, outra_chave=outra_chave)
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in lidas, lidas
+
+    def test_o_config_do_boot_vale_quando_o_dos_cabecalhos_nao_se_le(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / "com").mkdir()
+        _dito, com = self._instalar(tmp_path / "com", None, boot=CONFIG_QUE_ASSINA)
+        assert "dkms build" in com, com
+        (tmp_path / "sem").mkdir()
+        _dito, sem = self._instalar(tmp_path / "sem", None, boot=CONFIG_QUE_NAO_ASSINA)
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in sem, sem
+
+    def test_o_config_dos_cabecalhos_vence_o_do_boot(self, tmp_path: Path) -> None:
+        _dito, lidas = self._instalar(tmp_path, CONFIG_QUE_NAO_ASSINA, boot=CONFIG_QUE_ASSINA)
+        for verbo in FALHA_DE_REFAZER:
+            assert verbo not in lidas, lidas
+
+    @pytest.mark.parametrize(
+        ("config", "esperado"),
+        [(CONFIG_QUE_ASSINA, 0), (CONFIG_QUE_NAO_ASSINA, 1), (None, 2)],
+        ids=["com", "sem", "ilegivel"],
+    )
+    def test_o_kernel_assina_em_tres_respostas(
+        self, tmp_path: Path, config: str | None, esperado: int
+    ) -> None:
+        modulos = tmp_path / "modules"
+        (modulos / KERNEL_DO_TESTE / "build").mkdir(parents=True)
+        if config is not None:
+            (modulos / KERNEL_DO_TESTE / "build" / ".config").write_text(config, encoding="utf-8")
+        feito = _roda(
+            f"dkms_kernel_assina_modulo {KERNEL_DO_TESTE}", "/usr/bin:/bin",
+            {"HEFESTO_DKMS_MODULES_ROOT": str(modulos),
+             "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "sem-boot")})
+        assert feito.returncode == esperado, feito

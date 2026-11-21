@@ -24,12 +24,14 @@ prova a chave que o assinou, não a que assina o próximo.
 Com o Secure Boot ligado e a chave inscrita, falta ainda a chave privada para assinar: sem a
 privada o DKMS 3 gera um par novo por cima da pública (desde a 3.0.4) e assina com uma chave
 fora da MOK.
-`--sem-a-chave-privada` sai com 0 nesse caso, e o `--exclusivo` devolve o mesmo padrão que nenhum
-kernel casa: nada se constrói, e o que estava instalado fica.
+`--sem-a-chave-privada [<kernelver>]` sai com 0 nesse caso, e o `--exclusivo` devolve o mesmo
+padrão que nenhum kernel casa: nada se constrói, e o que estava instalado fica. O DKMS só assina (e
+só gera par) quando o `.config` do kernel traz `CONFIG_MODULE_SIG_HASH=`: o kernel cujo `.config`
+se lê sem essa linha não assina, e a falta da chave privada não pesa nele.
 
     preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
     preparar-o-fonte.py --sem-a-chave | --chave-nao-garantida | --estado-da-chave
-    preparar-o-fonte.py --sem-a-chave-privada
+    preparar-o-fonte.py --sem-a-chave-privada [<kernelver>]
 """
 
 from __future__ import annotations
@@ -749,9 +751,26 @@ def _chave_nao_garantida() -> bool:
     return _secure_boot_ligado() and _estado_da_chave() != "inscrita"
 
 
-def _sem_a_chave_privada() -> bool:
-    """Secure Boot ligado e a chave privada do DKMS não está onde se lê (ou está vazia)."""
+def _kernel_assina(kver: str) -> bool | None:
+    """Se o kernel assina módulo, pelo `.config` que o DKMS lê; `None` quando nenhum se lê."""
+    boot = Path(os.environ.get("HEFESTO_DKMS_BOOT_ROOT", "/boot"))
+    for config in (_modulos_root() / kver / "build" / ".config", boot / f"config-{kver}"):
+        try:
+            texto = config.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        return any(linha.startswith("CONFIG_MODULE_SIG_HASH=") for linha in texto.splitlines())
+    return None
+
+
+def _sem_a_chave_privada(kver: str = "") -> bool:
+    """Secure Boot ligado e a chave privada do DKMS não está onde se lê (ou está vazia).
+
+    O kernel que não assina módulo não pede a chave: o DKMS não assina nem gera par nele.
+    """
     if not _secure_boot_ligado():
+        return False
+    if kver and _kernel_assina(kver) is False:
         return False
     privada = _chave_privada_do_dkms()
     if privada.startswith("pkcs11:"):
@@ -766,7 +785,7 @@ def _exclusivo(kver: str, ksrc: str, veredito: Path | None) -> str:
     modulo = _conf("BUILT_MODULE_NAME[0]")
     if not kver or not modulo or veredito is None or (veredito / kver).is_dir():
         return ""
-    if _chave_nao_garantida() or _sem_a_chave_privada():
+    if _chave_nao_garantida() or _sem_a_chave_privada(kver):
         return NENHUM_KERNEL
     if not (Path(ksrc) / "Makefile").is_file():
         ksrc = str(_modulos_root() / kver / "build")
@@ -821,8 +840,8 @@ def main(argv: list[str]) -> int:
         return 0 if _sem_a_chave() else 1
     if argv == ["--chave-nao-garantida"]:
         return 0 if _chave_nao_garantida() else 1
-    if argv == ["--sem-a-chave-privada"]:
-        return 0 if _sem_a_chave_privada() else 1
+    if argv[:1] == ["--sem-a-chave-privada"] and len(argv) <= 2:
+        return 0 if _sem_a_chave_privada(argv[1] if len(argv) == 2 else "") else 1
     if argv == ["--estado-da-chave"]:
         print(_estado_da_chave(), end="")
         return 0

@@ -3,6 +3,7 @@
 _dkms_src_root() { printf '%s' "${HEFESTO_DKMS_SRC_ROOT:-/usr/src}"; }
 _dkms_modules_root() { printf '%s' "${HEFESTO_DKMS_MODULES_ROOT:-/lib/modules}"; }
 _dkms_tree_root() { printf '%s' "${HEFESTO_DKMS_TREE:-/var/lib/dkms}"; }
+_dkms_boot_root() { printf '%s' "${HEFESTO_DKMS_BOOT_ROOT:-/boot}"; }
 _dkms_kernel_alvo() { printf '%s' "${HEFESTO_DKMS_KERNEL:-$(uname -r)}"; }
 _dkms_initramfs_path() {
     printf '%s' "${HEFESTO_INITRAMFS_PATH:-/boot/initrd.img-$(_dkms_kernel_alvo)}"
@@ -139,8 +140,23 @@ _dkms_assina_com_a_chave_privada() {
     sudo test -s "${_chave}" 2>/dev/null
 }
 
+dkms_kernel_assina_modulo() {
+    local _k="${1:-$(_dkms_kernel_alvo)}" _config _rc
+    for _config in "$(_dkms_modules_root)/${_k}/build/.config" "$(_dkms_boot_root)/config-${_k}"; do
+        [[ -r "${_config}" ]] || continue
+        _rc=0
+        grep -q '^CONFIG_MODULE_SIG_HASH=' "${_config}" 2>/dev/null || _rc=$?
+        [[ "${_rc}" -eq 0 ]] && return 0
+        [[ "${_rc}" -eq 1 ]] && return 1
+    done
+    return 2
+}
+
 dkms_sem_a_chave_privada() {
+    local _assina=0
     dkms_secure_boot_ligado || return 1
+    dkms_kernel_assina_modulo "${1:-}" || _assina=$?
+    [[ "${_assina}" -eq 1 ]] && return 1
     ! _dkms_assina_com_a_chave_privada
 }
 _dkms_mok_listas() {
@@ -761,13 +777,13 @@ dkms_install_patched_module() {
             esac
             return 0
         fi
-        if dkms_sem_a_chave_privada; then
+        if dkms_sem_a_chave_privada "${_kver}"; then
             dkms_avisa_a_chave_privada_uma_vez
             _dkms_log "${_pkg} pulado: falta a chave privada do DKMS, então nada se instala nem se tira"
             return 0
         fi
     fi
-    if dkms_secure_boot_ligado; then
+    if dkms_secure_boot_ligado && dkms_kernel_assina_modulo "${_kver}"; then
         if dkms_modulo_da_casa_sem_assinatura "${_built}"; then
             _refazer=1
             _dkms_log "${_pkg}: o módulo instalado está sem assinatura e a chave do DKMS está inscrita; refazendo para o kernel aceitá-lo"

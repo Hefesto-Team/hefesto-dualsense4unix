@@ -23,6 +23,8 @@ import pytest
 
 from tests.unit.test_dkms_lib import (
     CINCO_PREPARADORES,
+    CONFIG_QUE_ASSINA,
+    CONFIG_QUE_NAO_ASSINA,
     PREPARADOR,
     _estado_do_secure_boot,
     _roda,
@@ -41,6 +43,7 @@ def _instalar(
     vezes: int = 1,
     framework: str | None = None,
     extra: dict[str, str] | None = None,
+    config: str | None = None,
 ) -> tuple[str, str]:
     """Roda o ``dkms_install_patched_module`` num módulo ainda não construído, com o fonte
     instalado diferente do novo: sem a guarda, o ``dkms remove --all`` tiraria o que estava."""
@@ -56,6 +59,8 @@ def _instalar(
     _stub(bin_, "mokutil", "exit 1")
     modulos = tmp_path / "modules"
     (modulos / KERNEL / "build").mkdir(parents=True)
+    if config is not None:
+        (modulos / KERNEL / "build" / ".config").write_text(config, encoding="utf-8")
     fonte = tmp_path / "fonte"
     instalado = tmp_path / "usr-src" / "hefesto-teste-9.9.9"
     for pasta, versao in ((fonte, "novo"), (instalado, "velho")):
@@ -67,6 +72,7 @@ def _instalar(
         "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
         "HEFESTO_DKMS_TREE": str(tmp_path / "arvore"),
         "HEFESTO_DKMS_KERNEL": KERNEL,
+        "HEFESTO_DKMS_BOOT_ROOT": str(tmp_path / "boot-de-mentira"),
         **estado,
         **({"HEFESTO_DKMS_FRAMEWORK_CONFS": framework} if framework else {}),
         **(extra or {}),
@@ -154,6 +160,52 @@ class TestSemAChavePrivadaNadaSeConstroi:
         for verbo in ("dkms add", "dkms build", "dkms install"):
             assert verbo not in lidas, lidas
         assert "falta a chave privada" not in saida, saida
+
+    @pytest.mark.parametrize(
+        ("config", "constroi"),
+        [(CONFIG_QUE_ASSINA, False), (CONFIG_QUE_NAO_ASSINA, True), (None, False)],
+        ids=["kernel-assina", "kernel-nao-assina", "config-ilegivel"],
+    )
+    def test_o_kernel_que_nao_assina_nao_pede_a_chave_privada(
+        self, tmp_path: Path, config: str | None, constroi: bool
+    ) -> None:
+        """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: o DKMS não assina nem gera par
+        onde o kernel não assina; sem ler o ``.config``, a falta da privada segue valendo."""
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=True, inscrita=True, chave_privada=False)
+        saida, lidas = _instalar(tmp_path, estado, config=config)
+        assert ("dkms build" in lidas) is constroi, lidas
+        assert ("falta a chave privada" in saida) is (not constroi), saida
+
+    def test_o_gancho_exclusivo_e_o_atualizador_olham_o_config_do_kernel(
+        self, tmp_path: Path
+    ) -> None:
+        """D-2111-O-KERNEL-SEM-ASSINATURA-DE-MODULO-NAO-REFAZ: o preparador diz o mesmo."""
+        veredito = tmp_path / "dkms" / "pacote" / "1.0.0"
+        veredito.mkdir(parents=True)
+        for config, esperado, rc in ((CONFIG_QUE_ASSINA, "^/", 0), (CONFIG_QUE_NAO_ASSINA, "", 1),
+                                     (None, "^/", 0)):
+            raiz = tmp_path / f"c{rc}-{esperado.strip('^/') or 'x'}-{bool(config)}"
+            raiz.mkdir()
+            modulos = raiz / "modules"
+            (modulos / KERNEL / "build").mkdir(parents=True)
+            if config is not None:
+                (modulos / KERNEL / "build" / ".config").write_text(config, encoding="utf-8")
+            estado = _estado_do_secure_boot(
+                raiz, ligado=True, inscrita=True, chave_privada=False)
+            ambiente = {**os.environ, **estado, "PATH": _sem_mokutil(estado, os.environ["PATH"]),
+                        "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
+                        "HEFESTO_DKMS_BOOT_ROOT": str(raiz / "sem-boot")}
+            for preparador in CINCO_PREPARADORES:
+                exclusivo = subprocess.run(
+                    ["python3", str(preparador), "--exclusivo", KERNEL, str(raiz / "sem-fonte"),
+                     str(veredito)], capture_output=True, text=True, check=False, timeout=60,
+                    env=ambiente)
+                assert exclusivo.stdout.strip() == esperado, (preparador, config, exclusivo)
+            pergunta = subprocess.run(
+                ["python3", str(PREPARADOR), "--sem-a-chave-privada", KERNEL], env=ambiente,
+                capture_output=True, text=True, check=False, timeout=60)
+            assert pergunta.returncode == (0 if esperado else 1), (config, pergunta)
 
     def test_o_gancho_exclusivo_dos_cinco_nao_deixa_o_dkms_construir(
         self, tmp_path: Path
