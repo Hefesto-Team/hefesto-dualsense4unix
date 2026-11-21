@@ -195,6 +195,11 @@ with sync_playwright() as pw:
           document.querySelectorAll('.b2[data-estado]').forEach(e => e.removeAttribute('data-estado'));
         }""", modelo)
 
+    def acende_o_chip(jogador: int) -> None:
+        """O chip aceso como o pacote o pinta: desde 20/11/2026 o clique só manda o gesto."""
+        pg.evaluate("""j => document.querySelectorAll('.mc-chips .chip').forEach(
+          c => c.classList.toggle('on', c.dataset.jogador === String(j)))""", jogador)
+
     erros: list[str] = []
     pg.on("pageerror", lambda e: erros.append(str(e)))
     abrir_pronta(pg, MAPA.as_uri(), lambda **ir: pg.goto(f"file://{MAPA}", **ir),
@@ -232,7 +237,7 @@ with sync_playwright() as pw:
         for e in erradas:
             print(f"         {e}")
 
-    pg.click('[data-jogador="2"]')
+    acende_o_chip(2)
     pg.wait_for_timeout(150)
     antes = pg.evaluate("()=>getComputedStyle(document.querySelector('#mp-lightbar *')).fill")
     escolhe("white")
@@ -242,7 +247,7 @@ with sync_playwright() as pw:
         f"a barra de luz não muda com o plástico — {antes} -> {depois}")
 
     for n in (1, 2, 3, 4):
-        pg.click(f'[data-jogador="{n}"]')
+        acende_o_chip(n)
         pg.wait_for_timeout(120)
         acesos = pg.evaluate(
             "()=>[1,2,3,4,5].filter(i=>document.querySelector('#mp-led-jogador-'+i)"
