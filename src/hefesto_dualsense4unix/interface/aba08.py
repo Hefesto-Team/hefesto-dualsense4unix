@@ -1195,7 +1195,7 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio span.vaga.som[data-ligada]{border-color:var(--c-som);color:var(--c-som)}
   .radio span.vaga.haptica[data-ligada]{border-color:var(--c-haptica);color:var(--c-haptica)}
   .radio span.selo-zero[data-ligada]{border-color:var(--yellow);color:var(--yellow)}
-  .radio .ponte .falta{flex:1 1 0;min-width:0;align-self:center;font-size:12.5px;cursor:help;
+  .radio .ponte .falta{flex:2 1 0;min-width:0;align-self:center;font-size:12.5px;cursor:help;
                        color:var(--texto-suave);white-space:nowrap;overflow:hidden;
                        text-overflow:ellipsis;text-align:center}
   .radio div.opcoes-da-falta{display:flex;flex-direction:column;gap:6px;margin-top:10px}
