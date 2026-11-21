@@ -1163,9 +1163,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         nada = str(_monta().NADA_A_DIZER)
         return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
                 "blocos": blocos_dos_botoes(_de_pe(ctx)),
-                CAMPO_DO_MODO_AVULSO: (
-                    MODO_A_CORRIGIR
-                    if _status_do_daemon(ctx.state) == "online_avulso" else ""),
+                CAMPO_DO_MODO_AVULSO: _modo_a_corrigir(_status_do_daemon(ctx.state)),
                 REGISTRO: _no_painel(None),
                 CAMPO_DO_VERDE: "",
                 "exame-lista": nada,
@@ -1177,15 +1175,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     fora: dict[str, object] = {}
-    status = list(bruto.get("status") or [])
+    _, _, perfil_da_bateria, estado, repouso = _faixa_lenta(ctx.state or None, ctx.mesa)
+    status = _linhas_do_status_sem_promessa(list(bruto.get("status") or []), estado)
     do_status = [linha for linha in status if linha.get("id") in LINHAS_DO_STATUS]
     fora[CAMPO_DO_STATUS] = _html_do_status(do_status)
     fora["hefesto-autostart"] = bruto.get("autostart")
     fora[CAMPO_DAS_CORRECOES] = _vigia.interruptor_ligado()
     fora[CAMPO_DA_BANDEJA] = _bandeja.bandeja_ligada()
     fora[CAMPO_DO_TAMANHO] = str(tamanho_da_interface())
-    _, _, perfil_da_bateria, estado, repouso = _faixa_lenta(ctx.state or None,
-                                                            ctx.mesa)
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
@@ -1201,8 +1198,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora.update(campos_das_atualizacoes())
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(fora), "sem_dono": len(SEM_DONO)}
-    fora[CAMPO_DO_MODO_AVULSO] = (
-        MODO_A_CORRIGIR if estado == "online_avulso" else "")
+    fora[CAMPO_DO_MODO_AVULSO] = _modo_a_corrigir(estado)
     de_pe = estado in _tela.DE_PE
     pausado = _pausado(ctx)
     fora[CAMPO_DO_VERDE] = MODO_A_CORRIGIR if (pausado or not de_pe) else ""
@@ -2127,10 +2123,29 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         return _so_armou(True, _para_o_painel(_pergunta_do_botao(DESLIGAR),
                                               pergunta_de=DESLIGAR))
     _limpar_o_painel()
-    _systemctl("stop")
+    if _status_do_daemon(ctx.state) == "online_avulso":
+        _parar_o_avulso()
+    else:
+        _systemctl("stop")
     _matriz()._user_stopped_daemon = True
     lembrar_o_parar(True)
     return {"blocos": blocos_dos_botoes(False)}
+
+
+def _parar_o_avulso() -> None:
+    """Para o serviço que roda por fora pelo mesmo caminho do «Corrigir»; levanta se ele não saiu.
+
+    A unit está parada, então o `systemctl stop` nada desligaria: quem desliga é o pedido de saída
+    ao processo, e a marca do Parar só vale depois de vê-lo fora.
+    """
+    pid = _matriz()._read_daemon_pid()
+    if pid is None:
+        raise RuntimeError(
+            "Não achei o processo do serviço que roda por fora, e por isso não desliguei nada.")
+    if not _o_avulso_saiu(pid):
+        raise RuntimeError(
+            "O Hefesto que roda por fora não saiu quando pedi — ele pode estar no meio de "
+            "alguma coisa.")
 
 
 def ativar_o_servico() -> bool:
@@ -2193,23 +2208,63 @@ def ativar_o_servico() -> bool:
     return True
 
 
-SEGUNDOS_ATE_O_AVULSO_SAIR = 5.0
+def _ha_como_subir_a_unit() -> bool:
+    """Há unit instalada e `systemctl` no caminho: o que o «Corrigir» precisa para subir a unit."""
+    import shutil
+
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    try:
+        if ServiceInstaller().detect_installed_unit() is None:
+            return False
+    except Exception:
+        return False
+    return shutil.which("systemctl") is not None
+
+
+def _o_systemd_responde() -> bool:
+    """`systemctl --user` respondeu agora: a leitura de `is-active` não veio vazia."""
+    return str(_matriz()._is_service_active()) != ""
+
+
+def _modo_a_corrigir(estado: str) -> str:
+    """O campo do botão «Corrigir»: aceso só no improvisado e só com como subir a unit."""
+    return MODO_A_CORRIGIR if estado == "online_avulso" and _ha_como_subir_a_unit() else ""
+
+
+def _linhas_do_status_sem_promessa(linhas: list[dict[str, Any]],
+                                   estado: str) -> list[dict[str, Any]]:
+    """No improvisado sem como subir a unit, a dica da linha do serviço diz o que há para fazer."""
+    if estado != "online_avulso" or _ha_como_subir_a_unit():
+        return linhas
+    return [{**linha, "dica": DICA_DO_IMPROVISADO_SEM_UNIT}
+            if linha.get("id") == "hefesto-estado" else linha for linha in linhas]
 
 
 def _o_avulso_saiu(pid: int) -> bool:
-    """Pede ao daemon avulso que saia e ESPERA. `True` quando ele já não vive."""
+    """Pede ao daemon avulso que saia e ESPERA o prazo do desligamento. `True` quando já não vive.
+
+    Só sinaliza processo do Hefesto (`_is_hefesto_dualsense4unix_process`): o número do arquivo
+    pode ter caído noutro processo, e esse nunca recebe o pedido de saída.
+    """
     import os
     import signal
 
-    from hefesto_dualsense4unix.utils.single_instance import is_alive
+    from hefesto_dualsense4unix.utils.single_instance import (
+        PRAZO_DO_DESLIGAMENTO_S,
+        _is_hefesto_dualsense4unix_process,
+        is_alive,
+    )
 
     if not is_alive(pid):
         return True
+    if not _is_hefesto_dualsense4unix_process(pid):
+        return False
     try:
         os.kill(pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
         return not is_alive(pid)
-    limite = time.monotonic() + SEGUNDOS_ATE_O_AVULSO_SAIR
+    limite = time.monotonic() + PRAZO_DO_DESLIGAMENTO_S
     while time.monotonic() < limite:
         if not is_alive(pid):
             return True
@@ -2218,6 +2273,14 @@ def _o_avulso_saiu(pid: int) -> bool:
 
 
 NADA_A_CORRIGIR = "O serviço já sobe pelo sistema — não há o que corrigir."
+
+SEM_COMO_SUBIR_A_UNIT = (
+    "Esta instalação não tem como subir o serviço pelo sistema, e por isso não encerrei o que "
+    "roda por fora.")
+
+DICA_DO_IMPROVISADO_SEM_UNIT = (
+    "Roda por fora do sistema, e esta instalação não tem o serviço do sistema para corrigir. "
+    "Parar desliga e pergunta antes.")
 
 
 @gesto("09-sistema.html", "corrigir-modo", grava="_systemctl")
@@ -2267,6 +2330,8 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """
     if _status_do_daemon(ctx.state) != "online_avulso":
         raise RuntimeError(NADA_A_CORRIGIR)
+    if not _ha_como_subir_a_unit() or not _o_systemd_responde():
+        raise RuntimeError(SEM_COMO_SUBIR_A_UNIT)
     pid = _matriz()._read_daemon_pid()
     if pid is not None and not _o_avulso_saiu(pid):
         raise RuntimeError(

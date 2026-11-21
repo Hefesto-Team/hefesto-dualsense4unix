@@ -280,6 +280,10 @@ def test_o_retomar_o_ativar_e_o_start_trazem_a_bandeja(
             chamadas.append(metodo)
             return {"status": "ok"}
 
+        def chamar_detalhado(self, metodo: str, *_a: Any, **_k: Any) -> tuple[bool, None]:
+            chamadas.append(metodo)
+            return True, None
+
     ctx = pacotes.Contexto(state={})
     monkeypatch.setattr(a09, "_de_pe", lambda _c: True)
     monkeypatch.setattr(a09, "_pausado", lambda _c: True)

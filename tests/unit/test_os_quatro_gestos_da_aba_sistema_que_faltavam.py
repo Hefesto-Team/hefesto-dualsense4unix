@@ -172,6 +172,7 @@ def test_o_corrigir_modo_pede_ao_avulso_que_saia_e_sobe_a_unit(
     monkeypatch.setattr(a09._matriz(), "_read_daemon_pid", lambda: 4242)
     saiu: list[int] = []
     monkeypatch.setattr(a09, "_o_avulso_saiu", lambda pid: (saiu.append(pid), True)[1])
+    monkeypatch.setattr(a09, "_ha_como_subir_a_unit", lambda: True)
 
     from hefesto_dualsense4unix.daemon import service_install
 
@@ -205,6 +206,8 @@ def test_o_corrigir_modo_recusa_quando_o_avulso_nao_sai(
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_avulso")
     monkeypatch.setattr(a09._matriz(), "_read_daemon_pid", lambda: 4242)
     monkeypatch.setattr(a09, "_o_avulso_saiu", lambda _pid: False)
+    monkeypatch.setattr(a09, "_ha_como_subir_a_unit", lambda: True)
+    monkeypatch.setattr(a09, "_o_systemd_responde", lambda: True)
     subiu: list[bool] = []
     monkeypatch.setattr(a09, "ativar_o_servico",
                         lambda: (subiu.append(True), True)[1])
@@ -225,6 +228,7 @@ def test_o_campo_do_modo_improvisado_sai_em_todo_tique(
         monkeypatch: pytest.MonkeyPatch, estado: str, esperado: str) -> None:
     """INCLUSIVE VAZIO, e é isso que faz o botão SUMIR de volta."""
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: estado)
+    monkeypatch.setattr(a09, "_ha_como_subir_a_unit", lambda: True)
     a09._LENTO.clear()
     saiu = normalizar(dict(a09.pacote(_ctx())))["mesa"]
     assert a09.CAMPO_DO_MODO_AVULSO in saiu, (
@@ -239,6 +243,7 @@ def test_o_campo_do_modo_improvisado_sai_ate_quando_a_camada_levanta(
     monkeypatch.setattr(a09._tela, "pacote",
                         lambda _l: (_ for _ in ()).throw(RuntimeError("caiu")))
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_avulso")
+    monkeypatch.setattr(a09, "_ha_como_subir_a_unit", lambda: True)
     a09._LENTO.clear()
     bruto = dict(a09.pacote(_ctx()))
     assert bruto.get("sem_dono"), "o ramo de erro não foi exercido"
