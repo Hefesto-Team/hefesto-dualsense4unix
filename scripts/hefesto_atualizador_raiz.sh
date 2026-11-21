@@ -454,12 +454,12 @@ _dkms_devolver_de_fabrica() {
     local nome="$1" ver="$2" kernel linha estado tirou=1
     estado="$(dkms status -m "${nome}" -v "${ver}" 2>/dev/null || true)"
     while IFS= read -r linha; do
-        [[ "${linha}" == *": installed"* ]] || continue
-        linha="${linha%%: installed*}"
+        [[ "${linha}" =~ :\ (installed|built) ]] || continue
+        linha="${linha%%: ${BASH_REMATCH[1]}*}"
         linha="${linha%, *}"
         kernel="${linha##*, }"
         printf 'devolvendo o driver de fábrica: %s %s sai do kernel %s\n' "${nome}" "${ver}" "${kernel}"
-        if dkms uninstall -m "${nome}" -v "${ver}" -k "${kernel}"; then
+        if dkms remove -m "${nome}" -v "${ver}" -k "${kernel}"; then
             depmod -a "${kernel}" >/dev/null 2>&1 || true
             [[ "${tirou}" -eq 2 ]] || tirou=0
         else

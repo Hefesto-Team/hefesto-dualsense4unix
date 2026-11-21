@@ -315,12 +315,12 @@ dkms_fontes_so_do_root() {
     return "${_falhou}"
 }
 
-_dkms_kernels_com_o_modulo_instalado() {
+_dkms_kernels_com_o_modulo() {
     local _status _linha
     _status="$(_dkms_status_texto "$1/$2")"
     while IFS= read -r _linha; do
-        [[ "${_linha}" == *": installed"* ]] || continue
-        _linha="${_linha%%: installed*}"
+        [[ "${_linha}" =~ :\ (installed|built) ]] || continue
+        _linha="${_linha%%: ${BASH_REMATCH[1]}*}"
         _linha="${_linha%, *}"
         printf '%s\n' "${_linha##*, }"
     done <<< "${_status}"
@@ -330,16 +330,16 @@ dkms_devolver_o_driver_de_fabrica() {
     local _pkg="$1" _ver="$2" _built="${3:-}" _kver _tirou=0
     while IFS= read -r _kver; do
         [[ -n "${_kver}" ]] || continue
-        if sudo dkms uninstall "${_pkg}/${_ver}" -k "${_kver}" >/dev/null 2>&1; then
+        if sudo dkms remove "${_pkg}/${_ver}" -k "${_kver}" >/dev/null 2>&1; then
             sudo depmod -a "${_kver}" >/dev/null 2>&1 || true
             _dkms_log "${_pkg} tirado do kernel ${_kver}: o driver de fábrica volta no próximo carregamento"
             _tirou=1
             [[ -n "${_built}" && "${_kver}" == "$(_dkms_kernel_alvo)" ]] \
                 && dkms_mark_initramfs_stale "${_built}"
         else
-            _dkms_warn "dkms uninstall falhou p/ ${_pkg}/${_ver} no kernel ${_kver} — o módulo da casa segue instalado e o kernel o recusa no boot; rode: sudo dkms uninstall ${_pkg}/${_ver} -k ${_kver}"
+            _dkms_warn "dkms remove falhou p/ ${_pkg}/${_ver} no kernel ${_kver} — o módulo da casa segue nesse kernel e o kernel o recusa no boot; rode: sudo dkms remove ${_pkg}/${_ver} -k ${_kver}"
         fi
-    done < <(_dkms_kernels_com_o_modulo_instalado "${_pkg}" "${_ver}")
+    done < <(_dkms_kernels_com_o_modulo "${_pkg}" "${_ver}")
     [[ "${_tirou}" -eq 1 ]] || _dkms_log "${_pkg} pulado: Secure Boot sem a chave do DKMS inscrita — o driver de fábrica continua"
     return 0
 }

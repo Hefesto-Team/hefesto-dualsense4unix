@@ -512,7 +512,12 @@ ESTADOS_IDS = ["ligado-sem-chave", "ligado-com-chave", "desligado", "sem-efi"]
 
 
 class TestSecureBootLigadoDevolveODriverDeFabrica:
-    """O-SECURE-BOOT-LIGADO-DEVOLVE-O-DRIVER-DE-FABRICA-01: sem a chave o módulo da casa sai."""
+    """O-SECURE-BOOT-LIGADO-DEVOLVE-O-DRIVER-DE-FABRICA-01: sem a chave o módulo da casa sai.
+
+    Sai pelo ``dkms remove`` de cada kernel em que está instalado ou só construído: o ``dkms
+    uninstall`` deixava o construído, o ``--exclusivo`` não exclui o kernel que já tem construção, e
+    o ``autoinstall`` (o do boot no Fedora, o do pacote do kernel refeito) o reinstalava.
+    """
 
     STATUS = (
         "hefesto-teste/9.9.9, 7.1.5-generic, x86_64: installed\n"
@@ -555,10 +560,10 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
     ) -> None:
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
         saida, lidas = self._instalar(tmp_path, estado, self.STATUS)
-        for kernel in ("7.1.5-generic", "7.0.1-generic"):
-            assert f"dkms uninstall hefesto-teste/9.9.9 -k {kernel}" in lidas, lidas
+        for kernel in ("7.1.5-generic", "7.0.1-generic", "6.9.0-generic"):
+            assert f"dkms remove hefesto-teste/9.9.9 -k {kernel}" in lidas, lidas
             assert f"depmod -a {kernel}" in lidas, lidas
-        assert "-k 6.9.0-generic" not in lidas.replace("status", ""), lidas
+        assert "dkms uninstall" not in lidas, lidas
         for verbo in ("dkms add", "dkms build", "dkms install"):
             assert verbo not in lidas, lidas
         assert "STALE=1" in saida and "mokutil --import" in saida, saida
@@ -569,7 +574,7 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
     ) -> None:
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
         saida, lidas = self._instalar(tmp_path, estado, "")
-        assert "dkms uninstall" not in lidas, lidas
+        assert "dkms remove" not in lidas, lidas
         assert "STALE=0" in saida and "o driver de fábrica continua" in saida, saida
 
     @pytest.mark.parametrize(("ligado", "inscrita"), ESTADOS[1:], ids=ESTADOS_IDS[1:])
@@ -578,7 +583,8 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
     ) -> None:
         estado = _estado_do_secure_boot(tmp_path, ligado=ligado, inscrita=inscrita)
         _saida, lidas = self._instalar(tmp_path, estado, self.STATUS)
-        assert "dkms uninstall" not in lidas and "sudo chown -R root:root" in lidas, lidas
+        assert "-k 7.0.1-generic" not in lidas.replace("status", ""), lidas
+        assert "sudo chown -R root:root" in lidas, lidas
 
     def test_o_atualizador_no_mesmo_estado_tira_o_modulo_em_vez_de_refazer(
         self, tmp_path: Path
@@ -600,14 +606,16 @@ class TestSecureBootLigadoDevolveODriverDeFabrica:
         (lar.modulos / "7.2.18-generic" / "build").mkdir(parents=True)
         lar.duble(
             "dkms",
-            '[ "$1" = status ] && echo "hefesto-hid-playstation/1.0.0, 7.2.18-generic, x86_64: '
-            'installed"\nexit 0',
+            '[ "$1" = status ] && printf "%s\\n" "hefesto-hid-playstation/1.0.0, 7.2.18-generic, '
+            'x86_64: installed" "hefesto-hid-playstation/1.0.0, 7.2.17-generic, x86_64: built"\n'
+            'exit 0',
         )
         estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
         feito = lar.rodar("dkms-refazer", **estado)
         assert feito.returncode == 0, feito.stderr
         lidas = lar.lidas()
-        assert "dkms uninstall -m hefesto-hid-playstation -v 1.0.0 -k 7.2.18-generic" in lidas
+        for kernel in ("7.2.18-generic", "7.2.17-generic"):
+            assert f"dkms remove -m hefesto-hid-playstation -v 1.0.0 -k {kernel}" in lidas, lidas
         assert not [x for x in lidas if x.startswith(("dkms install", "dkms build"))], lidas
         assert any(x.startswith("update-initramfs") for x in lidas), lidas
 
