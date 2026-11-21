@@ -1430,6 +1430,7 @@ class PyDualSenseController(IController):
         self._abridor_do_handle = None
         self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
         self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
+        self._extensao_by_uniq: dict[str, _DesiredOutput] = {}
         self._jogo_provou_o_gatilho: set[str] = set()
         self._jogo_provou_a_luz: set[str] = set()
         self._game_authority_provider: Callable[[], str] | None = None
@@ -1939,6 +1940,9 @@ class PyDualSenseController(IController):
             self._resolvido_do_daemon(key, incluir_coop=incluir_coop),
             incluir_coop=incluir_coop,
         )
+        extensao = self._camadas_da_extensao().get(uniq) if uniq is not None else None
+        if extensao is not None:
+            resolved = _merge_desired(resolved, extensao)
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         if game is not None and self._game_wins():
             resolved = _merge_desired(resolved, game)
@@ -2578,6 +2582,7 @@ class PyDualSenseController(IController):
         for key in [k for k in self._handles if k not in keep]:
             handle = self._handles.pop(key)
             self._segurar_a_volta_pelo_radio_locked(key, handle)
+            self._largar_a_camada_da_extensao_locked(self._key_to_uniq(key))
             saindo.append((key, handle))
         _fechar_os_handles_juntos(handle for _key, handle in saindo)
         for key, handle in saindo:
@@ -2676,6 +2681,8 @@ class PyDualSenseController(IController):
         with self._io_lock:
             sobras = self._abandonar_as_aberturas_locked()
             saindo = [(key, self._handles.pop(key)) for key in list(self._handles)]
+            for key, _handle in saindo:
+                self._largar_a_camada_da_extensao_locked(self._key_to_uniq(key))
             _fechar_os_handles_juntos([*sobras, *(handle for _key, handle in saindo)])
             for key, handle in saindo:
                 self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
@@ -4327,6 +4334,99 @@ class PyDualSenseController(IController):
                 campos=guardados,
             )
             return "registrado"
+        return "escreveu"
+
+    def _camadas_da_extensao(self) -> dict[str, _DesiredOutput]:
+        camadas: dict[str, _DesiredOutput] = self.__dict__.setdefault("_extensao_by_uniq", {})
+        return camadas
+
+    def _largar_a_camada_da_extensao_locked(self, uniq: str | None) -> None:
+        """O controle que saiu de verdade leva o que a extensão tomou; a troca de transporte, que
+        não é saída, mantém. Sob `_io_lock`."""
+        if uniq is not None and not self._troca_valida_locked(uniq):
+            self._camadas_da_extensao().pop(uniq, None)
+
+    def apply_extension_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
+        """Aplica `spec` SÓ em `uniq`, na camada da extensão: acima do perfil e da escolha de quem
+        usa, abaixo do jogo. Só sai por `release_extension_output_for` ou pela saída do
+        controle."""
+        fields = _spec_fields(spec)
+        if not fields:
+            return "nada_a_fazer"
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            logger.warning("apply_extension_output_for_sem_mac_ignorado", uniq=uniq)
+            return "sem_alvo"
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+            if handle is None and not self._troca_valida_locked(alvo):
+                return "sem_alvo"
+            camada = self._camadas_da_extensao().setdefault(alvo, _DesiredOutput())
+            for name, value in fields.items():
+                setattr(camada, name, value)
+            por_fora = handle is not None and (
+                node is not None or self._detect_transport(handle) == "bt"
+            )
+            muted = self._output_mute
+        if handle is None:
+            return "registrado"
+        if not self._write_partial_output(
+            handle, node, _DesiredOutput(**fields), what="apply_extension_output_for"
+        ):
+            return "falhou"
+        sairam = _CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset(
+            {"player_led_brightness"}
+        )
+        if muted and set(fields) - sairam:
+            return "registrado"
+        return "escreveu"
+
+    def release_extension_output_for(
+        self, uniq: str, campos: Iterable[str]
+    ) -> ResultadoDeSaida:
+        """Solta da camada da extensão os `campos` de `uniq` e devolve ao controle o valor
+        resolvido sem a camada (o perfil, ou a escolha da aba). Campo que a extensão não tem não
+        escreve nada: soltar duas vezes devolve uma."""
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return "sem_alvo"
+        with self._io_lock:
+            camada = self._camadas_da_extensao().get(alvo)
+            soltos = [
+                nome for nome in dict.fromkeys(campos)
+                if camada is not None and getattr(camada, nome, None) is not None
+            ]
+            if camada is None or not soltos:
+                return "nada_a_fazer"
+            for nome in soltos:
+                setattr(camada, nome, None)
+            if all(getattr(camada, nome) is None for nome in _OUTPUT_FIELDS):
+                del self._camadas_da_extensao()[alvo]
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+            desired = self._merged_desired_for_key(key) if key is not None else None
+        if handle is None or desired is None:
+            return "registrado"
+        try:
+            for campo, lado in (("trigger_left", "left"), ("trigger_right", "right")):
+                if campo not in soltos:
+                    continue
+                efeito = getattr(desired, campo)
+                if efeito is not None:
+                    self._apply_trigger(handle, lado, efeito)
+                else:
+                    self._reset_trigger(handle, lado)
+        except Exception as exc:
+            logger.warning("output_handle_failed", op="release_extension_output_for",
+                           key=key, err=str(exc))
+            return "falhou"
+        if "led" in soltos and desired.led is not None and not self._write_partial_output(
+            handle, node, _DesiredOutput(led=desired.led), what="release_extension_output_for"
+        ):
+            return "falhou"
         return "escreveu"
 
     def reset_output_overrides(

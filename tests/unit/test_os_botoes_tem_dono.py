@@ -95,7 +95,7 @@ def test_o_inventario_le_os_metodos_do_daemon():
         f"o inventário achou {len(m)} métodos e o daemon atende pelo menos 39. "
         f"Se caiu, o padrão do `ROTA` voltou a perder os de três níveis.")
     assert "identity.number.set" in m, "o de três níveis sumiu do censo"
-    assert daemon.parametros("led.set") == ("rgb", "brightness", "uniq")
+    assert daemon.parametros("led.set") == ("camada", "soltar", "rgb", "brightness", "uniq")
 
 
 def test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende(pac):

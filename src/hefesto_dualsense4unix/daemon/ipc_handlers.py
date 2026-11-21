@@ -139,6 +139,8 @@ def _as_str_or_none(value: Any) -> str | None:
 
 _LIGHTBAR_READ_TTL_SEC = 1.0
 
+CAMADA_DA_EXTENSAO = "extensao"  # (noqa-acento)
+
 _IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC = 5.0
 
 COOP_SEMPRE_LIGADO_MOTIVO = (
@@ -788,6 +790,33 @@ class IpcHandlersMixin:
                 resultado = apply_for(alvo, spec)
         return resultado if isinstance(resultado, str) and resultado else "escreveu"
 
+    def _escrever_na_extensao(self, params: dict[str, Any], **campos: Any) -> dict[str, Any]:
+        """O pedido de uma extensão (``camada: "extensao"``) vai à camada da extensão em ``uniq``,
+        acima do perfil e da escolha da aba; sai por ``soltar`` ou pela saída do controle."""
+        alvo = params.get("uniq")
+        aplicar = getattr(self.controller, "apply_extension_output_for", None)
+        if not isinstance(alvo, str) or not alvo or not callable(aplicar):
+            raise ValueError("a camada da extensão pede o uniq de um controle com a camada")
+        from hefesto_dualsense4unix.core.controller import OutputSpec
+
+        resultado = aplicar(alvo, OutputSpec(**campos))
+        aplicado_em, guardado_em = self._destinos_por_uniq(
+            resultado if isinstance(resultado, str) and resultado else "escreveu", alvo
+        )
+        return {"status": "ok", "aplicado_em": aplicado_em, "guardado_em": guardado_em}
+
+    def _soltar_a_extensao(self, params: dict[str, Any], campo: str) -> dict[str, Any]:
+        """Tira ``campo`` da camada da extensão em ``uniq`` e devolve o valor sem a camada."""
+        alvo = params.get("uniq")
+        soltar = getattr(self.controller, "release_extension_output_for", None)
+        if not isinstance(alvo, str) or not alvo or not callable(soltar):
+            raise ValueError("a camada da extensão pede o uniq de um controle com a camada")
+        resultado = soltar(alvo, (campo,))
+        aplicado_em, guardado_em = self._destinos_por_uniq(
+            resultado if isinstance(resultado, str) and resultado else "nada_a_fazer", alvo
+        )
+        return {"status": "ok", "aplicado_em": aplicado_em, "guardado_em": guardado_em}
+
     @staticmethod
     def _destinos_por_uniq(resultado: str | None, uniq: str) -> tuple[list[str], list[str]]:
         """``(aplicado_em, guardado_em)`` a partir do que o backend fez (MESA-CHEIA-09 E1/E2).
@@ -926,6 +955,10 @@ class IpcHandlersMixin:
     async def _handle_trigger_set(self, params: dict[str, Any]) -> dict[str, Any]:
         side = params.get("side")
         mode = params.get("mode")
+        if params.get("camada") == CAMADA_DA_EXTENSAO and params.get("soltar") is True:
+            if side not in ("left", "right"):
+                raise ValueError("trigger.set: side precisa ser 'left' ou 'right'")
+            return self._soltar_a_extensao(params, f"trigger_{side}")
         trigger_params = params.get("params", [])
         if side not in ("left", "right"):
             raise ValueError("trigger.set: side precisa ser 'left' ou 'right'")
@@ -944,6 +977,8 @@ class IpcHandlersMixin:
         campos: dict[str, Any] = (
             {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
         )
+        if params.get("camada") == CAMADA_DA_EXTENSAO:
+            return self._escrever_na_extensao(params, **campos)
         resultado = self._apply_por_uniq(params, **campos)
         if resultado is None:
             self.controller.set_trigger(side, effect)
@@ -1025,6 +1060,8 @@ class IpcHandlersMixin:
 
 
     async def _handle_led_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        if params.get("camada") == CAMADA_DA_EXTENSAO and params.get("soltar") is True:
+            return self._soltar_a_extensao(params, "led")
         rgb = params.get("rgb")
         if not isinstance(rgb, list) or len(rgb) != 3:
             raise ValueError("led.set: rgb precisa ser lista com 3 inteiros")
@@ -1045,6 +1082,8 @@ class IpcHandlersMixin:
         r, g, b = LedSettings(
             lightbar=(int(rgb[0]), int(rgb[1]), int(rgb[2]))
         ).apply_brightness(brightness).lightbar
+        if params.get("camada") == CAMADA_DA_EXTENSAO:
+            return self._escrever_na_extensao(params, led=(r, g, b))
         resultado = self._apply_por_uniq(params, brilho_da_cor=brightness, led=(r, g, b))
         guardado_em: list[str] = []
         if resultado is not None:

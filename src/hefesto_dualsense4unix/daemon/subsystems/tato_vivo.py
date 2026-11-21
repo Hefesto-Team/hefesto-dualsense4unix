@@ -3631,7 +3631,7 @@ class FonteDeFora:
         self._vencedor: dict[tuple[str, str, str], tuple[str, float]] = {}
         self.padroes: dict[tuple[str, str], PadraoDeFora] = {}
         self.sons: dict[tuple[str, str], PadraoDeFora] = {}
-        self._devolver: list[tuple[str, str, Callable[[], object]]] = []
+        self._devolver: list[tuple[str, str, str, Callable[[], object]]] = []
         self.toques: dict[tuple[str, str], ToqueDeFora] = {}
         self._estalos: deque[tuple[float, Any]] = deque(maxlen=ESTALOS_GUARDADOS)
         self._trava = threading.Lock()
@@ -3647,7 +3647,7 @@ class FonteDeFora:
             if pedido.ate > agora:
                 vivos.append(pedido)
             elif pedido.ao_vencer is not None:
-                self._devolver.append((chave[0], chave[1], pedido.ao_vencer))
+                self._devolver.append((chave[0], chave[1], chave[2], pedido.ao_vencer))
         if vivos:
             self._vivos[chave] = vivos
         else:
@@ -3749,7 +3749,7 @@ class FonteDeFora:
             chave = (uniq, canal, vaga)
             outros = [p for p in self._vivos.get(chave, ()) if p.origem != origem]
             self._devolver.extend(
-                (uniq, canal, p.ao_vencer) for p in self._vivos.get(chave, ())
+                (uniq, canal, vaga, p.ao_vencer) for p in self._vivos.get(chave, ())
                 if p.origem == origem and p.ao_vencer is not None)
             if outros:
                 self._vivos[chave] = outros
@@ -3884,13 +3884,14 @@ class FonteDeFora:
     def _devolver_o_que_venceu(self) -> int:
         pendentes, self._devolver = self._devolver, []
         feitas = 0
-        for uniq, canal, devolver in pendentes:
-            if any(c[0] == uniq and c[1] == canal for c in self._vivos):
+        for uniq, canal, vaga, devolver in pendentes:
+            if (uniq, canal, vaga) in self._vivos:
                 continue
             try:
                 devolver()
             except Exception:
-                logger.warning("tato_de_fora_nao_devolveu", uniq=uniq, canal=canal, exc_info=True)
+                logger.warning("tato_de_fora_nao_devolveu", uniq=uniq, canal=canal, vaga=vaga,
+                               exc_info=True)
                 continue
             feitas += 1
         return feitas

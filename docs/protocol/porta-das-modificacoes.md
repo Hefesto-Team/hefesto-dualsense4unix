@@ -346,8 +346,8 @@ nesse prazo, o serviço o solta
 (`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:373`). Quem quer uma
 vibração contínua repete o pedido antes dos 3 s. A resposta de sucesso não garante o motor: no Modo Nativo, e com o `uniq` de um controle fora da
 mesa, a resposta traz `status: "recusado"`, o `desfecho` e o `motivo` na frase
-(`RUMBLE_RECUSADO_MODO_NATIVO` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3540`,
-`RUMBLE_RECUSADO_ALVO_AUSENTE` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3556`). Quem acompanha o
+(`RUMBLE_RECUSADO_MODO_NATIVO` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3579`,
+`RUMBLE_RECUSADO_ALVO_AUSENTE` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3595`). Quem acompanha o
 resultado lê o `status`.
 
 Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os controles ligados agora, cada um
@@ -385,6 +385,12 @@ cabe recebe `-32014`, nunca o silêncio. A ordem é sempre a mesma: o modo, o ma
   motor (`pelo_motor: true`) e o `som.tocar` recusa com `-32015`.
 - **As luzes de jogador.** O bit 0 da `mascara` é a luz da esquerda. No fim do `ate_ms` o serviço devolve as luzes
   que o controle mostrava antes.
+- **A luz e o gatilho.** A escrita do `luz.set` e do `gatilho.set` vai a uma camada própria do controle, acima do <!-- ref-externa: método da porta das extensões, não do daemon -->
+  perfil e da escolha da aba, e nunca vira escolha da aba. A camada some quando o pedido vence (`ate_ms`, ou os
+  3 s do pedido sem prazo), quando o pedido sai todo em zero (no gatilho, `Off`) e quando a extensão sai: o
+  controle volta ao valor resolvido de antes, o perfil ou a escolha da aba, por controle e por lado do gatilho, sem
+  devolver duas vezes. O controle que sai de verdade leva a camada; o que só troca de cabo para rádio, ou de rádio
+  para cabo, mantém.
 
 ## A extensão de lançador
 

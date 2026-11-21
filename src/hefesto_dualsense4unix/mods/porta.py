@@ -2727,10 +2727,17 @@ class Porta:
             self._anotar_a_escrita(sessao.mod_id, canal, uniq)
             return resposta
         vagas = _vagas_do_pedido(canal, params)
+        soltar_a_camada = self._soltar_a_camada_da_extensao(canal, uniq, params)
+        if soltar_a_camada is not None:
+            from hefesto_dualsense4unix.daemon.ipc_handlers import CAMADA_DA_EXTENSAO
+
+            pedido = {**pedido, "camada": CAMADA_DA_EXTENSAO}
         veredito = fonte.pedir(
             _origem(sessao), canal, uniq, vagas, fonte.relogio(),
             ate_s=_prazo_do_pedido(params, metodo),
             reescrever=lambda: self._reescrever(metodo, metodo_do_servico, pedido),
+            ao_vencer=None if soltar_a_camada is None else (
+                lambda: self._reescrever(metodo, metodo_do_servico, soltar_a_camada)),
         )
         if not veredito.vale:
             raise _recusa_do_veredito(veredito, canal)
@@ -2738,6 +2745,8 @@ class Porta:
             return {"status": "coberto", "vence": veredito.vence}
         if veredito.motivo == "solto" and any(f > 0 for f in veredito.fortes.values()):
             return {"status": "solto"}
+        if veredito.motivo == "solto" and soltar_a_camada is not None:
+            return await self._levar(metodo, metodo_do_servico, soltar_a_camada)
         if canal == "vibracao":
             pedido = {**pedido, "weak": round(veredito.fortes["direito"] * 255),
                       "strong": round(veredito.fortes["esquerdo"] * 255)}
@@ -2753,6 +2762,22 @@ class Porta:
         except Exception as exc:
             logger.warning("mods_porta_escrita_falhou", metodo=metodo, err=str(exc))
             raise RecusaError(CODE_NAO_ESCREVEU, f"não escreveu: {type(exc).__name__}") from exc
+
+    @staticmethod
+    def _soltar_a_camada_da_extensao(
+        canal: str, uniq: str, params: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """O pedido que devolve ao controle o que a extensão tomou na luz ou num gatilho: o mesmo
+        método do serviço, com ``soltar``, no controle e no lado do pedido. Os outros canais não
+        têm camada própria."""
+        from hefesto_dualsense4unix.daemon.ipc_handlers import CAMADA_DA_EXTENSAO
+
+        if canal == "luz":
+            return {"uniq": uniq, "camada": CAMADA_DA_EXTENSAO, "soltar": True}
+        if canal == "gatilho":
+            return {"uniq": uniq, "camada": CAMADA_DA_EXTENSAO, "soltar": True,
+                    "side": _pedido_do_gatilho(params, uniq)["side"]}
+        return None
 
     def _reescrever(self, metodo: str, metodo_do_servico: str, pedido: dict[str, Any]) -> None:
         """O pedido com prazo que voltou a ser o mais forte sai de novo, no laço do serviço."""
