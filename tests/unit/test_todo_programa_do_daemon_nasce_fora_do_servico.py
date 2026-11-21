@@ -54,12 +54,6 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "a janela de busca da ponte root (`sudo … descobrir`); morre com quem "
         "a abriu, e o `fechar` a derruba",
     ),
-    "integrations/alto_falante_bt.py::lancar_tocador": (
-        "ajudante", 1,
-        "o `pw-cat` (ou o `pacat`) da caixa separada de um controle no cabo "
-        "(A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01): alimentado pelo cano, preso ao pai "
-        "pelo PDEATHSIG, e a `CaixaQueSeparaNoCabo.descer` o derruba",
-    ),
     "integrations/energia_do_som.py::abrir_fluxo": (
         "ajudante", 1,
         "o `parec` do monitor da saída padrão, da luz «Ao som», preso ao pai",

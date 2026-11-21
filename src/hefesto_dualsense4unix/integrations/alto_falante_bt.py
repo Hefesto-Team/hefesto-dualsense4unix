@@ -2602,16 +2602,11 @@ def argv_do_tocador_da_caixa(
 
 
 def lancar_tocador(argv: Sequence[str]) -> subprocess.Popen[bytes]:
-    """O ``Popen`` de um tocador de som: cano no ``stdin``, e preso ao pai."""
-    from hefesto_dualsense4unix.integrations.filho_de_som import morrer_com_o_pai
+    """O ``Popen`` de um tocador de som: cano no ``stdin``, e preso ao pai pelo dono dos filhos."""
+    from hefesto_dualsense4unix.integrations.filho_de_som import lancar_filho
 
-    return subprocess.Popen(
-        list(argv),
-        stdin=subprocess.PIPE,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        preexec_fn=morrer_com_o_pai,
-    )
+    return lancar_filho(
+        argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 class CaixaQueSeparaNoCabo:

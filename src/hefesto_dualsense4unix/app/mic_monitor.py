@@ -480,10 +480,12 @@ def _rodar(argv: list[str]) -> str:
 
 
 def _abrir_captura(fonte: str) -> Any:
-    """Abre o `parec` da source e devolve o processo (None se indisponível)."""
+    """Abre o `parec` da source, preso ao pai, e devolve o processo (None se indisponível)."""
     if shutil.which("parec") is None:
         return None
-    return subprocess.Popen(
+    from hefesto_dualsense4unix.integrations.filho_de_som import lancar_filho
+
+    return lancar_filho(
         [
             "parec",
             f"--device={fonte}",

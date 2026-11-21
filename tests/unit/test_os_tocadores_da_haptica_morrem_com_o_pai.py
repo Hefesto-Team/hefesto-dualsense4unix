@@ -23,6 +23,8 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.app import mic_monitor as mm
+from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import filho_de_som
 from hefesto_dualsense4unix.integrations import transiente_do_jogo as tj
@@ -32,9 +34,7 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
 PROGRAMAS_DE_SOM = ("pw-cat", "pacat", "pw-loopback", "pw-record", "parec")
 
-SEM_PDEATHSIG_AINDA = {
-    "app/mic_monitor.py": "o `parec` tem o stdout no cano: o SIGPIPE o recolhe quando a janela cai",
-}
+SEM_PDEATHSIG_AINDA: dict[str, str] = {}
 
 
 class _RecusaError(OSError):
@@ -191,3 +191,92 @@ def test_a_regua_enxerga_o_popen_puro_e_o_default_do_tocador(tmp_path: Path) -> 
         "subprocess.Popen(['pw-cat'], preexec_fn=morrer_com_o_pai)\n", encoding="utf-8")
     assert _lancamentos_sem_o_dono(solto) == [2, 3]
     assert _lancamentos_sem_o_dono(preso) == []
+
+
+def test_o_tocador_da_caixa_nasce_pelo_dono_dos_filhos(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2011-OS-TOCADORES-DA-HAPTICA-MORREM-COM-O-PAI: o tocador lança por ``lancar_filho``.
+
+    MORDIDA: o ``Popen`` próprio de volta no ``lancar_tocador`` deixa o dono sem o pedido.
+    """
+    pedidos: list[tuple[list[str], dict[str, Any]]] = []
+
+    def _lancar(argv: Any, **kw: Any) -> str:
+        pedidos.append((list(argv), kw))
+        return "filho"
+
+    monkeypatch.setattr(filho_de_som, "lancar_filho", _lancar)
+    monkeypatch.setattr(filho_de_som.subprocess, "Popen", lambda *_a, **_k: "popen-direto")
+
+    assert af.lancar_tocador(["pw-cat", "--playback"]) == "filho"
+
+    (argv, kw), = pedidos
+    assert argv == ["pw-cat", "--playback"]
+    assert kw == {
+        "stdin": subprocess.PIPE, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+
+
+def test_o_parec_do_medidor_nasce_pelo_dono_dos_filhos(monkeypatch: pytest.MonkeyPatch) -> None:
+    """MORDIDA: o ``Popen`` próprio de volta no ``_abrir_captura`` solta o ``parec`` da janela."""
+    pedidos: list[tuple[list[str], dict[str, Any]]] = []
+
+    def _lancar(argv: Any, **kw: Any) -> str:
+        pedidos.append((list(argv), kw))
+        return "filho"
+
+    monkeypatch.setattr(filho_de_som, "lancar_filho", _lancar)
+    monkeypatch.setattr(mm.shutil, "which", lambda _nome: "/usr/bin/parec")
+    monkeypatch.setattr(filho_de_som.subprocess, "Popen", lambda *_a, **_k: "popen-direto")
+
+    assert mm._abrir_captura("fonte-de-mentira") == "filho"
+
+    (argv, kw), = pedidos
+    assert argv[0] == "parec" and "--device=fonte-de-mentira" in argv
+    assert kw["stdout"] == subprocess.PIPE and kw["stderr"] == subprocess.DEVNULL
+    assert kw["env"]["LC_ALL"] == "C"
+
+
+_FILHOS_DE_MENTIRA = {
+    "caixa": ("pw-cat", "from hefesto_dualsense4unix.integrations.alto_falante_bt import "
+              "lancar_tocador\nlancar_tocador(['pw-cat'])\n"),
+    "medidor": ("parec", "from hefesto_dualsense4unix.app.mic_monitor import _abrir_captura\n"
+                "_abrir_captura('fonte-de-mentira')\n"),
+}
+
+
+@pytest.mark.parametrize("quem", sorted(_FILHOS_DE_MENTIRA))
+def test_o_filho_do_som_cai_com_o_pai_que_leva_sigkill(tmp_path: Path, quem: str) -> None:
+    """MORDIDA: o ``parec`` do medidor sem o dono segue vivo com o cano calado depois do SIGKILL.
+
+    O programa de som é um script de mentira num ``PATH`` temporário que dorme; o pai é um
+    processo filho do teste, que lança o filho e leva o próprio SIGKILL.
+    """
+    programa, lancamento = _FILHOS_DE_MENTIRA[quem]
+    binario = tmp_path / "bin"
+    binario.mkdir()
+    script = binario / programa
+    script.write_text('#!/bin/sh\necho $$ > "$PIDFILE"\nexec sleep 300\n', encoding="utf-8")
+    script.chmod(0o755)
+    pidfile = tmp_path / "pid"
+    casa = tmp_path / "casa"
+    casa.mkdir()
+    codigo = f"import os, signal\n{lancamento}" "os.kill(os.getpid(), signal.SIGKILL)\n"
+    pai = subprocess.run(
+        [sys.executable, "-c", codigo], timeout=60, check=False, capture_output=True,
+        env={
+            **os.environ, "PYTHONPATH": str(RAIZ / "src"), "PIDFILE": str(pidfile),
+            "PATH": f"{binario}:{os.environ['PATH']}", "HOME": str(casa),
+            "XDG_STATE_HOME": str(casa / "state"), "XDG_CONFIG_HOME": str(casa / "config"),
+        })
+    assert pai.returncode == -signal.SIGKILL, pai.stderr.decode()[-400:]
+    fim = time.monotonic() + 5.0
+    while not (pidfile.exists() and pidfile.read_text(encoding="utf-8").strip()):
+        assert time.monotonic() < fim, "o filho de mentira não gravou o PID"
+        time.sleep(0.02)
+    pid = int(pidfile.read_text(encoding="utf-8"))
+    try:
+        while _vivo(pid) and time.monotonic() < fim + 5.0:
+            time.sleep(0.02)
+        assert not _vivo(pid), f"o filho do {quem} seguiu vivo depois do pai morrer"
+    finally:
+        if _vivo(pid):
+            os.kill(pid, signal.SIGKILL)
