@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import codecs
 import contextlib
+import dataclasses
 import hashlib
 import json
 import os
@@ -43,6 +44,7 @@ from hefesto_dualsense4unix.app.actions.atualizador import (
     ordem,
     passou_a_quarentena,
 )
+from hefesto_dualsense4unix.utils import repo_files
 
 AJUDANTE = Path("/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz")
 RAIZ_DO_REPOSITORIO = Path(__file__).resolve().parents[4]
@@ -59,6 +61,12 @@ PACOTE_DO_PRODUTO = "hefesto-dualsense4unix"
 RC_NADA_A_CONSTRUIR = 9
 RC_TRAVA_OCUPADA = 11
 OUTRO_INSTALADOR = "outro instalador está usando o sistema de pacotes"
+GERENCIADORES_DA_DISTRO = (
+    (("fedora", "rhel", "centos", "rocky", "almalinux", "nobara"), "sudo dnf upgrade"),
+    (("arch", "manjaro", "cachyos", "endeavouros"), "sudo pacman -Syu"),
+    (("opensuse", "suse", "sles"), "sudo zypper update"),
+    (("debian", "ubuntu"), "sudo apt upgrade"),
+)
 GRUPO_NVIDIA = re.compile(r"^(?:nvidia-|libnvidia-|xserver-xorg-video-nvidia)")
 GRUPO_KERNEL = re.compile(r"^linux-(?:system76|generic|image-|headers-|modules-|signed-)")
 METAS_DO_KERNEL = ("linux-system76", "linux-generic", "linux-image-generic")
@@ -357,6 +365,8 @@ def _limpar(passo: Passo, _dados_: dict[str, Any]) -> None:
 
 
 def versoes_da_nvidia(rede: bool) -> Versoes:
+    if not AJUDANTE.is_file():
+        return Versoes(existe=False)
     _atualizar_a_lista_do_apt(rede)
     drivers = {p: v for p, v in _instalados("nvidia-driver-*").items()
                if p.startswith("nvidia-driver-")}
@@ -376,7 +386,7 @@ def _kernel_do_pacote(versao: str) -> str:
 
 
 def versoes_do_kernel(rede: bool) -> Versoes:
-    if shutil.which("apt-get") is None:
+    if shutil.which("apt-get") is None or not AJUDANTE.is_file():
         return Versoes(existe=False)
     _atualizar_a_lista_do_apt(rede)
     rodando = os.uname().release
@@ -421,10 +431,31 @@ def _nome_da_distro() -> str:
     return ""
 
 
+def _ids_da_distro() -> list[str]:
+    ids: list[str] = []
+    with contextlib.suppress(OSError):
+        for linha in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
+            chave, _, valor = linha.partition("=")
+            if chave in ("ID", "ID_LIKE"):
+                ids += valor.strip().strip('"').lower().split()
+    return ids
+
+
+def _gesto_do_sistema() -> str:
+    """O gesto de quem usa onde o Hefesto não sobe os pacotes: o gerenciador da distribuição, com o
+    comando lido do ``ID`` e do ``ID_LIKE`` do os-release."""
+    ids = _ids_da_distro()
+    comando = next((c for nomes, c in GERENCIADORES_DA_DISTRO if any(i in nomes for i in ids)), "")
+    base = "Atualize pelo gerenciador da distribuição"
+    return f"{base}: {comando}" if comando else base
+
+
 def versoes_do_sistema(rede: bool) -> Versoes:
     _atualizar_a_lista_do_apt(rede)
-    if shutil.which("apt-get") is None:
-        return Versoes(existe=False)
+    if shutil.which("apt-get") is None or not AJUDANTE.is_file():
+        distro = _versao_da_distro()
+        return Versoes(distro, distro, rotulo="Pela distribuição", dica=_nome_da_distro(),
+                       gesto=_gesto_do_sistema())
     resto = [p for p in _atualizaveis() if not GRUPO_NVIDIA.match(p) and not GRUPO_KERNEL.match(p)]
     distro = _versao_da_distro()
     if resto:
@@ -1189,18 +1220,36 @@ def _vao() -> Any:
     return vao
 
 
+def _versoes_do_hefesto_sem_clone(rede: bool, forma: str) -> Versoes:
+    """Sem clone, a última release publicada diz a versão nova, e o gesto da forma de instalação
+    diz como instalá-la; o Hefesto não a sobe."""
+    from importlib import metadata
+
+    instalada = ""
+    with contextlib.suppress(OSError):
+        instalada = _versao_do_pyproject(
+            (RAIZ_DO_REPOSITORIO / "pyproject.toml").read_text(encoding="utf-8"))
+    with contextlib.suppress(metadata.PackageNotFoundError):
+        instalada = metadata.version(PACOTE_DO_PRODUTO)
+    if not rede:
+        return Versoes(instalada, None)
+    release = _release(REPO_DO_PRODUTO)
+    versoes = Versoes(instalada, _sem_v(str(release.get("tag_name", ""))) or None,
+                      publicada_em=publicada_em(release))
+    if not versoes.tem_nova():
+        return versoes
+    return dataclasses.replace(versoes, gesto=repo_files.gesto_de_subir_a_versao_nova(forma))
+
+
 def versoes_do_hefesto(rede: bool) -> Versoes:
     vao = _vao()
     raiz = RAIZ_DO_REPOSITORIO
+    forma = repo_files.forma_da_instalacao(raiz)
+    if forma != repo_files.FORMA_CLONE:
+        return _versoes_do_hefesto_sem_clone(rede, forma)
     instalada = ""
     with contextlib.suppress(OSError):
         instalada = _versao_do_pyproject((raiz / "pyproject.toml").read_text(encoding="utf-8"))
-    if not (raiz / ".git").exists():
-        from importlib import metadata
-
-        with contextlib.suppress(metadata.PackageNotFoundError):
-            instalada = metadata.version(PACOTE_DO_PRODUTO)
-        return Versoes(instalada, None)
     topo = vao._git(raiz, "rev-parse", "HEAD")
     alvo = vao._git(raiz, "rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}")
     if not topo or not alvo or alvo == topo or not vao._e_avanco(raiz, topo, alvo):
@@ -1265,7 +1314,8 @@ def _aplicar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
 
 
 def _hefesto_sem_reinstalar(_versoes: Versoes) -> str:
-    return "" if (RAIZ_DO_REPOSITORIO / ".git").exists() else "instalação sem clone"
+    clone = repo_files.forma_da_instalacao(RAIZ_DO_REPOSITORIO) == repo_files.FORMA_CLONE
+    return "" if clone else "instalação sem clone"
 
 
 def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:

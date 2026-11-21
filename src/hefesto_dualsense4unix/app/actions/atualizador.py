@@ -124,7 +124,8 @@ def ordem(versao: str) -> tuple[tuple[int, int | str], ...]:
 
 @dataclass(frozen=True)
 class Versoes:
-    """O que a peça tem e o que saiu. ``publicada`` ``None``: a fonte não respondeu."""
+    """O que a peça tem e o que saiu. ``publicada`` ``None``: a fonte não respondeu. ``gesto``: a
+    peça não sobe pelo Hefesto aqui, e o gesto de quem usa vai na dica."""
 
     instalada: str = ""
     publicada: str | None = None
@@ -135,6 +136,7 @@ class Versoes:
     completa: str = ""
     revisar: str = ""
     publicada_em: float = 0.0
+    gesto: str = ""
 
     def tem_nova(self) -> bool:
         if self.nova is not None:
@@ -442,7 +444,8 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
             "publicada_em": versoes.publicada_em,
             "marcada": escolha.marcada(peca),
             "pode_voltar": peca.voltar is not None,
-            "reinstala": not motivo, "motivo": motivo,
+            "reinstala": not motivo and not versoes.gesto, "motivo": motivo,
+            "gesto": versoes.gesto,
         })
     conferencia = {"em": agora(), "rede": rede, "pecas": itens}
     _gravar_json(_estado() / ARQUIVO_DA_CONFERENCIA, conferencia)
@@ -460,7 +463,7 @@ def novas(conferencia: dict[str, Any], escolha: Escolha | None = None,
     escolha = ler_a_escolha() if escolha is None else escolha
     saida = []
     for item in conferencia.get("pecas") or []:
-        if not isinstance(item, dict) or item.get("estado") != NOVA:
+        if not isinstance(item, dict) or item.get("estado") != NOVA or item.get("gesto"):
             continue
         if sozinha_em is not None:
             try:

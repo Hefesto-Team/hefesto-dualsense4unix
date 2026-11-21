@@ -279,7 +279,7 @@ def _grupo_do_cartao(item: dict[str, Any]) -> str:
 def marcavel(item: dict[str, Any]) -> bool:
     """A peça com versão nova se atualiza; a em dia e a de revisar se reinstalam, se o motor
     deixa."""
-    if item.get("volta", 1) != 1:
+    if item.get("volta", 1) != 1 or item.get("gesto"):
         return False
     grupo = _grupo_do_cartao(item)
     return grupo == "nova" or (grupo in REINSTALAVEIS and item.get("reinstala", True) is not False)
@@ -306,6 +306,8 @@ def _junto(*partes: str) -> str:
 
 
 def _selo(classe: str, dica: str) -> str:
+    if not classe:
+        return '<span class="mp-s"></span>'
     return f'<span class="mp-s {classe}"{_dica(dica)}>{GLIFO[classe]}</span>'
 
 
@@ -313,7 +315,7 @@ def _linha(item: dict[str, Any], classe: str, dica_do_selo: str, meio: str, fim:
            dica: str, *, marca: bool = False) -> str:
     """Uma linha: o ícone, o nome e a versão (a explicação na dica), o meio, o selo e a marca."""
     tag = "label" if marca else "div"
-    return (f'<{tag} class="mp-l {classe}"><span class="mp-i">'
+    return (f'<{tag} class="{f"mp-l {classe}".strip()}"><span class="mp-i">'
             f'{_icone(str(item.get("id") or ""))}</span>'
             f'<span class="mp-n"{_dica(dica)}>{_e(item.get("nome"))}</span>'
             f'{meio}{_selo(classe, dica_do_selo)}<span class="mp-mx">{fim}</span></{tag}>')
@@ -348,8 +350,12 @@ def _linha_do_mapa(item: dict[str, Any]) -> str:
              f'{_e(idade)}</span>' if idade else "")
     versao = f'<span class="mp-v">{antes}{_versao_a_vista(item)}</span>'
     if not marcavel(item):
-        dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), dica_da_idade,
-                      _por_que_sem_marca(item))
+        gesto = str(item.get("gesto") or "")
+        if gesto and classe != "nova":
+            classe = ""
+        por_que = "" if gesto and classe == "nova" else _por_que_sem_marca(item)
+        dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), dica_da_idade, gesto,
+                      por_que)
         return _linha(item, classe, estado, versao, "", dica)
     reinstala = DICA_DA_REINSTALACAO if e_reinstalacao(item) else ""
     caixa = (f'<input type="checkbox" class="mp-m"{" checked" if marcada(item) else ""}'

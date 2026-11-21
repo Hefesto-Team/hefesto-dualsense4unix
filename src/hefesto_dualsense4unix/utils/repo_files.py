@@ -42,6 +42,7 @@ código?"*), então a resposta fica no mesmo lugar.
 """
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -102,11 +103,49 @@ def como_atualizar_esta_instalacao(e_checkout: bool | None = None) -> str:
     return FRASE_DE_ATUALIZAR[bool(e_checkout)]
 
 
+FORMA_CLONE, FORMA_DEB, FORMA_FLATPAK, FORMA_APPIMAGE, FORMA_OUTRA = (
+    "clone", "deb", "flatpak", "appimage", "outra")
+MARCA_DO_FLATPAK = Path("/.flatpak-info")
+PREFIXO_DO_DEB = Path("/opt") / NOME_NO_SHARE
+
+GESTO_DE_SUBIR: dict[str, str] = {
+    FORMA_DEB: "Abra o .deb novo no instalador do sistema",
+    FORMA_FLATPAK: "Baixe o .flatpak novo na página da versão",
+    FORMA_APPIMAGE: "Baixe o AppImage novo na página da versão",
+    FORMA_OUTRA: "Atualize o Hefesto pelo mesmo caminho por onde você o instalou",
+}
+
+
+def forma_da_instalacao(raiz: Path | None = None) -> str:
+    """Como esta instalação chegou: clone (``.git`` na raiz), ``.deb``, Flatpak, AppImage ou
+    outra (wheel, Arch, Fedora, Nix)."""
+    base = raiz if raiz is not None else bases_de_instalacao()[0]
+    if (base / ".git").exists():
+        return FORMA_CLONE
+    if MARCA_DO_FLATPAK.is_file() or os.environ.get("FLATPAK_ID"):
+        return FORMA_FLATPAK
+    if os.environ.get("APPIMAGE"):
+        return FORMA_APPIMAGE
+    if Path(sys.prefix).is_relative_to(PREFIXO_DO_DEB):
+        return FORMA_DEB
+    return FORMA_OUTRA
+
+
+def gesto_de_subir_a_versao_nova(forma: str | None = None) -> str:
+    """O gesto de quem usa para instalar a versão nova quando o Hefesto não a sobe sozinho;
+    vazio no clone, que ele mesmo sobe."""
+    return GESTO_DE_SUBIR.get(forma if forma is not None else forma_da_instalacao(), "")
+
+
 __all__ = [
+    "FORMA_CLONE",
     "FRASE_DE_ATUALIZAR",
+    "GESTO_DE_SUBIR",
     "NOME_NO_SHARE",
     "bases_de_instalacao",
     "como_atualizar_esta_instalacao",
     "encontrar_arquivo_do_repo",
     "esta_instalacao_e_um_checkout",
+    "forma_da_instalacao",
+    "gesto_de_subir_a_versao_nova",
 ]
