@@ -796,6 +796,31 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
         assert "não consegui ler a chave do DKMS" in saida, saida
         assert "mokutil --import" in saida and "instale o mokutil" not in saida, saida
 
+    def test_o_carregado_se_compara_com_o_arquivo_do_kernel_que_roda(self, tmp_path: Path) -> None:
+        """O /sys/module é do kernel que roda: o arquivo do kernel alvo não prova nada dele."""
+        from tests.unit.dkms_de_mentira import ko_do_dkms
+
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        arvore = tmp_path / "arvore"
+        da_casa = ko_do_dkms(tmp_path / "ko", arvore, "hefesto-teste", "hid-teste.ko",
+                             kernel="7.2.0-novo")
+        de_fabrica = tmp_path / "fabrica" / "hid-teste.ko"
+        de_fabrica.parent.mkdir()
+        de_fabrica.write_bytes(b"o de fabrica")
+        sysmod = tmp_path / "sysmod" / "hid_teste"
+        sysmod.mkdir(parents=True)
+        (sysmod / "srcversion").write_text("SRC123\n", encoding="utf-8")
+        bin_ = tmp_path / "bin"
+        bin_.mkdir()
+        _stub(bin_, "modinfo", f'case "$*" in *srcversion*) echo SRC123;; '
+                                f'*-k*) echo "{da_casa}";; *) echo "{de_fabrica}";; esac')
+        caminho = _sem_mokutil(estado, f"{bin_}:/usr/bin:/bin")
+        feito = _roda("dkms_estado_da_chave hid-teste", caminho,
+                      {**estado, "HEFESTO_DKMS_KERNEL": "7.2.0-novo",
+                       "HEFESTO_DKMS_TREE": str(arvore),
+                       "HEFESTO_DKMS_SYS_MODULE": str(tmp_path / "sysmod")})
+        assert feito.stdout == "fora", feito
+
     def test_o_python_tambem_so_desmente_o_fora_com_o_carregado(self, tmp_path: Path) -> None:
         from tests.unit.dkms_de_mentira import ko_do_dkms
 
