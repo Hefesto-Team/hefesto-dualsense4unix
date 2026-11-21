@@ -245,16 +245,6 @@ _PERGUNTAS_DO_VOLUME: list[tuple[str, Callable[[], object], object]] = [
         False,
     ),
     ("volume_da_captura", lambda: ac.volume_da_captura(fonte=CANAL_DELE), None),
-    (
-        "AudioControl.fonte_padrao_e_o_controle",
-        lambda: ac.AudioControl().fonte_padrao_e_o_controle(),
-        False,
-    ),
-    (
-        "AudioControl.toggle_default_source_mute",
-        lambda: ac.AudioControl().toggle_default_source_mute(),
-        False,
-    ),
 ]
 
 
@@ -272,29 +262,9 @@ def test_em_recuo_toda_pergunta_do_volume_devolve_o_nao_sei_sem_perguntar(
 ) -> None:
     run = _RunDoServidorMudo(espera_s=1.0)
     monkeypatch.setattr(subprocess, "run", run)
-    monkeypatch.setattr(
-        ac.shutil, "which", lambda cmd: "/usr/bin/pactl" if cmd == "pactl" else None
-    )
     bt.PACTL.estourou()
     assert pergunta() is nao_sei
     assert run.chamadas == [], f"{nome} perguntou ao servidor em recuo"
-
-
-def test_o_wpctl_fica_fora_do_recuo(recuo: _Relogio, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O recuo é do `pipewire-pulse`; o `wpctl` fala o protocolo nativo do PipeWire."""
-    chamadas: list[list[str]] = []
-
-    def _run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
-        chamadas.append(list(argv))
-        return _resposta("node.name = alsa_input.usb-Sony_DualSense")
-
-    monkeypatch.setattr(subprocess, "run", _run)
-    monkeypatch.setattr(
-        ac.shutil, "which", lambda cmd: "/usr/bin/wpctl" if cmd == "wpctl" else None
-    )
-    bt.PACTL.estourou()
-    assert ac.AudioControl().fonte_padrao_e_o_controle() is True
-    assert [argv[0] for argv in chamadas] == ["wpctl"]
 
 
 def test_em_recuo_a_pergunta_segurada_nao_vira_aviso(

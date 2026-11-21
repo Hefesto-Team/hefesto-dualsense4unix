@@ -13,7 +13,7 @@ Os dois testes deste arquivo cobrem os dois defeitos de código que explicam
 esse par de fatos, e nenhum dos dois precisa saber de onde vieram as bordas:
 
 **(A) O laço do botão não tinha defesa nenhuma contra rajada.** Toda a
-proteção estava terceirizada para o debounce de 200 ms do ``AudioControl``, e
+proteção estava terceirizada para o debounce de 200 ms do controle do mudo do sistema, e
 esse debounce grava o relógio ANTES de rodar dois subprocessos com
 ``timeout=2.0`` cada — a janela efetiva é ``max(0, 0.2 - duração)``, isto é,
 ZERO sempre que o áudio demora. Rajada de bordas virava rajada de toggles.
@@ -49,19 +49,6 @@ from hefesto_dualsense4unix.daemon.subsystems import hotkey as mod
 class _Config:
     def __init__(self, *, mic_button_toggles_system: bool = True) -> None:
         self.mic_button_toggles_system = mic_button_toggles_system
-
-
-class _Audio:
-    """AudioControl dublado: alterna e conta, sem tocar em subprocess."""
-
-    def __init__(self) -> None:
-        self.mudo = False
-        self.toggles = 0
-
-    def toggle_default_source_mute(self) -> bool:
-        self.toggles += 1
-        self.mudo = not self.mudo
-        return self.mudo
 
 
 class _Controle:
@@ -101,7 +88,6 @@ class _Daemon:
         self.bus = EventBus()
         self.config = config
         self.controller = controller
-        self._audio = _Audio()
         self._parando = False
 
     def _is_stopping(self) -> bool:

@@ -1,158 +1,20 @@
-"""Controle de mute do microfone padrão do sistema via wpctl ou pactl.
+"""A fonte de captura e o volume de cada controle, pelo `pactl` e pelo recuo do servidor de som.
 
-Auto-detecta o backend disponivel (wpctl para PipeWire/WirePlumber,
-pactl para PulseAudio legado). Nunca levanta excecao: falhas de
-subprocess viram warning + retorno do último estado conhecido.
-
-Regras:
-- Nunca usa shell=True (invariante do projeto).
-- Debounce 200ms com clock injetavel para testes.
-- Logging via structlog (get_logger).
+Funções soltas: nenhuma muta o microfone padrão do sistema. Nunca usa `shell=True`; o logging
+é por `get_logger`.
 """
 from __future__ import annotations
 
 import os
 import re
-import shutil
 import subprocess
-import time
-from collections.abc import Callable
 from typing import Literal
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-DEBOUNCE_SEC = 0.2
 SUBPROCESS_TIMEOUT_SEC = 2.0
-Backend = Literal["wpctl", "pactl", "none"]
-
-
-class AudioControl:
-    """Controla mute do microfone padrão do sistema via wpctl ou pactl.
-
-    Auto-detecta backend no primeiro uso. Não levanta: falhas viram
-    warning + retorno do último estado conhecido.
-
-    Args:
-        clock: função que retorna tempo monotonic em segundos. Injetavel
-               para testes. Default: time.monotonic.
-    """
-
-    def __init__(self, clock: Callable[[], float] | None = None) -> None:
-        self._clock: Callable[[], float] = clock or time.monotonic
-        self._backend: Backend | None = None
-        self._last_call_at: float = -(DEBOUNCE_SEC + 1.0)
-        self._last_known_muted: bool = False
-        self._warned_no_backend: bool = False
-
-    def _detect_backend(self) -> Backend:
-        """Detecta qual utilitario de audio esta disponivel no PATH."""
-        if shutil.which("wpctl"):
-            return "wpctl"
-        if shutil.which("pactl"):
-            return "pactl"
-        return "none"
-
-    def _ensure_backend(self) -> Backend:
-        """Detecta e cacheia o backend na primeira chamada."""
-        if self._backend is None:
-            self._backend = self._detect_backend()
-            logger.info("audio_backend_detectado", backend=self._backend)
-        return self._backend
-
-
-    def fonte_padrao_e_o_controle(self) -> bool:
-        """True quando o microfone padrão do sistema É o do DualSense.
-
-        BT-E-VPAD-01, defeito 1. **Medido em 01/08/2026**: com o controle no
-        Bluetooth, `pactl list short cards | grep -i dualsense` devolve ZERO —
-        no BT o DualSense **não tem placa de som nenhuma**. O áudio vai dentro
-        dos reports HID e depende da ponte deste projeto, que é opt-in.
-
-        Sem esta pergunta, o botão do microfone do controle alternava o mudo
-        da FONTE PADRÃO, que no Bluetooth é outra coisa: nesta máquina, o
-        microfone da placa-mãe. O log de três toques mostra a assinatura
-        do defeito — sempre o mesmo resultado, porque não era o microfone do
-        controle que estava sendo alternado:
-
-            20:15:54  mic_hotkey_toggle  muted=True
-            20:16:31  mic_hotkey_toggle  muted=True
-            20:16:43  mic_hotkey_toggle  muted=True
-
-        A comparação é por SUBSTRING do nome da fonte padrão, e não por
-        enumeração de placas: é uma pergunta só, na cadência de um toque de
-        botão, e o nome do node do PipeWire para o controle carrega
-        "DualSense" em qualquer um dos dois backends.
-
-        Em caso de dúvida devolve **False** — e o chamador não mexe em nada.
-        É a resposta segura: não fazer nada é sempre melhor que mutar o
-        microfone errado.
-        """
-        backend = self._ensure_backend()
-        try:
-            if backend == "wpctl":
-                saida = self._run(
-                    ["wpctl", "inspect", "@DEFAULT_AUDIO_SOURCE@"]
-                ).stdout
-            elif backend == "pactl":
-                saida = self._run(["pactl", "get-default-source"]).stdout
-            else:
-                return False
-        except Exception as exc:
-            _avisar("audio_fonte_padrao_falhou", exc)
-            return False
-        return "dualsense" in (saida or "").lower()
-
-    def toggle_default_source_mute(self) -> bool:
-        """Alterna mute do microfone padrão do sistema."""
-        now = self._clock()
-        if (now - self._last_call_at) < DEBOUNCE_SEC:
-            logger.debug("audio_toggle_debounced")
-            return self._last_known_muted
-        self._last_call_at = now
-
-        backend = self._ensure_backend()
-        if backend == "none":
-            if not self._warned_no_backend:
-                logger.warning("audio_backend_indisponivel")
-                self._warned_no_backend = True
-            return False
-
-        try:
-            if backend == "wpctl":
-                self._run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
-                self._last_known_muted = self._query_wpctl_muted()
-            else:
-                self._run(["pactl", "set-source-mute", "@DEFAULT_SOURCE@", "toggle"])
-                self._last_known_muted = self._query_pactl_muted()
-        except Exception as exc:
-            _avisar("audio_toggle_falhou", exc, backend=backend)
-        return self._last_known_muted
-
-
-    def _run(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
-        """Executa comando como lista de args, sem shell=True — e em `LC_ALL=C`."""
-        return _rodar_pelo_recuo(
-            argv,
-            timeout=SUBPROCESS_TIMEOUT_SEC,
-            check=False,
-            capture_output=True,
-            text=True,
-            env={**os.environ, "LC_ALL": "C", "LANG": "C"},
-        )
-
-    def _query_wpctl_muted(self) -> bool:
-        """Consulta estado de mute via wpctl get-volume."""
-        result = self._run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SOURCE@"])
-        return "[MUTED]" in (result.stdout or "")
-
-    def _query_pactl_muted(self) -> bool:
-        """Consulta estado de mute via pactl get-source-mute."""
-        result = self._run(["pactl", "get-source-mute", "@DEFAULT_SOURCE@"])
-        return "yes" in (result.stdout or "").lower()
-
-
 _MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = ("dualsense",)
 
 
@@ -451,10 +313,7 @@ def _avisar(evento: str, exc: BaseException, **campos: object) -> None:
 
 
 __all__ = [
-    "DEBOUNCE_SEC",
     "SUBPROCESS_TIMEOUT_SEC",
-    "AudioControl",
-    "Backend",
     "PactlEmRecuoError",
     "definir_volume_da_captura",
     "fonte_de_captura_do_controle",

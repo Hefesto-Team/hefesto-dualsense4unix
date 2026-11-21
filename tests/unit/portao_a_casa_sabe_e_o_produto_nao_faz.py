@@ -765,7 +765,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:762` (`start_hotkey_manager`) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
         "script de quem usa antes de rodá-lo (`_rodar_o_script_do_gesto` em "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2631`). Não há `Environment=` a "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2627`). Não há `Environment=` a "
         "escrever: a chave"
         " nasce a cada gesto, para o script, e não para o serviço.",
     ),
@@ -775,7 +775,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:762` (`start_hotkey_manager`) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
         "script de quem usa antes de rodá-lo (`_rodar_o_script_do_gesto` em "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2631`). Não há `Environment=` a "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2627`). Não há `Environment=` a "
         "escrever: a chave"
         " nasce a cada gesto, para o script, e não para o serviço.",
     ),
@@ -802,7 +802,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "(True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1730`, "
+        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1729`, "
         "dentro de "
         "`set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço antigo, a linha 1300, caducou; "

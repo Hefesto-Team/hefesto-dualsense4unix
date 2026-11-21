@@ -637,7 +637,6 @@ class TestShutdownFechaLease:
         daemon: Any = wired
         daemon._plugins_subsystem = None
         daemon._hotkey_manager = None
-        daemon._audio = None
         daemon._keyboard_device = None
         daemon._ipc_server = None
         daemon._udp_server = None
@@ -665,7 +664,6 @@ class TestShutdownFechaLease:
         daemon._hidraw_broker_client = None
         daemon._plugins_subsystem = None
         daemon._hotkey_manager = None
-        daemon._audio = None
         daemon._keyboard_device = None
         daemon._ipc_server = None
         daemon._udp_server = None

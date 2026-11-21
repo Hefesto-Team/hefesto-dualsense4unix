@@ -900,29 +900,3 @@ def _valor_bruto(argv: list[str], chave: str) -> str:
         if arg.startswith(chave):
             return arg
     raise AssertionError(f"o `load-module` foi montado sem {chave!r}")
-
-
-def test_o_audio_control_le_o_mudo_em_lingua_que_ele_entende(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """`Mute: sim` não contém `yes` — e era isso que a leitura de volta lia."""
-    import subprocess
-
-    from hefesto_dualsense4unix.integrations.audio_control import AudioControl
-
-    vistos: list[dict[str, str]] = []
-
-    class _Proc:
-        stdout = "Mute: yes\n"
-        stderr = ""
-        returncode = 0
-
-    def _run(argv, **kw):  # type: ignore[no-untyped-def]
-        vistos.append(dict(kw.get("env") or {}))
-        return _Proc()
-
-    monkeypatch.setattr(subprocess, "run", _run)
-    AudioControl()._query_pactl_muted()
-    assert vistos, "a leitura não chegou a rodar `pactl`"
-    assert vistos[0].get("LC_ALL") == "C", (
-        "a leitura do mudo roda no idioma da sessão de quem usa, e o `pactl` TRADUZ: "
-        "a resposta passa a ser sobre o idioma do shell, não sobre o aparelho"
-    )

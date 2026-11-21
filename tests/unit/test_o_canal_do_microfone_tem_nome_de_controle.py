@@ -14,6 +14,7 @@ from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as canal_bt
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     PRIORIDADE_SESSAO_DA_PONTE,
+    campo_do_controle,
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_PONTE_BT,
@@ -155,7 +156,10 @@ def test_as_propriedades_ficam_no_espaco_de_nome_do_hefesto() -> None:
     props = canal.propriedades_do_canal(P1)
     assert props, "o nó subiria sem marca nenhuma do Hefesto"
     assert all(k.startswith(PREFIXO_PROPRIEDADE_HEFESTO) for k in props), props
-    assert props[f"{PREFIXO_PROPRIEDADE_HEFESTO}uniq"] == P1
+    assert f"{PREFIXO_PROPRIEDADE_HEFESTO}uniq" not in props, "o endereço não vai ao grafo"
+    assert [f"{k}={v}" for k, v in props.items() if k.endswith("controle")] == list(
+        campo_do_controle(P1)
+    )
 
 
 def test_pedir_duas_vezes_sobe_um_no_so() -> None:

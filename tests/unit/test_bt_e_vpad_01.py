@@ -7,68 +7,6 @@ from typing import Any
 from hefesto_dualsense4unix.integrations import uhid_gamepad as uhid
 
 
-class _AudioDeEnsaio:
-    """Um `AudioControl` com o subprocess trocado por uma resposta fixa."""
-
-    def __init__(self, backend: str, saida: str) -> None:
-        from hefesto_dualsense4unix.integrations.audio_control import AudioControl
-
-        self.real = AudioControl()
-        self.real._backend = backend
-        self.comandos: list[list[str]] = []
-
-        class _Resultado:
-            stdout = saida
-
-        def _run(argv: list[str]) -> Any:
-            self.comandos.append(argv)
-            return _Resultado()
-
-        self.real._run = _run  # type: ignore[method-assign]
-
-
-def test_a_fonte_padrao_do_controle_e_reconhecida() -> None:
-    """Com o cabo, a fonte padrão É o controle — e o botão pode agir."""
-    for backend, saida in (
-        ("pactl", "alsa_input.usb-Sony_DualSense_Wireless_Controller-00.mono"),
-        ("wpctl", 'node.description = "DualSense Wireless Controller Mono"'),
-    ):
-        ensaio = _AudioDeEnsaio(backend, saida)
-        assert ensaio.real.fonte_padrao_e_o_controle() is True, backend
-
-
-def test_a_fonte_padrao_de_outro_dispositivo_nao_e_confundida() -> None:
-    """O defeito, em uma linha.
-
-    **Medido em 01/08/2026:** com o controle no Bluetooth,
-    `pactl list short cards | grep -i dualsense` devolve ZERO — no BT o
-    DualSense **não tem placa de som nenhuma**, porque o áudio vai dentro dos
-    reports HID e depende da ponte deste projeto, que é opt-in e estava
-    desligada.
-
-    Então a fonte padrão era outra coisa: nesta máquina, o microfone da
-    placa-mãe. O botão do microfone DO CONTROLE alternava aquele, e o LED do
-    controle acendia para refletir um estado que não era dele. O log de três
-    toques mostra a assinatura — sempre o mesmo resultado:
-
-        20:15:54  mic_hotkey_toggle  muted=True
-        20:16:31  mic_hotkey_toggle  muted=True
-        20:16:43  mic_hotkey_toggle  muted=True
-
-    Mordida: trocar a comparação por `return True`.
-    """
-    ensaio = _AudioDeEnsaio(
-        "pactl", "alsa_input.pci-0000_00_1f.3.analog-stereo"
-    )
-    assert ensaio.real.fonte_padrao_e_o_controle() is False
-
-
-def test_sem_backend_de_audio_a_resposta_e_nao_mexer() -> None:
-    """Em caso de dúvida, False — e o chamador não mexe em nada."""
-    ensaio = _AudioDeEnsaio("none", "DualSense")
-    assert ensaio.real.fonte_padrao_e_o_controle() is False
-
-
 def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
     """O DEFEITO 1 continua fechado — por CONSTRUÇÃO, e não mais pelo gate.
 

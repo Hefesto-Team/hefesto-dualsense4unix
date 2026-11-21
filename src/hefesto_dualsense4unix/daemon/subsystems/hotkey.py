@@ -834,10 +834,6 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
 
     As bordas e o mudo do jogo sobem em :func:`start_mic_do_jogo`, sem ele.
     """
-    from hefesto_dualsense4unix.integrations.audio_control import AudioControl
-
-    if daemon._audio is None:
-        daemon._audio = AudioControl()
     daemon._tasks.append(
         asyncio.create_task(mic_button_loop(daemon), name=mic_button_loop.__name__)
     )
@@ -962,7 +958,7 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
         *escolher* um canal, não silenciar dois.
 
     (b) **A guarda `fonte_padrao_e_o_controle`.** A guarda pergunta por SUBSTRING
-        "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte
+        "dualsense" (guarda hoje removida), logo responde *"a fonte
         padrão é ALGUM DualSense"* e nunca *"é ESTE"* — numa mesa de quatro os
         quatro respondem `True`. E está escrita **de costas para o gesto
         novo**: só deixava agir quando a fonte padrão JÁ era o controle, que é

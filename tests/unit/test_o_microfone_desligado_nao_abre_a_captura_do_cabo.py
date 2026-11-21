@@ -33,7 +33,10 @@ from hefesto_dualsense4unix.integrations import (
     eleicao_de_microfone,
     microfone_filtrado,
 )
-from hefesto_dualsense4unix.integrations.dualsense_bt_audio import SourceVirtualPipeWire
+from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+    SourceVirtualPipeWire,
+    campo_do_controle,
+)
 
 P = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 CABO = "alsa_input.usb-Sony_DualSense_Wireless_Controller-00.HiFi__Mic__source"
@@ -121,7 +124,8 @@ class _Mundo:
     def vivos(self, uniq: str | None = None) -> list[_Processo]:
         return [
             p for p in self.alimentadores
-            if p.codigo is None and (uniq is None or f"hefesto.uniq={uniq}" in " ".join(p.argv))
+            if p.codigo is None
+            and (uniq is None or campo_do_controle(uniq)[0] in " ".join(p.argv))
         ]
 
 

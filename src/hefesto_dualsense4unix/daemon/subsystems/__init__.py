@@ -192,7 +192,6 @@ async def _parar_metrics(daemon: Any) -> None:
 
 async def _parar_hotkey(daemon: Any) -> None:
     daemon._hotkey_manager = None
-    daemon._audio = None
 
 
 async def _parar_coop(daemon: Any) -> None:

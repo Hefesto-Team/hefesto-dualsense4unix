@@ -511,8 +511,8 @@ Medido em ``pactl list source-outputs`` com o argv de :func:`argv_do_medidor`,
 verbatim: ``application.name = "hefesto-medidor-de-nivel"``,
 ``node.name = "hefesto-medidor-de-nivel"``,
 ``application.id = "br.dev.hefesto.luz_do_mic"``,
-``hefesto.papel = "medidor-de-nivel"``, ``hefesto.uniq = "143a9a0000ab"`` e
-``resample.peaks = "true"``.
+``hefesto.papel = "medidor-de-nivel"``, ``hefesto.controle = <marca do aparelho>`` e
+``resample.peaks = "true"`` (até 21/11/2026 a chave era ``hefesto.uniq``, com o endereço).
 
 O crivo da PEÇA A aceita TRÊS marcas, e a ordem não é preferência estética:
 

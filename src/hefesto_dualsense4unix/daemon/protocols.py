@@ -44,7 +44,6 @@ class DaemonProtocol(Protocol):
     _hidraw_broker_executor: Any
     _coop_manager: Any
     _hotkey_manager: Any
-    _audio: Any
     _plugins_subsystem: Any
     _servidor_dsu: Any
     _tarefa_dsu: Any

@@ -89,15 +89,9 @@ async def test_input_settling_suppresses_mic_btn_down() -> None:
     bus = EventBus()
     store = StateStore()
 
-    mock_audio = MagicMock()
-    mock_audio.toggle_default_source_mute.return_value = True
-
     down_queue = bus.subscribe(EventTopic.BUTTON_DOWN)
 
-    with patch(
-        "hefesto_dualsense4unix.integrations.audio_control.AudioControl",
-        return_value=mock_audio,
-    ):
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(
             controller=fc,
             bus=bus,
@@ -113,7 +107,7 @@ async def test_input_settling_suppresses_mic_btn_down() -> None:
 
     assert down_queue.qsize() == 0
     assert store.counter("button.down.emitted") == 0
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
     assert True not in fc.mic_led_history
 
 
@@ -209,13 +203,7 @@ async def test_mic_toggle_after_settling(
     bus = EventBus()
     store = StateStore()
 
-    mock_audio = MagicMock()
-    mock_audio.toggle_default_source_mute.return_value = True
-
-    with patch(
-        "hefesto_dualsense4unix.integrations.audio_control.AudioControl",
-        return_value=mock_audio,
-    ):
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(
             controller=fc,
             bus=bus,
@@ -224,13 +212,13 @@ async def test_mic_toggle_after_settling(
         )
         run_task = asyncio.create_task(daemon.run())
         await asyncio.sleep(0.15)
-        mock_audio.toggle_default_source_mute.assert_not_called()
+        pelo_recuo.assert_not_called()
         fc.set_buttons(["mic_btn"])
         await asyncio.sleep(0.12)
         daemon.stop()
         await run_task
 
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
     assert fc.mic_led_history == [], (
         "o LED só é pintado da RELEITURA da eleição, e por um caminho com `uniq`"
     )
@@ -365,13 +353,7 @@ async def test_disconnect_reconnect_cycle_resuppresses_ghost(
     store = StateStore()
     down_queue = bus.subscribe(EventTopic.BUTTON_DOWN)
 
-    mock_audio = MagicMock()
-    mock_audio.toggle_default_source_mute.return_value = True
-
-    with patch(
-        "hefesto_dualsense4unix.integrations.audio_control.AudioControl",
-        return_value=mock_audio,
-    ):
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(
             controller=fc,
             bus=bus,
@@ -388,7 +370,7 @@ async def test_disconnect_reconnect_cycle_resuppresses_ghost(
         await run_task
 
     assert down_queue.qsize() == 0
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
 
 
 def test_keyboard_prime_sets_state_without_emitting() -> None:

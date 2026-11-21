@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.integrations.dualsense_bt_audio import campo_do_controle
 from hefesto_dualsense4unix.integrations.nivel_do_microfone import (
     APLICACAO_ID,
     CHAVE_DO_PAPEL,
     CHAVE_DO_PICO,
-    CHAVE_DO_UNIQ,
     ENTRA_S,
     LIMIAR_ENTRA,
     LIMIAR_SAI,
@@ -372,7 +372,9 @@ def test_o_argv_se_identifica_para_a_peca_a() -> None:
             chave, _, valor = arg[len("--property=") :].partition("=")
             props[chave] = valor
     assert e_stream_do_medidor(props) is True
-    assert props[CHAVE_DO_UNIQ] == "aabbcc0000ab"
+    assert [f"{k}={v}" for k, v in props.items() if k == "hefesto.controle"] == list(
+        campo_do_controle("aabbcc0000ab")
+    )
     assert f"--client-name={NOME_DO_MEDIDOR}" in argv
 
 
@@ -384,7 +386,7 @@ def test_o_argv_nao_pede_media_role() -> None:
 
 def test_sem_uniq_nao_se_publica_endereco_inventado() -> None:
     props = propriedades_do_medidor("")
-    assert CHAVE_DO_UNIQ not in props
+    assert "hefesto.controle" not in props
     assert props[CHAVE_DO_PICO] == VALOR_DO_PICO
 
 

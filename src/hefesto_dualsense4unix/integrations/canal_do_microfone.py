@@ -17,6 +17,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_TAXA_HZ,
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
+    campo_do_controle,
     marca_do_aparelho,
     rotulo_envelheceu,
 )
@@ -89,10 +90,9 @@ def nome_do_canal(uniq: str) -> str:
 
 def propriedades_do_canal(uniq: str) -> dict[str, str]:
     """As propriedades do ALIMENTADOR — no ESPAÇO DE NOME, nunca combinadas."""
-    return {
-        f"{PREFIXO_PROPRIEDADE_HEFESTO}papel": PAPEL_DO_ALIMENTADOR,
-        f"{PREFIXO_PROPRIEDADE_HEFESTO}uniq": uniq,
-    }
+    props = {f"{PREFIXO_PROPRIEDADE_HEFESTO}papel": PAPEL_DO_ALIMENTADOR}
+    props.update(item.split("=", 1) for item in campo_do_controle(uniq))
+    return props
 
 
 def argv_do_alimentador(uniq: str, fonte: str, *, taxa_hz: int, canais: int) -> list[str]:

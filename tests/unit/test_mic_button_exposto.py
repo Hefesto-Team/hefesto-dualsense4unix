@@ -10,7 +10,7 @@ no `daemon.state_full`.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
@@ -96,15 +96,16 @@ class TestLacoDoBotao:
         daemon = MagicMock()
         daemon.bus = bus
         daemon.config = MagicMock(mic_button_toggles_system=False)
-        daemon._audio = MagicMock()
         parando = {"v": False}
         daemon._is_stopping = lambda: parando["v"]
 
-        task = asyncio.create_task(mic_button_loop(daemon))
-        await asyncio.sleep(0.05)
-        bus.publish(EventTopic.BUTTON_DOWN, {"button": "mic_btn"})
-        await asyncio.sleep(0.15)
-        parando["v"] = True
-        await asyncio.wait_for(task, timeout=2.0)
+        alvo = "hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo"
+        with patch(alvo) as pelo_recuo:
+            task = asyncio.create_task(mic_button_loop(daemon))
+            await asyncio.sleep(0.05)
+            bus.publish(EventTopic.BUTTON_DOWN, {"button": "mic_btn"})
+            await asyncio.sleep(0.15)
+            parando["v"] = True
+            await asyncio.wait_for(task, timeout=2.0)
 
-        daemon._audio.toggle_default_source_mute.assert_not_called()
+        pelo_recuo.assert_not_called()

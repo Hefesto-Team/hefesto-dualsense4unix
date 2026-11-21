@@ -96,7 +96,7 @@ MEDIDOR_PULSE = bloco(
         "media.name": "luz-do-mic",
         "application.id": "br.dev.hefesto.luz_do_mic",
         "hefesto.papel": "medidor-de-nivel",
-        "hefesto.uniq": "aabbcc0000ab",
+        "hefesto.controle": "APARELHOQWERTY",
         "application.process.id": "999002",
         "application.process.binary": "pacat",
         "pulse.corked": "false",
@@ -291,7 +291,7 @@ def test_o_medidor_nativo_tambem_nao_conta_como_ouvinte() -> None:
     ("chave", "valor"),
     [
         ("hefesto.papel", "medidor-de-nivel"),
-        ("hefesto.uniq", "aabbcc0000ab"),
+        ("hefesto.controle", "APARELHOQWERTY"),
         ("application.id", "br.dev.hefesto.luz_do_mic"),
         ("application.name", "hefesto-medidor-de-nivel"),
         ("node.name", "hefesto-luz-do-mic"),

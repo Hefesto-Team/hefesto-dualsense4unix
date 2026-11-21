@@ -678,7 +678,7 @@ class Daemon:
     """Orquestrador do daemon. API pública preservada (REFACTOR-LIFECYCLE-01).
 
     Atributos públicos (mantidos para backcompat de testes):
-      controller, bus, store, config, _hotkey_manager, _audio, _mouse_device,
+      controller, bus, store, config, _hotkey_manager, _mouse_device,
       _ipc_server, _udp_server, _autoswitch, _last_auto_mult, _last_auto_change_at.
     """
 
@@ -732,7 +732,6 @@ class Daemon:
     _rumble_policy_before_profile: tuple[RumblePolicy, float] | None = None
     _emu_lock: Any = field(default_factory=threading.RLock)
     _p1_que_nasceu: list[Any] = field(default_factory=list)
-    _audio: Any = None
     _plugins_subsystem: Any = None
     _metrics_subsystem: Any = None
     _mods_supervisor: Any = None

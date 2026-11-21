@@ -37,11 +37,10 @@ palavra por palavra e o que mudou foi só o laço onde a guarda mora.
 O journal da noite de 18→19/08 tem três `mic_hotkey_toggle` em 2,5 s às
 01:52:27 — `muted=False`, `muted=True`, `muted=False`. Isso não é mão humana, e
 o produto não tinha defesa nenhuma: toda a proteção estava terceirizada para o
-debounce de 200 ms do `AudioControl`, que é inútil aqui por três motivos, cada
-um verificável no fonte:
+debounce de 200 ms do antigo controle do mudo do sistema, que é inútil aqui por três
+motivos, cada um verificável no fonte da época:
 
-1. **O relógio dele começa no INÍCIO da chamada**
-   (`integrations/audio_control.py`: `self._last_call_at = now` é gravado ANTES
+1. **O relógio dele começa no INÍCIO da chamada** (o instante era gravado ANTES
    dos subprocessos). Como a chamada roda `wpctl`/`pactl` com `timeout=2.0`,
    a chamada pode levar segundos — e quando termina o debounce já expirou faz tempo.
    A janela efetiva é ``max(0, 0.2 - duração)``, ou seja: ZERO sempre que o

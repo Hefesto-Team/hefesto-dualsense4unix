@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -101,14 +101,11 @@ async def test_mic_btn_do_button_down_nao_muta_mais_nada() -> None:
     ]
     fc = FakeController(states=states)
 
-    mock_audio = MagicMock()
-    mock_audio.toggle_default_source_mute.return_value = True
-
-    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -117,8 +114,7 @@ async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
 
     Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: aplicar o perfil não toca
     mic_led; portanto mic_led_history fica vazio se nenhum wire-up de hotkey
-    mic disparar. O invariante deste teste é que toggle não foi chamado e que
-    _audio permanece None.
+    mic disparar. O invariante deste teste é que o servidor de som não foi tocado.
     """
     states = [
         _make_state(frozenset({"mic_btn"})),
@@ -126,14 +122,11 @@ async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
     ]
     fc = FakeController(states=states)
 
-    mock_audio = MagicMock()
-
-    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=False))
         await _run_daemon_ticks(daemon, n_ticks=2)
 
-    assert daemon._audio is None
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
     assert True not in fc.mic_led_history
 
 
@@ -152,14 +145,11 @@ async def test_outros_botoes_nao_disparam_toggle() -> None:
     ]
     fc = FakeController(states=states)
 
-    mock_audio = MagicMock()
-    mock_audio.toggle_default_source_mute.return_value = False
-
-    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
     assert True not in fc.mic_led_history
 
 
@@ -173,11 +163,9 @@ async def test_o_led_do_mic_nao_e_pintado_pelo_button_down() -> None:
     ]
     fc = FakeController(states=states)
 
-    mock_audio = MagicMock()
-
-    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
+    with patch("hefesto_dualsense4unix.integrations.audio_control._rodar_pelo_recuo") as pelo_recuo:
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 
-    mock_audio.toggle_default_source_mute.assert_not_called()
+    pelo_recuo.assert_not_called()
     assert fc.mic_led_history == [], "o LED não foi tocado por este caminho"

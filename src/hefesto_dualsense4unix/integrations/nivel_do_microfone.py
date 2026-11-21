@@ -23,6 +23,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from hefesto_dualsense4unix.integrations.dualsense_bt_audio import campo_do_controle
 from hefesto_dualsense4unix.integrations.filho_de_som import (
     morrer_com_o_pai as _morrer_com_o_pai,
 )
@@ -40,8 +41,6 @@ APLICACAO_ID = "br.dev.hefesto.luz_do_mic"
 CHAVE_DO_PAPEL = "hefesto.papel"
 PAPEL_DO_MEDIDOR = "medidor-de-nivel"
 
-CHAVE_DO_UNIQ = "hefesto.uniq"
-
 CHAVE_DO_PICO = "resample.peaks"
 VALOR_DO_PICO = "true"
 
@@ -53,8 +52,7 @@ def propriedades_do_medidor(uniq: str = "") -> dict[str, str]:
         "application.id": APLICACAO_ID,
         CHAVE_DO_PAPEL: PAPEL_DO_MEDIDOR,
     }
-    if uniq:
-        props[CHAVE_DO_UNIQ] = uniq
+    props.update(item.split("=", 1) for item in campo_do_controle(uniq))
     return props
 
 
@@ -488,7 +486,6 @@ __all__ = [
     "APLICACAO_ID",
     "CHAVE_DO_PAPEL",
     "CHAVE_DO_PICO",
-    "CHAVE_DO_UNIQ",
     "ENTRA_S",
     "LIMIAR_ENTRA",
     "LIMIAR_SAI",
