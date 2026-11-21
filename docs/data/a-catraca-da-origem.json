@@ -48,10 +48,10 @@
       "universo": 416
     },
     "remendos-de-sintoma": {
-      "data": "2026-11-19",
+      "data": "2026-11-21",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 955,
+      "piso": 951,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -65,8 +65,8 @@
         "app/tray.py": 5,
         "broker/hidraw_broker.py": 18,
         "cli/cmd_doctor.py": 1,
-        "cli/cmd_mic.py": 3,
-        "cli/cmd_status.py": 2,
+        "cli/cmd_mic.py": 1,
+        "cli/cmd_status.py": 1,
         "cli/cmd_steam.py": 1,
         "cli/cmd_test.py": 1,
         "cli/cmd_tray.py": 2,
@@ -88,7 +88,7 @@
         "daemon/ipc_rumble_policy.py": 2,
         "daemon/ipc_server.py": 4,
         "daemon/launch_env.py": 15,
-        "daemon/lifecycle.py": 38,
+        "daemon/lifecycle.py": 37,
         "daemon/sensor_hub.py": 16,
         "daemon/service_install.py": 1,
         "daemon/subsystems/alto_falante.py": 16,
@@ -253,20 +253,20 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 437
+      "universo": 439
     },
     "tamanho": {
       "data": "2026-11-21",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1285533,
+      "piso": 1286579,
       "por_item": {
-        "docs": 107760,
+        "docs": 107794,
         "scripts": 115288,
-        "src": 325727,
-        "tests": 736758
+        "src": 325963,
+        "tests": 737534
       },
-      "razao": "tamanho: +920 linhas (1284613 -> 1285533), pagas por Origem: D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA, D-1911-O-CHECK-UP-CONTA-SO-PAREAMENTO-DE-CONTROLE, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 5aaee85c7170",
+      "razao": "tamanho: +1046 linhas (1285533 -> 1286579), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO; registrado no fecho, topo 29be09ef0fb0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2193,10 +2193,16 @@
           "de": 1284613,
           "para": 1285533,
           "razao": "tamanho: +920 linhas (1284613 -> 1285533), pagas por Origem: D-1911-A-CAIXA-SO-ENXERGA-O-QUE-ENTRA-NA-LISTA, D-1911-O-CHECK-UP-CONTA-SO-PAREAMENTO-DE-CONTROLE, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-2011-O-REGISTRO-DO-ATUALIZADOR-E-PISO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 5aaee85c7170"
+        },
+        {
+          "data": "2026-11-21",
+          "de": 1285533,
+          "para": 1286579,
+          "razao": "tamanho: +1046 linhas (1285533 -> 1286579), pagas por Origem: D-1310-O-PRAZO-DO-IPC-TEM-UM-DONO, D-1911-OS-CAMINHOS-DE-ANTES-SE-MIGRAM-UMA-VEZ-SO; registrado no fecho, topo 29be09ef0fb0"
         }
       ],
       "unidade": "linhas",
-      "universo": 3584
+      "universo": 3589
     }
   }
 }
