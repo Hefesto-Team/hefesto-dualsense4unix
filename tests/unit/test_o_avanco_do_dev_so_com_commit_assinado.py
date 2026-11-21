@@ -394,6 +394,85 @@ def test_a_assinatura_ssh_atras_de_outra_fica_de_fora(casa: Casa, base: Path) ->
     assert casa.topo() == antes
 
 
+def _o_clone_depois_da_revogacao(casa: Casa, segunda: Path) -> dict[str, str]:
+    """O início (K), a passagem A (K põe S) e a revogação R (S tira K); o clone avança até R pelo
+    produto."""
+    revogacao = _revogar_a_da_casa(casa, segunda)
+    assert _avancar(casa, revogacao, Pedidos())
+    assert casa.topo() == revogacao
+    return {"inicio": casa.inicio, "passagem": _git(casa.autor, "rev-parse", "HEAD~1")}
+
+
+def _reescrever_desde(casa: Casa, ponto: str, *chaves: Path) -> str:
+    """Quem publica reescreve o ``dev`` desde ``ponto``, um commit por chave, e força o envio."""
+    _git(casa.autor, "reset", "-q", "--hard", ponto)
+    return [casa.publicar(chave, f"src/reescrito-{indice}.py", forcar=True)
+            for indice, chave in enumerate(chaves)][-1]
+
+
+def _a_baixa_do_dev_reescrito(casa: Casa) -> dict[str, Any]:
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) is None
+    baixa = va.ler_a_baixa()
+    assert baixa["veredito"] == va.DIVERGIU
+    return baixa
+
+
+@pytest.mark.parametrize("ponto", ["inicio", "passagem"])
+def test_o_dev_reescrito_pela_chave_revogada_nao_ganha_a_oferta_de_refazer(
+        casa: Casa, base: Path, ponto: str) -> None:
+    """D-2111-A-OFERTA-DE-REFAZER-RESPEITA-A-LISTA-DO-HEAD: a reescrita desde antes da revogação,
+    assinada pela chave revogada, não traz o comando de refazer."""
+    segunda = _chave(base, "segunda")
+    pontos = _o_clone_depois_da_revogacao(casa, segunda)
+    _reescrever_desde(casa, pontos[ponto], casa.chave)
+
+    baixa = _a_baixa_do_dev_reescrito(casa)
+    assert baixa["oferta"] is False
+    assert "git reset --hard" not in va.frase_da_baixa(baixa)
+    assert va.frase_da_baixa(baixa) == va.FRASES_DA_BAIXA[va.DIVERGIU]
+
+
+def test_a_reescrita_assinada_pela_chave_que_o_head_aceita_ganha_a_oferta(
+        casa: Casa, base: Path) -> None:
+    segunda = _chave(base, "segunda")
+    pontos = _o_clone_depois_da_revogacao(casa, segunda)
+    _reescrever_desde(casa, pontos["passagem"], segunda, segunda)
+
+    baixa = _a_baixa_do_dev_reescrito(casa)
+    assert baixa["oferta"] is True
+    assert "git reset --hard" in va.frase_da_baixa(baixa)
+
+
+def test_a_reescrita_que_troca_para_chave_que_o_head_nao_conhece_fica_sem_oferta(
+        casa: Casa, base: Path) -> None:
+    """O lado seguro, de propósito: a chave nova que só existe no ramo reescrito não vale para o
+    clone; a oferta volta quando o clone conhecer a chave pela linhagem dele."""
+    segunda, nova = _chave(base, "segunda"), _chave(base, "nova")
+    pontos = _o_clone_depois_da_revogacao(casa, segunda)
+    _git(casa.autor, "reset", "-q", "--hard", pontos["passagem"])
+    casa.escrever(LISTA, _linha_da_lista(segunda) + _linha_da_lista(nova))
+    casa.commitar(segunda)
+    casa.publicar(nova, forcar=True)
+
+    baixa = _a_baixa_do_dev_reescrito(casa)
+    assert baixa["oferta"] is False
+    assert "git reset --hard" not in va.frase_da_baixa(baixa)
+
+
+def test_o_clone_com_commit_local_fora_da_linhagem_fica_sem_oferta(
+        casa: Casa, base: Path) -> None:
+    segunda = _chave(base, "segunda")
+    pontos = _o_clone_depois_da_revogacao(casa, segunda)
+    (casa.clone / "local.py").write_text("y\n", encoding="utf-8")
+    _git(casa.clone, "add", "local.py")
+    _git(casa.clone, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "local")
+    _reescrever_desde(casa, pontos["passagem"], segunda)
+
+    baixa = _a_baixa_do_dev_reescrito(casa)
+    assert baixa["oferta"] is False
+    assert "git reset --hard" not in va.frase_da_baixa(baixa)
+
+
 def test_a_lista_da_casa_tem_o_formato_do_git() -> None:
     linhas = (RAIZ / LISTA).read_text(encoding="utf-8").splitlines()
     assert linhas

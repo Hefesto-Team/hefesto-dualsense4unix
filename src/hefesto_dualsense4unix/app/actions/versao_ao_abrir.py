@@ -230,12 +230,13 @@ def _a_lista(raiz: Path, commit: str) -> str | None:
     return _git(raiz, "show", f"{commit}:{LISTA_DE_QUEM_ASSINA}")
 
 
-def _a_linhagem_aceita(raiz: Path, de: str, alvo: str) -> bool:
+def _a_linhagem_aceita(raiz: Path, de: str, alvo: str, *, fixa: str | None = None) -> bool:
     """A lista parte do commit ``de``, já aceito, e anda commit a commit pelo primeiro pai até o
     ``alvo``: cada commit vem assinado por uma chave da lista do pai dele, e só depois de aceito a
     lista dele passa a valer. Não há salto: a chave que um commit tirou da lista não assina nada
     depois dele. O alvo que não descende de ``de`` pelo primeiro pai e o commit recusado no meio
-    deixam a faixa inteira de fora."""
+    deixam a faixa inteira de fora. Com a lista ``fixa``, cada commit vem assinado também por uma
+    chave dessa lista."""
     lista = _a_lista(raiz, de)
     faixa = _git(raiz, "rev-list", "--first-parent", "--reverse", "--parents",
                  f"{de}..{alvo}") if lista else None
@@ -245,8 +246,21 @@ def _a_linhagem_aceita(raiz: Path, de: str, alvo: str) -> bool:
         commit, pai = [*linha.split(), ""][:2]
         if pai != de or not lista or not _assinado_pela_lista(raiz, commit, lista):
             return False
+        if fixa is not None and not _assinado_pela_lista(raiz, commit, fixa):
+            return False
         de, lista = commit, _a_lista(raiz, commit)
     return True
+
+
+def _a_reescrita_se_aceita(raiz: Path, topo: str, alvo: str) -> bool:
+    """O ``alvo`` que divergiu do ``topo`` ganha a oferta de refazer só se o ramo reescrito anda
+    pela linhagem desde o commit comum, cada commit assinado também por uma chave da lista do
+    ``topo``, e se a própria faixa do comum ao ``topo`` anda pela linhagem: a chave que o clone
+    já retirou não volta pela reescrita desde antes da retirada. Na dúvida, não há oferta."""
+    comum = _git(raiz, "merge-base", topo, alvo)
+    agora = _a_lista(raiz, topo)
+    return bool(comum and agora and _a_linhagem_aceita(raiz, comum, topo)
+                and _a_linhagem_aceita(raiz, comum, alvo, fixa=agora))
 
 
 def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
@@ -341,8 +355,7 @@ def baixar(raiz: Path, *, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str
         if alvo is not None and _e_avanco(raiz, alvo, topo):
             _registrar_a_baixa(topo, ATUAL, commit=alvo, origem=origem)
             return None
-        comum = _git(raiz, "merge-base", topo, alvo) if alvo and topo else None
-        oferta = bool(alvo and comum and _a_linhagem_aceita(raiz, comum, alvo))
+        oferta = bool(alvo and topo and _a_reescrita_se_aceita(raiz, topo, alvo))
         _registrar_a_baixa(topo, DIVERGIU, commit=alvo or "", origem=origem, oferta=oferta)
         return None
     if sem_a_assinatura_da_casa(raiz, alvo):

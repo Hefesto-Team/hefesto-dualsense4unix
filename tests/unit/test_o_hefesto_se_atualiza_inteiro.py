@@ -682,8 +682,8 @@ def test_a_reescrita_so_oferece_refazer_pela_linhagem_desde_o_commit_comum(
     item = _a_peca_hefesto(casa, monkeypatch)
     assert item["estado"] == at.REVISAR and "reset" not in item["dica"]
 
-    _git(casa.autor, "reset", "-q", "--hard", "HEAD~1")
-    casa.publicar(segunda, "src/da-segunda.py", forcar=True)
+    _git(casa.autor, "reset", "-q", "--hard", "HEAD~2")
+    casa.publicar(casa.chave, "src/da-que-o-clone-aceita.py", forcar=True)
     assert _baixar(casa) is None
     assert "git reset --hard" in _a_peca_hefesto(casa, monkeypatch)["dica"]
 
