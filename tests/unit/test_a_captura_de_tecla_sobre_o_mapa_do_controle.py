@@ -266,3 +266,13 @@ def test_a_pagina_nasce_da_mesma_tabela() -> None:
     for code, tecla in a13.CODIGO_DA_TECLA.items():
         assert f'"{code}": "{tecla}"' in texto, code
     assert "NOMEADA" not in texto
+
+
+def test_a_tecla_gravada_aparece_no_botao_pelo_nome(mapa: Any, perfil_no_disco: None) -> None:
+    """D-2011-A-CAPTURA-DE-TECLA-RESPONDE-A-TECLA-QUE-NAO-CONHECE: a tecla em palavras."""
+    _grava(mapa, "Minus")
+
+    assert mapa._texto_do_valor(mapa._estado()["edicoes"]["cross"], "cross") == "Menos"
+    for tecla in set(a13.CODIGO_DA_TECLA.values()):
+        texto = mapa._texto_do_valor((mapa.ACAO, tecla), "cross")
+        assert texto != tecla.removeprefix("KEY_"), f"{tecla} aparece no botão com o nome cru"
