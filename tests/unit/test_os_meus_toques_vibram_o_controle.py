@@ -21,7 +21,7 @@ AS MORDIDAS (executadas na implementação, uma a uma, com o md5 conferido na vo
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -392,6 +392,36 @@ def test_a_haptica_do_jogo_que_comeca_solta_o_motor_que_o_toque_segurava() -> No
     assert mesa.de(P1)[-1][1:] == (0, 0), "a háptica calou e o motor voltaria a vibrar sozinho"
     meus.soltar_tudo(mesa.agora)
     assert mesa.de(P1)[-1][1:] == (0, 0)
+
+
+@dataclass
+class _MesaDeQuatro(Mesa):
+    """A mesa em que a háptica do jogo é de cada controle: só os controles listados a têm."""
+
+    com_haptica: set[str] = field(default_factory=set)
+
+    def ligacoes(self) -> Ligacoes:
+        return replace(
+            super().ligacoes(), haptica_do_jogo=lambda uniq: uniq in self.com_haptica)
+
+
+def test_a_haptica_do_jogo_de_um_controle_solta_so_o_motor_dele_nos_quatro() -> None:
+    """D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO: o zero é de cada controle, e o
+    estado dos toques mora no endereço, que atravessa a troca de cabo e rádio."""
+    mesa = _MesaDeQuatro()
+    meus = _meus(mesa)
+    todos = lambda _t: [Entrada(u, lx=255) for u in UNIQS]  # noqa: E731
+    _andar(meus, mesa, todos, mesa.agora + 0.2)
+    assert [mesa.de(u)[-1][1:] for u in UNIQS] == [(0, BASE)] * 4
+    mesa.com_haptica = {P2, P4}
+    _andar(meus, mesa, todos, mesa.agora + 0.1)
+    assert [mesa.de(u)[-1][1:] for u in UNIQS] == [(0, BASE), (0, 0), (0, BASE), (0, 0)], (
+        "o zero da háptica do jogo não foi só dos controles que a têm")
+    mesa.com_haptica = set()
+    _andar(meus, mesa, lambda _t: [Entrada(u) for u in UNIQS], mesa.agora + 10.0)
+    assert [mesa.de(u)[-1][1:] for u in UNIQS] == [(0, 0)] * 4
+    meus.soltar_tudo(mesa.agora)
+    assert [mesa.de(u)[-1][1:] for u in UNIQS] == [(0, 0)] * 4
 
 
 def test_parar_o_servico_zera_o_par_escrito_mesmo_sem_toque() -> None:
