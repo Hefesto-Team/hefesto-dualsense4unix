@@ -29,6 +29,8 @@ _FAMILIAS: list[Lacos] = []
 
 _PROC = Path("/proc")
 
+_MATAR: Callable[[int, int], None] = os.kill
+
 
 class _Lancador:
     """O fio de vida longa de onde sai todo `pw-loopback`.
@@ -99,18 +101,19 @@ def _e_do_hefesto(pai: int, raiz: Path) -> bool:
 def varrer_orfaos(
     familia: str,
     *,
-    raiz: Path = _PROC,
+    raiz: Path | None = None,
     uid: int | None = None,
-    matar: Callable[[int, int], None] = os.kill,
+    matar: Callable[[int, int], None] | None = None,
 ) -> list[int]:
     """Recolhe os `pw-loopback` desta família que ficaram sem o pai do Hefesto.
 
-    Um laço de uma janela que caiu sem o ``atexit`` (uma versão anterior não o prendia ao pai)
-    segue levando o microfone à saída, e a janela nova nasce sem lembrar dele. Só cai o processo
-    do mesmo usuário, de nome ``pw-loopback`` e ``--name hefesto-<família>-…``, cujo pai não é
-    mais processo do Hefesto, e o PID é lido duas vezes antes do sinal. O PID 1, este processo e o
-    pai dele nunca levam sinal. Devolve os PIDs recolhidos.
+    Só cai o processo do mesmo usuário, de nome ``pw-loopback`` e ``--name hefesto-<família>-…``,
+    cujo pai não é mais processo do Hefesto, e o PID é lido duas vezes antes do sinal. O PID 1,
+    este processo e o pai dele nunca levam sinal. ``raiz`` e ``matar`` vazios valem o ``/proc`` e o
+    ``os.kill`` de produção, lidos na hora da varredura. Devolve os PIDs recolhidos.
     """
+    raiz = _PROC if raiz is None else raiz
+    matar = _MATAR if matar is None else matar
     dono = os.getuid() if uid is None else uid
     prefixo = f"hefesto-{familia}-"
     intocaveis = {1, os.getpid(), os.getppid()}
@@ -153,21 +156,44 @@ class Lacos:
         self,
         familia: str,
         *,
-        raiz: Path = _PROC,
-        matar: Callable[[int, int], None] = os.kill,
+        raiz: Path | None = None,
+        matar: Callable[[int, int], None] | None = None,
     ) -> None:
-        """Nasce varrendo os órfãos da família em `raiz` com `matar` (o `/proc` e o `os.kill`)."""
+        """Nasce sem varrer: guarda a `raiz` do `/proc` e o `matar` da varredura de quem a cria.
+
+        Criar a família no nível do módulo é o caso comum; a varredura de órfãos corre uma vez, no
+        primeiro uso da família pelo processo (:meth:`recolher_orfaos`), nunca no import.
+        """
         self.familia = familia
         self._vivos: dict[str, subprocess.Popen[bytes]] = {}
         self._pedidos: dict[str, dict[str, object]] = {}
         self._trava = threading.Lock()
+        self._raiz = raiz
+        self._matar = matar
+        self._varrida = False
+        self._trava_da_varredura = threading.Lock()
         _FAMILIAS.append(self)
-        varrer_orfaos(familia, raiz=raiz, matar=matar)
+
+    def recolher_orfaos(self) -> list[int]:
+        """Recolhe os laços órfãos desta família agora, com a `raiz` e o `matar` de quem a criou."""
+        with self._trava_da_varredura:
+            self._varrida = True
+            return varrer_orfaos(self.familia, raiz=self._raiz, matar=self._matar)
+
+    def _recolher_no_primeiro_contato(self) -> None:
+        if self._varrida:
+            return
+        with self._trava_da_varredura:
+            if self._varrida:
+                return
+            self._varrida = True
+            varrer_orfaos(self.familia, raiz=self._raiz, matar=self._matar)
 
     def esta_ligado(self, chave: str) -> bool:
         """Esta laçada está de pé AGORA? Pergunta ao processo, não à lembrança."""
         if not chave:
             return False
+        self._recolher_no_primeiro_contato()
         with self._trava:
             proc = self._vivos.get(chave)
             if proc is None:
@@ -179,6 +205,7 @@ class Lacos:
 
     def ligados(self) -> tuple[str, ...]:
         """As chaves com laçada de pé, em ordem ESTÁVEL."""
+        self._recolher_no_primeiro_contato()
         with self._trava:
             vivos = [c for c, p in self._vivos.items() if p.poll() is None]
             for morto in [c for c in self._vivos if c not in vivos]:

@@ -222,13 +222,15 @@ def test_o_laco_que_mudou_entre_as_duas_leituras_nao_leva_sinal(
     assert sinais == []
 
 
-def test_toda_familia_varre_os_orfaos_ao_nascer(tmp_path: Path) -> None:
-    """MORDIDA: a família criada sem varrer deixa a janela nova sem saber do laço antigo."""
+def test_toda_familia_varre_os_orfaos_no_primeiro_contato(tmp_path: Path) -> None:
+    """MORDIDA: a família que nunca varre deixa a janela nova sem saber do laço antigo."""
     raiz = tmp_path / "proc"
     _fingir_processo(raiz, P + 50, _laco(FAMILIA), 1)
     sinais: list[tuple[int, int]] = []
 
-    Lacos(FAMILIA, raiz=raiz, matar=lambda p, s: sinais.append((p, s)))
+    lacos = Lacos(FAMILIA, raiz=raiz, matar=lambda p, s: sinais.append((p, s)))
+    assert sinais == []
+    assert not lacos.esta_ligado("x1")
 
     assert sinais == [(P + 50, signal.SIGTERM)]
 

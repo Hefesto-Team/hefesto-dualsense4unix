@@ -219,7 +219,8 @@ Para ninguém gastar de novo:
   `integrations/laco_de_audio.py` lançava sem `PR_SET_PDEATHSIG`. No serviço, o `KillMode` padrão recolhe o cgroup;
   a janela roda com `KillMode=process` e não o recolhe. Desde 20/11/2026 todo laço sai preso ao pai, de um fio de
   vida longa (o `PR_SET_PDEATHSIG` dispara na morte do fio que fez o fork, e o fio do gesto acaba com o clique), e
-  a família que nasce recolhe o laço órfão que sobrou (O-LACO-DE-AUDIO-MORRE-COM-A-JANELA-01).
+  a família recolhe o laço órfão que sobrou no primeiro uso da família pelo processo, nunca no import
+  (O-LACO-DE-AUDIO-MORRE-COM-A-JANELA-01).
 - **O PipeWire não é acordado pelo Hefesto.** O `pipewire.service` estava de pé 19 ms antes de o serviço começar.
 - **`core_pattern` global não existe mais.** A regra de `sysctl.d` antiga não está no disco, e o `uninstall.sh`
   segue limpando quem a tem.

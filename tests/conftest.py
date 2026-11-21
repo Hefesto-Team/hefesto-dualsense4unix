@@ -4238,3 +4238,39 @@ def _a_tela_da_suite_e_uma_so_e_esta_ligada(
         yield
     finally:
         tela_do_jogo.RAIZ_DRM = antes
+
+
+def _o_matar_que_a_suite_nao_pode_usar(pid: int, sinal: int) -> None:
+    raise AssertionError(
+        f"a varredura de órfãos mandou o sinal {sinal} ao PID {pid} com o matar de produção: "
+        "o teste passa o `raiz=` e o `matar=` de mentira"
+    )
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _a_varredura_de_orfaos_da_suite_nao_toca_a_maquina(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """A varredura de laços da suíte lê uma raiz vazia e tem um ``matar`` que reprova.
+
+    A família de laços varre no primeiro contato com os padrões de produção; um teste que a usa
+    sem passar a raiz e o ``matar`` de mentira varreria os processos de quem roda a suíte (a sessão
+    caiu duas vezes por isso em 21/11/2026).
+    """
+    vazia = tmp_path_factory.mktemp("proc-vazio-dos-lacos")
+    try:
+        from hefesto_dualsense4unix.integrations import laco_de_audio
+    except ModuleNotFoundError as erro:  # pragma: no cover
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+        yield
+        return
+
+    raiz_antes, matar_antes = laco_de_audio._PROC, laco_de_audio._MATAR
+    laco_de_audio._PROC = vazia
+    laco_de_audio._MATAR = _o_matar_que_a_suite_nao_pode_usar
+    try:
+        yield
+    finally:
+        laco_de_audio._PROC = raiz_antes
+        laco_de_audio._MATAR = matar_antes
