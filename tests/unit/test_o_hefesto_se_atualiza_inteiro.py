@@ -642,8 +642,14 @@ def _reescrever_o_dev(casa: Casa, chave: Path, texto: str) -> None:
     _git(casa.autor, "push", "-q", "-f", "origin", "dev")
 
 
+def _o_clone_no_publicado(casa: Casa) -> None:
+    casa.publicar(casa.chave, "src/um.py")
+    _git(casa.clone, "pull", "-q", "--ff-only", "origin", "dev")
+
+
 def test_o_dev_reescrito_pede_revisao_e_so_oferece_refazer_com_a_ponta_assinada(
         casa: Casa, base: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _o_clone_no_publicado(casa)
     _reescrever_o_dev(casa, casa.chave, "reescrito\n")
     assert _baixar(casa) is None
     item = _a_peca_hefesto(casa, monkeypatch)
@@ -654,6 +660,28 @@ def test_o_dev_reescrito_pede_revisao_e_so_oferece_refazer_com_a_ponta_assinada(
     assert _baixar(casa) is None
     item = _a_peca_hefesto(casa, monkeypatch)
     assert item["estado"] == at.REVISAR and "reset" not in item["dica"]
+
+
+def test_a_reescrita_so_oferece_refazer_pela_linhagem_desde_o_commit_comum(
+        casa: Casa, base: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2011-A-CHAVE-NOVA-SE-SEGUE-PELA-LINHAGEM-ASSINADA: a oferta anda commit a commit."""
+    _o_clone_no_publicado(casa)
+    segunda = _chave(base, "segunda")
+    _git(casa.autor, "reset", "-q", "--hard", casa.inicio)
+    casa.escrever(assinado.LISTA, assinado._linha_da_lista(casa.chave)
+                  + assinado._linha_da_lista(segunda))
+    casa.commitar(casa.chave)
+    casa.escrever(assinado.LISTA, assinado._linha_da_lista(segunda))
+    casa.commitar(segunda)
+    casa.publicar(casa.chave, "src/da-revogada.py", forcar=True)
+    assert _baixar(casa) is None
+    item = _a_peca_hefesto(casa, monkeypatch)
+    assert item["estado"] == at.REVISAR and "reset" not in item["dica"]
+
+    _git(casa.autor, "reset", "-q", "--hard", "HEAD~1")
+    casa.publicar(segunda, "src/da-segunda.py", forcar=True)
+    assert _baixar(casa) is None
+    assert "git reset --hard" in _a_peca_hefesto(casa, monkeypatch)["dica"]
 
 
 def test_a_recusa_por_assinatura_pede_revisao(

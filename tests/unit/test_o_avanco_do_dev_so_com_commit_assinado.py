@@ -91,10 +91,11 @@ class Casa:
         _git(self.autor, *assina, "commit", "-q", "-m", "muda")
         return _git(self.autor, "rev-parse", "HEAD")
 
-    def publicar(self, chave: Path | None, caminho: str = "src/um.py", texto: str = "x\n") -> str:
+    def publicar(self, chave: Path | None, caminho: str = "src/um.py", texto: str = "x\n",
+                 *, forcar: bool = False) -> str:
         self.escrever(caminho, texto)
         alvo = self.commitar(chave)
-        _git(self.autor, "push", "-q", "origin", "dev")
+        _git(self.autor, "push", "-q", *(["-f"] if forcar else []), "origin", "dev")
         return alvo
 
     def topo(self) -> str:
@@ -199,7 +200,7 @@ def test_a_chave_nova_entra_pelo_commit_que_a_casa_assinou(casa: Casa, base: Pat
 
 def test_a_chave_nova_se_segue_pela_linhagem_sem_ter_parado_no_commit_da_troca(
         casa: Casa, base: Path) -> None:
-    """D-2011-A-CHAVE-NOVA-SE-SEGUE-PELA-LINHAGEM: o clone parado antes da troca segue."""
+    """D-2011-A-CHAVE-NOVA-SE-SEGUE-PELA-LINHAGEM-ASSINADA: o clone parado segue a troca."""
     segunda, terceira = _chave(base, "segunda"), _chave(base, "terceira")
     casa.escrever(LISTA, _linha_da_lista(segunda))
     casa.commitar(casa.chave)
@@ -231,6 +232,60 @@ def test_o_commit_de_fora_no_meio_da_faixa_nao_se_atravessa(casa: Casa, base: Pa
     assert pendencia is not None and MOTIVO in pendencia[1]
 
 
+def _revogar_a_da_casa(casa: Casa, segunda: Path) -> str:
+    """A da casa põe a segunda na lista; a segunda tira a da casa (a revogação, R)."""
+    casa.escrever(LISTA, _linha_da_lista(casa.chave) + _linha_da_lista(segunda))
+    casa.commitar(casa.chave)
+    casa.escrever(LISTA, _linha_da_lista(segunda))
+    revogacao = casa.commitar(segunda)
+    _git(casa.autor, "push", "-q", "origin", "dev")
+    return revogacao
+
+
+def test_a_chave_revogada_nao_assina_depois_da_revogacao_nem_para_o_clone_parado(
+        casa: Casa, base: Path) -> None:
+    """D-2011-A-CHAVE-NOVA-SE-SEGUE-PELA-LINHAGEM-ASSINADA: commit a commit, sem salto."""
+    segunda = _chave(base, "segunda")
+    revogacao = _revogar_a_da_casa(casa, segunda)
+    da_revogada = casa.publicar(casa.chave)
+    antes = casa.topo()
+
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) is None
+    assert not _avancar(casa, da_revogada, Pedidos())
+    assert casa.topo() == antes
+
+    _git(casa.autor, "reset", "-q", "--hard", revogacao)
+    casa.publicar(segunda, "src/dois.py", forcar=True)
+    alvo = casa.publicar(segunda, "src/tres.py")
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) == alvo
+    assert _avancar(casa, alvo, Pedidos())
+    assert casa.topo() == alvo
+
+
+def test_a_lista_adulterada_pela_chave_revogada_nao_vale(casa: Casa, base: Path) -> None:
+    segunda, de_fora = _chave(base, "segunda"), _chave(base, "de-fora")
+    _revogar_a_da_casa(casa, segunda)
+    casa.escrever(LISTA, "".join(_linha_da_lista(c) for c in (casa.chave, segunda, de_fora)))
+    casa.commitar(casa.chave)
+    alvo = casa.publicar(de_fora)
+    antes = casa.topo()
+
+    assert va.baixar(casa.clone, jogo_aberto=lambda: False) is None
+    assert not _avancar(casa, alvo, Pedidos())
+    assert casa.topo() == antes
+
+
+def test_o_alvo_que_nao_descende_do_head_fica_de_fora(casa: Casa) -> None:
+    (casa.clone / "local.py").write_text("y\n", encoding="utf-8")
+    _git(casa.clone, "add", "local.py")
+    _git(casa.clone, "-c", "commit.gpgsign=true", "-c", "gpg.format=ssh",
+         "-c", f"user.signingkey={casa.chave}", "commit", "-q", "-m", "local")
+    alvo = casa.publicar(casa.chave)
+    _git(casa.clone, "fetch", "-q", "origin", "dev")
+
+    assert va.sem_a_assinatura_da_casa(casa.clone, alvo)
+
+
 def test_a_lista_da_ponta_nao_vale_para_a_propria_ponta(casa: Casa, base: Path) -> None:
     de_fora = _chave(base, "de-fora")
     casa.publicar(casa.chave)
@@ -249,7 +304,8 @@ def test_a_recusa_sai_da_aba_sistema_quando_o_assinado_entra(casa: Casa) -> None
     assert not _avancar(casa, casa.publicar(None), pedidos)
     assert va.pendencia_do_install() is not None
 
-    alvo = casa.publicar(casa.chave, "README.md")
+    _git(casa.autor, "reset", "-q", "--hard", casa.inicio)
+    alvo = casa.publicar(casa.chave, "README.md", forcar=True)
     assert _avancar(casa, alvo, pedidos)
     assert va.pendencia_do_install() is None
 

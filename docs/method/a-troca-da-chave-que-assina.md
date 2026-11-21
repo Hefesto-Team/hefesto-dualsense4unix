@@ -1,9 +1,11 @@
 # A troca da chave que assina
 
 A lista `assets/assinaturas/quem-assina` diz quais chaves SSH assinam os commits do `dev` que o Hefesto aceita
-avançar. O clone parte da lista do seu `HEAD` e anda pelo primeiro pai da faixa baixada: acha o commit mais novo que
-a lista vigente aceita, relê a lista dele e repete até a ponta. A lista da ponta nunca vale para a própria ponta, e um
-commit assinado por chave de fora não se atravessa.
+avançar. O clone parte da lista do seu `HEAD` e anda commit a commit pelo primeiro pai da faixa baixada: cada commit
+vem assinado por uma chave da lista do pai dele, e só depois de aceito a lista dele passa a valer. Não há salto: a
+chave que um commit tirou da lista não assina nada depois dele, nem para o clone que ficou parado antes da retirada. A
+lista de um commit nunca vale para ele mesmo, um commit recusado no meio deixa a faixa inteira de fora, e o alvo que
+não descende do `HEAD` não avança.
 
 ## O roteiro
 
@@ -23,5 +25,5 @@ reinstalar pelo caminho de instalação.
 ## A prova
 
 `tests/unit/test_o_avanco_do_dev_so_com_commit_assinado.py`: a chave nova entra pelo commit que a lista aceitou; o clone
-parado antes da troca chega à ponta; o commit de fora no meio da faixa e a lista que só existe na ponta ficam
-recusados.
+parado antes da troca chega à ponta; o commit de fora no meio da faixa, a lista que só existe na ponta, o commit da
+chave já retirada e a lista adulterada por essa chave ficam recusados.

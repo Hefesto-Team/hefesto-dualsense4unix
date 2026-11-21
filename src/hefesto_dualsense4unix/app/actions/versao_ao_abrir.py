@@ -2,9 +2,10 @@
 
 Só numa instalação pelo código, em ``dev``, com a árvore limpa, sem trabalho em voo e sem jogo
 aberto; qualquer outra coisa para em silêncio, com uma linha no diário. A rede fica num fio que a
-janela não espera, e o avanço, só rápido e só para commit assinado por chave da lista do ``HEAD`` de
-agora, fica para o fecho, só com a «Atualização automática» ligada (desligada, a versão baixada
-espera o «Atualizar») e com a cópia datada da configuração antes de mudar perfis ou extensões. A
+janela não espera, e o avanço, só rápido e só com cada commit da faixa assinado por chave da lista
+que vale nele (a do ``HEAD`` de agora, trocada só por commit aceito), fica para o fecho, só com a
+«Atualização automática» ligada (desligada, a versão baixada espera o «Atualizar») e com a cópia
+datada da configuração antes de mudar perfis ou extensões. A
 faixa que pede install o solta fora do cgroup da janela (``--install``): ele espera o jogo fechar de
 vez, roda uma vez só e nunca guarda senha; a falha fica em ``install-pendente``.
 """
@@ -225,24 +226,33 @@ def _assinado_pela_lista(raiz: Path, commit: str, lista: str) -> bool:
             os.unlink(caminho)
 
 
-def _o_passo_da_linhagem(raiz: Path, de: str, alvo: str, lista: str) -> str | None:
-    """O commit mais novo de ``de..alvo``, pelo primeiro pai, que a ``lista`` aceita."""
-    sha = _git(raiz, "rev-list", "--first-parent", f"{de}..{alvo}")
-    return next((c for c in (sha or "").split() if _assinado_pela_lista(raiz, c, lista)), None)
+def _a_lista(raiz: Path, commit: str) -> str | None:
+    return _git(raiz, "show", f"{commit}:{LISTA_DE_QUEM_ASSINA}")
+
+
+def _a_linhagem_aceita(raiz: Path, de: str, alvo: str) -> bool:
+    """A lista parte do commit ``de``, já aceito, e anda commit a commit pelo primeiro pai até o
+    ``alvo``: cada commit vem assinado por uma chave da lista do pai dele, e só depois de aceito a
+    lista dele passa a valer. Não há salto: a chave que um commit tirou da lista não assina nada
+    depois dele. O alvo que não descende de ``de`` pelo primeiro pai e o commit recusado no meio
+    deixam a faixa inteira de fora."""
+    lista = _a_lista(raiz, de)
+    faixa = _git(raiz, "rev-list", "--first-parent", "--reverse", "--parents",
+                 f"{de}..{alvo}") if lista else None
+    if not faixa:
+        return False
+    for linha in faixa.splitlines():
+        commit, pai = [*linha.split(), ""][:2]
+        if pai != de or not lista or not _assinado_pela_lista(raiz, commit, lista):
+            return False
+        de, lista = commit, _a_lista(raiz, commit)
+    return True
 
 
 def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
-    """A lista parte do ``HEAD`` de agora, nunca da faixa baixada, e só anda por commit que a
-    lista vigente aceita: a chave nova entra num commit que uma chave da lista já assinou, e o
-    commit seguinte a relê dele. A assinatura do alvo fixa a faixa inteira pelo hash."""
+    """A faixa do ``HEAD`` de agora até o ``alvo`` não anda pela linhagem assinada."""
     de = _git(raiz, "rev-parse", "HEAD")
-    lista = _git(raiz, "show", f"HEAD:{LISTA_DE_QUEM_ASSINA}")
-    while de and lista:
-        if _assinado_pela_lista(raiz, alvo, lista):
-            return False
-        de = _o_passo_da_linhagem(raiz, de, alvo, lista)
-        lista = _git(raiz, "show", f"{de}:{LISTA_DE_QUEM_ASSINA}") if de else None
-    return True
+    return not (de and _a_linhagem_aceita(raiz, de, alvo))
 
 
 def _recusa_da_assinatura() -> Path:
@@ -330,7 +340,8 @@ def baixar(raiz: Path, *, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str
         if alvo is not None and _e_avanco(raiz, alvo, topo):
             _registrar_a_baixa(topo, ATUAL, commit=alvo, origem=origem)
             return None
-        oferta = alvo is not None and not sem_a_assinatura_da_casa(raiz, alvo)
+        comum = _git(raiz, "merge-base", topo, alvo) if alvo and topo else None
+        oferta = bool(alvo and comum and _a_linhagem_aceita(raiz, comum, alvo))
         _registrar_a_baixa(topo, DIVERGIU, commit=alvo or "", origem=origem, oferta=oferta)
         return None
     if sem_a_assinatura_da_casa(raiz, alvo):
