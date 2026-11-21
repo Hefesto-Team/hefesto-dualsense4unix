@@ -450,8 +450,28 @@ _dkms_compilar() {
         && dkms install --force -m "${nome}" -v "${ver}" -k "${kernel}"
 }
 
+_dkms_devolver_de_fabrica() {
+    local nome="$1" ver="$2" kernel linha estado tirou=1
+    estado="$(dkms status -m "${nome}" -v "${ver}" 2>/dev/null || true)"
+    while IFS= read -r linha; do
+        [[ "${linha}" == *": installed"* ]] || continue
+        linha="${linha%%: installed*}"
+        linha="${linha%, *}"
+        kernel="${linha##*, }"
+        printf 'devolvendo o driver de fábrica: %s %s sai do kernel %s\n' "${nome}" "${ver}" "${kernel}"
+        if dkms uninstall -m "${nome}" -v "${ver}" -k "${kernel}"; then
+            depmod -a "${kernel}" >/dev/null 2>&1 || true
+            [[ "${tirou}" -eq 2 ]] || tirou=0
+        else
+            _erro "${nome} não saiu do kernel ${kernel}: o kernel o recusa no boot"
+            tirou=2
+        fi
+    done <<< "${estado}"
+    return "${tirou}"
+}
+
 _dkms_por_fonte() {
-    local forcar="$1" pasta nome ver kernel mudou=0 falhou=0
+    local forcar="$1" pasta nome ver kernel mudou=0 falhou=0 rc
     command -v dkms >/dev/null 2>&1 || _recusar "dkms ausente"
     for pasta in "${SRC}"/hefesto-*-*; do
         [[ -d "${pasta}" && -f "${pasta}/dkms.conf" ]] || continue
@@ -463,6 +483,13 @@ _dkms_por_fonte() {
         nome="${pasta##*/}"
         ver="${nome##*-}"
         nome="${nome%-*}"
+        if /usr/bin/python3 "${pasta}/preparar-o-fonte.py" --sem-a-chave 2>/dev/null; then
+            _dkms_devolver_de_fabrica "${nome}" "${ver}"
+            rc=$?
+            [[ "${rc}" -eq 0 ]] && mudou=1
+            [[ "${rc}" -eq 2 ]] && falhou=1
+            continue
+        fi
         while IFS= read -r kernel; do
             [[ -n "${kernel}" ]] || continue
             if [[ "${forcar}" -eq 0 ]] \

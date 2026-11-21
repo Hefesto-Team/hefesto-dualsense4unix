@@ -484,3 +484,202 @@ class TestOFonteJaInstaladoFicaSoDoRoot:
         udev = (REPO_ROOT / "scripts" / "install-host-udev.sh").read_text(encoding="utf-8")
         fim = udev[udev.rindex('source "${DKMS_LIB_SH}"'):]
         assert fim.index("dkms_fontes_so_do_root") < fim.index("dkms_flush_initramfs")
+
+
+SECURE_BOOT = "SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"
+CHAVE = b"0\x82\x03\x1bCHAVE-DE-MENTIRA-DO-DKMS\x00\x01\x02"
+PREPARADOR = REPO_ROOT / "assets" / "dkms" / "hid-playstation" / "preparar-o-fonte.py"
+CINCO_PREPARADORES = sorted((REPO_ROOT / "assets" / "dkms").glob("*/preparar-o-fonte.py"))
+
+
+def _estado_do_secure_boot(raiz: Path, *, ligado: bool | None, inscrita: bool) -> dict[str, str]:
+    """efivars, chave e lista do shim de mentira, no formato que as duas leituras recebem."""
+    efivars = raiz / "efivars"
+    efivars.mkdir()
+    if ligado is not None:
+        (efivars / SECURE_BOOT).write_bytes(b"\x06\x00\x00\x00" + (b"\x01" if ligado else b"\x00"))
+    (raiz / "mok.pub").write_bytes(CHAVE)
+    (raiz / "MokListRT").write_bytes(CHAVE if inscrita else b"outra-chave")
+    return {
+        "HEFESTO_EFIVARS_ROOT": str(efivars),
+        "HEFESTO_DKMS_MOK_PUB": str(raiz / "mok.pub"),
+        "HEFESTO_MOK_LISTAS": str(raiz / "MokListRT"),
+    }
+
+
+ESTADOS = [(True, False), (True, True), (False, False), (None, False)]
+ESTADOS_IDS = ["ligado-sem-chave", "ligado-com-chave", "desligado", "sem-efi"]
+
+
+class TestSecureBootLigadoDevolveODriverDeFabrica:
+    """O-SECURE-BOOT-LIGADO-DEVOLVE-O-DRIVER-DE-FABRICA-01: sem a chave o módulo da casa sai."""
+
+    STATUS = (
+        "hefesto-teste/9.9.9, 7.1.5-generic, x86_64: installed\n"
+        "hefesto-teste/9.9.9, 7.0.1-generic, x86_64: installed (WARNING! Diff between built "
+        "and installed module!)\n"
+        "hefesto-teste/9.9.9, 6.9.0-generic, x86_64: built\n"
+    )
+
+    def _instalar(self, tmp_path: Path, estado: dict[str, str], status: str) -> tuple[str, str]:
+        bin_ = tmp_path / "bin"
+        bin_.mkdir()
+        chamadas = tmp_path / "chamadas.log"
+        _stub(bin_, "uname", 'echo "7.1.5-generic"')
+        _stub(bin_, "sudo", f'echo "sudo $*" >> "{chamadas}"\nexec "$@"')
+        _stub(bin_, "depmod", f'echo "depmod $*" >> "{chamadas}"')
+        _stub(
+            bin_, "dkms",
+            f'echo "dkms $*" >> "{chamadas}"\n'
+            f'[ "$1" = status ] && cat "{tmp_path / "status.txt"}"\nexit 0',
+        )
+        (tmp_path / "status.txt").write_text(status, encoding="utf-8")
+        modulos = tmp_path / "modules"
+        (modulos / "7.1.5-generic" / "build").mkdir(parents=True)
+        fonte = tmp_path / "fonte"
+        fonte.mkdir()
+        (fonte / "dkms.conf").write_text('PACKAGE_VERSION="9.9.9"\n', encoding="utf-8")
+        feito = _roda(
+            f"dkms_install_patched_module hefesto-teste 9.9.9 '{fonte}' hid-teste\n"
+            'printf "STALE=%s\\n" "${_DKMS_INITRAMFS_STALE}"',
+            f"{bin_}:/usr/bin:/bin",
+            {"HEFESTO_DKMS_MODULES_ROOT": str(modulos),
+             "HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "usr-src"), **estado},
+        )
+        assert feito.returncode == 0, feito.stderr
+        lidas = chamadas.read_text(encoding="utf-8") if chamadas.exists() else ""
+        return feito.stdout + feito.stderr, lidas
+
+    def test_sem_a_chave_o_modulo_instalado_sai_de_cada_kernel_e_o_initramfs_se_refaz(
+        self, tmp_path: Path
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        saida, lidas = self._instalar(tmp_path, estado, self.STATUS)
+        for kernel in ("7.1.5-generic", "7.0.1-generic"):
+            assert f"dkms uninstall hefesto-teste/9.9.9 -k {kernel}" in lidas, lidas
+            assert f"depmod -a {kernel}" in lidas, lidas
+        assert "-k 6.9.0-generic" not in lidas.replace("status", ""), lidas
+        for verbo in ("dkms add", "dkms build", "dkms install"):
+            assert verbo not in lidas, lidas
+        assert "STALE=1" in saida and "mokutil --import" in saida, saida
+        assert "Wi-Fi USB" in saida and "driver de fábrica" in saida, saida
+
+    def test_sem_nada_instalado_nao_tira_nada_e_diz_que_o_de_fabrica_continua(
+        self, tmp_path: Path
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        saida, lidas = self._instalar(tmp_path, estado, "")
+        assert "dkms uninstall" not in lidas, lidas
+        assert "STALE=0" in saida and "o driver de fábrica continua" in saida, saida
+
+    @pytest.mark.parametrize(("ligado", "inscrita"), ESTADOS[1:], ids=ESTADOS_IDS[1:])
+    def test_fora_desse_estado_o_modulo_instala_e_nada_sai(
+        self, tmp_path: Path, ligado: bool | None, inscrita: bool
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=ligado, inscrita=inscrita)
+        _saida, lidas = self._instalar(tmp_path, estado, self.STATUS)
+        assert "dkms uninstall" not in lidas and "sudo chown -R root:root" in lidas, lidas
+
+    def test_o_atualizador_no_mesmo_estado_tira_o_modulo_em_vez_de_refazer(
+        self, tmp_path: Path
+    ) -> None:
+        if os.geteuid() == 0:
+            pytest.skip("o ajudante como root usa os caminhos de verdade")
+        from tests.unit.test_o_ajudante_do_atualizador import Lar
+
+        (tmp_path / "lar").mkdir()
+        lar = Lar(tmp_path / "lar")
+        pasta = lar.src / "hefesto-hid-playstation-1.0.0"
+        pasta.mkdir()
+        shutil.copy(PREPARADOR, pasta / "preparar-o-fonte.py")
+        (pasta / "dkms.conf").write_text(
+            'BUILT_MODULE_NAME[0]="hid-playstation"\n', encoding="utf-8")
+        pasta.chmod(0o755)
+        (pasta / "preparar-o-fonte.py").chmod(0o755)
+        (pasta / "dkms.conf").chmod(0o644)
+        (lar.modulos / "7.2.18-generic" / "build").mkdir(parents=True)
+        lar.duble(
+            "dkms",
+            '[ "$1" = status ] && echo "hefesto-hid-playstation/1.0.0, 7.2.18-generic, x86_64: '
+            'installed"\nexit 0',
+        )
+        estado = _estado_do_secure_boot(tmp_path, ligado=True, inscrita=False)
+        feito = lar.rodar("dkms-refazer", **estado)
+        assert feito.returncode == 0, feito.stderr
+        lidas = lar.lidas()
+        assert "dkms uninstall -m hefesto-hid-playstation -v 1.0.0 -k 7.2.18-generic" in lidas
+        assert not [x for x in lidas if x.startswith(("dkms install", "dkms build"))], lidas
+        assert any(x.startswith("update-initramfs") for x in lidas), lidas
+
+    def test_o_exclusivo_dos_cinco_devolve_o_padrao_que_nenhum_kernel_casa(
+        self, tmp_path: Path
+    ) -> None:
+        veredito = tmp_path / "dkms" / "pacote" / "1.0.0"
+        veredito.mkdir(parents=True)
+        for preparador in CINCO_PREPARADORES:
+            for ligado, inscrita in ESTADOS:
+                raiz = tmp_path / f"{preparador.parent.name}-{ligado}-{inscrita}"
+                raiz.mkdir()
+                estado = _estado_do_secure_boot(raiz, ligado=ligado, inscrita=inscrita)
+                feito = subprocess.run(
+                    ["python3", str(preparador), "--exclusivo", "7.1.5-generic",
+                     str(tmp_path / "sem-fonte"), str(veredito)],
+                    capture_output=True, text=True, check=False, timeout=60,
+                    env={**os.environ, **estado},
+                )
+                esperado = "^/" if (ligado and not inscrita) else ""
+                assert feito.stdout.strip() == esperado, (preparador, ligado, inscrita, feito)
+
+    @pytest.mark.parametrize(("ligado", "inscrita"), ESTADOS, ids=ESTADOS_IDS)
+    def test_a_leitura_do_python_e_a_do_bash_dizem_o_mesmo(
+        self, tmp_path: Path, ligado: bool | None, inscrita: bool
+    ) -> None:
+        estado = _estado_do_secure_boot(tmp_path, ligado=ligado, inscrita=inscrita)
+        em_bash = _roda(
+            "dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita",
+            "/usr/bin:/bin", estado,
+        ).returncode
+        em_python = subprocess.run(
+            ["python3", str(PREPARADOR), "--sem-a-chave"], env={**os.environ, **estado},
+            capture_output=True, check=False, timeout=60,
+        ).returncode
+        assert em_bash == em_python, (ligado, inscrita)
+
+    @pytest.mark.parametrize(
+        ("os_release", "framework"),
+        [
+            ('ID=pop\nID_LIKE="ubuntu debian"\n', "# mok_signing_key=/x\n"),
+            ("ID=ubuntu\nID_LIKE=debian\n", ""),
+            ("ID=debian\n", ""),
+            ("ID=fedora\n", 'mok_signing_key="/k.priv"\nmok_certificate="/k.der"\n'),
+            ("ID=ubuntu\n", "mok_signing_key=/root/chave.priv\n"),
+        ],
+        ids=["pop", "ubuntu", "debian", "chave-propria", "ubuntu-so-a-chave"],
+    )
+    def test_o_python_acha_a_chave_onde_o_bash_acha(
+        self, tmp_path: Path, os_release: str, framework: str
+    ) -> None:
+        (tmp_path / "os-release").write_text(os_release, encoding="utf-8")
+        (tmp_path / "framework.conf").write_text(framework, encoding="utf-8")
+        env = {
+            "HEFESTO_OS_RELEASE": str(tmp_path / "os-release"),
+            "HEFESTO_DKMS_FRAMEWORK_CONFS": str(tmp_path / "framework.conf"),
+        }
+        em_bash = _roda("_dkms_mok_pub", "/usr/bin:/bin", env).stdout
+        roteiro = (
+            "import importlib.util, sys\n"
+            f"spec = importlib.util.spec_from_file_location('preparador', {str(PREPARADOR)!r})\n"
+            "mod = importlib.util.module_from_spec(spec)\n"
+            "spec.loader.exec_module(mod)\n"
+            "print(mod._chave_do_dkms(), end='')\n"
+        )
+        em_python = subprocess.run(
+            ["python3", "-c", roteiro], env={**os.environ, **env}, capture_output=True, text=True,
+            check=False, timeout=60,
+        ).stdout
+        assert em_bash == em_python
+
+
+def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:
+    assert len(CINCO_PREPARADORES) == 5
+    assert len({p.read_bytes() for p in CINCO_PREPARADORES}) == 1

@@ -11,7 +11,12 @@ vazio quando o fonte se preparou (guardado em `fonte-<kernel>.tar`), e um padrã
 kernel casa quando o de fábrica fica, para o DKMS pular com 77 e o `autoinstall` não reprovar
 a instalação do kernel. Sem ele, é o `PRE_BUILD`: usa o guardado ou decide na hora.
 
+Com o Secure Boot ligado e a chave do DKMS fora da MOK, o kernel recusaria o módulo no boot: o
+`--exclusivo` devolve o padrão que nenhum kernel casa, e `--sem-a-chave` sai com 0 nesse estado
+(1 fora dele) para quem refaz o módulo por fora do DKMS.
+
     preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
+    preparar-o-fonte.py --sem-a-chave
 """
 
 from __future__ import annotations
@@ -574,10 +579,87 @@ def _decidir(kver: str, ksrc: str, modulo: str, destino: Path) -> tuple[str, str
         return motivo.estado, motivo.frase
 
 
+def _valor_do_arquivo(arquivo: Path, chave: str) -> str:
+    valor = ""
+    with contextlib.suppress(OSError):
+        for linha in arquivo.read_text(encoding="utf-8", errors="replace").splitlines():
+            linha = linha.lstrip()
+            if linha.startswith(f"{chave}="):
+                valor = linha[len(chave) + 1:]
+    return valor.replace('"', "").replace("'", "")
+
+
+def _secure_boot_ligado() -> bool:
+    raiz = Path(os.environ.get("HEFESTO_EFIVARS_ROOT", "/sys/firmware/efi/efivars"))
+    for variavel in sorted(raiz.glob("SecureBoot-*")):
+        try:
+            dados = variavel.read_bytes()
+        except OSError:
+            continue
+        return bool(dados) and dados[-1] == 1
+    return False
+
+
+def _familia_da_distro() -> str:
+    os_release = Path(os.environ.get("HEFESTO_OS_RELEASE", "/etc/os-release"))
+    ident = _valor_do_arquivo(os_release, "ID")
+    parecida = _valor_do_arquivo(os_release, "ID_LIKE")
+    return ident if ident == "ubuntu" or not parecida else parecida
+
+
+def _chave_do_dkms() -> Path:
+    fixa = os.environ.get("HEFESTO_DKMS_MOK_PUB")
+    if fixa:
+        return Path(fixa)
+    padrao = "/etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf"
+    privada = certificado = ""
+    for molde in os.environ.get("HEFESTO_DKMS_FRAMEWORK_CONFS", padrao).split():
+        for conf in sorted(glob.glob(molde)):
+            privada = _valor_do_arquivo(Path(conf), "mok_signing_key") or privada
+            certificado = _valor_do_arquivo(Path(conf), "mok_certificate") or certificado
+    if not privada and _familia_da_distro().startswith("ubuntu"):
+        return Path("/var/lib/shim-signed/mok/MOK.der")
+    return Path(certificado or "/var/lib/dkms/mok.pub")
+
+
+def _chave_inscrita() -> bool:
+    chave = _chave_do_dkms()
+    try:
+        bytes_da_chave = chave.read_bytes()
+    except OSError:
+        return False
+    if not bytes_da_chave:
+        return False
+    mokutil = shutil.which("mokutil")
+    if mokutil:
+        resposta = subprocess.run(
+            [mokutil, "--test-key", str(chave)], capture_output=True, text=True, check=False,
+            timeout=30,
+        )
+        if "already enrolled" in resposta.stdout + resposta.stderr:
+            return True
+    listas = os.environ.get(
+        "HEFESTO_MOK_LISTAS",
+        "/sys/firmware/efi/mok-variables/MokListRT "
+        "/sys/firmware/efi/efivars/MokListRT-605dab50-e046-4300-abb6-3dd810dd8b23",
+    )
+    for lista in listas.split():
+        with contextlib.suppress(OSError):
+            if bytes_da_chave in Path(lista).read_bytes():
+                return True
+    return False
+
+
+def _sem_a_chave() -> bool:
+    return _secure_boot_ligado() and not _chave_inscrita()
+
+
 def _exclusivo(kver: str, ksrc: str, veredito: Path | None) -> str:
     modulo = _conf("BUILT_MODULE_NAME[0]")
     if not kver or not modulo or veredito is None or (veredito / kver).is_dir():
         return ""
+    if _sem_a_chave():
+        return NENHUM_KERNEL
     if not (Path(ksrc) / "Makefile").is_file():
         ksrc = str(_modulos_root() / kver / "build")
         if not (Path(ksrc) / "Makefile").is_file():
@@ -627,6 +709,8 @@ def _do_guardado(veredito: Path | None, kver: str) -> bool:
 
 
 def main(argv: list[str]) -> int:
+    if argv == ["--sem-a-chave"]:
+        return 0 if _sem_a_chave() else 1
     exclusivo = bool(argv) and argv[0] == "--exclusivo"
     if exclusivo:
         argv = argv[1:]

@@ -154,13 +154,17 @@ dkms_passo_da_mok() {
     printf 'inscreva-a com sudo mokutil --import %s (ele pede uma senha), reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' "${_pub}"
 }
 
+dkms_efeito_sem_a_chave() {
+    printf 'o DualSense e o controle Nintendo funcionam, sem as curas, os nós de movimento e do touchpad e as luzes; o microfone pelo rádio fica desligado; o pad virtual cai para a reserva; o dongle Wi-Fi USB da Realtek fica sem driver, porque o kernel não traz um'
+}
+
 : "${_DKMS_SB_WARNED:=0}"
 dkms_warn_secureboot_once() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
     dkms_secure_boot_ligado || return 0
     dkms_chave_mok_inscrita && return 0
     _DKMS_SB_WARNED=1
-    _dkms_warn "Secure Boot ligado e a chave do DKMS não está inscrita: os módulos desta casa NÃO vão ser instalados, porque o kernel os recusaria no boot e o DualSense (e o controle Nintendo, e o Wi-Fi USB) ficaria sem driver nenhum. Os drivers de fábrica ficam: o DualSense funciona, sem as curas, e o microfone pelo rádio fica desligado. Para ganhar as curas: $(dkms_passo_da_mok)."
+    _dkms_warn "Secure Boot ligado e a chave do DKMS não está inscrita: os módulos desta casa NÃO ficam instalados, porque o kernel os recusaria no boot. Os que já estavam instalados saem e os drivers de fábrica voltam no próximo carregamento: $(dkms_efeito_sem_a_chave). Para ganhar as curas: $(dkms_passo_da_mok)."
     return 0
 }
 
@@ -311,6 +315,35 @@ dkms_fontes_so_do_root() {
     return "${_falhou}"
 }
 
+_dkms_kernels_com_o_modulo_instalado() {
+    local _status _linha
+    _status="$(_dkms_status_texto "$1/$2")"
+    while IFS= read -r _linha; do
+        [[ "${_linha}" == *": installed"* ]] || continue
+        _linha="${_linha%%: installed*}"
+        _linha="${_linha%, *}"
+        printf '%s\n' "${_linha##*, }"
+    done <<< "${_status}"
+}
+
+dkms_devolver_o_driver_de_fabrica() {
+    local _pkg="$1" _ver="$2" _built="${3:-}" _kver _tirou=0
+    while IFS= read -r _kver; do
+        [[ -n "${_kver}" ]] || continue
+        if sudo dkms uninstall "${_pkg}/${_ver}" -k "${_kver}" >/dev/null 2>&1; then
+            sudo depmod -a "${_kver}" >/dev/null 2>&1 || true
+            _dkms_log "${_pkg} tirado do kernel ${_kver}: o driver de fábrica volta no próximo carregamento"
+            _tirou=1
+            [[ -n "${_built}" && "${_kver}" == "$(_dkms_kernel_alvo)" ]] \
+                && dkms_mark_initramfs_stale "${_built}"
+        else
+            _dkms_warn "dkms uninstall falhou p/ ${_pkg}/${_ver} no kernel ${_kver} — o módulo da casa segue instalado e o kernel o recusa no boot; rode: sudo dkms uninstall ${_pkg}/${_ver} -k ${_kver}"
+        fi
+    done < <(_dkms_kernels_com_o_modulo_instalado "${_pkg}" "${_ver}")
+    [[ "${_tirou}" -eq 1 ]] || _dkms_log "${_pkg} pulado: Secure Boot sem a chave do DKMS inscrita — o driver de fábrica continua"
+    return 0
+}
+
 dkms_install_patched_module() {
     local _pkg="$1" _ver="$2" _src="$3" _built="$4"
     local _kver _srcdst _dkms_lic
@@ -321,17 +354,17 @@ dkms_install_patched_module() {
         _dkms_warn "dkms ausente — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar dkms)"
         return 0
     fi
+    if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
+        dkms_warn_secureboot_once
+        dkms_devolver_o_driver_de_fabrica "${_pkg}" "${_ver}" "${_built}"
+        return 0
+    fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then
         _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar cabecalhos "${_kver}")"
         return 0
     fi
     if [[ ! -f "${_src}/dkms.conf" ]]; then
         _dkms_warn "source DKMS incompleto em ${_src} (sem dkms.conf) — pulando ${_pkg}"
-        return 0
-    fi
-    if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
-        dkms_warn_secureboot_once
-        _dkms_log "${_pkg} pulado: Secure Boot sem a chave do DKMS inscrita — o driver de fábrica continua"
         return 0
     fi
 
