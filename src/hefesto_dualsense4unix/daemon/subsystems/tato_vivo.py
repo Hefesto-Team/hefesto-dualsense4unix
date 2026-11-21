@@ -102,6 +102,7 @@ INTERVALO_S = 1.0 / 60.0
 FOLGA_DA_CONTINUA_S = 2 * INTERVALO_S
 RELEITURA_DA_RECEITA_S = 1.0
 PASSO_DO_REPOUSO_S = 0.25
+INTERVALO_DO_AVISO_S = 60.0
 PORTA_DO_TATO = "receita do tato"
 CORPO_MAX_PEDACOS = 16
 SINAL_DO_CORPO = 0.001
@@ -4114,6 +4115,7 @@ class Passo:
         self.motor = motor
         self.dedo = motor.borda_do_dedo
         self.receita_vigente: Receita = DESLIGADA
+        self.aviso = AvisoPorMinuto()
         self.jogo = False
         self._lida_em = float("-inf")
         self._vivas: frozenset[str] = frozenset()
@@ -4530,8 +4532,8 @@ class Passo:
         """O tique do laço de 60 Hz: o que falha num tique fica no log, e o seguinte vem."""
         try:
             return self(agora)
-        except Exception:
-            logger.debug("tato_vivo_tique_falhou", exc_info=True)
+        except Exception as falha:
+            self.aviso.dizer("tato_vivo_tique_falhou", falha)
             return 0
 
     def _sessao_ha_s(self, controle: Controle, agora: float) -> float | None:
@@ -4566,6 +4568,34 @@ class Passo:
                 self.motor.anotar(
                     Evento(estalo.instante, controle.uniq, TIPO_BATIDA, estalo.lado,
                            estalo.energia))
+
+
+class AvisoPorMinuto:
+    """A falha que se repete diz uma linha de aviso por minuto, com quantas vezes se repetiu
+    desde a última linha."""
+
+    def __init__(
+        self, relogio: Callable[[], float] = time.monotonic,
+        intervalo_s: float = INTERVALO_DO_AVISO_S,
+    ) -> None:
+        self._relogio = relogio
+        self._intervalo_s = intervalo_s
+        self._vistas: dict[tuple[str, str], tuple[float, int]] = {}
+
+    def dizer(self, evento: str, falha: BaseException | None = None, **campos: Any) -> bool:
+        """Grava o aviso com a pilha, dentro do ``except``; ``False`` quando a mesma falha já
+        falou há menos de um intervalo."""
+        agora = self._relogio()
+        chave = (evento, type(falha).__name__ if falha is not None else "")
+        visto = self._vistas.get(chave)
+        if visto is not None and agora - visto[0] < self._intervalo_s:
+            self._vistas[chave] = (visto[0], visto[1] + 1)
+            return False
+        self._vistas[chave] = (agora, 0)
+        logger.warning(
+            evento, repetidas=0 if visto is None else visto[1], exc_info=falha is not None,
+            **campos)
+        return True
 
 
 def _volta_em_curso(volta: Any) -> bool:
@@ -4626,6 +4656,14 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         _acordar_com(gestos, acordar)
         _acordar_com(estados, acordar)
     repouso = False
+
+    def seguro(nome: str, passo_do_laco: Callable[[], Any]) -> Any:
+        try:
+            return passo_do_laco()
+        except Exception as falha:
+            passo.aviso.dizer(f"tato_vivo_laco_{nome}_falhou", falha)
+            return None
+
     try:
         while not daemon._is_stopping():
             if repouso:
@@ -4636,10 +4674,10 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
             desperto.clear()
             agora = time.monotonic()
             if gestos is not None and estados is not None:
-                volta.drenar(gestos, estados, agora)
+                seguro("da_volta", partial(volta.drenar, gestos, estados, agora))
             passo.tique_do_laco(agora)
-            motor.de_fora.andar(agora)
-            repouso = passo.ocioso()
+            seguro("de_fora", partial(motor.de_fora.andar, agora))
+            repouso = seguro("do_repouso", passo.ocioso) is True
     finally:
         motor.de_fora.acordar = motor.de_fora.corpo.acordar = None
         diario.cancel()
@@ -4702,6 +4740,7 @@ __all__ = [
     "AtuadorDoSom",
     "AtuadorDosMomentos",
     "AtuadorDosMotores",
+    "AvisoPorMinuto",
     "BordaDoDedo",
     "BordaDoRumble",
     "Controle",

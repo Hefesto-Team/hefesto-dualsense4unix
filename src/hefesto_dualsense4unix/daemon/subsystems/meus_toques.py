@@ -21,11 +21,14 @@ from typing import Any
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     TETO_POR_CONTROLE,
     TETO_TOTAL,
+    AvisoPorMinuto,
     Teto,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+_AVISO = AvisoPorMinuto()
 
 MODO_SO_O_JOGO = "so_o_jogo"
 MODO_JOGO_E_TOQUES = "jogo_e_meus_toques"
@@ -279,8 +282,8 @@ class MeusToques:
             for entrada in entradas:
                 try:
                     self._andar(entrada, agora)
-                except Exception:
-                    logger.debug("meus_toques_tique_falhou", exc_info=True)
+                except Exception as falha:
+                    _AVISO.dizer("meus_toques_tique_falhou", falha)
         return self.escritas - antes
 
     def _andar(self, entrada: Entrada, agora: float) -> None:

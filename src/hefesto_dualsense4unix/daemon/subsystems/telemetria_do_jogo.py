@@ -54,6 +54,7 @@ PORTA_DE_PARTIDA = 5300
 VALIDADE_DO_PACOTE_S = 0.5
 PACOTES_POR_VOLTA = 64
 INTERVALO_DO_LACO_S = 1.0 / 60.0
+RECUO_DA_ABERTURA_S = 5.0
 
 VELOCIDADE_DE_PARADO_M_S = 0.1
 GIRO_DE_PARADO_RAD_S = 1.0
@@ -238,6 +239,8 @@ class TelemetriaDoJogo:
         self.porta = porta
         self.endereco = endereco
         self._socket: socket.socket | None = None
+        self._falhou_em: float | None = None
+        self.motivo: str | None = None
         self.ultimo: EstadoDaCorrida | None = None
         self.recebido_em = float("-inf")
         self._toques = LeitorDosToques()
@@ -258,23 +261,35 @@ class TelemetriaDoJogo:
         nome = self._socket.getsockname()
         return (str(nome[0]), int(nome[1]))
 
-    def abrir(self) -> bool:
-        """Abre a porta no localhost; ocupada, fica fechada e tenta de novo na próxima volta."""
+    def abrir(self, agora: float | None = None) -> bool:
+        """Abre a porta no localhost; ocupada, fica fechada e tenta de novo a cada
+        ``RECUO_DA_ABERTURA_S``, dizendo a borda uma vez."""
         if self._socket is not None:
             return True
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        agora = time.monotonic() if agora is None else agora
+        if self._falhou_em is not None and agora - self._falhou_em < RECUO_DA_ABERTURA_S:
+            return False
+        sock: socket.socket | None = None
         try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setblocking(False)
             sock.bind((ENDERECO, self.porta))
-        except OSError:
-            sock.close()
-            logger.debug("telemetria_porta_ocupada", porta=self.porta, exc_info=True)
+        except OSError as falha:
+            if sock is not None:
+                sock.close()
+            if self.motivo is None:
+                logger.warning("telemetria_porta_ocupada", porta=self.porta, erro=str(falha))
+            self._falhou_em = agora
+            self.motivo = type(falha).__name__
             return False
         self._socket = sock
+        self._falhou_em = None
+        self.motivo = None
         logger.info("telemetria_aberta", porta=self.endereco_escutado)
         return True
 
     def fechar(self) -> None:
+        self._falhou_em, self.motivo = None, None
         if self._socket is None:
             return
         with contextlib.suppress(OSError):
@@ -330,7 +345,7 @@ class TelemetriaDoJogo:
         if estilo not in ESTILOS_DA_TELEMETRIA:
             self.fechar()
             return 0
-        if not self.abrir():
+        if not self.abrir(agora):
             return 0
         return self.receber(agora)
 
@@ -366,6 +381,7 @@ class TelemetriaDoJogo:
         return {
             "aberta": self.aberta,
             "porta": self.porta,
+            "motivo": self.motivo,
             "formato": None if ultimo is None else ultimo.formato,
             **self.contadores,
         }
@@ -547,11 +563,20 @@ class AtuadorDaTelemetria:
             self.devolver(uniq, agora)
 
 
+def _andar_sem_cair(daemon: Any, tel: TelemetriaDoJogo, aviso: _tv.AvisoPorMinuto) -> None:
+    """Uma volta da telemetria: a falha vai ao diário, uma linha por minuto, e o laço segue."""
+    try:
+        tel.andar(time.monotonic(), _tv.estilo_ativo(daemon))
+    except Exception as falha:
+        aviso.dizer("telemetria_laco_falhou", falha)
+
+
 async def telemetria_loop(daemon: Any, tel: TelemetriaDoJogo) -> None:
+    aviso = _tv.AvisoPorMinuto()
     try:
         while not daemon._is_stopping():
             await asyncio.sleep(INTERVALO_DO_LACO_S)
-            tel.andar(time.monotonic(), _tv.estilo_ativo(daemon))
+            _andar_sem_cair(daemon, tel, aviso)
     finally:
         tel.fechar()
 
