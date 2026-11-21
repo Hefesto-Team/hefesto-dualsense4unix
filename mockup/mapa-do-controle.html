@@ -420,7 +420,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 <div class="cx mc" role="dialog" aria-modal="true" aria-label="Mapa do controle" data-tipo="nav"
      data-campo="mc-tipo" data-hef-alvo="atributo" data-hef-atributo="data-tipo">
   <div class="mc-topo">
-    <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a Navegação">← Voltar</a>
+    <a class="voltar2 voltar" href="06-navegacao.html" data-gesto="mapa-cancelar" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para onde você estava">← Voltar</a>
     <h1 id="mc-titulo">Mapa do controle</h1>
     <span class="mc-vale"><span class="mc-rot" data-dica="A troca e a sequência valem para os controles acesos. A tecla e o mouse valem para todos, pelo perfil.">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico on" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico on" style="--plastico:#74588e" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico on" style="--plastico:#e4e0d8" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div></span>
   </div>
@@ -1236,7 +1236,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   </div>
   </div>
   <div class="mc-rod">
-    <a class="btn2" href="06-navegacao.html" data-gesto="mapa-cancelar">Cancelar</a>
+    <a class="btn2" href="06-navegacao.html" data-gesto="mapa-cancelar" onclick="if (history.length > 1) { history.back(); return false }">Cancelar</a>
     <button class="btn2 amarelo" data-gesto="mapa-padrao">Voltar ao padrão</button>
     <button class="btn2 roxo" data-gesto="mapa-guardar">Guardar</button>
   </div>

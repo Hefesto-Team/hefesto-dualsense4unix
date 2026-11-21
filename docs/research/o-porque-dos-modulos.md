@@ -1933,6 +1933,38 @@ estava de pé, e levou junto o `hefesto-bt-agent`, que confirmaria o repareament
 vigia existe para pegar, é o daemon recusando vários aparelhos ao mesmo tempo; dois aparelhos distintos é
 o menor limiar que separa as duas leituras.
 
+## o mapa do controle (`interface/pacotes/a13_mapa_do_controle.py`), 20/11/2026
+
+`mapa-do-controle.html`, A-ABA-MAPA-DO-CONTROLE-DO-TODO-01 (15/10/2026). O desenho do
+todo (rodadas 2 a 4): o perfil em cima, o DualSense no meio, os botões dos dois lados,
+e um seletor por botão que diz no que ele vira (outro botão, mouse ou tecla).
+
+O QUE A TELA É, e de quem é cada coisa:
+
+* **o perfil** (`#perfil`): `nav` é o perfil que está valendo agora, o mesmo que a
+  Navegação lê e grava (`Profile.button_actions`); `molde:<chave>` são os quatro
+  moldes de `profiles.loader.MOLDES_DE_PERFIL` (o dono dos quatro nomes, iguais aqui e
+  na Navegação); `perfil:<nome>` é um perfil do disco que já configura botão; `novo` é
+  o perfil em branco. O molde e o novo só viram arquivo no «Guardar», e viram um perfil
+  NOVO em «Meus perfis» (o molde é código, não arquivo).
+* **o valor de cada botão**: uma de duas coisas, e escolher uma limpa a outra naquele
+  botão. «Troca» é `Profile.remapeamento` (o que o jogo recebe, o motor é
+  `core/remapeamento_de_botao`); «ação» é `Profile.button_actions` (o que o botão faz
+  no computador, o motor é `core/acoes_de_botao`). Os botões que o motor recusa (as
+  direções dos analógicos, o toque no touchpad, o PS) aparecem, mas não se trocam.
+* **a edição** mora em `_EDITANDO` e só vai ao disco no «Guardar». Larga-se em dois
+  pontos, e nunca por tempo: a abertura da página (`_ao_abrir`) e o «Cancelar»
+  (`mapa_cancelar`); a janela escondida, o tique parado e um gesto não a perdem.
+
+O que a página lê do aparelho é o botão sob o dedo (`aceso-<peça>`, a leitura do pisca
+da Controles), a barra de luz (`luz-cor`) e os chips: um por controle, na cor do
+plástico. Os sensores, as luzes e o áudio saíram desta página (moram nas abas
+Controles e Iluminação), e os chips «Todos» e «Nenhum» também.
+
+Funções privadas de outras abas usadas aqui, declaradas: a troca de botões e o nome do
+botão (`a06_navegacao`), o nome livre e a prioridade do perfil novo (`a10_perfis`). A
+alternativa seria a segunda verdade de cada uma, que esta casa persegue.
+
 ## o gesto da fita (`interface/hefesto_vivo.py`, `_escolher_na_fita`)
 
 Ele não troca de perfil e não grava no disco do usuário. Só o «Todos» fala com o serviço

@@ -1,34 +1,11 @@
 #!/usr/bin/env python3
-"""O mapa do controle é a tela de configurar os botões de um perfil.
+"""O mapa do controle é a tela de configurar os botões de um perfil (`mapa-do-controle.html`).
 
-`mapa-do-controle.html`, A-ABA-MAPA-DO-CONTROLE-DO-TODO-01 (15/10/2026). O desenho do
-todo (rodadas 2 a 4): o perfil em cima, o DualSense no meio, os botões dos dois lados,
-e um seletor por botão que diz no que ele vira (outro botão, mouse ou tecla).
-
-O QUE A TELA É, e de quem é cada coisa:
-
-* **o perfil** (`#perfil`): `nav` é o perfil que está valendo agora, o mesmo que a
-  Navegação lê e grava (`Profile.button_actions`); `molde:<chave>` são os quatro
-  moldes de `profiles.loader.MOLDES_DE_PERFIL` (o dono dos quatro nomes, iguais aqui e
-  na Navegação); `perfil:<nome>` é um perfil do disco que já configura botão; `novo` é
-  o perfil em branco. O molde e o novo só viram arquivo no «Guardar», e viram um perfil
-  NOVO em «Meus perfis» (o molde é código, não arquivo).
-* **o valor de cada botão**: uma de duas coisas, e escolher uma limpa a outra naquele
-  botão. «Troca» é `Profile.remapeamento` (o que o jogo recebe, o motor é
-  `core/remapeamento_de_botao`); «ação» é `Profile.button_actions` (o que o botão faz
-  no computador, o motor é `core/acoes_de_botao`). Os botões que o motor recusa (as
-  direções dos analógicos, o toque no touchpad, o PS) aparecem, mas não se trocam.
-* **a edição** mora em `_EDITANDO` e só vai ao disco no «Guardar». Some sozinha se o
-  tique parar por mais de `PAUSA_DE_OUTRA_ABA` (a mesma regra da Navegação).
-
-O que a página lê do aparelho é o botão sob o dedo (`aceso-<peça>`, a leitura do pisca
-da Controles), a barra de luz (`luz-cor`) e os chips: um por controle, na cor do
-plástico. Os sensores, as luzes e o áudio saíram desta página (moram nas abas
-Controles e Iluminação), e os chips «Todos» e «Nenhum» também.
-
-Funções privadas de outras abas usadas aqui, declaradas: a troca de botões e o nome do
-botão (`a06_navegacao`), o nome livre e a prioridade do perfil novo (`a10_perfis`). A
-alternativa seria a segunda verdade de cada uma, que esta casa persegue.
+O perfil em cima, o DualSense no meio, um seletor por botão que diz no que ele vira (outro botão,
+mouse ou tecla). «Troca» é `Profile.remapeamento`; «ação» é `Profile.button_actions`. A edição mora
+em `_EDITANDO` e só vai ao disco no «Guardar»; larga-se na abertura da página e no «Cancelar», nunca
+por tempo. A página lê do aparelho o botão sob o dedo, a barra de luz e os chips. O porquê de cada
+parte: docs/research/o-porque-dos-modulos.md, «o mapa do controle».
 """
 from __future__ import annotations
 
@@ -36,7 +13,6 @@ import html
 import itertools
 import sys
 import threading
-import time
 from typing import Any, NamedTuple
 
 import monta
@@ -53,7 +29,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 from hefesto_dualsense4unix.profiles import estilos_de_jogo
 from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
-from . import GESTOS, Contexto, fios, gesto, perfil, registrar
+from . import GESTOS, Contexto, ao_abrir, fios, gesto, perfil, registrar
 from . import a02_controles as a02
 from . import a06_navegacao as a06
 from . import em_fundo as fundo
@@ -67,8 +43,6 @@ BLOCO_DO_PERFIL = "#perfil"
 
 ACESO = "aceso-"
 LUZ = "luz-cor"
-
-PAUSA_DE_OUTRA_ABA = 5.0
 
 NAV, NOVO = "nav", "novo"
 ACAO = "acao"  # (noqa-acento)
@@ -173,14 +147,10 @@ PISCAM: tuple[str, ...] = (*ALL_BUTTONS, *NOME_NO_LEITOR)
 DESTINO_DA_PECA = {"stick_l": "l3", "stick_r": "r3", "share": "create"}
 
 _EDITANDO: dict[str, Any] = {}
-_VISTO: list[float] = [0.0]
 
 
 def _estado() -> dict[str, Any]:
-    """A edição em curso, ou a de partida; some se o tique parou."""
-    agora = time.monotonic()
-    if _EDITANDO and _VISTO[0] and agora - _VISTO[0] > PAUSA_DE_OUTRA_ABA:
-        _EDITANDO.clear()
+    """A edição em curso, ou a de partida; só se larga ao abrir a página ou no «Cancelar»."""
     if not _EDITANDO:
         _EDITANDO.update({"chave": NAV, "edicoes": {}, "nome": None,
                           "usar_em": None, "botao": None, "peca": None,
@@ -190,6 +160,12 @@ def _estado() -> dict[str, Any]:
 
 def _largar() -> None:
     _EDITANDO.clear()
+
+
+@ao_abrir(PAGINA)
+def _ao_abrir() -> None:
+    """A página abriu de novo, do zero: a edição que ficou da vez anterior não volta."""
+    _largar()
 
 
 def _estilo_de_clicar(cru: dict[str, Any]) -> bool:
@@ -652,7 +628,6 @@ def chips_do_controle(mesa: list[dict[str, Any]], ativo: str, *, vivo: bool = Tr
 @registrar(PAGINA)
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """O que o tique escreve na tela: a edição, o botão sob o dedo, a luz e os chips."""
-    _VISTO[0] = time.monotonic()
     ativo, itens = _escolhidos(ctx)
     _largar_se_outro_controle(ctx, no_tique=True)
     acesas = _acesos(ctx, itens)
@@ -688,7 +663,6 @@ def _largar_se_outro_controle(ctx: Contexto, *, no_tique: bool = False) -> None:
 
 def _repinta(ctx: Contexto) -> dict[str, Any]:
     """A resposta de um gesto: a tela inteira de agora, sem esperar o próximo tique."""
-    _VISTO[0] = time.monotonic()
     _largar_se_outro_controle(ctx)
     _, itens = _escolhidos(ctx)
     return {"mesa": {**_mesa_da_edicao(ctx), **_linhas(ctx, _acesos(ctx, itens)),
@@ -895,7 +869,7 @@ def mapa_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "mapa-cancelar")
 def mapa_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Cancelar»: larga o que não foi guardado. A volta à Navegação é do link."""
+    """«Cancelar» e «← Voltar»: larga o que não foi guardado. A volta é do link, pelo histórico."""
     _largar()
 
 

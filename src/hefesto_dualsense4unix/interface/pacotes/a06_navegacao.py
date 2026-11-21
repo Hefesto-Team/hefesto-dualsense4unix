@@ -514,9 +514,6 @@ def _o_ps_digita(token: str | None) -> bool | None:
     return bool(do_dono(token))
 
 
-PAUSA_DE_OUTRA_ABA = 5.0
-
-
 def _rotulo_do_destino(botao: str) -> str:
     """O id de destino → o texto da `<option>`. Sem rótulo, o id cru."""
     for rotulo, alvo in ROTULOS_DA_TROCA.items():

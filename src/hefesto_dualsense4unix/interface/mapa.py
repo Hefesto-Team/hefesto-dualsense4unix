@@ -982,7 +982,7 @@ def main():
 <div class="cx mc" role="dialog" aria-modal="true" aria-label="Mapa do controle" data-tipo="nav"
      data-campo="mc-tipo" data-hef-alvo="atributo" data-hef-atributo="data-tipo">
   <div class="mc-topo">
-    <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) {{ history.back(); return false }}" title="Volta para a Navegação">← Voltar</a>
+    <a class="voltar2 voltar" href="06-navegacao.html" data-gesto="mapa-cancelar" onclick="if (history.length > 1) {{ history.back(); return false }}" title="Volta para onde você estava">← Voltar</a>
     <h1 id="mc-titulo">Mapa do controle</h1>
     <span class="mc-vale"><span class="mc-rot" data-dica="A troca e a sequência valem para os controles acesos. A tecla e o mouse valem para todos, pelo perfil.">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa">{_chips_de_exemplo()}</div></span>
   </div>
@@ -1026,7 +1026,7 @@ def main():
   </div>
   </div>
   <div class="mc-rod">
-    <a class="btn2" href="06-navegacao.html" data-gesto="mapa-cancelar">Cancelar</a>
+    <a class="btn2" href="06-navegacao.html" data-gesto="mapa-cancelar" onclick="if (history.length > 1) {{ history.back(); return false }}">Cancelar</a>
     <button class="btn2 amarelo" data-gesto="mapa-padrao">Voltar ao padrão</button>
     <button class="btn2 roxo" data-gesto="mapa-guardar">Guardar</button>
   </div>
