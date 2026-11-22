@@ -20,6 +20,15 @@ Mordidas (cada uma arrancada, vista reprovar e devolvida):
 * tirar o ramo ``disconnect`` da classificação em ``scripts/storm_watch.sh``:
   :func:`test_o_vigia_leva_a_queda_ao_diario_e_nao_leva_o_que_nao_e_queda` reprova;
 * tirar o filtro ``hq != "vhci_hcd"`` da classificação: o mesmo teste reprova pelo pad virtual;
+* apagar todas as saídas guardadas quando uma porta volta (``delete saiu_em``):
+  :func:`test_quatro_portas_que_caem_juntas_viram_quatro_quedas` reprova;
+* tirar ``chegou < ponto`` de ``_fora_pelo_kernel``:
+  :func:`test_o_aviso_de_antes_da_saida_nao_vira_volta` reprova;
+* contar a saída pela leitura e não pelo ``remove`` (``ponto = saiu_em``):
+  :func:`test_o_remove_do_kernel_conta_a_saida_pela_hora_dele` reprova;
+* ``_campos_da_porta`` que lê o aparelho sem conferir se ele está no censo:
+  :func:`test_a_queda_chega_com_a_porta_ainda_vazia_e_leva_a_porta_os_hubs_e_a_controladora`
+  reprova;
 * tirar o padrão do ``disconnect`` do ``GREP_UNION``:
   :func:`test_o_filtro_do_journal_deixa_passar_o_disconnect_e_o_new` reprova;
 * tirar a chamada aos assinantes do ``_avisar_a_volta``: os testes do ouvido reprovam;
@@ -210,6 +219,27 @@ def test_o_remove_do_kernel_conta_a_saida_pela_hora_dele(
     assert volta["fora_s"] == 9.2
 
 
+def test_o_aviso_de_antes_da_saida_nao_vira_volta(
+        sys_usb: SysDeMentira, tmp_path: Path) -> None:
+    """Um ``add`` velho, de antes da saída, não diz quando o aparelho voltou."""
+    sys_usb.por(PORTA, _controle("1.4", "3-1", 8))
+    relogio = Relogio(T0 - 100.0)
+    ouvido = _ouvido(sys_usb, tmp_path, relogio)
+    ouvido.comecar(com_netlink=True)
+    controle = dict(sys_usb.nos[PORTA])
+    relogio.t = T0 - 50.0
+    ouvido.ouviu(_uevent("add", PORTA))
+    sys_usb.tirar(PORTA)
+    relogio.t = T0
+    ouvido.reler()
+    relogio.t = T0 + 19.9
+    sys_usb.por(PORTA, controle)
+    sys_usb.mudar(PORTA, devnum="11")
+    ouvido.reler()
+    assert not _linhas(tmp_path, du.VOLTOU)
+    assert len(_linhas(tmp_path, du.ENTROU)) == 1
+
+
 def test_sem_aviso_do_kernel_vale_a_hora_da_leitura(
         sys_usb: SysDeMentira, tmp_path: Path) -> None:
     """Sem netlink vale o de antes: até 10 s depois da saída é volta, sem ``fora_s``."""
@@ -338,6 +368,37 @@ def test_o_vigia_leva_a_queda_ao_diario_e_nao_leva_o_que_nao_e_queda(
         "2026-11-21T18:10:29.044291-03:00"))
     assert SERIAL_FORJADO not in diario.read_text(encoding="utf-8"), "o serial nunca entra"
     assert len(du.ler(diario)) == 1, "nada além da queda entrou no diário"
+
+
+def test_a_queda_chega_com_a_porta_ainda_vazia_e_leva_a_porta_os_hubs_e_a_controladora(
+        sys_usb: SysDeMentira, tmp_path: Path) -> None:
+    """Às 18:10:29,044 o aparelho novo ainda não está no ``/sys``: o lugar vem da porta e do hub."""
+    sys_usb.tirar(PORTA)
+    saida = _o_vigia(list(LINHAS_DE_21_11), sys_usb, _diario(tmp_path), tmp_path)
+    assert saida.returncode == 0, saida.stderr
+    assert f" · lugar pci-{CONTROLADORA}-usb-0:1.4" in saida.stdout, saida.stdout
+    [caiu] = _linhas(tmp_path, du.CAIU)
+    assert (caiu["no"], caiu["hubs"], caiu["controladora"]) == (PORTA, ["3-1"], CONTROLADORA)
+    assert (caiu["vid"], caiu["pid"], caiu["fora_ms"]) == ("", "", 353)
+
+
+def test_quatro_portas_que_caem_juntas_viram_quatro_quedas(
+        sys_usb: SysDeMentira, tmp_path: Path) -> None:
+    """O hub que pisca com P1 a P4 nele: as linhas se cruzam, cada porta é uma queda."""
+    portas = ("3-1.1.2", "3-1.1.3", "3-1.1.4", PORTA)
+    hora = "2026-11-21T18:10:{:06.3f}000-03:00 computador kernel: "
+    linhas = [hora.format(28.1 + i * 0.01) + f"usb {p}: USB disconnect, device number {10 + i}"
+              for i, p in enumerate(portas)]
+    linhas.append(hora.format(28.2) + PAR_DO_PAD_VIRTUAL[0].split("kernel: ", 1)[1])
+    linhas += [hora.format(28.5 + i * 0.1)
+               + f"usb {p}: new high-speed USB device number {20 + i} using xhci_hcd"
+               for i, p in enumerate(reversed(portas))]
+    saida = _o_vigia(linhas, sys_usb, _diario(tmp_path), tmp_path)
+    assert saida.returncode == 0, saida.stderr
+    quedas = {c["no"]: c for c in _linhas(tmp_path, du.CAIU)}
+    assert set(quedas) == set(portas), saida.stdout
+    assert quedas[PORTA]["fora_ms"] == 370
+    assert quedas["3-1.1.2"]["fora_ms"] == 700
 
 
 def test_o_limiar_da_queda_e_um_segundo(sys_usb: SysDeMentira, tmp_path: Path) -> None:
