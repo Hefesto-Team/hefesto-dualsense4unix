@@ -15,6 +15,7 @@ censo.
 """
 from __future__ import annotations
 
+import os
 import socket
 import struct
 import subprocess
@@ -310,7 +311,8 @@ def test_o_avulso_sem_a_estrutura_do_produto_ainda_poe_o_atalho_no_jogo_de_fora(
     """)
 
     r = subprocess.run([sys.executable, "-I", "-c", codigo], capture_output=True, text=True,
-                       cwd=tmp_path, check=False)
+                       cwd=tmp_path, check=False,
+                       env={"HOME": str(tmp_path), "PATH": os.environ.get("PATH", "/usr/bin:/bin")})
 
     assert r.returncode == 0, r.stderr
     assert set(r.stdout.strip().split(",")) == {str(JANELA), str(LINUX), str(OPT_OUT)}
