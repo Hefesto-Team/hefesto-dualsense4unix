@@ -219,29 +219,41 @@ _NUNCA_ANUNCIADO = object()
 _AVISO_EM_CURSO = threading.Lock()
 
 
+def _o_p1_em_voo(daemon: DaemonProtocol) -> tuple[str, str | None, bool] | None:
+    """`(máscara, caminho, permite uhid)` do P1 pedido ao fio e ainda não instalado, ou `None`."""
+    coop = getattr(daemon, "_coop_manager", None)
+    contar = getattr(coop, "o_p1_que_nasce", None)
+    if not callable(contar):
+        return None
+    em_voo = contar()
+    if em_voo is None:
+        return None
+    return (str(em_voo[0]), em_voo[1], bool(em_voo[2]))
+
+
 def ponte_atual(daemon: DaemonProtocol) -> str:
     """A ponte de pé AGORA, lida do estado VIVO — não da config.
 
-    O estado vivo é o vpad: se existe, a ponte é a máscara dele; se não
-    existe, o controle está indo para o desktop (mouse+teclado). Ler do
-    `config.gamepad_flavor` seria repetir o defeito da noite de 18/08, em que
-    o perfil dizia `xbox` e o vivo dizia `dualsense` — e o daemon ficou
-    destruindo e recriando o vpad em laço por acreditar no papel.
+    O estado vivo é o vpad: se existe, a ponte é o CAMINHO dele (o
+    `config.gamepad_caminho`, escrito só depois de o vpad alcançar o pedido; sem
+    escolha, a máscara que ele veste). Ler o papel (`config.gamepad_flavor`) repetiu
+    o defeito de 18/08, e ler a máscara travou o ciclo com máscara no cartão
+    (MODO-DE-CONEXAO-01, 13/09/2026).
 
-    NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. Com o vpad de pé, a ponte é o
-    CAMINHO dele, e não o `device.flavor`: ler a máscara travava o ciclo com
-    máscara no cartão (todo aperto pedia uma máscara que o cartão vencia, e o
-    vivo nunca virava o pedido). O caminho é o `config.gamepad_caminho`, que só
-    é escrito DEPOIS de o vpad alcançar o pedido (`gamepad._guardar_o_caminho`)
-    — é leitura do vivo, não do papel —, e sem escolha ele sai da máscara que o
-    vpad veste, como antes.
+    Sem vpad, vale o pedido do P1 que nasce pelo fio (`CoopManager.o_p1_que_nasce`,
+    o mesmo que o arme conta): o pad ainda não existe, e a ponte pedida não é mouse
+    e teclado (O-GESTO-DA-PONTE-CONTA-O-PAD-QUE-ESTA-NASCENDO-01, 22/11/2026). Sem
+    pedido em voo (descartado, ou o fio falhou), o controle vai para o desktop.
     """
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
     from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
 
     device = getattr(daemon, "_gamepad_device", None)
     if device is None:
-        return PONTE_MOUSE_TECLADO
+        em_voo = _o_p1_em_voo(daemon)
+        if em_voo is None:
+            return PONTE_MOUSE_TECLADO
+        return caminho_resolvido(em_voo[1], normalize_flavor(em_voo[0]))
     return caminho_resolvido(
         getattr(getattr(daemon, "config", None), "gamepad_caminho", None),
         normalize_flavor(getattr(device, "flavor", None)),
@@ -545,12 +557,22 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         ciclo. Para o Modo Nativo continuam valendo a GUI, a CLI e o IPC.
     """
 
+    ultimo_aperto = [0]
+
     async def _ciclar_ponte() -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            DESFECHOS_EMULACAO_ATIVA,
+            depois_do_p1,
+            esperar_o_p1_que_nasce,
+        )
+
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("ponte_ciclo_skip_native_mode")
             return
 
+        ultimo_aperto[0] += 1
+        este_aperto = ultimo_aperto[0]
         atual = ponte_atual(daemon)
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
 
@@ -601,6 +623,12 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             )
 
         ok = _aplicar_ponte(daemon, alvo)
+        desfecho = await esperar_o_p1_que_nasce(daemon, depois_do_p1(daemon))
+        if ultimo_aperto[0] != este_aperto:
+            logger.info("ponte_do_gesto_cedida_ao_aperto_seguinte", pedida=alvo)
+            return
+        if desfecho is not None and desfecho not in DESFECHOS_EMULACAO_ATIVA:
+            ok = False
         efetiva = ponte_atual(daemon)
         if degrau_da_escada is not None and efetiva == alvo:
             with contextlib.suppress(Exception):
