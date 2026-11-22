@@ -44,6 +44,7 @@ from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 logger = get_logger(__name__)
 
 TETO_DO_PEDIDO_MS = 100.0
+_TETO_DA_ESPERA_DO_FECHAMENTO_S = 1.0
 
 PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
     {"daemon.state_full", "controller.list", "profile.list"}
@@ -68,6 +69,7 @@ class IpcServer(IpcHandlersMixin):
     _server: asyncio.base_events.Server | None = None
     _socket_inode: int | None = None
     _escrevente: Any = None
+    _clientes: set[asyncio.StreamWriter] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         self._handlers = {
@@ -200,20 +202,39 @@ class IpcServer(IpcHandlersMixin):
                 probe.close()
 
     async def stop(self) -> None:
-        """Encerra o servidor e remove o socket apenas se ainda formos o owner."""
-        if self._server is not None:
-            self._server.close()
-            with contextlib.suppress(Exception):
-                await self._server.wait_closed()
+        """Encerra o servidor e remove o socket apenas se ainda formos o owner.
+
+        Fecha as conexões aceitas antes de esperar (o ``wait_closed`` do 3.12 espera todas),
+        limita a espera abaixo do teto de quem chama, e a limpeza roda mesmo se a espera
+        estourar ou for cancelada.
+        """
+        try:
+            if self._server is not None:
+                self._server.close()
+                self._derrubar_os_clientes()
+                with contextlib.suppress(Exception):
+                    await asyncio.wait_for(
+                        self._server.wait_closed(), timeout=_TETO_DA_ESPERA_DO_FECHAMENTO_S
+                    )
+        finally:
             self._server = None
-        self._tirar_o_socket()
-        escrevente, self._escrevente = self._escrevente, None
-        if escrevente is not None:
+            self._tirar_o_socket()
+            escrevente, self._escrevente = self._escrevente, None
+            if escrevente is not None:
+                with contextlib.suppress(Exception):
+                    await asyncio.shield(
+                        asyncio.to_thread(launch_env.desarmar_o_escrevente, escrevente)
+                    )
+            hub = self._sensor_hub
+            if hub is not None:
+                await asyncio.shield(asyncio.to_thread(hub.stop_all))
+
+    def _derrubar_os_clientes(self) -> None:
+        """Aborta o transporte de cada cliente: quem não lê nem fecha não segura a parada."""
+        for escritor in list(self._clientes):
             with contextlib.suppress(Exception):
-                await asyncio.to_thread(launch_env.desarmar_o_escrevente, escrevente)
-        hub = self._sensor_hub
-        if hub is not None:
-            await asyncio.to_thread(hub.stop_all)
+                escritor.transport.abort()
+        self._clientes.clear()
 
     def _tirar_o_socket(self) -> None:
         """Remove o socket do disco só se ainda formos o owner (o inode do `start`)."""
@@ -239,6 +260,7 @@ class IpcServer(IpcHandlersMixin):
     async def _serve_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
+        self._clientes.add(writer)
         try:
             while not reader.at_eof():
                 raw = await reader.readline()
@@ -255,6 +277,7 @@ class IpcServer(IpcHandlersMixin):
         except Exception as exc:
             logger.warning("ipc_client_error", err=str(exc), exc_info=True)
         finally:
+            self._clientes.discard(writer)
             with contextlib.suppress(Exception):
                 writer.close()
                 await writer.wait_closed()

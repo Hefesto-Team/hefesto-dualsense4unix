@@ -476,7 +476,7 @@ async def parar(daemon: Any) -> None:
             if inspect.isawaitable(resultado):
                 await resultado
         except Exception as exc:
-            logger.warning("subsystem_parada_falhou", subsystem=passo.nome, err=str(exc))
+            logger.warning("subsystem_parada_falhou", subsystem=passo.nome, err=repr(exc))
 
 
 __all__ = [
