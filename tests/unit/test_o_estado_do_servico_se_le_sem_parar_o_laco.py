@@ -5,6 +5,9 @@ do pad virtual, os controles sem driver, o endereço do adaptador, o orçamento 
 barra; cada cliente refazia a leitura inteira. Aqui as leituras de `/sys` e do HCI dormem 200 ms,
 quatro controles no rádio e quatro pads virtuais, dois clientes pedindo o estado a 2 Hz pelo
 socket de verdade.
+
+Decisão proposta (22/11/2026, a validar):
+D-2211-O-ESTADO-RESPONDE-DO-GUARDADO-E-A-LEITURA-CORRE-FORA-DO-LACO.
 """
 from __future__ import annotations
 

@@ -4,6 +4,10 @@ O-IPC-RECUSA-O-QUE-NAO-SERVE-E-RESPONDE-SEMPRE-01: o `daemon.reload` aceitava `r
 e matava o laço; a resposta acima de 64 KiB estourava o cliente; um cliente calado segurava o
 descritor para sempre; um JSON fundo ou um resultado que não serializa fechava a conexão sem
 resposta. O servidor, nos casos abaixo, está num socket de pasta temporária.
+
+Decisões propostas (22/11/2026, a validar):
+D-2211-O-RELOAD-SO-APLICA-A-LISTA-FECHADA-AO-VIVO e
+D-2211-O-IPC-SOLTA-O-CLIENTE-CALADO-E-LIMITA-AS-CONEXOES.
 """
 from __future__ import annotations
 
