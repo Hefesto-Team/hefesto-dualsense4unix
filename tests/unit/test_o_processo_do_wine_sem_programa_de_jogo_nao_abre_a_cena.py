@@ -226,3 +226,59 @@ def test_o_registro_muda_com_o_processo_que_segura(
         ("winedevice.exe", "STEAM_COMPAT_DATA_PATH no ambiente"),
         ("forja", "aplicativo aberto que lê o controle"),
     ]
+
+
+def _quatro_pads(proc: Proc) -> tuple[dict[str, Any], dict[str, Path]]:
+    pads: dict[str, Any] = {}
+    nos: dict[str, Path] = {}
+    for n in range(1, 5):
+        no = proc.raiz / "dev" / f"event{20 + n}"
+        no.write_bytes(b"")
+        mac = f"aa:bb:cc:00:00:0{n}"
+        pads[f"p{n}"] = SimpleNamespace(mac=mac, name="pad (Hefesto)")
+        nos[mac] = no
+    return pads, nos
+
+
+def _jogos_dos_quatro(proc: Proc, pads: dict[str, Any], nos: dict[str, Path]) -> dict[str, Any]:
+    def resolvedor(*, uniq: str, **_kw: Any) -> dict[str, Any]:
+        return {"evdev": str(nos[uniq]), "ino": nos[uniq].stat().st_ino}
+
+    return qsp.jogos_por_pad(
+        pads,
+        raiz_proc=proc.proc,
+        resolver=resolvedor,
+        raiz_dev=str(proc.raiz / "dev"),
+        meu_pid=MEU_PID,
+    )
+
+
+def _segura_os_quatro(proc: Proc, pid: int, nos: dict[str, Path]) -> None:
+    for fd, no in enumerate(nos.values(), start=10):
+        (proc.raiz / "proc" / str(pid) / "fd" / str(fd)).symlink_to(no)
+
+
+def test_os_quatro_pads_segurados_pelo_wine_do_avaliador_ficam_sem_jogo(
+    proc: Proc, diario: list[dict[str, Any]]
+) -> None:
+    pads, nos = _quatro_pads(proc)
+    pid = _avaliador(proc)
+    _segura_os_quatro(proc, pid, nos)
+    assert _jogos_dos_quatro(proc, pads, nos) == {}, FRASE
+    assert diario == []
+
+
+def test_os_quatro_pads_da_partida_dizem_o_motivo_uma_vez_cada_e_o_que_sai_volta_sozinho(
+    proc: Proc, diario: list[dict[str, Any]]
+) -> None:
+    pads, nos = _quatro_pads(proc)
+    pid = _partida(proc)
+    _segura_os_quatro(proc, pid, nos)
+    for _ in range(2):
+        assert sorted(_jogos_dos_quatro(proc, pads, nos)) == ["p1", "p2", "p3", "p4"]
+    assert sorted(r["pad"] for r in diario) == ["p1", "p2", "p3", "p4"]
+    (proc.raiz / "proc" / str(pid) / "fd" / "12").unlink()
+    assert sorted(_jogos_dos_quatro(proc, pads, nos)) == ["p1", "p2", "p4"]
+    (proc.raiz / "proc" / str(pid) / "fd" / "12").symlink_to(nos["aa:bb:cc:00:00:03"])
+    _jogos_dos_quatro(proc, pads, nos)
+    assert [r["pad"] for r in diario[4:]] == ["p3"]
