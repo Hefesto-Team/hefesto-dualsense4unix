@@ -59,15 +59,16 @@ import re
 import struct
 import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core import system_check
 from hefesto_dualsense4unix.core.numeros_da_sony import BOTOES2_DA_ROUPA, roupa_normalizada
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
-from hefesto_dualsense4unix.integrations import pad_usb, usb_pai
+from hefesto_dualsense4unix.integrations import o_cabo_em_espera, pad_usb, usb_pai
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
@@ -897,8 +898,15 @@ class UhidDualSense:
         )
 
 
-    def _criar_o_device(self) -> bool:
-        """O corpo do `start` (que mora no fim da classe): False = indisponível."""
+    def _criar_o_device(self, esperar_o_kernel_s: float = 0.0) -> bool:
+        """O corpo do `start` (que mora no fim da classe): False = indisponível.
+
+        O endereço do pad só vale se o kernel já soltou o gêmeo: o estacionado de outra
+        roupa desce primeiro, e o `hid_playstation` que ainda tem o endereço na lista
+        se espera até ``esperar_o_kernel_s`` (o `start`; o tique não espera) antes de o
+        pad vestir o próximo endereço do aparelho. Só depois saem as features e o
+        `UHID_CREATE2`, que carregam o endereço.
+        """
         if self._fd is not None:
             return True
         if self.blueprint is None:
@@ -910,7 +918,11 @@ class UhidDualSense:
         except (KeyError, TypeError, ValueError) as exc:
             logger.warning("uhid_blueprint_invalido", err=str(exc), player=self.player)
             return False
-        if _o_pad_em_usb(self, features):
+        retomado = _retomar_o_estacionado(self)
+        if _esperar_o_kernel_soltar_o_endereco(self, esperar_o_kernel_s, retomado):
+            features = self._features_com_mac_proprio()
+            create_event = self._create2_event(self.blueprint["descriptor"])
+        if _o_pad_em_usb(self, features, retomado):
             return True
 
         try:
@@ -1893,7 +1905,7 @@ class UhidDualSense:
         self._mic_bit_que_saiu = False
         _DESCIDA_AO_BROKER.esperar_o_aparelho(self, _DESCIDA_DO_SERIAL_ESPERA_S)
         _MACS_DOS_VPADS_VIVOS.vestir(self)
-        if self._criar_o_device():
+        if self._criar_o_device(_O_KERNEL_ESPERA_S):
             return True
         _MACS_DOS_VPADS_VIVOS.despir(self)
         return False
@@ -2218,6 +2230,10 @@ class UhidDualSense:
 
 _MACS_POR_APARELHO = 64
 
+_O_KERNEL_ESPERA_S = 1.0
+
+_O_KERNEL_PASSO_S = 0.005
+
 
 def vpad_macs_do_aparelho(identity: str | None, player: int) -> Iterator[str]:
     """Os MACs que o vpad deste aparelho pode vestir, na ordem em que o dono os tenta."""
@@ -2237,7 +2253,13 @@ def vpad_macs_do_aparelho(identity: str | None, player: int) -> Iterator[str]:
 
 
 class _MacsDosVpadsVivos:
-    """Quem veste cada MAC agora — o espelho, deste lado, da lista do `hid_playstation`."""
+    """Quem veste cada MAC agora, deste lado: o espelho da lista do `hid_playstation`.
+
+    O espelho só sabe dos pads deste processo e solta o MAC quando o pad devolve o
+    gadget ao broker; a resposta do broker não é a saída do kernel, que tira o aparelho
+    USB depois (0 a 236 ms medidos). Quem entrega o MAC ao pad confere antes o que o
+    kernel tem (:func:`_esperar_o_kernel_soltar_o_endereco`) e usa :meth:`trocar`.
+    """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -2265,6 +2287,29 @@ class _MacsDosVpadsVivos:
             logger.info("uhid_mac_do_aparelho_ja_vestido", pedido=pedido, vestido=mac,
                         player=pad.player)
         return mac
+
+    def trocar(self, pad: UhidDualSense, no_kernel: Collection[str]) -> str:
+        """Veste em `pad` o primeiro MAC do aparelho que ninguém veste e o kernel não tem.
+
+        ``no_kernel`` são os endereços em minúsculas que o `hid_playstation` guarda agora.
+        Sem alternativa livre o pad segue com o que veste.
+        """
+        import weakref
+
+        with self._lock:
+            atual = self._de(pad)
+            for mac in vpad_macs_do_aparelho(pad.identity, pad.player):
+                if mac in no_kernel:
+                    continue
+                dono = self._vestido_por.get(mac)
+                if dono is not None and dono() is not None and dono() is not pad:
+                    continue
+                if atual is not None and atual != mac:
+                    del self._vestido_por[atual]
+                self._vestido_por[mac] = weakref.ref(pad)
+                return mac
+        logger.warning("uhid_mac_sem_alternativa_livre", pedido=atual, player=pad.player)
+        return atual or vpad_mac(pad.identity, pad.player)
 
     def despir(self, pad: UhidDualSense) -> None:
         """Devolve o MAC que `pad` veste. Idempotente."""
@@ -2786,11 +2831,83 @@ def _avisar_o_f_hid_sem_marca() -> None:
 _F_HID_SEM_MARCA_AVISADO: list[bool] = []
 
 
-def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
-    """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
+def _retomar_o_estacionado(pad: UhidDualSense) -> _GadgetDoPad | None:
+    """O estacionado do aparelho sai da vaga antes de o endereço ser escolhido.
+
+    Devolve o da mesma roupa (o :func:`_o_pad_em_usb` o usa); o de outra roupa desce pela
+    fila na hora, e o kernel o tira depois, o que a conferência do endereço espera. O pad
+    que volta ao uhid (`_sem_gadget`) não retoma nada.
+    """
+    if pad._sem_gadget or pad.blueprint is None:
+        return None
+    return _GADGETS_ESTACIONADOS.retomar(pad.identity, (DUALSENSE_VENDOR, pad.product), pad)
+
+
+def _enderecos_no_kernel() -> frozenset[str]:
+    """Os `HID_UNIQ` (minúsculos) dos HID ligados a um driver agora.
+
+    Só o HID com driver está na lista do `hid_playstation`: o recusado guarda o
+    endereço no `uevent` sem driver e não recusa ninguém.
+    """
+    base = Path(o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID)
+    try:
+        pastas = sorted(base.iterdir())
+    except OSError:
+        return frozenset()
+    achados: set[str] = set()
+    for pasta in pastas:
+        if not (pasta / "driver").exists():
+            continue
+        uniq = o_cabo_em_espera._uniq_do_hid(pasta)
+        if uniq:
+            achados.add(uniq.lower())
+    return frozenset(achados)
+
+
+def _esperar_o_kernel_soltar_o_endereco(
+    pad: UhidDualSense, esperar_s: float, retomado: _GadgetDoPad | None = None
+) -> bool:
+    """O pad só veste o endereço que o kernel já soltou. True = o endereço mudou.
+
+    O gadget que desceu segue no kernel, com o endereço dele na lista do
+    `hid_playstation`, até o aparelho USB sair do hub; o uhid novo com o mesmo
+    endereço é recusado (`-EEXIST`). Espera até ``esperar_s`` (zero no tique do
+    `pump_ff`) a saída do gêmeo; passado o prazo, o espelho entrega o próximo endereço
+    do aparelho. O gadget que o pad vai usar (retomado ou na mão) é dele, não gêmeo.
+    """
+    if retomado is not None or pad._gadget_na_mao is not None:
+        return False
+    mac = pad.mac.lower()
+    no_kernel = _enderecos_no_kernel()
+    if mac not in no_kernel:
+        return False
+    comeco = time.monotonic()
+    while mac in no_kernel and time.monotonic() - comeco < esperar_s:
+        time.sleep(_O_KERNEL_PASSO_S)
+        no_kernel = _enderecos_no_kernel()
+    esperou_ms = round((time.monotonic() - comeco) * 1000)
+    if mac not in no_kernel:
+        logger.info("vpad_esperou_o_kernel_soltar_o_endereco", player=pad.player,
+                    mac=mac, esperou_ms=esperou_ms)
+        return False
+    novo = _MACS_DOS_VPADS_VIVOS.trocar(pad, no_kernel)
+    logger.warning("vpad_endereco_ainda_no_kernel_veste_o_proximo", player=pad.player,
+                   pedido=mac, vestido=novo, esperou_ms=esperou_ms)
+    return novo != mac
+
+
+def _o_pad_em_usb(
+    pad: UhidDualSense, features: dict[int, bytes], retomado: _GadgetDoPad | None = None
+) -> bool:
+    """O pad nasce no gadget? False = segue o uhid de sempre, intacto.
+
+    ``retomado`` é o estacionado da mesma roupa que o `_criar_o_device` já tirou da vaga.
+    """
     if pad._sem_gadget or pad.blueprint is None:
         return False
-    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, (DUALSENSE_VENDOR, pad.product), pad)
+    gadget = retomado or _GADGETS_ESTACIONADOS.retomar(
+        pad.identity, (DUALSENSE_VENDOR, pad.product), pad
+    )
     if gadget is None:
         gadget, pad._gadget_na_mao = pad._gadget_na_mao, None
     if gadget is None:
@@ -3462,11 +3579,12 @@ class _DescidaAoBroker:
     def esperar_o_aparelho(self, pad: object, segundos: float) -> bool:
         """O pad novo espera a descida do pad do MESMO aparelho que parou.
 
-        O gadget dele segue no kernel com o MAC do aparelho até o broker o
-        desmontar, e o `hid_playstation` recusa o MAC repetido: sem a espera, o
-        pad novo vestiria outro MAC. Conta o MAC que ainda não voltou, a descida
-        pendente e o pedido largado em voo, cujo gadget ainda pode chegar.
-        True = nenhum, em até ``segundos``.
+        O gadget dele segue no kernel com o MAC do aparelho até o aparelho USB sair do
+        hub, e o `hid_playstation` recusa o MAC repetido. A resposta do broker não é essa
+        saída: o broker só espera a fila daqui, e quem confere o que o kernel tem é
+        :func:`_esperar_o_kernel_soltar_o_endereco`. Esta espera conta o MAC que ainda não
+        voltou, a descida pendente e o pedido largado em voo, cujo gadget ainda pode
+        chegar. True = nenhum, em até ``segundos``.
         """
         identidade = pad_usb._so_hex(getattr(pad, "identity", None) or "")
         if not identidade:
