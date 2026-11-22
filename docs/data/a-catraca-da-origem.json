@@ -259,14 +259,14 @@
       "data": "2026-11-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1301924,
+      "piso": 1302885,
       "por_item": {
-        "docs": 107904,
+        "docs": 107906,
         "scripts": 116096,
-        "src": 328770,
-        "tests": 749154
+        "src": 329129,
+        "tests": 749754
       },
-      "razao": "tamanho: +597 linhas (1301327 -> 1301924), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1510-A-JANELA-DA-STEAM-NAO-TOMA-O-TOQUE, D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo 0d28e46ce7a1",
+      "razao": "tamanho: +961 linhas (1301924 -> 1302885), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1510-A-JANELA-DA-STEAM-NAO-TOMA-O-TOQUE, D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-A-LUZ-SE-ESCREVE-FORA-DO-FIO-DO-LACO, D-2211-O-CONTROLE-ABRE-SEM-ESPERAR-O-PRIMEIRO-REPORT, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo 069bdcb4a0ae",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2391,10 +2391,16 @@
           "de": 1301327,
           "para": 1301924,
           "razao": "tamanho: +597 linhas (1301327 -> 1301924), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1510-A-JANELA-DA-STEAM-NAO-TOMA-O-TOQUE, D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo 0d28e46ce7a1"
+        },
+        {
+          "data": "2026-11-22",
+          "de": 1301924,
+          "para": 1302885,
+          "razao": "tamanho: +961 linhas (1301924 -> 1302885), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1510-A-JANELA-DA-STEAM-NAO-TOMA-O-TOQUE, D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-A-LUZ-SE-ESCREVE-FORA-DO-FIO-DO-LACO, D-2211-O-CONTROLE-ABRE-SEM-ESPERAR-O-PRIMEIRO-REPORT, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo 069bdcb4a0ae"
         }
       ],
       "unidade": "linhas",
-      "universo": 3638
+      "universo": 3640
     }
   }
 }
