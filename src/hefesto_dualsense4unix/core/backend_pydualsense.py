@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field, replace
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from pydualsense import pydualsense
@@ -95,6 +96,286 @@ def _acordar_a_volta_de(handle: Any) -> None:
     acordar = getattr(handle, "acordar_a_volta", None)
     if callable(acordar):
         acordar()
+
+
+@dataclass
+class _PedidoDeLuz:
+    """Um pedido de escrita de luz na fila de UM controle; junta com o vizinho do mesmo tipo."""
+
+    tipo: str
+    dados: dict[str, Any]
+    executar: Callable[[dict[str, Any]], None]
+
+
+class _EscritorDaLuz:
+    """O fio que escreve a luz de UM controle, fora do fio de quem pinta.
+
+    Quem pinta deixa o pedido e volta; o sysfs do LED, a leitura do brilho e o report direto do
+    rádio correm aqui. O pedido novo se junta ao último da fila quando é do mesmo tipo (o mais novo
+    vence, campo a campo); entre tipos a ordem é a da chegada. Quem precisa do resultado entra por
+    :meth:`agora`, que escoa a fila antes de escrever. O handle sem escritor (dublê, CLI) escreve na
+    hora. A-LUZ-DO-CONTROLE-SE-ESCREVE-FORA-DO-FIO-DO-LACO-01.
+    """
+
+    def __init__(self, nome: str) -> None:
+        self._nome = nome
+        self._trava = threading.RLock()
+        self._fila_trava = threading.Condition()
+        self._fila: list[_PedidoDeLuz] = []
+        self._acorda = threading.Event()
+        self._fechado = False
+        self._rodando = False
+        self._fio: threading.Thread | None = None
+
+    def pedir(
+        self,
+        tipo: str,
+        dados: dict[str, Any],
+        executar: Callable[[dict[str, Any]], None],
+        juntar: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]],
+    ) -> None:
+        """Deixa o pedido na fila e acorda o fio; junta ao último se ele é do mesmo tipo."""
+        with self._fila_trava:
+            if self._fechado:
+                return
+            if self._fila and self._fila[-1].tipo == tipo:
+                ultimo = self._fila[-1]
+                ultimo.dados = juntar(ultimo.dados, dados)
+            else:
+                self._fila.append(_PedidoDeLuz(tipo, dados, executar))
+            if self._fio is None or not self._fio.is_alive():
+                self._fio = threading.Thread(target=self._girar, daemon=True, name=self._nome)
+                self._fio.start()
+        self._acorda.set()
+
+    def agora(self, escrever: Callable[[], Any]) -> Any:
+        """Escoa a fila na ordem e roda `escrever` no fio de quem chama, sob a mesma trava."""
+        with self._trava:
+            while self._tirar_o_proximo() is not None:
+                pass
+            return escrever()
+
+    def fechar(self) -> None:
+        """O handle fechou: a fila se perde e o fio sai na próxima passada."""
+        with self._fila_trava:
+            self._fechado = True
+            self._fila.clear()
+        self._acorda.set()
+
+    def ocioso(self) -> bool:
+        """Fila vazia e nada em escrita."""
+        with self._fila_trava:
+            return not self._fila and not self._rodando
+
+    def esperar(self, prazo: float) -> bool:
+        """Espera a fila esvaziar até `prazo` segundos; devolve se esvaziou."""
+        with self._fila_trava:
+            return self._fila_trava.wait_for(lambda: not self._fila and not self._rodando, prazo)
+
+    def _tirar_o_proximo(self) -> bool | None:
+        """Tira o pedido mais velho e o roda, sob a trava; `None` sem pedido."""
+        with self._fila_trava:
+            if self._fechado or not self._fila:
+                return None
+            pedido = self._fila.pop(0)
+            self._rodando = True
+        try:
+            pedido.executar(pedido.dados)
+        except Exception as exc:
+            logger.warning("luz_do_controle_falhou", tipo=pedido.tipo, err=str(exc))
+        finally:
+            with self._fila_trava:
+                self._rodando = False
+                self._fila_trava.notify_all()
+        return True
+
+    def _girar(self) -> None:
+        while True:
+            self._acorda.wait()
+            self._acorda.clear()
+            if self._fechado:
+                return
+            with self._trava:
+                while self._tirar_o_proximo() is not None:
+                    pass
+
+
+def _escritor_da_luz_de(handle: Any) -> _EscritorDaLuz | None:
+    """O escritor da luz do handle, ou None (dublê e CLI escrevem na hora)."""
+    escritor = getattr(handle, "_escritor_da_luz", None)
+    return escritor if isinstance(escritor, _EscritorDaLuz) else None
+
+
+def _na_vez_da_luz(handle: Any, escrever: Callable[[], Any]) -> Any:
+    """Roda `escrever` na ordem do escritor do handle (escoa o que está na fila antes); sem
+    escritor, direto."""
+    escritor = _escritor_da_luz_de(handle)
+    return escrever() if escritor is None else escritor.agora(escrever)
+
+
+def _rodar_o_quadro(dados: dict[str, Any]) -> None:
+    """A passada do escritor da luz para um quadro de luz."""
+    _escrever_a_luz_do_quadro(
+        dados["backend"], dados["handle"], dados["node"], dados["luz"], dados["what"]
+    )
+
+
+def _escrever_a_luz_do_quadro(
+    backend: Any, handle: Any, node: Any, out: _DesiredOutput, what: str
+) -> bool:
+    """A luz de `out` num handle: o nó do kernel, o número, o brilho e o report do rádio."""
+    from pydualsense.enums import PlayerID
+
+    try:
+        if out.led is not None and not (
+            node is not None and _a_cor_saiu(handle, out.led, node.set_rgb(*out.led), False)
+        ):
+            handle.light.setColorI(*out.led)
+        if (
+            out.player_leds is not None
+            and backend._pode_escrever_player_leds()
+            and not (node is not None and node.set_players(out.player_leds))
+        ):
+            mask = sum(1 << i for i, b in enumerate(out.player_leds) if b)
+            handle.light.playerNumber = PlayerID(mask)
+        pode_player = backend._pode_escrever_player_leds()
+        brilho = out.player_led_brightness if pode_player else None
+        backend._levar_o_brilho_das_luzes(
+            None, handle, brilho, what=what, o_radio_ja_leva=True
+        )
+        backend._pintar_por_hidraw_bt(
+            None,
+            handle,
+            rgb=out.led,
+            players=out.player_leds if pode_player else None,
+            what=what,
+            brilho_das_luzes=brilho,
+        )
+    except Exception as exc:
+        logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
+        return False
+    finally:
+        _acordar_a_volta_de(handle)
+    return True
+
+
+def _led_de_um(
+    backend: Any,
+    key: str,
+    handle: Any,
+    node: Any,
+    sysfs_op: Callable[[Any], bool],
+    pydual_op: Callable[[pydualsense], None],
+    what: str,
+    rgb: tuple[int, int, int] | None,
+    players: tuple[bool, bool, bool, bool, bool] | None,
+) -> None:
+    """O LED de UM controle pela rota do kernel, com o report do rádio e o fluxo da lib."""
+    escreveu_sysfs = False
+    if node is not None:
+        try:
+            escreveu_sysfs = _a_cor_saiu(handle, rgb, bool(sysfs_op(node)), False)
+        except Exception as exc:
+            logger.debug("sysfs_led_falhou_fallback_pydual", op=what, key=key, err=str(exc))
+    backend._pintar_por_hidraw_bt(key, handle, rgb=rgb, players=players, what=what)
+    if escreveu_sysfs:
+        return
+    try:
+        pydual_op(handle)
+    except Exception as exc:
+        logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+    _acordar_a_volta_de(handle)
+
+
+def _led_na_vez(
+    backend: Any,
+    key: str,
+    handle: Any,
+    node: Any,
+    sysfs_op: Callable[[Any], bool],
+    pydual_op: Callable[[pydualsense], None],
+    what: str,
+    rgb: tuple[int, int, int] | None,
+    players: tuple[bool, bool, bool, bool, bool] | None,
+) -> None:
+    """O LED de UM controle na ordem do escritor da luz dele (escoa a fila antes)."""
+    _na_vez_da_luz(
+        handle,
+        partial(_led_de_um, backend, key, handle, node, sysfs_op, pydual_op, what, rgb, players),
+    )
+
+
+def _barra_e_numero_na_vez(
+    backend: Any,
+    key: str,
+    handle: Any,
+    desired: _DesiredOutput,
+    *,
+    pode_player: bool,
+    nome: str,
+) -> tuple[bool, tuple[int, int, int], tuple[bool, ...] | None]:
+    """O `0x31` mínimo de UM controle na ordem do escritor da luz dele: o que está na fila sai
+    antes, e o resultado é do aparelho."""
+    resultado: tuple[bool, tuple[int, int, int], tuple[bool, ...] | None] = _na_vez_da_luz(
+        handle,
+        partial(
+            backend._escrever_barra_e_numero_bt,
+            key, handle, desired, pode_player=pode_player, nome=nome,
+        ),
+    )
+    return resultado
+
+
+def _repintar_agora(
+    backend: Any,
+    key: str,
+    handle: Any,
+    no: Any,
+    desired: _DesiredOutput,
+    *,
+    pode_player: bool,
+    what: str,
+    verify: bool,
+    forcar: bool,
+    apesar_do_mudo: bool,
+) -> tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]:
+    """O corpo da repintura resolvida de UM controle, no fio de quem o roda."""
+    return PyDualSenseController._repintar_a_luz_de_um_agora(
+        backend, key, handle, no, desired, pode_player=pode_player, what=what,
+        verify=verify, forcar=forcar, apesar_do_mudo=apesar_do_mudo,
+    )
+
+
+def _rodar_a_repintura(dados: dict[str, Any]) -> None:
+    """A passada do escritor da luz para uma repintura resolvida."""
+    _repintar_agora(
+        dados["backend"], dados["key"], dados["handle"], dados["no"], dados["desired"],
+        pode_player=dados["pode_player"], what=dados["what"], verify=dados["verify"],
+        forcar=dados["forcar"], apesar_do_mudo=dados["apesar_do_mudo"],
+    )
+
+
+def _juntar_os_quadros(velho: dict[str, Any], novo: dict[str, Any]) -> dict[str, Any]:
+    """Dois quadros de luz do mesmo controle viram um: o campo que o novo traz vence."""
+    antigo: _DesiredOutput = velho["luz"]
+    recente: _DesiredOutput = novo["luz"]
+    campos = {
+        nome: getattr(recente, nome)
+        for nome in ("led", "player_leds", "player_led_brightness")
+        if getattr(recente, nome) is not None
+    }
+    return {**novo, "luz": replace(antigo, **campos)}
+
+
+def _juntar_as_repinturas(velho: dict[str, Any], novo: dict[str, Any]) -> dict[str, Any]:
+    """Duas repinturas resolvidas do mesmo controle viram uma: a nova, sem perder o `forcar`, o
+    `verify` nem o `apesar_do_mudo` que a velha pedia."""
+    return {
+        **novo,
+        "forcar": bool(velho["forcar"] or novo["forcar"]),
+        "verify": bool(velho["verify"] or novo["verify"]),
+        "apesar_do_mudo": bool(velho["apesar_do_mudo"] or novo["apesar_do_mudo"]),
+    }
 
 
 def versao_do_firmware(feature: bytes | None) -> int | None:
@@ -611,6 +892,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     _dispositivo: _DispositivoPorFd | None = None
 
+    _escritor_da_luz: _EscritorDaLuz | None = None
+
     def __init__(
         self, path: bytes, *, is_edge: bool, dispositivo: _DispositivoPorFd | None = None
     ) -> None:
@@ -702,6 +985,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self.conType = self.determineConnectionType()
         if self.conType is ConnectionType.ERROR:
             raise Exception("Couldn't determine connection type")
+        self._escritor_da_luz = _EscritorDaLuz(self._nome_da_thread().replace("report", "luz", 1))
         self.soltar_o_motor_preso()
         self.ds_thread = True
         self.connected = True
@@ -1049,6 +1333,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             self.ds_thread = False
             if self._sinal_em is None:
                 self._sinal_em = time.monotonic()
+        escritor = self._escritor_da_luz
+        if escritor is not None:
+            escritor.fechar()
 
     def _terminar_de_fechar(self, prazo: float) -> None:
         """Espera a thread até `prazo` e fecha — ou deixa o handle com quem está no C."""
@@ -3097,8 +3384,8 @@ class PyDualSenseController(IController):
             ]
         resultado: dict[str, bool] = {}
         for key, handle, desired in alvos:
-            ok, cor, players = self._escrever_barra_e_numero_bt(
-                key, handle, desired, pode_player=pode_player, nome="gatilho_da_cor"
+            ok, cor, players = _barra_e_numero_na_vez(
+                self, key, handle, desired, pode_player=pode_player, nome="gatilho_da_cor"
             )
             resultado[key] = ok
             logger.info(
@@ -3193,6 +3480,7 @@ class PyDualSenseController(IController):
                 what="vigia_do_sequestro",
                 forcar=True,
                 apesar_do_mudo=True,
+                agora=True,
             )
             resultado[key] = ok
             logger.debug(
@@ -3217,16 +3505,57 @@ class PyDualSenseController(IController):
         verify: bool = False,
         forcar: bool = False,
         apesar_do_mudo: bool = False,
+        agora: bool = False,
     ) -> tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]:
         """A cor e o número RESOLVIDOS de UM controle, pela rota que o alcança
         (A-COR-E-O-NUMERO-DO-PERFIL-CHEGAM-POR-TODA-ROTA-01).
 
-        Dono único para o vigia, `reassert_resolved_outputs`, `set_output_mute(False)` e a repintura
-        de nó novo. Cabo: o nó (`verify` quando pedido) ou o fluxo do pydualsense, mais o brilho das
-        luzes. Rádio: o nó, se houver, e o `0x31` estreito (brilho no mesmo quadro); quadro igual ao
-        último inteiro não sai de novo, e `forcar` ignora a memória. Modo Nativo: sem `0x31`, salvo
-        `apesar_do_mudo`.
+        Dono único da repintura (vigia, `reassert_resolved_outputs`, `set_output_mute(False)`, nó
+        novo). Com o escritor da luz do handle vai para a fila dele e devolve `(True, cor, número)`
+        do pedido; `agora` é de quem usa o que o aparelho aceitou (o vigia). Cabo: o nó (`verify`
+        quando pedido) ou o fluxo do pydualsense, mais o brilho das luzes. Rádio: o nó, se houver, e
+        o `0x31` estreito (brilho no mesmo quadro); quadro igual ao último inteiro não sai de novo,
+        e `forcar` ignora a memória. Modo Nativo: sem `0x31`, salvo `apesar_do_mudo`.
         """
+        agora_ou_depois = partial(
+            _repintar_agora, self, key, handle, no, desired,
+            pode_player=pode_player, what=what, verify=verify, forcar=forcar,
+            apesar_do_mudo=apesar_do_mudo,
+        )
+        escritor = _escritor_da_luz_de(handle)
+        if escritor is None:
+            repintada: tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]
+            repintada = agora_ou_depois()
+            return repintada
+        if agora:
+            repintada = escritor.agora(agora_ou_depois)
+            return repintada
+        escritor.pedir(
+            "repintar",
+            {
+                "backend": self, "key": key, "handle": handle, "no": no, "desired": desired,
+                "pode_player": pode_player, "what": what, "verify": verify,
+                "forcar": forcar, "apesar_do_mudo": apesar_do_mudo,
+            },
+            _rodar_a_repintura,
+            _juntar_as_repinturas,
+        )
+        return True, desired.led, desired.player_leds if pode_player else None
+
+    def _repintar_a_luz_de_um_agora(
+        self,
+        key: str,
+        handle: Any,
+        no: Any,
+        desired: _DesiredOutput,
+        *,
+        pode_player: bool,
+        what: str,
+        verify: bool,
+        forcar: bool,
+        apesar_do_mudo: bool,
+    ) -> tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]:
+        """O corpo da repintura, no fio de quem o roda (o escritor ou quem pediu `agora`)."""
         self._repinturas_da_luz += 1
         if forcar and no is not None:
             with contextlib.suppress(Exception):
@@ -3353,6 +3682,7 @@ class PyDualSenseController(IController):
                     node,
                     _DesiredOutput(led=alvo),
                     what="aviso_de_modo_devolve",
+                    agora=True,
                 )
             except Exception as exc:
                 logger.warning("aviso_de_modo_devolve_falhou", key=key, err=str(exc))
@@ -3414,25 +3744,10 @@ class PyDualSenseController(IController):
             logger.debug("output_offline_noop", op=what)
             return
         for key, handle in items:
-            node = sysfs_map.get(key)
-            escreveu_sysfs = False
-            if node is not None:
-                try:
-                    escreveu_sysfs = _a_cor_saiu(handle, rgb, bool(sysfs_op(node)), False)
-                except Exception as exc:
-                    logger.debug(
-                        "sysfs_led_falhou_fallback_pydual", op=what, key=key, err=str(exc)
-                    )
-            self._pintar_por_hidraw_bt(
-                key, handle, rgb=rgb, players=players, what=what
+            _led_na_vez(
+                self, key, handle, sysfs_map.get(key), sysfs_op, pydual_op, what, rgb, players
             )
-            if escreveu_sysfs:
-                continue
-            try:
-                pydual_op(handle)
-            except Exception as exc:
-                logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
-            _acordar_a_volta_de(handle)
+
 
     @staticmethod
     def _apply_trigger(handle: pydualsense, side: Side, effect: TriggerEffect) -> None:
@@ -3591,46 +3906,48 @@ class PyDualSenseController(IController):
         out: _DesiredOutput,
         *,
         what: str,
+        agora: bool = False,
     ) -> bool:
-        """Escreve os campos NÃO-None de `out` em UM handle. Devolve se DEU CERTO."""
-        from pydualsense.enums import PlayerID
+        """Escreve os campos NÃO-None de `out` em UM handle. Devolve se DEU CERTO.
 
+        Gatilho e LED do mic só mexem no estado do handle e saem aqui. A luz (cor, número, brilho:
+        o sysfs do LED, o `brightness` lido e o report direto do rádio) vai ao escritor do handle,
+        fora do fio de quem chama, e este devolve `True` quando o pedido foi aceito. `agora` é de
+        quem usa o resultado: escoa a fila do controle e escreve no fio de quem chama.
+        """
         try:
             if out.trigger_left is not None:
                 self._apply_trigger(handle, "left", out.trigger_left)
             if out.trigger_right is not None:
                 self._apply_trigger(handle, "right", out.trigger_right)
-            if out.led is not None and not (
-                node is not None and _a_cor_saiu(handle, out.led, node.set_rgb(*out.led), False)
-            ):
-                handle.light.setColorI(*out.led)
-            if (
-                out.player_leds is not None
-                and self._pode_escrever_player_leds()
-                and not (node is not None and node.set_players(out.player_leds))
-            ):
-                mask = sum(1 << i for i, b in enumerate(out.player_leds) if b)
-                handle.light.playerNumber = PlayerID(mask)
             if out.mic_led is not None:
                 _escrever_led_do_mic(handle, out.mic_led)
-            pode_player = self._pode_escrever_player_leds()
-            brilho = out.player_led_brightness if pode_player else None
-            self._levar_o_brilho_das_luzes(
-                None, handle, brilho, what=what, o_radio_ja_leva=True
-            )
-            self._pintar_por_hidraw_bt(
-                None,
-                handle,
-                rgb=out.led,
-                players=out.player_leds if pode_player else None,
-                what=what,
-                brilho_das_luzes=brilho,
-            )
         except Exception as exc:
             logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
-            return False
-        finally:
             _acordar_a_volta_de(handle)
+            return False
+        if out.led is None and out.player_leds is None and out.player_led_brightness is None:
+            _acordar_a_volta_de(handle)
+            return True
+        luz = _DesiredOutput(
+            led=out.led,
+            player_leds=out.player_leds,
+            player_led_brightness=out.player_led_brightness,
+        )
+        escritor = _escritor_da_luz_de(handle)
+        if escritor is None or agora:
+            return bool(
+                _na_vez_da_luz(
+                    handle, partial(_escrever_a_luz_do_quadro, self, handle, node, luz, what)
+                )
+            )
+        escritor.pedir(
+            "quadro",
+            {"backend": self, "handle": handle, "node": node, "luz": luz, "what": what},
+            _rodar_o_quadro,
+            _juntar_os_quadros,
+        )
+        _acordar_a_volta_de(handle)
         return True
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
@@ -4359,7 +4676,7 @@ class PyDualSenseController(IController):
             )
             return "registrado"
         escreveu = self._write_partial_output(
-            handle, node, _DesiredOutput(**fields), what="apply_output_for"
+            handle, node, _DesiredOutput(**fields), what="apply_output_for", agora=True
         )
         if not escreveu:
             return "falhou"
@@ -4413,7 +4730,8 @@ class PyDualSenseController(IController):
         if handle is None:
             return "registrado"
         if not self._write_partial_output(
-            handle, node, _DesiredOutput(**fields), what="apply_extension_output_for"
+            handle, node, _DesiredOutput(**fields), what="apply_extension_output_for",
+            agora=True,
         ):
             return "falhou"
         sairam = _CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset(
@@ -4464,7 +4782,8 @@ class PyDualSenseController(IController):
                            key=key, err=str(exc))
             return "falhou"
         if "led" in soltos and desired.led is not None and not self._write_partial_output(
-            handle, node, _DesiredOutput(led=desired.led), what="release_extension_output_for"
+            handle, node, _DesiredOutput(led=desired.led), what="release_extension_output_for",
+            agora=True,
         ):
             return "falhou"
         return "escreveu"
