@@ -21,7 +21,7 @@ FOLGA = 0.35
 
 
 def _report_do_radio(*, botao_do_mic: bool = False) -> bytes:
-    """Um `0x31` de estado, com CRC (78 bytes: o `determineConnectionType` lê BT)."""
+    """Um `0x31` de estado, com CRC (78 bytes: o tamanho do report do rádio)."""
     corpo = bytearray(prr.INPUT_REPORT_BT_SIZE)
     corpo[0] = prr.INPUT_REPORT_BT
     if botao_do_mic:

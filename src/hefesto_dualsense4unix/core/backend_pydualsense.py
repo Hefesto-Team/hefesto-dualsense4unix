@@ -246,6 +246,13 @@ REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 
 PISO_DE_ESCRITA_DO_CABO_SEC: float = 0.004
 
+COMPRIMENTO_DO_REPORT: dict[ConnectionType, int] = {
+    ConnectionType.USB: 64,
+    ConnectionType.BT: 78,
+}
+
+PRAZO_DA_LEITURA_DO_TRANSPORTE_SEC: float = 2.0
+
 LEITURAS_POR_VOLTA: int = 64
 
 ESPERA_DA_VOLTA_VAZIA_SEM_THROTTLE_SEC: float = 0.001
@@ -703,6 +710,39 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         )
         self.report_thread.start()
         self.states = None
+
+    def determineConnectionType(self) -> ConnectionType:  # noqa: N802
+        """O transporte do nó, sem esperar report do aparelho.
+
+        O `HID_ID` do uevent diz o barramento (`0003` cabo, `0005` rádio) e os comprimentos de
+        report são os da tabela do upstream (64 no cabo, 78 no rádio). Nó sem `HID_ID` legível
+        (dublê, caminho sem `/sys`) cai na leitura do upstream, com prazo: o `read` sem prazo
+        segurava a abertura do rádio calado até o primeiro report
+        (O-CONTROLE-ABRE-SEM-ESPERAR-O-PRIMEIRO-REPORT-01).
+        """
+        caminho = getattr(self, "_pinned_path", b"") or b""
+        barramento = _barramento_do_hidraw(caminho) if isinstance(caminho, bytes) else None
+        tipo = {"usb": ConnectionType.USB, "bt": ConnectionType.BT}.get(barramento or "")
+        if tipo is None:
+            return self._tipo_pela_leitura_com_prazo()
+        return self._fixar_o_transporte(tipo)
+
+    def _fixar_o_transporte(self, tipo: ConnectionType) -> ConnectionType:
+        """Grava os comprimentos de report do transporte e o devolve."""
+        comprimento = COMPRIMENTO_DO_REPORT[tipo]
+        self.input_report_length = comprimento
+        self.output_report_length = comprimento
+        return tipo
+
+    def _tipo_pela_leitura_com_prazo(self) -> ConnectionType:
+        """O `determineConnectionType` do upstream com prazo menor que o do guarda do `init`."""
+        prazo = min(PRAZO_DA_LEITURA_DO_TRANSPORTE_SEC, INIT_TIMEOUT_SEC * 0.8)
+        prazo_ms = max(1, int(prazo * 1000))
+        lido = self.device.read(100, timeout_ms=prazo_ms)
+        for tipo, comprimento in COMPRIMENTO_DO_REPORT.items():
+            if lido is not None and len(lido) == comprimento:
+                return self._fixar_o_transporte(tipo)
+        return ConnectionType.ERROR
 
     def soltar_o_motor_preso(self) -> None:
         """No cabo, escreve a soltura ao abrir o hidraw: um report com todos os flags a 0.
@@ -2239,8 +2279,8 @@ class PyDualSenseController(IController):
                 estado["desistido"] = True
         if desistiu:
             logger.warning(
-                "pydualsense_init_timeout — kernel pode estar bloqueado em "
-                "hidraw (hid_playstation conflict)",
+                "pydualsense_init_timeout — o init não terminou no prazo "
+                "(o broker ou o open do nó não responderam)",
                 path=path,
                 timeout_sec=INIT_TIMEOUT_SEC,
             )
