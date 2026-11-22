@@ -162,6 +162,7 @@ def _sequencia_crescente(cores: list[Any]) -> bool:
 
 
 def test_a_luz_nao_para_o_laco_e_cada_controle_termina_na_ultima_cor(mesa: Any) -> None:
+    """D-2211-A-LUZ-SE-ESCREVE-FORA-DO-FIO-DO-LACO: o laço não espera a luz de controle nenhum."""
     ctl, handles, nos = mesa
     custos = _pintar_o_laco(ctl, TIQUES)
     assert max(custos) < TETO_DO_LACO_SEC, (

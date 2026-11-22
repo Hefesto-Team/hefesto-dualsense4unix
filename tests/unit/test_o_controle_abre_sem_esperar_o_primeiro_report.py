@@ -138,7 +138,8 @@ def _fds_abertos() -> int:
 def test_os_quatro_abrem_sem_report_com_o_transporte_certo(
     mesa: _Mesa, controlador: PyDualSenseController
 ) -> None:
-    """Dois cabo e dois rádio, nenhum fd entrega report: a abertura não espera."""
+    """D-2211-O-CONTROLE-ABRE-SEM-ESPERAR-O-PRIMEIRO-REPORT: dois cabo e dois rádio, nenhum fd
+    entrega report, e a abertura não espera."""
     plano = [(0, CABO, ConnectionType.USB, 64), (1, RADIO, ConnectionType.BT, 78),
              (2, CABO, ConnectionType.USB, 64), (3, RADIO, ConnectionType.BT, 78)]
     for numero, barramento, tipo, comprimento in plano:
