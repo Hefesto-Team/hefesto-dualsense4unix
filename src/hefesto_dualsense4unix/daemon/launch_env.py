@@ -337,6 +337,58 @@ def read_last_exit_pid(base_dir: Path | None = None) -> int | None:
     return _read_kv_int_fields(path).get("pid")
 
 
+ARQUIVO_DA_ENTREGA = "entregue"
+
+ARQUIVO_DA_FONTE = "fonte_do_ambiente"
+
+FONTE_DO_DAEMON = "daemon"
+
+
+@dataclass(frozen=True)
+class EntregaDoAmbiente:
+    """O que o arme entregou ao wrapper de um lançamento: a base do aviso do ambiente congelado."""
+
+    appid: int
+    epoch: int
+    cobertura: bool
+    vpads: int
+    fisicos: int
+
+    def como_texto(self) -> str:
+        """O arquivo `entregue`: `chave=<dígitos>` por linha, a gramática dos markers."""
+        return (
+            f"appid={self.appid}\nepoch={self.epoch}\ncobertura={int(self.cobertura)}\n"
+            f"vpads={self.vpads}\nfisicos={self.fisicos}\n"
+        )
+
+
+def read_a_entrega(base_dir: Path | None = None) -> EntregaDoAmbiente | None:
+    """O registro da última entrega do arme, gravado pelo serviço; None sem registro legível."""
+    path = (base_dir if base_dir is not None else launch_env_dir()) / ARQUIVO_DA_ENTREGA
+    campos = _read_kv_int_fields_do_disco(path)
+    if not {"appid", "epoch", "cobertura", "vpads", "fisicos"} <= campos.keys():
+        return None
+    return EntregaDoAmbiente(
+        campos["appid"], campos["epoch"], bool(campos["cobertura"]),
+        campos["vpads"], campos["fisicos"],
+    )
+
+
+def read_a_fonte(base_dir: Path | None = None) -> tuple[int, str, int] | None:
+    """``(appid, fonte, epoch)`` que o wrapper gravou em `fonte_do_ambiente`, ou None."""
+    path = (base_dir if base_dir is not None else launch_env_dir()) / ARQUIVO_DA_FONTE
+    texto = ""
+    with contextlib.suppress(OSError):
+        texto = path.read_text(encoding="utf-8")
+    campos = dict(
+        linha.partition("=")[::2] for linha in texto.splitlines() if "=" in linha
+    )
+    appid, fonte, epoch = (campos.get(k, "").strip() for k in ("appid", "fonte", "epoch"))
+    if not (appid.isdigit() and epoch.isdigit() and fonte):
+        return None
+    return int(appid), fonte, int(epoch)
+
+
 def pid_is_alive(pid: int | None) -> bool:
     """True quando `pid` é de um processo vivo agora (NUMA-01).
 
@@ -1760,6 +1812,7 @@ def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bo
         anterior = getattr(daemon, "_launch_env_assinatura", None)
         sem_foto_assentada = getattr(daemon, "_foto_em_transito", False) is True
         daemon._foto_em_transito = False
+        _avisar_se_o_jogo_ja_congelou(daemon, assinatura)
         if assinatura == anterior and not sem_foto_assentada:
             return False
     except Exception:
@@ -1773,37 +1826,65 @@ def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bo
             backends=list(assinatura[3]), fisicos=assinatura[4]
         ),
     )
-    _avisar_se_o_jogo_ja_congelou(daemon, anterior, assinatura)
     materialize_launch_env(daemon)
     return True
 
 
-def _avisar_se_o_jogo_ja_congelou(
-    daemon: Any,
-    anterior: AssinaturaDaMesa | None,
-    atual: AssinaturaDaMesa,
-) -> None:
-    """Grita no journal quando a cobertura mudou com um jogo já de pé."""
+def _a_entrega_da_sessao(
+    daemon: Any, folha: FolhaDoLancamento | None, appid: int, marker: tuple[int, int]
+) -> EntregaDoAmbiente | None:
+    """A entrega que o jogo vivo recebeu, ou None quando a base não é a entrega.
+
+    O registro vale quando o `appid` e o `epoch` são os da sessão e o wrapper gravou que o ambiente
+    veio do serviço (`fonte=daemon`, do mesmo lançamento). Com `arquivo`, `nenhuma` ou sem a linha,
+    o jogo pode ter nascido de outra env, e o aviso fica calado.
+    """
+    fonte = read_a_fonte() if folha is None else folha.fonte
+    if fonte is None or fonte[0] != appid or fonte[1] != FONTE_DO_DAEMON or fonte[2] < marker[1]:
+        return None
+    do_disco = read_a_entrega() if folha is None else folha.entrega
+    for candidata in (getattr(daemon, "_launch_env_entregue", None), do_disco):
+        if (
+            isinstance(candidata, EntregaDoAmbiente)
+            and candidata.appid == appid
+            and candidata.epoch == marker[1]
+        ):
+            return candidata
+    return None
+
+
+def _avisar_se_o_jogo_ja_congelou(daemon: Any, atual: AssinaturaDaMesa) -> None:
+    """Grita no journal quando a mesa de agora e a entrega que o jogo de pé recebeu discordam.
+
+    Sem registro da entrega da sessão, ou com `fisicos <= 0` em um dos lados, não há aviso: «não
+    sei» nunca vira «tinha cobertura». Avisa uma vez por mudança, e a volta ao acordo rearma.
+    """
     with contextlib.suppress(Exception):
-        if anterior is None:
-            return
-        antes = cobertura_total(backends=list(anterior[3]), fisicos=anterior[4])
-        agora_tem = cobertura_total(backends=list(atual[3]), fisicos=atual[4])
-        if antes == agora_tem:
-            return
         folha = _a_folha_pronta(daemon)
+        marker = read_last_run_marker() if folha is None else folha.marker
         appid = launch_session_appid() if folha is None else _sessao_da_folha(folha, None)
-        if appid is None:
+        if appid is None or marker is None:
             return
+        entrega = _a_entrega_da_sessao(daemon, folha, appid, marker)
+        if entrega is None or entrega.fisicos <= 0 or atual[4] <= 0:
+            return
+        agora_tem = cobertura_total(backends=list(atual[3]), fisicos=atual[4])
+        if agora_tem == entrega.cobertura:
+            daemon._launch_env_avisou = None
+            return
+        avisado = (appid, entrega.epoch, agora_tem)
+        if getattr(daemon, "_launch_env_avisou", None) == avisado:
+            return
+        daemon._launch_env_avisou = avisado
         logger.warning(
             "launch_env_mudou_depois_do_exec",
             appid=appid,
-            cobertura_no_arquivo_antigo=antes,
+            cobertura_entregue=entrega.cobertura,
             cobertura_agora=agora_tem,
             vpads=len(atual[3]),
             fisicos=atual[4],
             motivo=(
-                "o jogo congelou a env no exec do wrapper; a regravação vale "
+                "o jogo congelou a env que o arme entregou; a regravação vale "
                 "para o PRÓXIMO lançamento, não para esta sessão"
             ),
         )
@@ -2630,6 +2711,11 @@ def ambiente_do_lancamento(
         except Exception as exc:
             logger.warning("launch_ambiente_arme_falhou", appid=appid, err=str(exc))
     foto = _foto_do_lancamento(daemon, no_fio=folha is not None, com_as_vozes=False, folha=folha)
+    if marker is not None and marker[0] == appid:
+        try:
+            _registrar_a_entrega(daemon, foto, appid, marker[1])
+        except Exception as exc:
+            logger.warning("launch_entrega_nao_registrada", appid=appid, err=str(exc))
     padrao = _o_ambiente_padrao(foto)
     comuns = _OsJogosDoComum(foto)
     ambiente = o_ambiente_do_jogo(
@@ -2655,6 +2741,42 @@ def ambiente_do_lancamento(
         "receita": [f"{chave}={valor}" for chave, valor in receita.items()],
         "estado": estado,
     }
+
+
+def _registrar_a_entrega(
+    daemon: DaemonProtocol, foto: _FotoDoLancamento, appid: int, epoch: int
+) -> None:
+    """Guarda o que a foto do arme entregou: no daemon, e no arquivo, fora do laço.
+
+    Entrega sem cobertura com a mesa prometendo um vpad por físico (fora do Modo Nativo, com a
+    emulação pedida e o co-op ligado) vira `warning` próprio, fora da agregação por arquivo.
+    """
+    entrega = EntregaDoAmbiente(
+        appid, epoch, cobertura_total(backends=foto.backends, fisicos=foto.fisicos),
+        len(foto.backends), foto.fisicos,
+    )
+    daemon._launch_env_entregue = entrega  # type: ignore[attr-defined]
+
+    def gravar() -> None:
+        try:
+            _write_atomic(launch_env_dir(ensure=True) / ARQUIVO_DA_ENTREGA, entrega.como_texto())
+        except OSError as exc:
+            logger.warning("launch_entrega_nao_gravou", appid=appid, err=str(exc))
+
+    escrevente = _ESCREVENTE
+    if escrevente is not None and escrevente.vivo() and escrevente.atende_aqui():
+        escrevente.pedir_o_carimbo((appid, "entrega", epoch), gravar)
+    else:
+        gravar()
+    previstos = _vpads_previstos(daemon, foto.fisicos)
+    if not foto.native and foto.enabled and previstos > len(foto.backends):
+        logger.warning(
+            "launch_ambiente_entregue_sem_cobertura",
+            appid=appid,
+            vpads=len(foto.backends),
+            previstos=previstos,
+            fisicos=foto.fisicos,
+        )
 
 
 def o_ambiente_no_status(
@@ -3034,6 +3156,8 @@ class FolhaDoLancamento:
     perfis: tuple[Any, ...] | None = field(default=None, compare=False)
     arme: LeituraDoArme | None = field(default=None, compare=False)
     comuns: Mapping[str, str] | None = field(default=None, compare=False)
+    entrega: EntregaDoAmbiente | None = None
+    fonte: tuple[int, str, int] | None = None
 
 
 FOLHA_EM_BRANCO = FolhaDoLancamento(None, None, None, None, frozenset(), ())
@@ -3174,6 +3298,8 @@ def ler_a_folha() -> FolhaDoLancamento:
         exit_pid=read_last_exit_pid(),
         allowlist=frozenset(steam_input_appids()),
         selo=selo_dos_perfis(),
+        entrega=read_a_entrega(),
+        fonte=read_a_fonte(),
     )
 
 

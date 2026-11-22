@@ -597,6 +597,14 @@ def test_o_aviso_do_jogo_congelado_nao_le_a_sessao_no_laco(
 ) -> None:
     """A cobertura muda com o jogo de pé: o aviso pergunta à folha, nunca ao disco."""
     _com_jogo(casa)
+    marcador = le.read_last_run_marker()
+    assert marcador is not None
+    (casa.base / "fonte_do_ambiente").write_text(
+        f"appid={APPID}\nfonte=daemon\narquivo=\nepoch={marcador[1]}\n", encoding="utf-8"
+    )
+    (casa.base / "entregue").write_text(
+        le.EntregaDoAmbiente(APPID, marcador[1], False, 1, 2).como_texto(), encoding="utf-8"
+    )
     daemon = _Daemon(0.0)
     avisos: list[Any] = []
     monkeypatch.setattr(le.logger, "warning", lambda evento, **k: avisos.append((evento, k)))
@@ -609,9 +617,8 @@ def test_o_aviso_do_jogo_congelado_nao_le_a_sessao_no_laco(
         monkeypatch.setattr(
             le, "launch_session_appid", lambda **k: pytest.fail("a sessão foi ao disco")
         )
-        antes = (False, True, "xbox360", ("uinput",), 2, False, (), ())
         depois = (False, True, "xbox360", ("uinput", "uinput"), 2, False, (), ())
-        le._avisar_se_o_jogo_ja_congelou(daemon, antes, depois)
+        le._avisar_se_o_jogo_ja_congelou(daemon, depois)
 
     asyncio.run(corpo())
 

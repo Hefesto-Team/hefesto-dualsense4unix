@@ -343,12 +343,18 @@ class TestOAvisoHonesto:
     ) -> None:
         espiao = _LoggerEspiao()
         monkeypatch.setattr(le, "logger", espiao)
+        epoch = int(le.time.time())
         (mesa / "last_run").write_text(
-            f"appid={APPID_SACKBOY}\nepoch={int(le.time.time())}\npid={os.getpid()}\n",
+            f"appid={APPID_SACKBOY}\nepoch={epoch}\npid={os.getpid()}\n",
+            encoding="utf-8",
+        )
+        (mesa / "fonte_do_ambiente").write_text(
+            f"appid={APPID_SACKBOY}\nfonte=daemon\narquivo=\nepoch={epoch}\n",
             encoding="utf-8",
         )
         daemon = _daemon(vpads=3, fisicos=3)
         le.materialize_launch_env(daemon)
+        le.ambiente_do_lancamento(daemon, APPID_SACKBOY)
         daemon.controller.describe_controllers = lambda: [{"connected": True}] * 4
 
         le.armar_rematerializacao(daemon, motivo="teste", agora=0.0)
@@ -356,7 +362,7 @@ class TestOAvisoHonesto:
 
         campos = espiao.campos("launch_env_mudou_depois_do_exec")
         assert campos["appid"] == APPID_SACKBOY
-        assert campos["cobertura_no_arquivo_antigo"] is True
+        assert campos["cobertura_entregue"] is True
         assert campos["cobertura_agora"] is False
 
     def test_sem_jogo_do_wrapper_de_pe_ninguem_e_acordado(
