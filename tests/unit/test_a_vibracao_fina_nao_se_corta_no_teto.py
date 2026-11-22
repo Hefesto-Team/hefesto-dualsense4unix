@@ -16,7 +16,12 @@ AS MORDIDAS (executadas, uma a uma, com o md5 conferido na volta):
   ``proximo_bloco``) → ``test_a_soma_acima_do_teto_nao_fica_no_teto_nem_da_degrau``;
 * o ``tetos_da_mistura`` sem o ganho → ``test_o_pico_depois_do_ganho_da_via_fica_no_teto``;
 * o ganho único de todos os tocadores (o limitador compartilhado) →
-  ``test_um_controle_alto_nao_abaixa_o_do_lado``.
+  ``test_um_controle_alto_nao_abaixa_o_do_lado``;
+* o joelho fora → os testes do pico, no cabo e no rádio;
+* a soltura de um bloco só → ``test_a_soltura_devolve_o_ganho_sem_degrau_e_o_baixo_volta_intacto``;
+* o dono que troca sem reler o ganho → ``test_o_ganho_vem_do_perfil_do_dono_do_nivel``;
+* a leitura que falha abrindo o teto, e o teto de 1,0 no lugar de 0,9 →
+  ``test_os_tetos_dos_motores_descontam_o_ganho_e_o_ganho_abaixo_de_um_nao_sobe_o_teto``.
 """
 from __future__ import annotations
 
@@ -30,7 +35,7 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.alto_falante_bt import CANAIS_DA_HAPTICA
 
 Q = eh.QUADROS_POR_BLOCO
-TETO = eh.TETO_DA_MISTURA
+TETO = 0.9
 QUATRO = (
     ("APARELHOAAAAAA", "aa:bb:cc:00:00:11", 1.0),
     ("APARELHOBBBBBB", "aa:bb:cc:00:00:12", 1.5),
@@ -109,6 +114,47 @@ def test_o_pico_depois_do_ganho_da_via_fica_no_teto(marca: str, dono: str, ganho
         assert np.abs(np.diff(depois)).max() <= 0.5
 
 
+def _radio(y: np.ndarray, ganho: float) -> np.ndarray:
+    """O bloco do tocador no rádio: o monitor em s16 e o conversor da ponte com o ganho."""
+    from hefesto_dualsense4unix.integrations.haptica_bt import ConversorDeHaptica
+
+    pcm = np.round(np.clip(y, -1.0, 1.0) * 32767).astype("<i2").tobytes()
+    blocos = ConversorDeHaptica(ganho=ganho).alimentar(pcm)
+    return np.frombuffer(b"".join(blocos), dtype=np.int8).reshape(-1, 2).astype(np.int64)
+
+
+def test_nos_quatro_o_cabo_e_o_radio_levam_o_mesmo_ganho_e_nenhum_corta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-2211-O-TETO-DA-MISTURA-DESCONTA-O-GANHO-DA-VIA: o teto desconta o ganho de cada via.
+
+    Os quatro controles juntos, cada um com o seu ganho. O cabo multiplica os traseiros do laço
+    pelo ganho que ``_ganhos_das_rotas`` dá à marca; o rádio converte em int8 na ponte com o ganho
+    do mesmo controle. O tocador sem ``ganho_da_via`` lê o do perfil, e nenhuma das duas vias
+    chega ao corte.
+    """
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af
+
+    do_uniq = {dono: ganho for _marca, dono, ganho in QUATRO}
+    monkeypatch.setattr(GANHO, "fator", lambda uniq: do_uniq.get(str(uniq), 1.0))
+    rotas = {marca: SimpleNamespace(dono=dono) for marca, dono, _g in QUATRO}
+    do_cabo = af.AltoFalanteSubsystem._ganhos_das_rotas(rotas)
+    for marca, dono, ganho in QUATRO:
+        tocador = eh.TocadorDoRumble(marca, argv_de=lambda *_a: [])
+        y = _tocar_a_soma(tocador, dono)
+        no_laco = y[:, 2:] * do_cabo[marca]
+        assert np.abs(no_laco).max() <= TETO + 1e-6, f"{dono}: o cabo passou do teto"
+        for canal in (0, 1):
+            assert _mais_longa_no_teto(no_laco[:, canal], TETO) <= 1, f"{dono}: platô no cabo"
+        na_ponte = _radio(y, GANHO.fator(dono))
+        assert np.abs(na_ponte).max() > 0.5 * TETO * 127 * min(ganho, 1.0), f"{dono}: rádio mudo"
+        assert np.abs(na_ponte).max() <= round(TETO * 127) + 1, f"{dono}: o rádio passou do teto"
+        assert not (np.abs(na_ponte) >= 127).any(), f"{dono}: o rádio cortou no int8"
+
+
 def test_os_tetos_dos_motores_descontam_o_ganho_e_o_ganho_abaixo_de_um_nao_sobe_o_teto() -> None:
     """D-2211-O-TETO-DA-MISTURA-DESCONTA-O-GANHO-DA-VIA: 2,0 divide o teto, menos de 1 não."""
     assert _tocador(ganho=2.0).tetos_da_mistura().tolist() == pytest.approx(
@@ -121,6 +167,22 @@ def test_os_tetos_dos_motores_descontam_o_ganho_e_o_ganho_abaixo_de_um_nao_sobe_
 
     sem_perfil = eh.TocadorDoRumble("APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=quebra)
     assert sem_perfil.tetos_da_mistura().tolist() == pytest.approx([TETO] * 4)
+
+    agora = [0.0]
+    lidos = iter([2.0])
+
+    def le_uma_vez(_dono: str) -> float:
+        return next(lidos)
+
+    falha_depois = eh.TocadorDoRumble(
+        "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=le_uma_vez,
+        relogio=lambda: agora[0],
+    )
+    assert falha_depois.tetos_da_mistura()[2] == pytest.approx(TETO / 2)
+    agora[0] = 10.0
+    assert falha_depois.tetos_da_mistura()[2] == pytest.approx(TETO / 2), (
+        "a leitura que falhou esqueceu o ganho já lido e abriu o teto"
+    )
     nao_finito = eh.TocadorDoRumble(
         "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=lambda _d: float("nan")
     )
@@ -179,6 +241,11 @@ def test_a_soltura_devolve_o_ganho_sem_degrau_e_o_baixo_volta_intacto() -> None:
     cauda_in, cauda_out = entrada[Q * 20:, 2], saida[Q * 20:, 2]
     razao = cauda_out[np.abs(cauda_in) > 0.05] / cauda_in[np.abs(cauda_in) > 0.05]
     assert razao[0] < 0.75, "o ganho não estava reduzido quando o pico acabou"
+    quarto = slice(Q * 3, Q * 4)
+    vivos = np.abs(cauda_in[quarto]) > 0.05
+    assert (cauda_out[quarto][vivos] / cauda_in[quarto][vivos]).max() < 0.9, (
+        "a soltura voltou a 1 em menos de 40 ms: o ganho bombeia na onda do motor"
+    )
     assert razao[-1] == pytest.approx(1.0, abs=1e-3), "o ganho não voltou a 1"
     assert np.abs(np.diff(saida[:, 2])).max() <= 0.5
     assert limitador.ganho[2] == 1.0

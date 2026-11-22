@@ -1380,14 +1380,15 @@ class TocadorDoRumble:
 
         O ganho da háptica do controle (``1.0 1.0 G G`` no laço do cabo, a amostra da ponte no
         rádio) multiplica o bloco DEPOIS daqui: o que passa de ``teto / G`` aqui passa do teto
-        lá, e o corte volta no servidor de som. Ganho abaixo de 1 não sobe o teto.
+        lá, e o corte volta no servidor de som. Ganho abaixo de 1 não sobe o teto. A leitura que
+        falha guarda o último ganho lido do mesmo dono (1 se não houver).
         """
         agora, dono, fator = self._ganho_lido
         if self._dono != dono or self._relogio() - agora >= LEITURA_DO_GANHO_S:
             try:
                 fator = float(self._ganho_da_via(self._dono))
             except Exception:
-                fator = 1.0
+                fator = fator if dono == self._dono else 1.0
             if not math.isfinite(fator) or fator < 1.0:
                 fator = 1.0
             self._ganho_lido = (self._relogio(), self._dono, fator)
