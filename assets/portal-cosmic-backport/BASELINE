@@ -8,4 +8,5 @@ PATCH=cosmic-protocols-92-destroy-antes-do-callback.patch
 PATCH_SHA256=d0b6f058aed69a7c10f1dd9a165ab7dca3576e76bfa9986d6f0599952e791e38
 ARVORE_DO_PATCH=hefesto-cosmic-protocols-92
 SUFIXO=+0~hefesto1
+PORTAL_DE_CIMA_COM_A_CURA=1.11.0~1795035856~24.04~7b0864c
 MARCA_cosmic-protocols-92=hefesto-cosmic-protocols-92/client-toolkit/src/screencopy/dispatch.rs

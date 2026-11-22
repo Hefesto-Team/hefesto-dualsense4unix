@@ -251,10 +251,21 @@ def som(maquina: Maquina | None = None) -> Cura:
                 "O som voltou ao da distribuição, mais velho que o do Hefesto", RODE_O_INSTALADOR)
 
 
+def _de_cima_ja_cura(maquina: Maquina, base: dict[str, str], versao: str) -> bool:
+    """A versão da distribuição é igual ou maior que o piso do ``BASELINE``, na ordem do
+    ``dpkg --compare-versions``? O piso é a menor versão de cima que o construtor já conferiu
+    trazendo a correção; sem ele no ``BASELINE``, nenhuma versão vale por aqui."""
+    piso = base.get("PORTAL_DE_CIMA_COM_A_CURA", "")
+    if not piso:
+        return False
+    return maquina.comando(["dpkg", "--compare-versions", versao, "ge", piso]) is not None
+
+
 def portal(maquina: Maquina | None = None) -> Cura:
     """A MARCA_ do cosmic-protocols#92 está no portal de captura do COSMIC? O portal da casa é
     opt-in (``install.sh --com-tela``): sem a preferência do apt dele e sem a versão da casa,
-    não se aplica."""
+    não se aplica. A distribuição que já passou o piso do ``BASELINE`` traz a correção de cima e
+    vale sem lista nenhuma; as listas do instalador valem abaixo do piso."""
     maquina = maquina or MAQUINA
     base = _baseline(maquina.assets / "portal-cosmic-backport" / "BASELINE")
     pacote, programa = base.get("PORTAL_PACOTE", ""), base.get("PORTAL_EXEC", "")
@@ -272,6 +283,8 @@ def portal(maquina: Maquina | None = None) -> Cura:
         with contextlib.suppress(OSError):
             curadas += lista.read_text(encoding="utf-8") + "\n"
     if tem or de_cima in curadas.splitlines():
+        return Cura("portal", "Portal de captura", VALE)
+    if "~hefesto" not in versao and _de_cima_ja_cura(maquina, base, versao):
         return Cura("portal", "Portal de captura", VALE)
     if "~hefesto" not in versao and not (maquina.preferencias_do_apt / PREF_DO_PORTAL).exists():
         return Cura("portal", "Portal de captura", NAO_SE_APLICA)

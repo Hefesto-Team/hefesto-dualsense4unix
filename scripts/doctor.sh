@@ -6411,7 +6411,7 @@ check_o_portal_de_captura_do_cosmic() {
     local baseline="${HEFESTO_DOCTOR_PORTAL_BASELINE:-${ROOT_DIR}/assets/portal-cosmic-backport/BASELINE}"
     local curadas="${HEFESTO_DOCTOR_PORTAL_CURADAS:-${HOME}/.cache/hefesto-dualsense4unix/portal-cosmic-backport/A-ORIGEM-JA-CURA.txt}"
     local pref="${HEFESTO_DOCTOR_PORTAL_PREF:-/etc/apt/preferences.d/hefesto-portal-cosmic}"
-    local pacote unidade oficial pr sufixo marca ver de_cima programa vivo arq valor troca=0
+    local pacote unidade oficial pr sufixo marca ver de_cima programa vivo arq valor piso troca=0
     [[ -r "${baseline}" ]] || return 0
     command -v dpkg-query >/dev/null 2>&1 || return 0
     pacote="$(_portal_cosmic_ler PORTAL_PACOTE "${baseline}")"
@@ -6419,6 +6419,7 @@ check_o_portal_de_captura_do_cosmic() {
     oficial="$(_portal_cosmic_ler PORTAL_EXEC "${baseline}")"
     pr="$(_portal_cosmic_ler PROTOCOLOS_PR "${baseline}")"
     sufixo="$(_portal_cosmic_ler SUFIXO "${baseline}")"
+    piso="$(_portal_cosmic_ler PORTAL_DE_CIMA_COM_A_CURA "${baseline}")"
     marca="$(sed -n 's/^MARCA_[^=]*=//p' "${baseline}" 2>/dev/null | head -n 1)"
     ver="$(dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' "${pacote}" 2>/dev/null | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true)"
     [[ -n "${ver}" ]] || return 0
@@ -6454,6 +6455,8 @@ check_o_portal_de_captura_do_cosmic() {
         info "o portal de captura em execução é o ${vivo}, de outro projeto: o doctor não sabe se ele traz o cosmic-protocols#${pr}"
     elif [[ -r "${curadas}" ]] && grep -q -x -F -- "${de_cima}" "${curadas}" 2>/dev/null; then
         pass "o portal de captura ${ver} já traz de cima a cura do cosmic-protocols#${pr}"
+    elif [[ -n "${piso}" && "${ver}" != *~hefesto* ]] && dpkg --compare-versions "${ver}" ge "${piso}" 2>/dev/null; then
+        pass "o portal de captura ${ver} já traz de cima a cura do cosmic-protocols#${pr} (a versão ${piso} em diante)"
     elif [[ ! -e "${pref}" && "${ver}" != *~hefesto* ]]; then
         info "o portal de captura (${vivo}, pacote ${ver}) é o da distribuição, sem o cosmic-protocols#${pr}: o «Ver a tela» do Modo imersão pode cair — $(conselho_de_instalacao --com-tela) para construir o corrigido"
     else
