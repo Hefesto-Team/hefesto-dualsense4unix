@@ -75,13 +75,20 @@ class Mesa:
             f'printf "{TRACEBACK}\\n" >&2\n'
             'exit "$rc"\n',
         )
-        vdf = (
+        self.vdf = (
             self.lar / ".local" / "share" / "Steam" / "userdata" / "1000" / "config"
             / "localconfig.vdf"
         )
-        vdf.parent.mkdir(parents=True)
-        vdf.write_text(
+        self.vdf.parent.mkdir(parents=True)
+        self.vdf.write_text(
             '"UserLocalConfigStore"\n{\n\t"Software"\n\t{\n\t}\n}\n', encoding="utf-8"
+        )
+
+    def com_o_vdf_a_corrigir(self) -> None:
+        """O vdf passa a ter o PSSupport ligado: o `--apply` e o `--apply-quiet` vão escrever."""
+        self.vdf.write_text(
+            '"UserLocalConfigStore"\n{\n\t"SteamController_PSSupport"\t\t"1"\n}\n',
+            encoding="utf-8",
         )
 
     def roda(
@@ -157,6 +164,53 @@ def test_cada_pergunta_e_cada_escrita_da_ponte_conta_sozinha(
 def test_o_texto_da_ponte_que_cai_segue_para_o_diario(mesa: Mesa, modo: str) -> None:
     proc = mesa.roda(modo, rc_da_ponte=1)
     assert "No module named 'structlog'" in proc.stdout + proc.stderr
+
+
+@pytest.mark.parametrize(
+    ("modo", "gesto"),
+    [("--apply", "--estado"), ("--status", "--estado"), ("--apply", "--dry-run")],
+)
+def test_a_queixa_da_pergunta_que_cai_segue_para_o_diario(
+    mesa: Mesa, modo: str, gesto: str
+) -> None:
+    """MORDIDA: a pergunta do `--apply` com a saída inteira em `/dev/null` cala o traceback."""
+    proc = mesa.roda(modo, rc_da_ponte=1, falha_em=gesto)
+    assert "No module named 'structlog'" in proc.stdout + proc.stderr
+
+
+@pytest.mark.parametrize(
+    ("modo", "gesto"),
+    [
+        ("--apply-quiet", "--ligar"),
+        ("--apply-quiet", "--desligar-fora-da-lista"),
+        ("--apply", "--ligar"),
+        ("--apply", "--estado"),
+        ("--apply", "--dry-run"),
+    ],
+)
+def test_com_o_vdf_a_corrigir_a_ponte_que_cai_ainda_e_erro(
+    mesa: Mesa, modo: str, gesto: str
+) -> None:
+    """MORDIDA: o `rc` zerado antes dos vdfs, ou a ponte e a pergunta esquecidas no `--apply`."""
+    mesa.com_o_vdf_a_corrigir()
+    proc = mesa.roda(modo, rc_da_ponte=1, falha_em=gesto)
+    saida = proc.stdout + proc.stderr
+    assert "resultado=erro" in saida, saida
+    assert "resultado=aplicado" not in saida, saida
+    assert proc.returncode != 0, saida
+    assert mesa.tocou_na_steam() == []
+
+
+@pytest.mark.parametrize("modo", ["--apply-quiet", "--apply"])
+def test_com_o_vdf_a_corrigir_e_a_ponte_de_rotina_aplica(mesa: Mesa, modo: str) -> None:
+    """O lar de mentira chega à escrita: sem isto o teste de cima passaria sem escrever nada."""
+    mesa.com_o_vdf_a_corrigir()
+    proc = mesa.roda(modo, rc_da_ponte=0)
+    saida = proc.stdout + proc.stderr
+    assert "resultado=aplicado" in saida, saida
+    assert proc.returncode == 0, saida
+    assert any("--gravar-vdf" in c for c in mesa.chamadas()), mesa.chamadas()
+    assert mesa.tocou_na_steam() == []
 
 
 @pytest.mark.parametrize("rc_da_ponte", [0, 3, 4])

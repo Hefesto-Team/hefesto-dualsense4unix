@@ -217,7 +217,7 @@ ponte_pendente() {
     queixa="$(mktemp)"
     estado="$(python3 "${PONTE_PY}" --estado 2>"${queixa}")" || rc_ponte=$?
     if [[ "${rc_ponte}" -ne 0 ]]; then
-        _imprime_linhas "$(cat "${queixa}")"
+        _imprime_linhas "$(cat "${queixa}")" >&2
         rm -f -- "${queixa}"
         return 2
     fi
@@ -478,7 +478,7 @@ case "${MODE}" in
         done
         pergunta_falhou=0
         rc_ponte=0
-        ponte_pendente >/dev/null 2>&1 || rc_ponte=$?
+        ponte_pendente >/dev/null || rc_ponte=$?
         case "${rc_ponte}" in
             0) any_needs=1 ;;
             2) pergunta_falhou=1 ;;
