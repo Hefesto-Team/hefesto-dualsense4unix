@@ -227,7 +227,12 @@ class AutoSwitcher:
                     logger.warning("autoswitch_window_read_failed", err=str(exc))
                     info = {}
 
-                self._tick(info, loop.time())
+                try:
+                    self._tick(info, loop.time())
+                except Exception as exc:
+                    logger.warning(
+                        "autoswitch_tick_falhou", err=str(exc), tipo=type(exc).__name__
+                    )
 
                 with contextlib.suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(
@@ -896,7 +901,19 @@ class AutoSwitcher:
 
     def start(self) -> asyncio.Task[Any]:
         self._task = asyncio.create_task(self.run(), name="autoswitch")
+        self._task.add_done_callback(self._registrar_o_fim_da_tarefa)
         return self._task
+
+    @staticmethod
+    def _registrar_o_fim_da_tarefa(tarefa: asyncio.Task[Any]) -> None:
+        """Registra a morte da tarefa por exceção; o fim pedido (stop ou cancelamento) é calado."""
+        if tarefa.cancelled():
+            return
+        erro = tarefa.exception()
+        if erro is not None:
+            logger.error(
+                "autoswitch_task_morreu", err=str(erro), tipo=type(erro).__name__
+            )
 
     def stop(self) -> None:
         if self._stop_event is not None:

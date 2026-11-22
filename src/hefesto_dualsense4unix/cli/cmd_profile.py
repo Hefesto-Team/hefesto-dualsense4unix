@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
+from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
 
@@ -188,11 +189,15 @@ def cmd_create(
     elif manual:
         match = MatchManual()
     else:
-        match = MatchCriteria(
-            window_class=match_class or [],
-            window_title_regex=match_regex,
-            process_name=match_exe or [],
-        )
+        try:
+            match = MatchCriteria(
+                window_class=match_class or [],
+                window_title_regex=match_regex,
+                process_name=match_exe or [],
+            )
+        except ValidationError as exc:
+            console.print(f"[red]{exc.errors()[0]['msg'].removeprefix('Value error, ')}[/red]")
+            raise typer.Exit(code=1) from exc
 
     profile = Profile(name=name, match=match, priority=priority)
     path = save_profile(profile, enxuto=True)

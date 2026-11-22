@@ -1,6 +1,7 @@
 """Schema de perfil v1 com pydantic."""
 from __future__ import annotations
 
+import functools
 import os
 import re
 from collections.abc import Mapping
@@ -35,6 +36,17 @@ def _casa_sem_caixa(valor: object, aceitos: list[str]) -> bool:
     return any(alvo == item.casefold() for item in aceitos)
 
 
+@functools.lru_cache(maxsize=256)
+def _padrao_do_titulo(fonte: str) -> re.Pattern[str] | None:
+    """O padrão compilado do título, guardado por expressão; None se a expressão não compila."""
+    padrao: re.Pattern[str] | None
+    try:
+        padrao = re.compile(fonte, re.IGNORECASE)
+    except re.error:
+        padrao = None
+    return padrao
+
+
 class MatchCriteria(BaseModel):
     """Casamento por critérios específicos (V2-8, V2-10).
 
@@ -54,6 +66,19 @@ class MatchCriteria(BaseModel):
     window_title_regex: str | None = None
     process_name: list[str] = Field(default_factory=list)
 
+    @field_validator("window_title_regex", mode="after")
+    @classmethod
+    def _validate_window_title_regex(cls, value: str | None) -> str | None:
+        """Recusa na gravação a expressão que não compila, para todo chamador."""
+        if value:
+            try:
+                re.compile(value, re.IGNORECASE)
+            except re.error as exc:
+                raise ValueError(
+                    f"expressão inválida no título da janela: {exc} (posição {exc.pos})"
+                ) from exc
+        return value
+
     def matches(self, window_info: dict[str, Any]) -> bool:
         conditions: list[bool] = []
         if self.window_class:
@@ -61,9 +86,9 @@ class MatchCriteria(BaseModel):
                 _casa_sem_caixa(window_info.get("wm_class"), self.window_class)
             )
         if self.window_title_regex:
-            pattern = self.window_title_regex
             title = window_info.get("wm_name", "") or ""
-            conditions.append(bool(re.search(pattern, title, re.IGNORECASE)))
+            padrao = _padrao_do_titulo(self.window_title_regex)
+            conditions.append(padrao is not None and padrao.search(title) is not None)
         if self.process_name:
             conditions.append(
                 _casa_sem_caixa(window_info.get("exe_basename"), self.process_name)
