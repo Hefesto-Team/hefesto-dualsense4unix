@@ -474,6 +474,61 @@ def test_o_fecho_que_reaproveitou_recibo_nao_alimenta_o_piso(tmp_path: Path) -> 
     assert TEMPO.censo_da_suite(tmp_path).numero == 2400
 
 
+def _reaproveita(
+        casa: Path, partes: list[int], arquivos_do_log: dict[int, int] | None = None) -> Path:
+    """O `reaproveitadas.txt` do fecho e o `seco/parte-NN` da partição (3 arquivos), com o log de
+    cada parte de `arquivos_do_log` dizendo quantos arquivos o sumário traz."""
+    pasta = casa / "fecho" / "suite"
+    (pasta / "seco").mkdir(exist_ok=True)
+    for n in range(TEMPO.PARTES):
+        (pasta / "seco" / f"parte-{n:02d}").write_text("a.py\nb.py\nc.py\n", encoding="utf-8")
+    for n, quantos in (arquivos_do_log or {}).items():
+        (pasta / f"parte-{n:02d}.txt").write_text(
+            _parte(n, 100.0).replace("(3 arq)", f"({quantos} arq)"), encoding="utf-8")
+    reaproveitadas: Path = pasta / TEMPO.REAPROVEITADAS
+    listadas = "".join(f" {n:02d}" for n in partes)
+    reaproveitadas.write_text(f"partes com o recibo de antes:{listadas}\n", encoding="utf-8")
+    return reaproveitadas
+
+
+def test_a_parte_reaproveitada_que_rodou_inteira_entra_na_soma(tmp_path: Path) -> None:
+    """Prova da D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE: marca igual, uma corrida."""
+    _escreve_casa(tmp_path)
+    _reaproveita(tmp_path, [0, 1, 7])
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero == 2400, censo.indisponivel
+
+
+def test_a_parte_reaproveitada_por_lote_deixa_a_suite_indisponivel(tmp_path: Path) -> None:
+    """Prova da D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE: o lote mede o que rodou."""
+    _escreve_casa(tmp_path)
+    _reaproveita(tmp_path, [0, 1, 7], {1: 2})
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None
+    motivo = censo.indisponivel or ""
+    assert "reaproveitou o recibo" in motivo and "(01)" in motivo
+
+
+def test_a_parte_reaproveitada_sem_a_particao_ao_lado_nao_prova_a_corrida_inteira(
+        tmp_path: Path) -> None:
+    _escreve_casa(tmp_path)
+    reaproveitadas = _reaproveita(tmp_path, [4])
+    (tmp_path / "fecho" / "suite" / "seco" / "parte-04").unlink()
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None and "(04)" in (censo.indisponivel or "")
+    reaproveitadas.write_text("partes com o recibo de antes: 99\n", encoding="utf-8")
+    assert TEMPO.censo_da_suite(tmp_path).numero is None
+
+
+def test_mordida_sem_a_conferencia_da_contagem_a_parte_por_lote_alimenta_o_piso(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _escreve_casa(tmp_path)
+    _reaproveita(tmp_path, [0, 1], {1: 2})
+    assert TEMPO.censo_da_suite(tmp_path).numero is None
+    monkeypatch.setattr(TEMPO, "_partes_por_lote", lambda _pasta, _listadas: [])
+    assert TEMPO.censo_da_suite(tmp_path).numero == 2400, "a mordida não mordeu: nada decide"
+
+
 def test_a_parte_trocada_vira_aviso_no_fecho_e_o_piso_fica(
         mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
     raiz, casa = mundo

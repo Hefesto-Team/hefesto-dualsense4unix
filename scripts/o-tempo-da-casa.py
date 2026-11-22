@@ -4,8 +4,9 @@
 Três medidas, lidas dos registros que o fecho e o rápido já deixam em ``$CASA``:
 
 * ``suite-pytest-s``: a soma do tempo de pytest das 24 partes (``fecho/suite/parte-NN.txt``) de UMA
-  corrida: a marca de cada parte (a árvore, o número de arquivos e a partição) tem de bater, e o fecho
-  que reaproveitou o recibo de uma parte não alimenta o piso;
+  corrida: a marca de cada parte (a árvore, o número de arquivos e a partição) tem de bater, e a
+  parte que o fecho reaproveitou só entra se o sumário traz a partição inteira (``parte-NN (N arq)``
+  com N igual ao de ``suite/seco/parte-NN``): a que rodou por lote deixa a medida indisponível;
 * ``rapido-mediana-s``: a mediana de parede das últimas corridas do rápido (``rapido-*.log``) que
   rodaram todos os portões com todas as vagas pedidas: a que lembrou portão mede o atalho, e a que
   pegou menos vagas mede a carga dos outros;
@@ -57,6 +58,7 @@ CORRIDAS_DO_RAPIDO = 9
 MINIMO_DE_CORRIDAS = 5
 
 _PARTE = re.compile(r"^\s*parte-(\d+) \(\d+ arq\): .* in ([\d.]+)s")
+_ARQUIVOS_DA_PARTE = re.compile(r"^\s*parte-(\d+) \((\d+) arq\)", re.M)
 _PROCESSO_PROPRIO = re.compile(r"^\s+\S+, em processo próprio: .* in ([\d.]+)s")
 _MARCA = re.compile(r"^\s*corrida árvore=(\S+) arquivos=(\d+) partição=(\S+)\s*$", re.M)
 _CABECALHO = re.compile(r"^suíte — (\d+) arquivos em (\d+) partes", re.M)
@@ -82,11 +84,46 @@ def _corrida(texto: str) -> str:
     return "sem marca nem cabeçalho"
 
 
+def _partes_reaproveitadas(pasta: Path) -> list[str]:
+    """Os números das partes que o fecho listou como de recibo de antes; vazio sem o arquivo."""
+    arquivo = pasta / REAPROVEITADAS
+    if not arquivo.is_file():
+        return []
+    return arquivo.read_text(encoding="utf-8").split(":")[-1].split()
+
+
+def _arquivos_da_particao(pasta: Path, n: str) -> int | None:
+    """Quantos arquivos a partição dá à parte ``n``, lida do ``seco/parte-NN`` que o fecho deixa ao lado."""
+    lista = pasta / "seco" / f"parte-{n}"
+    if not lista.is_file():
+        return None
+    return sum(1 for linha in lista.read_text(encoding="utf-8").splitlines() if linha.strip())
+
+
+def _partes_por_lote(pasta: Path, listadas: list[str]) -> list[str]:
+    """As partes listadas cujo log não traz a partição inteira: só a contagem de arquivos do sumário
+    igual à da partição prova que o recibo de antes foi de uma corrida por inteiro, e não de um lote."""
+    sem_prova: list[str] = []
+    for n in listadas:
+        log = pasta / f"parte-{n}.txt"
+        if not log.is_file():
+            sem_prova.append(n)
+            continue
+        texto = log.read_text(encoding="utf-8", errors="replace")
+        rodados = {int(m[2]) for m in _ARQUIVOS_DA_PARTE.finditer(texto) if m[1] == n}
+        if rodados != {_arquivos_da_particao(pasta, n)}:
+            sem_prova.append(n)
+    return sem_prova
+
+
 def censo_da_suite(casa: Path | None) -> Censo:
     """Soma o pytest das 24 partes de UMA corrida; parte, linha ou marca que falta é indisponível.
 
     O fecho guarda o recibo da parte verde e só reroda a vermelha, e a partição muda com o número de
     arquivos: em 23/10 as 24 partes vinham de quatro corridas (O-TEMPO-DA-SUITE-SO-SOMA-UMA-CORRIDA-01).
+    A marca igual nas 24 é a mesma corrida (D-2310): a parte reaproveitada cujo log traz todos os arquivos
+    da partição mede por inteiro (O-TEMPO-DA-SUITE-SE-MEDE-COM-A-PARTE-REAPROVEITADA-INTEIRA-01); a rodada
+    por lote só mede o que rodou, e deixa a soma indisponível.
     """
     if casa is None:
         return _sem_casa("a casa não foi informada (`--casa` ou $CASA)")
@@ -119,12 +156,14 @@ def censo_da_suite(casa: Path | None) -> Censo:
     if not marca.startswith("árvore "):
         return Censo(numero=None, universo=PARTES,
                      indisponivel=f"as partes em {pasta} não trazem a marca da corrida ({marca})")
-    reaproveitadas = pasta / REAPROVEITADAS
-    if reaproveitadas.is_file() and reaproveitadas.read_text(encoding="utf-8").split(":")[-1].split():
-        return Censo(numero=None, universo=PARTES,
-                     indisponivel=(f"o fecho reaproveitou o recibo de partes de antes "
-                                   f"({reaproveitadas.read_text(encoding='utf-8').strip()}): "
-                                   "a soma junta horas diferentes"))
+    de_antes = _partes_reaproveitadas(pasta)
+    if de_antes:
+        por_lote = _partes_por_lote(pasta, de_antes)
+        if por_lote:
+            return Censo(numero=None, universo=PARTES,
+                         indisponivel=(f"o fecho reaproveitou o recibo de partes de antes ({' '.join(por_lote)}) "
+                                       "sem a partição inteira no sumário: "
+                                       "a soma junta horas diferentes"))
     return Censo(numero=round(sum(por_parte.values())), universo=PARTES,
                  por_item={k: round(v) for k, v in por_parte.items()},
                  nota=f"segundos de pytest das {PARTES} partes de uma corrida da suíte ({marca})")
