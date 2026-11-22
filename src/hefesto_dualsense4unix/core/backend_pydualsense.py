@@ -2567,7 +2567,7 @@ class PyDualSenseController(IController):
         if desistiu:
             logger.warning(
                 "pydualsense_init_timeout — o init não terminou no prazo "
-                "(o broker ou o open do nó não responderam)",
+                "(a abertura do nó ou a soltura do cabo não voltaram)",
                 path=path,
                 timeout_sec=INIT_TIMEOUT_SEC,
             )
