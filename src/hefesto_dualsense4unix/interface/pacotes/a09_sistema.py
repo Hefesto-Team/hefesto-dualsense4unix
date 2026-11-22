@@ -1884,7 +1884,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("09-sistema.html", "reiniciar", grava="_systemctl")
 def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Reiniciar o serviço". `systemctl --user restart`, com o `reset-failed`.
+    """"Reiniciar o serviço". `systemctl --user restart`, `reset-failed` e a marca do reinício.
 
     A TRAVA VEM DA CAMADA DO PRODUTO: com o serviço desligado, `travas()`
     responde *"O serviço está desligado — não há o que reiniciar."* — e é essa a
@@ -1921,20 +1921,32 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     motivo = _trava(ctx, "reiniciar")
     if motivo:
         raise RuntimeError(motivo)
+    from hefesto_dualsense4unix.utils import session
+
+    session.marcar_o_reinicio(_daemon.prazo_do_systemctl(["restart"]))
     try:
         _systemctl("restart")
     except ReinicioEmCursoError as em_curso:
         _para_o_painel(str(em_curso))
         na_fila([FILA_DO_REINICIO], _repor_quando_o_servico_voltar, nome=FILA_DO_REINICIO)
         return
+    except BaseException:
+        session.encerrar_o_reinicio()
+        raise
+    session.marcar_que_o_servico_subiu(_daemon.prazo_do_systemctl(["start"]))
     _repor_o_lancador()
 
 
 def _repor_quando_o_servico_voltar() -> None:
     """O `start` bloqueia até a partida: quando ele volta com sucesso, o lançador é reposto."""
+    from hefesto_dualsense4unix.utils import session
+
     resultado = _matriz()._invoke_systemctl(["start", _unidade()], capture=True)
     if getattr(resultado, "returncode", -1) == 0:
+        session.marcar_que_o_servico_subiu(_daemon.prazo_do_systemctl(["start"]))
         _repor_o_lancador()
+    else:
+        session.encerrar_o_reinicio()
 
 
 def _repor_o_lancador() -> None:

@@ -24,6 +24,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import time
 from collections.abc import Callable, Iterator, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -300,6 +301,161 @@ def esquecer_o_ultimo_jogo(nome: str | None = None) -> None:
     with contextlib.suppress(OSError):
         (config_dir() / _ULTIMO_JOGO_FILE).unlink(missing_ok=True)
         logger.info("o_ultimo_jogo_esquecido", perfil=atual)
+
+
+def o_jogo_em_cena_no_disco() -> int | None:
+    """O appid do jogo aberto AGORA pela sessão do wrapper, lida sem o serviço: ou ``None``.
+
+    O marcador `last_run` fresco, com o pid vivo e sem `last_exit` mais novo: a primeira evidência
+    do `Daemon.appid_em_cena` (`lifecycle._o_appid_da_evidencia`), a única que se lê do disco sem
+    abrir `/proc` nem `/sys`. A tela pergunta isto a cada tique, no fio da janela
+    (`O-FIO-DA-JANELA-NUNCA-ESPERA-01`), e a varredura de processos da Steam, que o serviço faz
+    para o jogo que não passou pelo wrapper, ficaria proibida ali. O que só a varredura vê, o
+    serviço de pé diz (a perna do daemon, e a espera do rodapé). Nunca levanta.
+    """
+    try:
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            pid_is_alive,
+            read_last_exit_marker,
+            read_last_exit_pid,
+            read_last_run_marker,
+            read_last_run_pid,
+            wrapper_game_running,
+        )
+
+        marcador = read_last_run_marker()
+        if marcador is None:
+            return None
+        pid = read_last_run_pid()
+        vivo = wrapper_game_running(
+            marker=marcador,
+            exit_marker=read_last_exit_marker(),
+            pid_alive=pid_is_alive(pid),
+            marker_pid=pid,
+            exit_pid=read_last_exit_pid(),
+        )
+        return int(marcador[0]) if vivo else None
+    except Exception as exc:
+        logger.debug("o_jogo_em_cena_ilegivel", err=str(exc))
+        return None
+
+
+def _o_perfil_do_jogo(appid: int) -> str | None:
+    """O nome do perfil que é a regra do jogo, ou `None` (sem o Freestyle)."""
+    from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
+
+    do_jogo = perfil_do_appid(appid)
+    if do_jogo is None or _e_o_freestyle(do_jogo.name):
+        return None
+    return str(do_jogo.name)
+
+
+def o_nome_que_o_boot_restaura(
+    *, freestyle_ligado: bool, appid_em_cena: int | None,
+    perfil_do_jogo: Callable[[int], str | None] = _o_perfil_do_jogo,
+) -> str | None:
+    """O perfil que vale quando o serviço não diz: o Freestyle ligado, o jogo em cena, o último
+    jogo e, só então, a escolha do usuário.
+
+    O DONO ÚNICO da pergunta que o boot do serviço (`daemon.connection`) e a tela com o serviço
+    calado (:func:`o_nome_que_vale_sem_o_servico`) fazem — `D-3009-O-REINICIO-COM-O-JOGO-ABERTO-
+    NASCE-NO-PERFIL-DO-JOGO`. O boot passa a memória do botão e o `appid_em_cena` do sinal. O
+    Freestyle desligado nunca volta; sem perfil legível, `None`. Levanta só o que os donos de baixo
+    levantam.
+    """
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
+    if freestyle_ligado:
+        return NOME_DO_PADRAO
+    if appid_em_cena is not None and (do_jogo := perfil_do_jogo(appid_em_cena)) is not None:
+        return do_jogo
+    if (ultimo := o_ultimo_jogo()) is not None:
+        return ultimo
+    nome = resolve_boot_profile()
+    if _e_o_freestyle(nome):
+        nome = a_escolha_do_usuario(freestyle_ligado=False)
+    if not nome or _e_o_freestyle(nome):
+        return None
+    return nome
+
+
+_PERFIL_DO_JOGO_LEMBRADO: list[Any] = [None, None]
+
+
+def _o_perfil_do_jogo_lembrado(appid: int) -> str | None:
+    """:func:`_o_perfil_do_jogo`, lembrado enquanto a pasta de perfis não muda.
+
+    A tela pergunta a cada tique; ler os perfis todos custa dezenas de milissegundos (41 perfis:
+    64 ms), no fio da janela. A chave é o appid, a pasta e o `mtime` da pasta (a gravação de
+    perfil é por troca de arquivo, que o muda).
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    try:
+        pasta = profiles_dir()
+        chave = (appid, str(pasta), pasta.stat().st_mtime_ns)
+    except OSError:
+        return _o_perfil_do_jogo(appid)
+    if _PERFIL_DO_JOGO_LEMBRADO[0] == chave:
+        return _PERFIL_DO_JOGO_LEMBRADO[1]  # type: ignore[no-any-return]
+    nome = _o_perfil_do_jogo(appid)
+    _PERFIL_DO_JOGO_LEMBRADO[:] = [chave, nome]
+    return nome
+
+
+def o_nome_que_vale_sem_o_servico() -> str | None:
+    """A pergunta do boot (:func:`o_nome_que_o_boot_restaura`), feita pela tela sem o serviço.
+
+    O botão do Freestyle vem do `freestyle_ligado.flag` (só vale com o perfil no disco) e o jogo em
+    cena, do disco (:func:`o_jogo_em_cena_no_disco`): o que o boot do serviço vai restaurar é o
+    que a tela diz que vale, durante o reinício e fora dele.
+    """
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
+    manda = load_freestyle_ligado() and _o_perfil_carrega(NOME_DO_PADRAO)
+    return o_nome_que_o_boot_restaura(
+        freestyle_ligado=manda, appid_em_cena=o_jogo_em_cena_no_disco(),
+        perfil_do_jogo=_o_perfil_do_jogo_lembrado)
+
+
+_relogio = time.monotonic
+
+_REINICIO_ATE: list[float] = [0.0]
+
+_REINICIO_SUBIU: list[bool] = [False]
+
+
+def marcar_o_reinicio(prazo_s: float) -> None:
+    """Acende a marca de «o serviço reinicia por gesto desta janela», por `prazo_s`.
+
+    Só a janela que pediu o reinício a conhece (o Reiniciar da bandeja é outro processo). Nasce
+    no pedido, com o serviço ainda parando e subindo: o estado que ele responde nessa fase não
+    vale (:func:`reinicio_subiu`).
+    """
+    _REINICIO_ATE[0] = _relogio() + max(0.0, float(prazo_s))
+    _REINICIO_SUBIU[0] = False
+
+
+def marcar_que_o_servico_subiu(prazo_s: float) -> None:
+    """O `restart` voltou: o serviço escuta, e a marca segue por `prazo_s` até o boot restaurar."""
+    _REINICIO_ATE[0] = _relogio() + max(0.0, float(prazo_s))
+    _REINICIO_SUBIU[0] = True
+
+
+def encerrar_o_reinicio() -> None:
+    """Apaga a marca do reinício em curso."""
+    _REINICIO_ATE[0] = 0.0
+    _REINICIO_SUBIU[0] = False
+
+
+def reinicio_em_curso() -> bool:
+    """A marca está acesa e o prazo não venceu?"""
+    return _relogio() < _REINICIO_ATE[0]
+
+
+def reinicio_subiu() -> bool:
+    """Em reinício em curso, o `restart` já voltou? Só então o estado do serviço vale."""
+    return reinicio_em_curso() and _REINICIO_SUBIU[0]
 
 
 def esquecer_a_escolha(nome: str | None = None) -> None:
@@ -955,6 +1111,7 @@ __all__ = [
     "ARRANJO_NAVEGACAO",
     "ARRANJO_POINT_AND_CLICK",
     "a_escolha_do_usuario",
+    "encerrar_o_reinicio",
     "espelhar_a_escolha",
     "esquecer_a_escolha",
     "gravar_a_escolha",
@@ -972,8 +1129,15 @@ __all__ = [
     "load_mouse_preference",
     "load_paused_state",
     "load_plugins_enabled",
+    "marcar_o_reinicio",
+    "marcar_que_o_servico_subiu",
     "migrar_a_escolha_do_usuario",
+    "o_jogo_em_cena_no_disco",
+    "o_nome_que_o_boot_restaura",
+    "o_nome_que_vale_sem_o_servico",
     "read_active_marker",
+    "reinicio_em_curso",
+    "reinicio_subiu",
     "resolve_boot_profile",
     "save_active_marker",
     "save_arranjo_do_desktop",

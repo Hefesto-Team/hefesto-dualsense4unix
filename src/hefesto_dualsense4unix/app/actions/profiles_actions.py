@@ -71,22 +71,19 @@ def explicacao_da_disputa(
 
 
 def perfil_que_o_usuario_ativou() -> str | None:
-    """A escolha do usuário, lida do disco pelo dono (`utils.session.a_escolha_do_usuario`).
+    """O perfil que vale com o serviço calado, do disco (`session.o_nome_que_vale_sem_o_servico`).
 
-    O Freestyle quando o botão está ligado; desligado, o último perfil que quem usa
-    ativou; «sem escolha», `None`. Sobrevive ao daemon responder
-    `active_profile: null` e a fechar e reabrir a janela. Best-effort:
-    qualquer falha de I/O vira `None`, e a lista simplesmente não destaca
-    ninguém — nunca uma exceção na thread GTK.
+    A pergunta do boot: o Freestyle ligado, o jogo em cena, o último jogo e só então a escolha
+    do usuário; «sem perfil», `None`. Sobrevive ao daemon responder `active_profile: null` e a
+    fechar e reabrir a janela. Best-effort: falha de I/O vira `None`, nunca exceção na thread GTK.
 
-    NOTA DATADA — 01/10/2026: lia o `session.json` e o `active_profile.txt`,
-    com o marcador vencendo na divergência; com a sessão no Freestyle de fora
-    do jogo e o botão apagado, a perna do disco dizia «Freestyle».
+    NOTA DATADA — 22/11/2026: lia só a escolha, e o Aplicar do rodapé mandava a escolha de outro
+    jogo durante o reinício com um jogo aberto, porque o boot e a tela respondiam diferente.
     """
-    from hefesto_dualsense4unix.utils.session import resolve_boot_profile
+    from hefesto_dualsense4unix.utils.session import o_nome_que_vale_sem_o_servico
 
     with contextlib.suppress(Exception):
-        return resolve_boot_profile()
+        return o_nome_que_vale_sem_o_servico()
     return None
 
 

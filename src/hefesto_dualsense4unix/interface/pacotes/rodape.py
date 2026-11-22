@@ -61,13 +61,22 @@ condição em que escrever a linha da Steam é jogar o reparo fora.
 """
 from __future__ import annotations
 
+import copy
 import pathlib
 import sys
+import time
 from typing import Any
 
 from . import Contexto, gesto, perfil
 
 PAGINA = "*"
+
+PASSO_DA_ESPERA_S = 0.5
+
+_dormir = time.sleep
+
+_relogio = time.monotonic
+
 
 def _recado(frase: str) -> None:
     """A notícia da carona vai ao DIÁRIO da janela — e não mais à tela.
@@ -108,11 +117,44 @@ def _draft_do_ativo(nome: str) -> Any:
         return None
 
 
+def _esperar_o_servico_que_reinicia(ctx: Contexto, p: Any) -> Contexto:
+    """O contexto do gesto, com o estado do serviço, quando o reinício é desta janela.
+
+    Com a marca acesa (`session.reinicio_em_curso`), espera o serviço responder com perfil ativo
+    DEPOIS de o `restart` voltar, pelo teto do `start`, e segue com o estado dele: o boot restaura
+    o perfil do jogo 2 s depois de escutar (21/11/2026), e mandar o nome da escolha antes o fazia
+    desistir (`a_escolha_nao_entra_por_cima`). Sem o que restaurar, não espera. Vencido o teto,
+    recusa com `a09_sistema.REINICIO_EM_CURSO`. Sem a marca, devolve o contexto como veio.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import prazo_do_systemctl
+    from hefesto_dualsense4unix.utils import session
+
+    if not session.reinicio_em_curso():
+        return ctx
+    if not session.o_nome_que_vale_sem_o_servico():
+        return ctx
+    limite = _relogio() + prazo_do_systemctl(["start"])
+    while True:
+        if session.reinicio_subiu():
+            estado = p.daemon_state_full()
+            if isinstance(estado, dict) and estado.get("active_profile"):
+                de_volta = copy.copy(ctx)
+                de_volta.state = estado
+                return de_volta
+        if _relogio() >= limite or not session.reinicio_em_curso():
+            break
+        _dormir(PASSO_DA_ESPERA_S)
+    from .a09_sistema import REINICIO_EM_CURSO
+
+    raise RuntimeError(REINICIO_EM_CURSO)
+
+
 @gesto("*", "aplicar")
 def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão verde. Manda o perfil ativo INTEIRO aos controles, sem gravar."""
     from .a04_iluminacao import sem_resposta_do_daemon
 
+    ctx = _esperar_o_servico_que_reinicia(ctx, p)
     nome = perfil_do_rodape(ctx.state)
     if not nome:
         raise ValueError(
@@ -149,6 +191,7 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     arquivo mudava e o controle seguia com o que tinha. Depois, a volta
     (:func:`perfil.a_volta_do_perfil`), como o «Aplicar» e o «Importar».
     """
+    ctx = _esperar_o_servico_que_reinicia(ctx, p)
     nome = perfil_do_rodape(ctx.state)
     draft = _draft_do_ativo(nome)
     if draft is None:
@@ -170,6 +213,7 @@ def salvar_e_aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     from .a04_iluminacao import sem_resposta_do_daemon
 
+    ctx = _esperar_o_servico_que_reinicia(ctx, p)
     salvar(ctx, o, p)
     if p.profile_reaplicar(perfil_do_rodape(ctx.state), prender=True) is None:
         raise RuntimeError(sem_resposta_do_daemon())

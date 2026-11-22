@@ -619,9 +619,9 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
     """O nome da escolha do usuário para o boot, com a memória do botão quando há.
 
     `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item 4: o boot e a reconexão
-    restauram a escolha do usuário, com regra de janela ou sem. A pergunta é a do
-    dono (`utils.session.resolve_boot_profile`, que pergunta a
-    `a_escolha_do_usuario`); a memória do Modo Freestyle (`o_freestyle_manda`) vale
+    restauram a escolha do usuário, com regra de janela ou sem. A regra é a do dono
+    (`utils.session.o_nome_que_o_boot_restaura`, a que a tela pergunta com o serviço
+    calado); a memória do Modo Freestyle (`o_freestyle_manda`) vale
     quando há `store`, e o disco quando o boot pergunta antes de haver memória.
     O Freestyle desligado nunca volta (item 6). Levanta só o que o dono levanta.
 
@@ -639,32 +639,14 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
     com regra de janela, foi revogada para a escolha do usuário; a medida está em
     `docs/research/o-porque-dos-modulos.md` («o boot e o último jogo»).
     """
-    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
-    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, o_freestyle_manda
+    from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
     from hefesto_dualsense4unix.utils.session import (
-        a_escolha_do_usuario,
         load_freestyle_ligado,
-        o_ultimo_jogo,
-        resolve_boot_profile,
+        o_nome_que_o_boot_restaura,
     )
 
     manda = o_freestyle_manda(store) if store is not None else load_freestyle_ligado()
-    if manda:
-        return NOME_DO_PADRAO
-    if appid_em_cena is not None:
-        from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
-
-        do_jogo = perfil_do_appid(appid_em_cena)
-        if do_jogo is not None and not e_o_freestyle(do_jogo.name):
-            return str(do_jogo.name)
-    if (ultimo := o_ultimo_jogo()) is not None:
-        return ultimo
-    nome = resolve_boot_profile()
-    if e_o_freestyle(nome):
-        nome = a_escolha_do_usuario(freestyle_ligado=False)
-    if not nome or e_o_freestyle(nome):
-        return None
-    return nome
+    return o_nome_que_o_boot_restaura(freestyle_ligado=manda, appid_em_cena=appid_em_cena)
 
 
 def perfil_que_o_boot_restaura(
