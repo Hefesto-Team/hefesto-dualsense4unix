@@ -6,8 +6,9 @@ cruza as pernas da MESMA corrida e escreve a tabela teste x corridas x última v
 
 Um teste oscila numa corrida quando reprovou numa perna e passou em outra perna que o rodou. A perna que
 prova o verde do teste é a de faixa igual ou maior (``partes 00-05`` contém ``00-03``), com o passo da suíte
-concluído e, se a própria perna ficou vermelha, o log lido sem o teste. Perna sem log, ou de faixa que não contém
-a do vermelho, não prova nada: o teste vermelho em todas as pernas que se sabem rodá-lo não é intermitente,
+concluído e, se a própria perna ficou vermelha, o log lido sem o teste. Perna sem log, com processo que morreu
+sem sumário, de faixa sem número (``partes janela-e-bandeja`` roda um lote) ou de faixa que não contém a do
+vermelho não prova nada: o teste vermelho em todas as pernas que se sabem rodá-lo não é intermitente,
 é defeito. A coluna «no mesmo SHA verde» conta as corridas em que o teste oscilou e o mesmo commit tem
 outra corrida verde: é a prova mais forte (o código era o mesmo). Os SHAs com corrida verde e vermelha no
 mesmo commit saem numa segunda tabela.
@@ -38,6 +39,8 @@ SEM_RAZAO = "SEM RAZÃO"
 
 _PERNA = re.compile(r"^(lint-test|Interface com GTK REAL)")
 _FAIXA = re.compile(r"partes (\d+)-(\d+)\s*$")
+_SEM_FAIXA = re.compile(r"partes \S")
+_MORREU_SEM_SUMARIO = "SEM SUMÁRIO"
 _VERMELHO = re.compile(r"^(?:\S+Z )?(?:FAILED|ERROR) (tests/\S+)", re.M)
 _PASSOU = re.compile(r"^(?:\S+Z )?(tests/\S+) PASSED\b", re.M)
 _LINHA_DA_RAZAO = re.compile(r"^\|\s*`([^`]+)`\s*\|(.*)\|\s*$")
@@ -50,9 +53,10 @@ class Perna:
     nome: str
     conclusao: str
     passos: dict[str, str]
-    faixa: tuple[int, int]
+    faixa: tuple[int, int] | None
     vermelhos: frozenset[str] | None
     passou: frozenset[str] = frozenset()
+    sem_sumario: bool = False
 
     def rodou(self, teste: str) -> bool:
         """O passo da suíte que carrega o teste chegou a rodar (verde ou vermelho)."""
@@ -63,6 +67,11 @@ class Perna:
         return False
 
     def contem(self, outra: Perna) -> bool:
+        """A faixa desta perna cobre a da outra; a faixa sem número (um lote) só é coberta pelas 24 partes."""
+        if self.faixa is None:
+            return False
+        if outra.faixa is None:
+            return self.faixa == (0, PARTES - 1)
         return self.faixa[0] <= outra.faixa[0] and outra.faixa[1] <= self.faixa[1]
 
 
@@ -76,10 +85,13 @@ class Corrida:
     pernas: list[Perna] = field(default_factory=list)
 
 
-def faixa_do_job(nome: str) -> tuple[int, int]:
-    """``partes 04-07`` vira ``(4, 7)``; o job sem faixa roda as 24 partes."""
+def faixa_do_job(nome: str) -> tuple[int, int] | None:
+    """``partes 04-07`` vira ``(4, 7)``; o job sem faixa roda as 24 partes; ``partes janela-e-bandeja``
+    (um lote, sem número) vira ``None``."""
     if m := _FAIXA.search(nome):
         return int(m[1]), int(m[2])
+    if _SEM_FAIXA.search(nome):
+        return None
     return 0, PARTES - 1
 
 
@@ -107,7 +119,8 @@ def pernas_da_corrida(jobs: list[dict[str, Any]], log_do_job: Any) -> list[Perna
         else:
             vermelhos = vermelhos_do_log(texto) if texto is not None else None
         pernas.append(Perna(nome, j["conclusion"], passos, faixa_do_job(nome), vermelhos,
-                            aprovados_do_log(texto) if texto else frozenset()))
+                            aprovados_do_log(texto) if texto else frozenset(),
+                            bool(texto) and _MORREU_SEM_SUMARIO in str(texto)))
     return pernas
 
 
@@ -116,9 +129,13 @@ def oscila(pernas: list[Perna], teste: str) -> bool:
     vermelhas = [p for p in pernas if p.vermelhos is not None and teste in p.vermelhos]
     for v in vermelhas:
         for p in pernas:
-            if p is v or p.vermelhos is None or teste in p.vermelhos or not p.contem(v):
+            if p is v or p.vermelhos is None or teste in p.vermelhos:
                 continue
-            if p.rodou(teste) or teste in p.passou:
+            if teste in p.passou:
+                return True
+            if p.sem_sumario or not p.contem(v):
+                continue
+            if p.rodou(teste):
                 return True
     return False
 
@@ -194,10 +211,17 @@ def razoes_da_lista(arquivo: Path) -> dict[str, str]:
     return razoes
 
 
+def chave_casa(chave: str, funcao: str) -> bool:
+    """A chave da lista nomeia o arquivo, a classe ou a função inteira: ``test_a.py`` casa
+    ``tests/unit/test_a.py::test_x`` e não ``tests/unit/test_xa.py``; ``test_a.py::test_x`` não casa ``test_x2``."""
+    caminho = "/" + funcao
+    return caminho.endswith("/" + chave) or ("/" + chave + "::") in caminho
+
+
 def aplicar_razoes(linhas: list[Linha], razoes: dict[str, str]) -> None:
     for linha in linhas:
         for chave, razao in razoes.items():
-            if chave in linha.funcao:
+            if chave_casa(chave, linha.funcao):
                 linha.razao = razao
                 break
         else:

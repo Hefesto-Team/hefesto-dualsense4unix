@@ -109,6 +109,44 @@ def test_a_faixa_decide_quem_prova_o_verde_de_quem() -> None:
         "o teste da faixa larga pode estar nas partes 04-05, que a estreita não roda")
 
 
+def test_a_perna_do_lote_sem_numero_nao_prova_o_verde_das_faixas() -> None:
+    faixa = "Interface com GTK REAL (ubuntu-24.04), partes 04-07"
+    lote = "Interface com GTK REAL (ubuntu-26.04), partes janela-e-bandeja"
+    passos_do_lote = {"A suíte inteira sob Xvfb, com o GTK real": "success"}
+    jobs = [_job(faixa, "failure", 0), _job(lote, "success", 1, passos_do_lote)]
+    assert INT.cruzar([_corrida("1", "a", "failure", jobs, {0: _log(OSCILA)})]) == [], (
+        "o lote janela-e-bandeja roda poucos arquivos e não prova o verde de um teste da faixa")
+    jobs = [_job(lote, "failure", 0, {"A suíte inteira sob Xvfb, com o GTK real": "failure"}),
+            _job("lint-test (py3.12), partes 00-03", "success", 1),
+            _job("lint-test (3.10)", "success", 2)]
+    linhas = INT.cruzar([_corrida("2", "a", "failure", jobs, {0: _log(OSCILA)})])
+    assert [ln.funcao for ln in linhas] == [OSCILA], "só a perna das 24 partes cobre o lote"
+    assert INT.faixa_do_job(lote) is None and INT.faixa_do_job("lint-test (3.10)") == (0, 23)
+
+
+def test_a_perna_que_morreu_sem_sumario_nao_prova_o_verde() -> None:
+    jobs = [_job("lint-test (3.10)", "failure", 0), _job("lint-test (3.11)", "failure", 1)]
+    morreu = "  parte-03 (90 arq): SEM SUMÁRIO — o processo morreu no meio\n"
+    corrida = _corrida("1", "a", "failure", jobs, {0: _log(OSCILA), 1: morreu})
+    assert INT.cruzar([corrida]) == [], "o processo morto no meio pode não ter chegado ao teste"
+    passou = morreu + f"2026-11-01T10:00:00.000Z {OSCILA} PASSED [ 1%]\n"
+    corrida = _corrida("2", "a", "failure", jobs, {0: _log(OSCILA), 1: passou})
+    assert [ln.funcao for ln in INT.cruzar([corrida])] == [OSCILA], "o PASSED escrito prova"
+
+
+def test_a_chave_da_lista_casa_o_arquivo_ou_a_funcao_inteira() -> None:
+    assert INT.chave_casa("test_a.py", OSCILA)
+    assert INT.chave_casa("test_a.py::test_oscila", OSCILA)
+    assert not INT.chave_casa("a.py", OSCILA), "a chave é o nome inteiro do arquivo"
+    assert not INT.chave_casa("test_a.py::test_osc", OSCILA), "a chave é o nome inteiro da função"
+    linhas = [INT.Linha("tests/unit/test_a.py::test_oscila_mais"),
+              INT.Linha("tests/unit/test_xa.py::test_y")]
+    INT.aplicar_razoes(linhas, {"test_a.py::test_oscila": "razão de outra função",
+                                "a.py": "outro arquivo"})
+    assert [ln.razao for ln in linhas] == [INT.SEM_RAZAO, INT.SEM_RAZAO], (
+        "a razão de outro teste não cala a linha no --exigir-razao")
+
+
 def test_os_testes_do_core_pedem_o_passo_do_core() -> None:
     jobs = [_job("lint-test (3.10)", "failure", 0),
             _job("lint-test (3.11)", "failure", 1, PASSOS_LINT)]
