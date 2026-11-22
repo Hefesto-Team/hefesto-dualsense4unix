@@ -187,6 +187,7 @@ class CoopManager:
         self._backend_avisado: Any = None
         self._pronto_desde: dict[str, float] = {}
         self._mesa_do_jogo: dict[int, str] = {}
+        self._recusas_do_numero: dict[str, tuple[Any, ...]] = {}
         self._nascido_em: dict[str, int] = {}
         self._nascimentos = 0
         self._vpad_do_p1_visto: Any = None
@@ -654,22 +655,15 @@ class CoopManager:
     def _adotar_o_numero_do_jogo(self) -> None:
         """O número que o jogo escreveu nas lâmpadas de um pad passa a ser o do Hefesto.
 
-        «O jogo manda, o controle obedece.» O pad nasce com o número do Hefesto
-        no serial (``pad_usb.serial_do_pad``) e o jogo o vê na mesma ordem; se o
-        jogo numera de outro jeito mesmo assim (medido em 12/10/2026: 3→2, 4→3,
-        2→4), o Hefesto troca o número do aparelho com quem tinha o do jogo, como
-        a troca à mão da aba Controles (``_set_number_locked``), e o lugar dele
-        na mesa do jogo troca junto. A carta passa a bater com a mesa, e
-        ``_ordenar`` não recria pad nenhum: o jogo segue com os pads de pé. A
-        tela e as lâmpadas seguem o registro; o «Háptica do Controle N» segue
-        quando o jogo larga o endpoint (o rótulo nunca renasce com jogo tocando).
-
-        Só com o jogo na autoridade, só no fio do laço, e só entre jogadores do
-        co-op: o posto do P1 (o primário) não troca por aqui.
+        O Hefesto troca o número do aparelho com quem tinha o do jogo, e o lugar dele na
+        mesa do jogo troca junto: nenhum pad renasce com o jogo aberto. Só com o jogo na
+        autoridade, só no fio do laço e só entre jogadores do co-op (o P1 não troca por
+        aqui). A recusa se diz uma vez por mudança (`_a_recusa_e_nova`).
         """
+        marcas = getattr(self._daemon, "_numero_que_o_jogo_escreveu", None)
+        self._esquecer_as_recusas(marcas)
         if not self._no_fio_do_laco() or not self._jogo_com_a_autoridade():
             return
-        marcas = getattr(self._daemon, "_numero_que_o_jogo_escreveu", None)
         registro = getattr(self._daemon, "identity_registry", None)
         numero_de = getattr(registro, "slot_for", None)
         if not isinstance(marcas, dict) or not callable(numero_de):
@@ -714,11 +708,12 @@ class CoopManager:
         dono = next((c for c in self._players if c != alvo and numero(c) == jogo), None)
         ocupante = self._mesa_do_jogo.get(jogo - 1)
         if dono is None or ocupante == _CHAVE_DO_P1 or self._players[alvo].vpad is None:
-            logger.info(
-                "o_numero_do_jogo_nao_trocou",
-                alvo=_rotulo(alvo), jogo=jogo, hefesto=atual,
-                motivo="o_p1" if ocupante == _CHAVE_DO_P1 else "sem_par_no_coop",
-            )
+            motivo = "o_p1" if ocupante == _CHAVE_DO_P1 else "sem_par_no_coop"
+            if self._a_recusa_e_nova(alvo, (jogo, atual, motivo)):
+                logger.info(
+                    "o_numero_do_jogo_nao_trocou",
+                    alvo=_rotulo(alvo), jogo=jogo, hefesto=atual, motivo=motivo,
+                )
             return False
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin, _norm_uniq
 
@@ -730,9 +725,11 @@ class CoopManager:
                 jogo,
             )
         except Exception as exc:
-            logger.warning("o_numero_do_jogo_nao_trocou", alvo=_rotulo(alvo), jogo=jogo,
-                           err=type(exc).__name__)
+            if self._a_recusa_e_nova(alvo, (jogo, atual, type(exc).__name__)):
+                logger.warning("o_numero_do_jogo_nao_trocou", alvo=_rotulo(alvo), jogo=jogo,
+                               err=type(exc).__name__)
             return False
+        self._recusas_do_numero.pop(alvo, None)
         lugar_do_alvo = next((lg for lg, c in self._mesa_do_jogo.items() if c == alvo), None)
         self._mesa_do_jogo[jogo - 1] = alvo
         if lugar_do_alvo is not None and lugar_do_alvo != jogo - 1:
@@ -743,6 +740,22 @@ class CoopManager:
         logger.info("o_numero_do_jogo_adotado", alvo=_rotulo(alvo), jogo=jogo, hefesto=atual,
                     trocou_com=_rotulo(dono))
         return True
+
+    def _a_recusa_e_nova(self, alvo: str, recusa: tuple[Any, ...]) -> bool:
+        """A recusa do número do jogo difere da última dita deste controle? Guarda-a."""
+        if self._recusas_do_numero.get(alvo) == recusa:
+            return False
+        self._recusas_do_numero[alvo] = recusa
+        return True
+
+    def _esquecer_as_recusas(self, marcas: Any) -> None:
+        """A recusa de quem saiu da mesa ou largou a marca do jogo volta a se poder dizer."""
+        if not self._recusas_do_numero:
+            return
+        vivas = {_so_hex(str(alvo)) for alvo in marcas} if isinstance(marcas, dict) else set()
+        for alvo in list(self._recusas_do_numero):
+            if alvo not in self._players or _so_hex(alvo) not in vivas:
+                del self._recusas_do_numero[alvo]
 
     @staticmethod
     def _publicar_a_mesa(vistos: Iterable[str] | None, *, ativa: bool = True) -> None:
@@ -1905,6 +1918,7 @@ class CoopManager:
         self._calib_sem_leitura.discard(identity)
         self._pronto_desde.pop(identity, None)
         self._tirar_da_fila(identity)
+        self._recusas_do_numero.pop(identity, None)
         if self._nascendo is not None and self._nascendo[0] == identity:
             self._nascendo[2].descartar()
             self._nascendo = None
