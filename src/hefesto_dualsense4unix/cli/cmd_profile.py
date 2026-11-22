@@ -220,7 +220,10 @@ def cmd_delete(
         frase_da_remocao_do_perfil_ativo,
         perfil_que_esta_valendo,
     )
-    from hefesto_dualsense4unix.profiles.loader import delete_profile
+    from hefesto_dualsense4unix.profiles.loader import (
+        OFreestyleNaoSeApagaError,
+        delete_profile,
+    )
     from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
 
     aviso = frase_da_remocao_do_perfil_ativo(name, perfil_que_esta_valendo(_estado_do_daemon()))
@@ -233,6 +236,9 @@ def cmd_delete(
         delete_profile(name)
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
+        raise typer.Exit(code=1) from None
+    except OFreestyleNaoSeApagaError as exc:
+        console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from None
     esquecer_o_perfil_apagado(name)
     console.print(f"[green]perfil deletado: {name}[/green]")

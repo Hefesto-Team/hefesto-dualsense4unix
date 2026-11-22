@@ -230,7 +230,11 @@ def seed_default_presets(
     dest_dir: Path | None = None,
     source_dirs: Sequence[Path] | None = None,
 ) -> list[str]:
-    """Copia os `ARQUIVOS_DE_FABRICA` ausentes para o diretório de perfis do usuário, por nome."""
+    """Copia os `ARQUIVOS_DE_FABRICA` ausentes para o diretório de perfis do usuário, por nome.
+
+    O Freestyle renasce de fábrica sempre que o arquivo falta, sem olhar a marca: o botão «Modo
+    Freestyle» pede o arquivo no disco. A marca segue valendo para os demais.
+    """
     global _sem_fonte_avisada
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     candidates = _DEFAULT_SEED_SOURCE_DIRS if source_dirs is None else tuple(source_dirs)
@@ -255,17 +259,21 @@ def seed_default_presets(
         new_entries: list[str] = []
         for fname in ARQUIVOS_DE_FABRICA:
             src = source / fname
-            if fname in seeded or not src.is_file():
+            semeado = fname in seeded
+            if (semeado and fname != ARQUIVO_DO_PADRAO) or not src.is_file():
                 continue
             if fname == ARQUIVO_DO_PADRAO and _o_slot_do_usuario_tem_nome_antigo(directory):
-                new_entries.append(fname)
+                if not semeado:
+                    new_entries.append(fname)
                 continue
             dest = directory / fname
             if dest.exists():
-                new_entries.append(fname)
+                if not semeado:
+                    new_entries.append(fname)
                 continue
             shutil.copyfile(src, dest)
-            new_entries.append(fname)
+            if not semeado:
+                new_entries.append(fname)
             copied.append(fname)
         if new_entries or not marker.exists():
             with marker.open("a", encoding="utf-8") as fh:
@@ -2706,8 +2714,16 @@ def restaurar_do_historico(
     return (alvo, escolhida)
 
 
+class OFreestyleNaoSeApagaError(RuntimeError):
+    """O perfil que o produto pede no disco (o Freestyle) não se remove."""
+
+
 def delete_profile(identifier: str) -> None:
-    """Remove o arquivo do perfil. Aceita slug ou display name."""
+    """Remove o arquivo do perfil. Aceita slug ou display name.
+
+    O Freestyle se recusa com `OFreestyleNaoSeApagaError` (a linha de comando e a janela chamam
+    esta mesma função): o botão «Modo Freestyle» pede o arquivo no disco.
+    """
     try:
         profile = load_profile(identifier)
     except FileNotFoundError:
@@ -2730,6 +2746,11 @@ def delete_profile(identifier: str) -> None:
                 if other.name == profile.name:
                     candidate = path
                     break
+
+    if candidate.name == ARQUIVO_DO_PADRAO or slugify(profile.name) == SLUG_DO_PADRAO:
+        raise OFreestyleNaoSeApagaError(
+            f"O {NOME_DO_PADRAO} não se apaga: é o perfil do botão Modo {NOME_DO_PADRAO}."
+        )
 
     lock_file = _lock_path(candidate)
     with FileLock(str(lock_file)):
@@ -2832,6 +2853,7 @@ __all__ = [
     "SEED_MARKER_NAME",
     "SEED_SKIP_ENV_VAR",
     "MoldeDePerfil",
+    "OFreestyleNaoSeApagaError",
     "PerfilSemeado",
     "ResultadoDaSemeadura",
     "ResultadoDosEstilos",

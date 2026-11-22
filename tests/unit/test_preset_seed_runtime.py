@@ -207,7 +207,10 @@ def test_falha_na_semeadura_nao_impede_a_carga(
 def test_marker_do_shell_script_e_respeitado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """install_profiles.sh semeia primeiro; o semeador Python não re-copia nada."""
+    """install_profiles.sh semeia primeiro; o semeador Python não re-copia o que já está lá.
+
+    A marca vale para os perfis opcionais; só o Freestyle volta de fábrica se o arquivo faltar.
+    """
     script = REPO_ROOT / "scripts" / "install_profiles.sh"
     if not script.exists():
         pytest.skip("scripts/install_profiles.sh não encontrado")
@@ -233,7 +236,8 @@ def test_marker_do_shell_script_e_respeitado(
     dest = home / ".config" / "hefesto-dualsense4unix" / "profiles"
     assert _marker_lines(dest) == ["freestyle.json"]
 
+    assert loader.seed_default_presets(dest_dir=dest, source_dirs=[src]) == []
     (dest / "freestyle.json").unlink()
     copied = loader.seed_default_presets(dest_dir=dest, source_dirs=[src])
-    assert copied == []
-    assert not (dest / "freestyle.json").exists()
+    assert copied == ["freestyle.json"]
+    assert _marker_lines(dest) == ["freestyle.json"]
