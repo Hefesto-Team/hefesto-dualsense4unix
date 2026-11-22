@@ -31,8 +31,6 @@ classify() {
         return (era * 146097 + doe - 719468) * 86400 \
             + substr(ts, 12, 2) * 3600 + substr(ts, 15, 2) * 60 + substr(ts, 18, 2)
     }
-    # ".691289" da hora precisa do journal ("...:28.691289-03:00"); 0 quando a hora não a traz.
-    # Os dígitos viram inteiro e se dividem depois: o ponto decimal "+0" quebra no locale pt_BR.
     function fracao(ts,   d, m, i) {
         if (substr(ts, 20, 1) != ".") return 0
         if (!match(substr(ts, 20), /^\.[0-9]+/)) return 0
@@ -66,7 +64,7 @@ classify() {
         # short-iso: "TS host identificador: msg" → "TS [TAG] msg"
         ts = $1
         tsp = ts
-        sub(/\.[0-9]+/, "", ts)      # o log segue com a hora em segundos; a precisa é só da queda
+        sub(/\.[0-9]+/, "", ts)
         rest = $0
         sub(/^[^ ]+ +/, "", rest)     # remove o timestamp
         sub(/^[^ ]+ +/, "", rest)     # remove o hostname
@@ -83,10 +81,6 @@ classify() {
                 if (dist > janela) fechar(j)
             }
         }
-        # A queda: "USB disconnect" e o "new ... USB device number" da MESMA porta em até queda_s
-        # (21/11/2026: 353 ms, na 3-1.4, sem reset no meio). Só controladora física: o pad virtual
-        # do produto (vhci_hcd) é desfeito e recriado pelo serviço, e não é queda de cabo. Quem
-        # sai de vez (o disconnect sem aparelho novo) não gera linha.
         if (t >= 0) {
             tf = t + fracao(tsp)
             for (pq in saiu_em) if (tf - saiu_em[pq] > queda_s) delete saiu_em[pq]
