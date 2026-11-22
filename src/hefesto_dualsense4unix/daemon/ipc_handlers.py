@@ -15,7 +15,7 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict, replace
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, get_args, get_type_hints
 
 from hefesto_dualsense4unix.core import escritor_cru as _escritor_cru
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
@@ -6770,7 +6770,7 @@ def config_do_reload_conferida(overrides: dict[str, Any]) -> dict[str, Any]:
     por este pedido. Bool não vale como inteiro. Levanta ``ValueError`` (``INVALID_PARAMS``) antes
     de qualquer ``replace``.
     """
-    from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICIES
+    from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICIES, DaemonConfig
     from hefesto_dualsense4unix.integrations import uinput_mouse as _um
 
     confere: dict[str, Callable[[str, Any], Any]] = {
@@ -6779,7 +6779,7 @@ def config_do_reload_conferida(overrides: dict[str, Any]) -> dict[str, Any]:
         "mic_button_toggles_system": _o_booleano,
         "mouse_speed": _o_inteiro_entre(_um.MOUSE_SPEED_MIN, _um.MOUSE_SPEED_MAX),
         "mouse_scroll_speed": _o_inteiro_entre(_um.SCROLL_SPEED_MIN, _um.SCROLL_SPEED_MAX),
-        "ps_button_action": _um_de(("steam", "none", "custom")),
+        "ps_button_action": _um_de(get_args(get_type_hints(DaemonConfig)["ps_button_action"])),
         "ps_button_command": _o_comando,
         "ps_long_press_ms": _o_inteiro_entre(0, 10_000),
         "rumble_policy": _um_de(tuple(RUMBLE_POLICIES)),

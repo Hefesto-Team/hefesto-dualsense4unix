@@ -234,8 +234,7 @@ class IpcServer(IpcHandlersMixin):
     def _derrubar_os_clientes(self) -> None:
         """Aborta o transporte de cada cliente: quem não lê nem fecha não segura a parada."""
         for escritor in list(self._clientes):
-            with contextlib.suppress(Exception):
-                escritor.transport.abort()
+            escritor.transport.abort()
         self._clientes.clear()
 
     def _tirar_o_socket(self) -> None:
@@ -265,8 +264,7 @@ class IpcServer(IpcHandlersMixin):
         if len(self._clientes) >= TETO_DE_CONEXOES:
             self.store.bump("ipc.conexoes_recusadas")
             logger.debug("ipc_conexao_recusada_pelo_teto", teto=TETO_DE_CONEXOES)
-            with contextlib.suppress(Exception):
-                writer.close()
+            writer.close()
             return
         self._clientes.add(writer)
         self.store.bump("ipc.conexoes")
