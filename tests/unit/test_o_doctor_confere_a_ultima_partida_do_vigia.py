@@ -104,7 +104,7 @@ def test_a_ultima_partida_falhada_diz_a_falha_e_o_comando_do_diario(tmp_path: Pa
     saida = _rodar(tmp_path, ativo="failed", resultado="exit-code")
     linha = _linha_do_vigia(saida)
     assert linha.startswith("[WARN]"), saida
-    assert "falhou na última partida" in linha, saida
+    assert "falhou da última vez que rodou" in linha, saida
     assert DIARIO in linha, saida
 
 
@@ -114,14 +114,14 @@ def test_com_a_partida_falhada_a_promessa_de_repor_sozinho_nao_sai(tmp_path: Pat
     jogos = _linha_dos_jogos(saida)
     assert jogos, saida
     assert "repõe" not in jogos and "fica para quando" not in jogos, jogos
-    assert "falhou na última partida" in jogos, jogos
+    assert "falhou da última vez que rodou" in jogos, jogos
     assert "--reparar" in jogos, jogos
 
 
 @pytest.mark.parametrize("resultado", ["signal", "core-dump", "timeout", "start-limit-hit"])
 def test_todo_resultado_que_nao_e_success_conta_como_falha(tmp_path: Path, resultado: str) -> None:
     saida = _rodar(tmp_path, ativo="failed", resultado=resultado)
-    assert "falhou na última partida" in _linha_do_vigia(saida), saida
+    assert "falhou da última vez que rodou" in _linha_do_vigia(saida), saida
 
 
 def test_com_a_partida_boa_nada_muda_em_relacao_a_hoje(tmp_path: Path) -> None:

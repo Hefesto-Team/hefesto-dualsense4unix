@@ -46,15 +46,20 @@ SUFIXO = BASE["SUFIXO"]
 MAIOR = "1.11.0~1795035857~24.04~aaaaaaa"
 MAIS_NOVA = "1.12.0~1799000000~24.04~bbbbbbb"
 MENOR = "1.11.0~1792525517~24.04~f448ddf"
+LANCAMENTO = "1.11.0"
+SERIE_VELHA = "1.9.0~1790000000~24.04~ccccccc"
 SEM_A_MARCA = b"\x7fELF portal da distribuicao, sem a marca da casa"
 
 CASOS = {
     "a_igual_ao_piso_com_a_preferencia": (PISO, True, cc.VALE),
     "b_maior_com_a_preferencia": (MAIOR, True, cc.VALE),
     "b_de_uma_serie_nova_com_a_preferencia": (MAIS_NOVA, True, cc.VALE),
+    "b_lancamento_sem_til_com_a_preferencia": (LANCAMENTO, True, cc.VALE),
     "c_menor_com_a_preferencia": (MENOR, True, cc.CAIU),
+    "c_de_uma_serie_velha_com_a_preferencia": (SERIE_VELHA, True, cc.CAIU),
     "d_da_casa_sem_a_marca": (f"{PISO}{SUFIXO}", True, cc.CAIU),
     "e_menor_sem_a_preferencia": (MENOR, False, cc.NAO_SE_APLICA),
+    "f_maior_sem_a_preferencia": (MAIOR, False, cc.VALE),
 }
 
 

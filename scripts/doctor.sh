@@ -1695,7 +1695,7 @@ check_sentinela_wrapper() {
     local vigia_falhou
     vigia_falhou="$(_o_vigia_da_steam_falhou)"
     if [[ -n "${vigia_falhou}" ]]; then
-        warn "o vigia da Steam falhou na última partida (${vigia_falhou}): o atalho dos jogos pode não ter sido reposto — o porquê: journalctl --user -u hefesto-steam-input-guard.service -n 50"
+        warn "o vigia da Steam falhou da última vez que rodou (${vigia_falhou}): o atalho dos jogos pode não ter sido reposto — o porquê: journalctl --user -u hefesto-steam-input-guard.service -n 50"
     fi
     if [[ ! -f "${py}" ]] || ! command -v python3 >/dev/null 2>&1; then
         return
@@ -1731,7 +1731,7 @@ print("erros=" + str(len(d.get("erros") or [])))
 
     local como="o Hefesto repõe sozinho assim que a Steam fechar; para não esperar: python3 ${py} --reparar"
     if [[ -n "${vigia_falhou}" ]]; then
-        como="o vigia da Steam falhou na última partida, então a reposição automática não é certa; para repor: python3 ${py} --reparar (com a Steam e os jogos fechados)"
+        como="o vigia da Steam falhou da última vez que rodou, então a reposição automática não é certa; para repor: python3 ${py} --reparar (com a Steam e os jogos fechados)"
     elif [[ "${jogo}" == "1" ]]; then
         como="há um JOGO aberto — o reparo fica para quando a Steam fechar (fechá-la agora mataria o jogo)"
     elif [[ "${steam}" == "1" ]]; then
