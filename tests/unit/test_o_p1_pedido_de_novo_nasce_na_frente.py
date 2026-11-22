@@ -171,6 +171,28 @@ def test_o_pedido_de_outro_pad_entra_na_frente_dos_secundarios(
     assert mesa.entregar_tudo() == ["P1", *(f"0{i}" for i in range(2, secundarios + 2))]
 
 
+@pytest.mark.parametrize("muda", ["roupa", "identidade"])
+def test_a_mesma_mascara_com_outra_roupa_ou_outro_dono_nao_se_junta(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, muda: str
+) -> None:
+    """O arme das 18h07: `dualsense` com a roupa `0df2` e depois com a `0ce6` são dois pads."""
+    agora = {"roupa": 0x0DF2, "identidade": None}
+    monkeypatch.setattr(gp, "a_roupa_que_o_pad_veste", lambda d: agora["roupa"])
+    monkeypatch.setattr(gp, "a_identidade_do_p1_que_nasce", lambda d: agora["identidade"])
+    mesa.pedir_o_p1("dualsense", caminho="dualsense", caminho_e_escolha=True)
+    mesa.sentar(2)
+    if muda == "roupa":
+        agora["roupa"] = 0x0CE6
+    else:
+        agora["identidade"] = "aa:bb:cc:00:00:01"
+    mesa.pedir_o_p1("dualsense", caminho="dualsense", caminho_e_escolha=True)
+
+    do_p1 = [p for p in mesa.fio.pedidos if p.identity in (None, "aa:bb:cc:00:00:01")]
+    primeiro, novo = do_p1
+    assert primeiro.descartado and not novo.descartado
+    assert mesa.entregar_tudo() == ["P1", "02"]
+
+
 def test_o_gesto_manual_que_se_junta_ao_pedido_do_perfil_grava_uma_vez(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:

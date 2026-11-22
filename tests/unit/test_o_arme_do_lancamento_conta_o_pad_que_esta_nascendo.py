@@ -282,6 +282,22 @@ def test_a_mesa_que_sobe_conta_a_promessa_quando_o_controle_ainda_nao_voltou(
     assert ambiente.env[IGNORE] == EDGE, ambiente.estado
 
 
+@pytest.mark.parametrize("transportes", [("usb", "bt", "usb"), ("bt", "usb", "bt", "usb")])
+def test_com_um_controle_cedido_ao_p1_a_mesa_nao_ganha_promessa(
+    casa: _Fio, transportes: tuple[str, ...]
+) -> None:
+    """O físico cedido ao P1 não terá pad próprio: a promessa de um por físico não vale ali."""
+    daemon, _ = _mesa_da_fila(transportes, mascara="dualsense", estagio="p1_no_fio_demais_na_fila")
+    gerente = daemon._coop_manager
+    cedido = next(iter(gerente._players.values()))
+    cedido.cedido_ao_primario = True
+    gerente._fila_do_nascimento = tuple(
+        c for c in gerente._fila_do_nascimento if c != cedido.identity
+    )
+    assert le._snapshot(daemon)[3] == ["uhid"] * (len(transportes) - 1)
+    assert IGNORE not in _env_do_jogo_dualsense(daemon, None).env
+
+
 def test_com_o_coop_desligado_o_ignore_segue_fora(casa: _Fio) -> None:
     daemon, _ = _mesa_da_fila(
         ("usb", "bt", "usb"), mascara="dualsense", estagio="p1_no_fio_demais_na_fila",

@@ -103,6 +103,22 @@ def test_o_jogo_que_muda_a_marca_diz_a_segunda(
     assert [kw["jogo"] for kw in espiao.de(NAO_TROCOU)] == [1, 3]
 
 
+def test_o_desencontro_que_volta_depois_de_o_jogo_concordar_diz_de_novo(
+    nascimentos: list[str], registro: _Registro, espiao: _Espiao  # noqa: F811
+) -> None:
+    """A concordância encerra a recusa: o mesmo desencontro, quando volta, é mudança nova."""
+    daemon, gerente = _mesa(registro)
+    registro.numeros = {P1: 1, P2: 2}
+    _o_jogo_marca(daemon, registro, {P2: 1})
+    _sync(gerente, 20)
+    _o_jogo_marca(daemon, registro, {P2: 2})
+    _sync(gerente, 20)
+    _o_jogo_marca(daemon, registro, {P2: 1})
+    _sync(gerente, 20)
+
+    assert [kw["jogo"] for kw in espiao.de(NAO_TROCOU)] == [1, 1]
+
+
 def test_o_pad_do_alvo_que_morre_e_renasce_com_a_mesma_marca_diz_de_novo(
     nascimentos: list[str], registro: _Registro, espiao: _Espiao  # noqa: F811
 ) -> None:

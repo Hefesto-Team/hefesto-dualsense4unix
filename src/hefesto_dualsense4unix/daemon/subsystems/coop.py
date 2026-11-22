@@ -703,6 +703,8 @@ class CoopManager:
             return None
 
         atual = numero(alvo)
+        if atual == jogo:
+            self._recusas_do_numero.pop(alvo, None)
         if atual is None or atual == jogo:
             return False
         dono = next((c for c in self._players if c != alvo and numero(c) == jogo), None)
