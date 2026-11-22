@@ -98,7 +98,7 @@ done < <(find packaging -name '*.desktop' \
 echo "== Atalho do menu dos pacotes: renderizado, nunca copiado =="
 ATALHO_MODELO=packaging/hefesto-dualsense4unix.desktop
 ATALHO_RENDERIZADOR=scripts/atalho_do_pacote.sh
-if [[ -f "${ATALHO_MODELO}" ]] && grep -q '^X-HefestoNaoEmpacotado=true' "${ATALHO_MODELO}" 2>/dev/null; then
+if [[ -f "${ATALHO_MODELO}" ]] && grep -qE '^X-HefestoNaoEmpacotado=true|@[A-Za-z_]+@' "${ATALHO_MODELO}" 2>/dev/null; then
     for inst in "${ICON_INSTALLERS[@]}"; do
         [[ -f "${inst}" ]] || continue
         _codigo_da_receita="$(grep -v '^[[:space:]]*#' "${inst}" || true)"
@@ -116,7 +116,7 @@ if [[ -f "${ATALHO_MODELO}" ]] && grep -q '^X-HefestoNaoEmpacotado=true' "${ATAL
         fi
     done
 else
-    echo "[ -- ] ${ATALHO_MODELO}: sem a declaração de não empacotado, ou ausente"
+    echo "[ -- ] ${ATALHO_MODELO}: sem marcador nem a declaração de não empacotado, ou ausente"
 fi
 
 echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="

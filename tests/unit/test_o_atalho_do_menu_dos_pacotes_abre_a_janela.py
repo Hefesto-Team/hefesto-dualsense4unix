@@ -274,6 +274,24 @@ def test_o_portao_barra_o_cp_cru_do_atalho_no_deb(tmp_path: Path) -> None:
     assert "cru" in secao
 
 
+def test_o_portao_barra_o_cp_cru_mesmo_sem_a_chave_de_nao_empacotado(tmp_path: Path) -> None:
+    """Quem tira a chave do modelo não desliga a régua: o marcador `@RAIZ@` basta."""
+    cru = "cp packaging/hefesto-dualsense4unix.desktop $d/hefesto-dualsense4unix.desktop\n"
+    repo = _repo_de_paridade(tmp_path, cru)
+    modelo = repo / "packaging" / "hefesto-dualsense4unix.desktop"
+    modelo.write_text(
+        "".join(
+            linha
+            for linha in modelo.read_text(encoding="utf-8").splitlines(keepends=True)
+            if not linha.startswith("X-HefestoNaoEmpacotado")
+        ),
+        encoding="utf-8",
+    )
+    r = _paridade(repo)
+    assert r.returncode == 1, r.stdout
+    assert "[FAIL] scripts/build_deb.sh" in _secao_do_atalho(r.stdout), r.stdout
+
+
 def test_o_portao_barra_a_receita_que_esquece_o_atalho(tmp_path: Path) -> None:
     repo = _repo_de_paridade(tmp_path, "echo nada\n")
     r = _paridade(repo)

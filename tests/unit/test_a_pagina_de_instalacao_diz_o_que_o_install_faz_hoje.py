@@ -204,3 +204,36 @@ def test_o_validador_morde_o_5_86_devolvido(tmp_path: Path) -> None:
     )
     assert r.returncode != 0, r.stdout
     assert "O BlueZ corrigido (5.86)" in r.stdout + r.stderr
+
+
+OPCAO = re.compile(r"`--[a-z][a-z-]+`")
+
+
+def _linhas_de_root_sem_opcao(tabela: str) -> list[str]:
+    faltam = []
+    for linha in tabela.splitlines():
+        if not linha.startswith("| ") or linha.startswith("| Caminho") or linha.startswith("|---"):
+            continue
+        caminho = linha.split("|")[1]
+        de_root = any(p in caminho for p in ("/etc/", "/usr/", "/var/")) or caminho.strip() in (
+            "o grupo `hefesto`",
+            "módulos de kernel (DKMS)",
+            "teclado na tela",
+            "o modo desempenho",
+        )
+        if de_root and not OPCAO.search(linha):
+            faltam.append(caminho.strip())
+    return faltam
+
+
+def test_cada_linha_de_root_diz_a_opcao_que_a_pula() -> None:
+    assert _linhas_de_root_sem_opcao(_tabela()) == []
+
+
+def test_a_regua_morde_a_linha_que_perdeu_a_opcao() -> None:
+    """Tira (só da cópia do texto) a opção da linha do modules-load: a régua acusa a linha."""
+    tabela = _tabela()
+    linha = next(x for x in tabela.splitlines() if x.startswith("| `/etc/modules-load.d/"))
+    mordida = tabela.replace(linha, OPCAO.sub("", linha))
+    esperado = ["`/etc/modules-load.d/hefesto-dualsense4unix.conf`"]
+    assert _linhas_de_root_sem_opcao(mordida) == esperado

@@ -9,7 +9,8 @@
 # guarda TELA-DO-USUARIO-02, e mora AQUI porque o atalho é o que se clica: o `run.sh`
 # não o declara, e todo instrumento que o chama continua sem tela.
 #
-# @RAIZ@ é substituído pelo caminho da árvore por quem instala (`install.sh`).
+# @RAIZ@ é substituído pelo caminho da árvore pelo `install.sh`; nos pacotes, o
+# `scripts/atalho_do_pacote.sh` troca o `Exec=` inteiro pelo executável do formato.
 # O arquivo versionado NÃO carrega caminho de máquina.
 #
 # O QUE JÁ DEU ERRADO AQUI, e apareceu no menu: o `Icon=` apontava para um nome
@@ -53,11 +54,13 @@ Categories=Settings;HardwareSettings;
 Terminal=false
 StartupNotify=true
 StartupWMClass=Hefesto-Dualsense4Unix
-# NÃO ENTRA EM .deb/.rpm/Arch/Nix ENQUANTO O `Exec=` FOR CAMINHO DE ÁRVORE.
+# ESTE ARQUIVO NÃO ENTRA CRU EM .deb/.rpm/Arch/Nix: o `Exec=` é caminho de árvore.
 # Um pacote instala em `/usr`, e um `Exec=` que aponta para a pasta de
-# desenvolvimento quebraria na máquina de qualquer outra pessoa. A chave abaixo
-# é a declaração que dispensa o `check_packaging_parity.sh` de cobrar o PNG nos
-# quatro empacotadores — sem a chave, o portão cobra, e está certo em cobrar.
-# É DECISÃO DE PRODUTO quando isto muda: empacotar exige o `Exec=` virar o console
-# script `hefesto-dualsense4unix-gui`, que já abre a mesma interface HTML.
+# desenvolvimento não abriria nada na máquina de qualquer outra pessoa. Cada
+# receita o passa pelo `scripts/atalho_do_pacote.sh`, que aponta o `Exec=` para o
+# console script `hefesto-dualsense4unix-gui` do formato (a mesma interface HTML)
+# e tira desta cópia os comentários e a chave abaixo
+# (D-2211-O-ATALHO-DO-MENU-DOS-PACOTES-APONTA-PARA-O-GUI). O
+# `check_packaging_parity.sh` reprova a receita que copia este arquivo cru e cobra
+# o PNG de toda receita que leva o atalho.
 X-HefestoNaoEmpacotado=true
