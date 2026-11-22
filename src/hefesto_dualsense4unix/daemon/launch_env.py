@@ -1562,12 +1562,12 @@ def _fisicos_na_mesa(daemon: DaemonProtocol) -> int:
 def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
     """(native, emulation_enabled, flavor, backends dos vpads, físicos na mesa).
 
-    O quinto campo é a COBERTURA (WRAPPER-EM-TODOS-01): o jogador de co-op pendente
-    (`vpad is None`) não entra em `backends`, e sem ele o `all(b == "uhid")` passava
-    trivialmente e o IGNORE escondia dois físicos com um vpad só. O pad do P1 que o
-    fio ainda faz nascer conta como emulação viva, com a máscara e o canal pedidos
-    (`CoopManager.o_p1_que_nasce`).
+    O quinto campo é a COBERTURA (WRAPPER-EM-TODOS-01): um vpad vivo por físico. Contam o
+    P1 em voo (emulação viva, máscara e canal pedidos), cada secundário em voo
+    (`CoopManager.os_pads_em_voo`) e, com a mesa subindo, os pads prometidos por
+    `_vpads_previstos`. O em voo é lido antes de tudo, do estágio mais cedo ao mais tarde.
     """
+    em_voo = _os_pads_em_voo(daemon)
     native = False
     with contextlib.suppress(Exception):
         native = bool(daemon.is_native_mode())
@@ -1577,25 +1577,53 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
 
     backends: list[str] = []
     primary = getattr(daemon, "_gamepad_device", None)
+    p1_em_voo = next((pad for pad in em_voo if pad.p1), None)
+    if p1_em_voo is not None:
+        enabled, flavor = True, str(p1_em_voo.mascara)
     if primary is not None:
         backends.append(str(getattr(primary, "backend", "") or ""))
-    else:
-        nasce = _de_fora(daemon, "o_p1_que_nasce", None)
-        if isinstance(nasce, tuple) and len(nasce) == 3:
-            mascara, caminho, permite_uhid = nasce
-            enabled, flavor = True, str(mascara)
-            backends.extend(_backends_da_troca(flavor, caminho, bool(permite_uhid)))
+    elif p1_em_voo is not None:
+        backends.extend(
+            _backends_da_troca(flavor, p1_em_voo.caminho, p1_em_voo.permite_uhid)
+        )
     coop = getattr(daemon, "_coop_manager", None)
     players = getattr(coop, "_players", None)
+    cedidos = False
     if isinstance(players, dict):
-        for player in players.values():
+        secundarios = {pad.chave: pad for pad in em_voo if not pad.p1}
+        for chave, player in list(players.items()):
+            cedidos = cedidos or bool(getattr(player, "cedido_ao_primario", False))
             vpad = getattr(player, "vpad", None)
             if vpad is not None and vpad is not primary:
                 backends.append(str(getattr(vpad, "backend", "") or ""))
+            elif vpad is None and chave in secundarios:
+                pad = secundarios[chave]
+                backends.extend(_backends_da_troca(pad.mascara, pad.caminho, pad.permite_uhid))
     fisicos = _fisicos_na_mesa(daemon)
     if fisicos > 0:
         fisicos += _de_fora(daemon, "externos_sentados", 0)
+    if em_voo and not cedidos:
+        faltam = _vpads_previstos(daemon, fisicos) - len(backends)
+        if faltam > 0:
+            pad = em_voo[0]
+            canal = _backends_da_troca(pad.mascara, pad.caminho, pad.permite_uhid)
+            backends.extend(canal * faltam)
+    logger.debug(
+        "launch_env_foto",
+        fio=threading.current_thread().name,
+        em_voo=[pad.chave for pad in em_voo],
+        p1_que_nasce=p1_em_voo is not None,
+        emulacao=enabled,
+        backends=backends,
+        fisicos=fisicos,
+    )
     return native, enabled, flavor, backends, fisicos
+
+
+def _os_pads_em_voo(daemon: Any) -> tuple[Any, ...]:
+    """Os pads pedidos ao fio e não instalados (`CoopManager.os_pads_em_voo`); vazio sem co-op."""
+    em_voo = _de_fora(daemon, "os_pads_em_voo", ())
+    return tuple(em_voo) if isinstance(em_voo, tuple) else ()
 
 
 def _de_fora(daemon: Any, pergunta: str, vazio: Any) -> Any:
