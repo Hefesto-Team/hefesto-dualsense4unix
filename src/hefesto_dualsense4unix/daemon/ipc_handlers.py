@@ -14,6 +14,7 @@ import json
 import os
 import time
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any, Literal, cast, get_args, get_type_hints
 
@@ -130,6 +131,14 @@ def origem_do_pedido(params: dict[str, Any] | None) -> Literal["manual", "profil
 
 logger = get_logger(__name__)
 
+le_so_do_guardado: ContextVar[bool] = ContextVar("hefesto_le_so_do_guardado", default=False)
+"""Ligada pelo servidor durante a pergunta do estado: as leituras de ``/sys`` e do HCI respondem
+do guardado, e cada uma corre num fio, sem parar o laço."""
+
+_LEITURAS_POR_CHAVE_MAX = 64
+_BARRA_E_AR_VALIDADE_S = 0.5
+_TETO_DA_LEITURA_FRIA_S = 0.25
+
 
 def _as_str_or_none(value: Any) -> str | None:
     """Normaliza campos informativos do state_full para str | None; só string real passa (um
@@ -212,6 +221,9 @@ class _LeituraForaDoLaco:
 
     def e_de(self, *chave: Any) -> bool:
         return chave == self._chave
+
+    def lendo(self) -> bool:
+        return self._corrida is not None
 
     def ja_leu(self) -> bool:
         """Falso até uma leitura começada depois do último `esquecer` acabar."""
@@ -617,6 +629,10 @@ class IpcHandlersMixin:
 
     _hid_orfaos_cache: tuple[float, list[str]] | None = None
 
+    _leituras_por_chave: dict[tuple[str, Any], _LeituraForaDoLaco] | None = None
+
+    _insumos_do_orcamento: Any = None
+
     _no_do_vpad_cache: (
         dict[tuple[str, str], tuple[float, tuple[int, ...] | None, dict[str, Any]]] | None
     ) = None
@@ -643,11 +659,154 @@ class IpcHandlersMixin:
     def _osk_lido(self) -> _LeituraForaDoLaco:
         return _LeituraForaDoLaco(self._ler_o_osk, False, _OSK_DISPONIVEL_TTL_SEC)
 
+    def _leitura_de(
+        self, familia: str, chave: Any, ler: Callable[..., Any], vazio: Any, validade_s: float
+    ) -> _LeituraForaDoLaco:
+        """A leitura guardada de uma porta de ``/sys`` por chave: um dono só, com fio próprio."""
+        mapa = self._leituras_por_chave
+        if mapa is None:
+            mapa = self._leituras_por_chave = {}
+        leitura = mapa.get((familia, chave))
+        if leitura is None:
+            if len(mapa) >= _LEITURAS_POR_CHAVE_MAX:
+                for velha in [k for k, v in mapa.items() if not v.lendo()]:
+                    del mapa[velha]
+            leitura = mapa[(familia, chave)] = _LeituraForaDoLaco(ler, vazio, validade_s)
+        return leitura
+
+    async def _primeira_leitura(self, leitura: _LeituraForaDoLaco, *chave: Any) -> None:
+        """A primeira pergunta de uma chave espera a leitura, num fio e com teto: o laço segue."""
+        prazo = time.monotonic() + _TETO_DA_LEITURA_FRIA_S
+        while not (leitura.e_de(*chave) and leitura.ja_leu()):
+            leitura.agora(*chave)
+            restante = prazo - time.monotonic()
+            if restante <= 0:
+                return
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(leitura.sem_leitura_correndo(), timeout=restante)
+
+    def _nos_da_barra_de(self, entries: list[dict[str, Any]]) -> list[Any]:
+        """Os nós LED que o enriquecimento vai ler: o nó do controle, escrito por nós."""
+        mapa = getattr(self.controller, "_sysfs", None)
+        escrito = getattr(self.controller, "_sysfs_written", None)
+        if not isinstance(mapa, dict) or not isinstance(escrito, dict):
+            return []
+        nos = {
+            u: n for k, n in list(mapa.items())
+            if (u := _norm_uniq(k)) is not None and n is not None
+        }
+        escritos = {
+            u for k, raw in list(escrito.items())
+            if (u := _norm_uniq(k)) is not None and _rgb_or_none(raw) is not None
+        }
+        uniqs = {e["uniq"] for e in entries if isinstance(e.get("uniq"), str)}
+        return [nos[u] for u in uniqs if u in nos and u in escritos]
+
+    async def _esperar_as_leituras_frias(self, entries: list[dict[str, Any]]) -> None:
+        """Antes do enriquecimento: a chave ainda não lida se lê agora, em paralelo."""
+        if not le_so_do_guardado.get():
+            return
+        pedidos = [self._primeira_leitura(self._sem_driver_lido)]
+        no_radio = self._uniqs_no_radio(entries)
+        if no_radio:
+            pedidos.append(
+                self._primeira_leitura(self._adaptadores_lidos, tuple(sorted(set(no_radio))))
+            )
+        pedidos.extend(
+            self._primeira_leitura(self._a_barra_guardada(no))
+            for no in self._nos_da_barra_de(entries)
+        )
+        await asyncio.gather(*pedidos, return_exceptions=True)
+
+    async def _esperar_os_nos_frios(self, vpads: list[tuple[int, Any, Any, str | None]]) -> None:
+        """Antes do laço dos pads virtuais: o nó ainda não lido de cada pad se lê agora."""
+        if not le_so_do_guardado.get():
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.coop import identidade_do_vpad
+
+        pedidos = []
+        for _numero, vp, _leitor, _uniq in vpads:
+            identidade = identidade_do_vpad(vp)
+            leitura = self._o_no_guardado(identidade["vpad_uniq"], identidade["vpad_nome"])
+            if leitura is not None:
+                pedidos.append(self._primeira_leitura(leitura))
+        await asyncio.gather(*pedidos, return_exceptions=True)
+
+    async def _esperar_o_orcamento_frio(self, result: dict[str, Any]) -> None:
+        """Depois do enriquecimento: o orçamento de uma chave nova se lê e entra na resposta."""
+        if not le_so_do_guardado.get() or self._insumos_do_orcamento is None:
+            return
+        chave = self._chave_do_orcamento(self._insumos_do_orcamento[0])
+        await self._primeira_leitura(self._orcamento_lido, chave)
+        if "radio_ar" in result:
+            result["radio_ar"] = dict(self._orcamento_lido.agora(chave))
+
+    def _o_no_guardado(self, uniq: str | None, nome: str | None) -> _LeituraForaDoLaco | None:
+        chave = ((uniq or "").strip().casefold(), (nome or "").strip())
+        if chave == ("", ""):
+            return None
+        return self._leitura_de(
+            "no_do_vpad",
+            chave,
+            lambda: self._ler_o_no_do_vpad(uniq, nome),
+            dict(NO_DESCONHECIDO),
+            _BARRA_E_AR_VALIDADE_S,
+        )
+
+    def _a_barra_guardada(self, node: Any) -> _LeituraForaDoLaco:
+        cache_key = str(getattr(node, "indicator_dir", "") or f"id:{id(node)}")
+        return self._leitura_de(
+            "barra",
+            cache_key,
+            lambda: self._ler_a_barra_do_no(node, cache_key),
+            (None, False),
+            _LIGHTBAR_READ_TTL_SEC,
+        )
+
+    @staticmethod
+    def _uniqs_no_radio(entries: list[dict[str, Any]]) -> list[str]:
+        return [
+            e["uniq"] for e in entries
+            if e.get("transport") == "bt" and isinstance(e.get("uniq"), str) and e["uniq"]
+        ]
+
+    @staticmethod
+    def _chave_do_orcamento(entries: list[dict[str, Any]]) -> tuple[tuple[str, str, bool], ...]:
+        return tuple(
+            sorted(
+                (str(e.get("uniq")), str(e.get("transport")), bool(e.get("connected", True)))
+                for e in entries
+            )
+        )
+
+    @functools.cached_property
+    def _sem_driver_lido(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(
+            self._ler_os_controles_sem_driver,
+            {"quantidade": 0, "ids": []},
+            _BARRA_E_AR_VALIDADE_S,
+        )
+
+    @functools.cached_property
+    def _adaptadores_lidos(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(
+            lambda alvo: self._ler_os_adaptadores_do_radio(list(alvo)), {}, self._ADAPTADOR_TTL_S
+        )
+
+    @functools.cached_property
+    def _orcamento_lido(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(
+            lambda *_chave: self._publicar_o_orcamento(*self._insumos_do_orcamento),
+            {},
+            _BARRA_E_AR_VALIDADE_S,
+        )
+
     def aquecer_as_leituras(self) -> None:
         """A primeira janela já encontra o que o `state_full` responde sem esperar."""
         self._pontes_lidas.agora()
         self._marker_lido.agora()
         self._motores_lidos.agora(None)
+        self._sem_driver_lido.agora()
         self._osk_lido.agora()
 
     _identidade_de_fabrica_cache: dict[str, dict[str, str | None]] | None = None
@@ -1978,9 +2137,10 @@ class IpcHandlersMixin:
                         entry["player"] = number
             if isinstance(controllers, list):
                 with contextlib.suppress(Exception):
-                    self._enriquecer_e_medir_o_ar(
-                        result, [c for c in controllers if isinstance(c, dict)], state
-                    )
+                    entradas = [c for c in controllers if isinstance(c, dict)]
+                    await self._esperar_as_leituras_frias(entradas)
+                    self._enriquecer_e_medir_o_ar(result, entradas, state)
+                    await self._esperar_o_orcamento_frio(result)
 
         entradas_de_controle = result.get("controllers")
         frageis = controles_bt_frageis(
@@ -2184,6 +2344,7 @@ class IpcHandlersMixin:
                 identidade_do_vpad,
             )
 
+            await self._esperar_os_nos_frios(vpads)
             for player_num, vp, motion_reader, uniq_do_fisico in vpads:
                 with contextlib.suppress(Exception):
                     ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
@@ -2959,10 +3120,23 @@ class IpcHandlersMixin:
             cache = {}
             self._lightbar_read_cache = cache
         cache_key = str(getattr(node, "indicator_dir", "") or f"id:{id(node)}")
+        if le_so_do_guardado.get():
+            lida = self._a_barra_guardada(node).agora()
+            return lida[0], lida[1]
         now = time.monotonic()
         hit = cache.get(cache_key)
         if hit is not None and (now - hit[0]) < _LIGHTBAR_READ_TTL_SEC:
             return hit[1], hit[2]
+        return self._ler_a_barra_do_no(node, cache_key)
+
+    def _ler_a_barra_do_no(
+        self, node: Any, cache_key: str
+    ) -> tuple[tuple[int, int, int] | None, bool]:
+        """A leitura de verdade do nó LED no sysfs: guarda e devolve ``(rgb, aceso)``."""
+        cache = self._lightbar_read_cache
+        if cache is None:
+            cache = {}
+            self._lightbar_read_cache = cache
         rgb: tuple[int, int, int] | None = None
         on = False
         with contextlib.suppress(Exception):
@@ -2971,7 +3145,7 @@ class IpcHandlersMixin:
             on = bool(node.is_on())
         if len(cache) > 64:
             cache.clear()
-        cache[cache_key] = (now, rgb, on)
+        cache[cache_key] = (time.monotonic(), rgb, on)
         return rgb, on
 
     def _player_slot_for(self, uniq: str | None) -> int | None:
@@ -3301,6 +3475,14 @@ class IpcHandlersMixin:
         chave = ((uniq or "").strip().casefold(), (nome or "").strip())
         if chave == ("", ""):
             return dict(NO_DESCONHECIDO)
+        if le_so_do_guardado.get():
+            leitura = self._o_no_guardado(uniq, nome)
+            return dict(leitura.agora()) if leitura is not None else dict(NO_DESCONHECIDO)
+        return self._ler_o_no_do_vpad(uniq, nome)
+
+    def _ler_o_no_do_vpad(self, uniq: str | None, nome: str | None) -> dict[str, Any]:
+        """A leitura de verdade do nó do vpad, a que o guardado chama num fio."""
+        chave = ((uniq or "").strip().casefold(), (nome or "").strip())
         from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
         from hefesto_dualsense4unix.integrations import no_do_vpad as _ndv
 
@@ -3331,6 +3513,13 @@ class IpcHandlersMixin:
         diretório do sysfs (``0005:054C:0CE6.000F``, sem MAC) para casar com o
         `bt_rebind_orphans.sh`; a janela usa só a quantidade.
         """
+        if le_so_do_guardado.get():
+            lido = self._sem_driver_lido.agora()
+            return {"quantidade": lido["quantidade"], "ids": list(lido["ids"])}
+        return self._ler_os_controles_sem_driver()
+
+    def _ler_os_controles_sem_driver(self) -> dict[str, Any]:
+        """A leitura de verdade do sysfs, a que o guardado chama num fio."""
         now = time.monotonic()
         hit = self._hid_orfaos_cache
         if hit is not None and (now - hit[0]) < _HID_ORFAOS_TTL_SEC:
@@ -5327,10 +5516,7 @@ class IpcHandlersMixin:
         def chave(valor: Any) -> str:
             return (norm_mac(str(valor)) or "") if isinstance(valor, str) else ""
 
-        no_radio = [
-            e["uniq"] for e in entries
-            if e.get("transport") == "bt" and isinstance(e.get("uniq"), str) and e["uniq"]
-        ]
+        no_radio = self._uniqs_no_radio(entries)
         enderecos = self._adaptadores_do_radio(no_radio)
         hub = self._sensor_hub
         if hub is None:
@@ -5392,6 +5578,12 @@ class IpcHandlersMixin:
 
     def _adaptadores_do_radio(self, uniqs: list[str]) -> dict[str, str]:
         """``{uniq: endereço do adaptador | ""}``, relido no máximo a cada 2 s."""
+        if le_so_do_guardado.get():
+            return dict(self._adaptadores_lidos.agora(tuple(sorted(set(uniqs)))))
+        return self._ler_os_adaptadores_do_radio(uniqs)
+
+    def _ler_os_adaptadores_do_radio(self, uniqs: list[str]) -> dict[str, str]:
+        """A leitura de verdade dos adaptadores, a que o guardado chama num fio."""
         from hefesto_dualsense4unix.integrations import radio_da_mesa
 
         agora = time.monotonic()
@@ -5415,8 +5607,6 @@ class IpcHandlersMixin:
         (``AltoFalanteSubsystem.governador``, a cada 250 ms); sem ele, ou no modo falso, «não sei».
         ``_medidor_de_ar`` é a porta da régua, que injeta um dublê.
         """
-        from hefesto_dualsense4unix.integrations import radio_da_mesa
-
         amostra: Any = None
         medidor = self._medidor_de_ar
         if medidor is not None:
@@ -5430,13 +5620,30 @@ class IpcHandlersMixin:
             ar = {e: a for e, a in dict(amostra).items() if e}
             self._talvez_ler_o_afh(ar)
             self._talvez_ler_o_sinal(ar)
-        orcamento = radio_da_mesa.orcamento_por_adaptador(
-            entries,
-            ar=ar,
-            canais_evitados=dict(self._afh_evitados or {}),
-            enlaces=dict(self._enlaces_lidos or {}),
-            sinais=dict(self._sinal_dos_enlaces or {}),
-        )
+        insumos = {
+            "ar": ar,
+            "canais_evitados": dict(self._afh_evitados or {}),
+            "enlaces": dict(self._enlaces_lidos or {}),
+            "sinais": dict(self._sinal_dos_enlaces or {}),
+        }
+        if le_so_do_guardado.get():
+            return self._o_orcamento_guardado(entries, insumos)
+        return self._publicar_o_orcamento(entries, insumos)
+
+    def _o_orcamento_guardado(
+        self, entries: list[dict[str, Any]], insumos: dict[str, Any]
+    ) -> dict[str, Any]:
+        """O orçamento de ar do último fio: as entradas viajam em foto e a conta corre fora."""
+        self._insumos_do_orcamento = ([dict(e) for e in entries], insumos)
+        return dict(self._orcamento_lido.agora(self._chave_do_orcamento(entries)))
+
+    def _publicar_o_orcamento(
+        self, entries: list[dict[str, Any]], insumos: dict[str, Any]
+    ) -> dict[str, Any]:
+        """A conta do orçamento por adaptador, que pode ler ``/sys`` e o HCI."""
+        from hefesto_dualsense4unix.integrations import radio_da_mesa
+
+        orcamento = radio_da_mesa.orcamento_por_adaptador(entries, **insumos)
         return {endereco: o.publicar() for endereco, o in orcamento.items()}
 
     def _talvez_ler_o_afh(self, ar: dict[str, Any]) -> None:

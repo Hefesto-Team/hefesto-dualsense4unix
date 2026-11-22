@@ -864,7 +864,7 @@ def _par_das_barras(
 
     1. **Esta função lia duas chaves que o daemon não publica no bloco de onde
        a função lia.** `last_weak` e `last_strong` moram no TOPO do `rumble_ff`
-       (`daemon/ipc_handlers.py:2067`), e o que chegava aqui era um bloco de
+       (`daemon/ipc_handlers.py:2324`), e o que chegava aqui era um bloco de
        `per_vpad`, que não tem nem uma nem outra. As duas leituras davam `0`
        sempre, o `if` caía sempre no :data:`PAR_DE_TESTE`, e o "Testar" mandava
        `(160, 220)` **fizesse o usuário o que fizesse com as barras**. Medido com a

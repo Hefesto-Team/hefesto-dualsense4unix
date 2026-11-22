@@ -21,7 +21,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController
 from hefesto_dualsense4unix.daemon import launch_env
-from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin, le_so_do_guardado
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_CONTROLLER_DISCONNECTED,
@@ -47,6 +47,8 @@ TETO_DO_PEDIDO_MS = 100.0
 TETO_DE_CONEXOES = 128
 _TETO_DE_OCIOSIDADE_S = 120.0
 _TETO_DA_ESPERA_DO_FECHAMENTO_S = 1.0
+
+PERGUNTAS_QUE_LEEM_SO_DO_GUARDADO = frozenset({"daemon.state_full"})
 
 PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
     {"daemon.state_full", "controller.list", "profile.list"}
@@ -336,6 +338,7 @@ class IpcServer(IpcHandlersMixin):
 
         t0 = time.perf_counter()
         marca_do_gesto = gesto_de_agora.set(f"ipc:{method}")
+        marca_do_guardado = le_so_do_guardado.set(method in PERGUNTAS_QUE_LEEM_SO_DO_GUARDADO)
         status = "erro"
         try:
             result = await handler(params)
@@ -354,6 +357,7 @@ class IpcServer(IpcHandlersMixin):
             )
         finally:
             gesto_de_agora.reset(marca_do_gesto)
+            le_so_do_guardado.reset(marca_do_guardado)
             self.store.bump(f"ipc.{method}.{status}")
             ms = (time.perf_counter() - t0) * 1000
             if ms > TETO_DO_PEDIDO_MS:
