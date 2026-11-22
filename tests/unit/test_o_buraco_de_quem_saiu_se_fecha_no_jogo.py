@@ -128,9 +128,11 @@ class MesaHonesta(MesaDoJogo):
         super().__init__(monkeypatch, **kw)
         a_casa_desce = uhid_gamepad._parar_na_casa
 
-        def _parar_na_casa(pad: Any) -> None:
+        def _parar_na_casa(pad: Any, **kw: Any) -> None:
             fd = getattr(pad, "_fd", None)
-            a_casa_desce(pad)
+            a_casa_desce(pad, **kw)
+            if kw.get("adiar"):
+                uhid_gamepad.esperar_as_descidas()
             device = self.kernel.devices.get(fd) if fd is not None else None
             if device is None or not device.criado:
                 self._morreu(pad)
@@ -160,6 +162,14 @@ class MesaHonesta(MesaDoJogo):
             parar()
 
         pad.stop = _stop
+        if getattr(pad, "backend", None) != "uhid":
+            parar_sem_esperar = pad.parar_sem_esperar
+
+            def _parar_sem_esperar() -> Any:
+                self._morreu(pad)
+                return parar_sem_esperar()
+
+            pad.parar_sem_esperar = _parar_sem_esperar
         self.vpads.append(pad)
         return pad
 

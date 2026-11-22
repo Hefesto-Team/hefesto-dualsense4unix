@@ -663,15 +663,33 @@ class UinputGamepad:
 
     def stop(self) -> None:
         """Fecha o pad UMA vez, mesmo com dois `stop()` ao mesmo tempo."""
+        resto = self.parar_sem_esperar()
+        if resto is not None:
+            resto()
+
+    def parar_sem_esperar(self) -> Callable[[], None] | None:
+        """O pad deixa de aceitar escrita agora; o que é lento volta para quem o rodar.
+
+        Aqui fica só a memória: o aviso de parada ao fio do rumble e o nó que sai do pad
+        (`is_active` já é falso). Devolve o resto, o `join` do fio do rumble, o rumble zerado
+        no físico, o `close` do nó que destrói o dispositivo no kernel e a limpeza do estado,
+        ou `None` se o pad já estava fechado. O `stop` roda o resto na hora.
+        """
         fio = getattr(self, "_ff_fio", None)
         if self._device is None and fio is None:
-            return
+            return None
         if fio is not None:
             self._ff_pare.set()
+        device = self.__dict__.pop("_device", None)
+        self._device = None
+        return lambda: self._terminar_a_parada(fio, device)
+
+    def _terminar_a_parada(self, fio: threading.Thread | None, device: Any) -> None:
+        """O resto do :meth:`parar_sem_esperar`, no fio de quem o recebeu."""
+        if fio is not None:
             fio.join(timeout=2 * _FF_FIO_ACORDA_S + 0.5)
             if self._ff_fio is fio:
                 self._ff_fio = None
-        device = self.__dict__.pop("_device", None)
         if device is None:
             return
         if self._ff_last_sent != (0, 0) and self.rumble_sink is not None:
@@ -679,7 +697,8 @@ class UinputGamepad:
                 self.rumble_sink(0, 0)
         with contextlib.suppress(Exception):
             device.close()
-        self._device = None
+        if self._device is not None:
+            return
         self._ecodes = None
         self._last_buttons = frozenset()
         self._last_axes = None

@@ -26,7 +26,10 @@ from collections.abc import Iterator
 
 import pytest
 
-from hefesto_dualsense4unix.integrations.uhid_gamepad import parar_fora_do_tique
+from hefesto_dualsense4unix.integrations.uhid_gamepad import (
+    esperar_as_descidas,
+    parar_fora_do_tique,
+)
 from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (
     KernelDoHidPlaystation,
     kernel_de_mentira,
@@ -89,6 +92,7 @@ class TestOPadParadoNoTiqueSaiDoJogo:
         posto = ensaio.vpad_do_p1
 
         parar_fora_do_tique(no_tique)
+        esperar_as_descidas()
         _o_jogo_nao_ve(ensaio, no_tique)
         posto.stop()
         _o_jogo_nao_ve(ensaio, posto)

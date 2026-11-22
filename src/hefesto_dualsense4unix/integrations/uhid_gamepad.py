@@ -973,7 +973,14 @@ class UhidDualSense:
                 )
         return features
 
-    def _destruir_o_device(self) -> None:
+    def _destruir_o_device(
+        self, adiar: Callable[[Callable[[], None]], None] | None = None
+    ) -> None:
+        """Desfaz o device; com ``adiar``, o `UHID_DESTROY` e o `close` vão a quem a recebe.
+
+        O resto é memória do pad e roda aqui. ``adiar`` recebe o que fala com o kernel, para
+        correr fora de quem chamou (:func:`parar_fora_do_tique`).
+        """
         self._parar_o_fio_do_uhid()
         with self._a_trava_da_saida(), self._lock:
             fd = self._fd
@@ -986,10 +993,10 @@ class UhidDualSense:
             self._silence_rumble()
             self._end_game_session()
             if not _soltar_o_gadget(self):
-                with contextlib.suppress(OSError):
-                    os.write(fd, struct.pack("<I", UHID_DESTROY))
-                with contextlib.suppress(OSError):
-                    os.close(fd)
+                if adiar is None:
+                    _desfazer_o_fd(fd)
+                else:
+                    adiar(lambda: _desfazer_o_fd(fd))
             self._features = {}
             self._last_sent = (0, 0)
             self._output_count = 0
@@ -3481,6 +3488,24 @@ _DESCIDA_ESPERA_S = 5.0
 _DESCIDA_DO_SERIAL_ESPERA_S = 4 * _DESCIDA_ESPERA_S
 
 
+class _DesfazerDoPad:
+    """O desfazer de um pad na fila da descida: sem serial, sem gadget, só o corpo."""
+
+    serial = ""
+
+    def __init__(self, corpo: Callable[[], None]) -> None:
+        self._corpo = corpo
+
+    def _soltar_na_casa(self) -> None:
+        pass
+
+    def _devolver_ao_broker(self) -> None:
+        try:
+            self._corpo()
+        except Exception:
+            logger.warning("pad_desfazer_falhou", exc_info=True)
+
+
 class _DescidaAoBroker:
     """A descida do gadget que o tique solta, num fio só, fora do tique de entrada.
 
@@ -3495,18 +3520,26 @@ class _DescidaAoBroker:
 
     def __init__(self) -> None:
         self._trava = threading.Condition()
-        self._fila: collections.deque[tuple[object, _GadgetDoPad]] = collections.deque()
+        self._fila: collections.deque[tuple[object, Any]] = collections.deque()
         self._prometidas: list[tuple[object, object]] = []
-        self._em_voo: tuple[object, _GadgetDoPad] | None = None
-        self._no_stop: list[tuple[object, _GadgetDoPad]] = []
+        self._em_voo: tuple[object, Any] | None = None
+        self._no_stop: list[tuple[object, Any]] = []
         self._depois: list[tuple[object, Callable[[], None]]] = []
         self._fio: threading.Thread | None = None
 
     def descer(self, gadget: _GadgetDoPad, dono: object) -> None:
         """Solta o gadget na casa agora e põe a devolução ao broker na fila. Volta na hora."""
         gadget._soltar_na_casa()
+        self._enfileirar(dono, gadget)
+
+    def desfazer(self, dono: object, corpo: Callable[[], None]) -> None:
+        """O que o desfazer do pad do ``dono`` tem de lento (o `close` do nó, o `join` do
+        rumble) vai à fila, na ordem de chegada. Volta na hora."""
+        self._enfileirar(dono, _DesfazerDoPad(corpo))
+
+    def _enfileirar(self, dono: object, vez: Any) -> None:
         with self._trava:
-            self._fila.append((dono, gadget))
+            self._fila.append((dono, vez))
             if self._fio is None:
                 self._fio = threading.Thread(
                     target=self._rodar, name="hefesto-pad-usb-descida", daemon=True
@@ -3606,7 +3639,7 @@ class _DescidaAoBroker:
             logger.info("vpad_espera_a_descida_do_aparelho", player=getattr(pad, "player", None))
             return self._trava.wait_for(livre, segundos)
 
-    def _pendentes(self) -> list[tuple[object, _GadgetDoPad]]:
+    def _pendentes(self) -> list[tuple[object, Any]]:
         """A fila e a que está em voo. Sob a trava."""
         em_voo = [self._em_voo] if self._em_voo is not None else []
         return em_voo + self._no_stop + list(self._fila)
@@ -3682,12 +3715,24 @@ def _report_neutro(pad: UhidDualSense) -> bytes:
     return bytes([_INPUT_REPORT_USB]) + bytes(body)
 
 
-def _parar_na_casa(pad: UhidDualSense) -> None:
+def _desfazer_o_fd(fd: int) -> None:
+    """O `UHID_DESTROY` e o `close` do fd do uhid: o que o kernel leva para tirar o nó."""
+    with contextlib.suppress(OSError):
+        os.write(fd, struct.pack("<I", UHID_DESTROY))
+    with contextlib.suppress(OSError):
+        os.close(fd)
+
+
+def _parar_na_casa(pad: UhidDualSense, adiar: bool = False) -> None:
     """A parte do `stop` que não fala com o broker: o pedido em voo se larga (o gadget
-    tardio desce), e o uhid e o fd descem; o gadget do pad vai à fila da descida."""
+    tardio desce), e o uhid e o fd descem; o gadget do pad vai à fila da descida.
+
+    Com ``adiar``, o `UHID_DESTROY` e o `close` do fd também vão à fila da descida."""
     pad._gadget_outra_vez = False
     _esquecer_a_recusa(pad)
-    pad._destruir_o_device()
+    pad._destruir_o_device(
+        (lambda corpo: _DESCIDA_AO_BROKER.desfazer(pad, corpo)) if adiar else None
+    )
 
 
 def _despir_se_parado(pad: UhidDualSense) -> None:
@@ -3697,20 +3742,24 @@ def _despir_se_parado(pad: UhidDualSense) -> None:
 
 
 def parar_fora_do_tique(pad: Any) -> None:
-    """O `stop` do pad que para no laço do tique, sem esperar o broker.
+    """O `stop` do pad que para no laço do tique, sem esperar o kernel nem o broker.
 
-    O-JOGADOR-QUE-SAI-NAO-PRENDE-O-TIQUE-NO-BROKER-01 (25/10/2026): o `stop`
-    termina a descida do gadget no próprio fio, e o co-op o chamava no `sync`
-    do laço; com o broker preso, o jogador que saía segurava a entrada de todos
-    por ~4 s. Aqui a casa desce na hora, a devolução ao broker fica na fila da
-    descida (:class:`_DescidaAoBroker`), e o MAC só volta quando a descida termina. O
-    `stop` do daemon que para espera a fila (:func:`esperar_as_descidas`). O pad
-    que não é do uhid não fala com o broker e para como sempre.
+    No fio de quem chama fica só a memória do pad. O `UHID_DESTROY` e o `close` do uhid, o
+    `join` do rumble e o `close` do nó do uinput e a devolução do gadget ao broker correm
+    na fila da descida (:class:`_DescidaAoBroker`), na ordem de chegada. O MAC só volta
+    quando a descida do pad termina; o `stop` do daemon espera a fila
+    (:func:`esperar_as_descidas`). O pad sem `parar_sem_esperar` para como sempre.
     """
     if not isinstance(pad, UhidDualSense):
-        pad.stop()
+        sem_esperar = getattr(pad, "parar_sem_esperar", None)
+        if sem_esperar is None:
+            pad.stop()
+            return
+        resto = sem_esperar()
+        if resto is not None:
+            _DESCIDA_AO_BROKER.desfazer(pad, resto)
         return
-    _parar_na_casa(pad)
+    _parar_na_casa(pad, adiar=True)
     _DESCIDA_AO_BROKER.soltar(pad, lambda: _despir_se_parado(pad))
     logger.info("vpad_parou", player=pad.player)
 
