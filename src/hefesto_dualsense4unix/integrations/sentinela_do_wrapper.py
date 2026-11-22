@@ -122,6 +122,8 @@ try:
     from .steam_launch_options import (
         apply_wrapper_to_all_games,
         atalho_no_lugar,
+        atalhos_de_fora_do_arquivo,
+        atalhos_do_vdf,
         discover_vdfs,
         garantir_blocos_no_texto,
         has_extended_ignore,
@@ -141,6 +143,8 @@ except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         apply_wrapper_to_all_games,
         atalho_no_lugar,
+        atalhos_de_fora_do_arquivo,
+        atalhos_do_vdf,
         discover_vdfs,
         garantir_blocos_no_texto,
         has_extended_ignore,
@@ -317,6 +321,29 @@ def censo_do_wrapper(
     pedidos = [a for a in instalados if a not in fora_set]
     ja_visto = ler_registro(registro, home)
 
+    def contar(appid: str, valor: str | None, onde: Path, nome: str = "") -> None:
+        if appid in fora_set:
+            if valor is not None and tem_o_atalho(valor):
+                recusados_com_wrapper.append(appid)
+            return
+        if valor is not None and atalho_no_lugar(valor):
+            com_wrapper.append(appid)
+            return
+        if valor is not None and has_extended_ignore(valor):
+            motivo = MOTIVO_ESTENDIDO
+        elif appid in ja_visto:
+            motivo = MOTIVO_REGRESSAO
+        else:
+            motivo = MOTIVO_NOVO
+        rotulo = rotulo_do_jogo(appid, home)
+        if nome and rotulo == f"appid {appid}":
+            rotulo = f"{nome} (appid {appid})"
+        faltantes.append(
+            JogoSemWrapper(
+                appid=appid, rotulo=rotulo, opcoes=valor, motivo=motivo, vdf=str(onde),
+            )
+        )
+
     alvos = list(vdfs) if vdfs is not None else discover_vdfs(home)
     for vdf in alvos:
         if is_sandboxed_layout(vdf):
@@ -338,28 +365,14 @@ def censo_do_wrapper(
             )
             continue
         for appid, valor in sorted(apps.items()):
-            if appid in fora_set:
-                if valor is not None and tem_o_atalho(valor):
-                    recusados_com_wrapper.append(appid)
-                continue
-            if valor is not None and atalho_no_lugar(valor):
-                com_wrapper.append(appid)
-                continue
-            if valor is not None and has_extended_ignore(valor):
-                motivo = MOTIVO_ESTENDIDO
-            elif appid in ja_visto:
-                motivo = MOTIVO_REGRESSAO
-            else:
-                motivo = MOTIVO_NOVO
-            faltantes.append(
-                JogoSemWrapper(
-                    appid=appid,
-                    rotulo=rotulo_do_jogo(appid, home),
-                    opcoes=valor,
-                    motivo=motivo,
-                    vdf=str(vdf),
-                )
-            )
+            contar(appid, valor, vdf)
+
+    for vdf in alvos:
+        arquivo = atalhos_do_vdf(vdf)
+        if arquivo is None or is_sandboxed_layout(vdf):
+            continue
+        for atalho in atalhos_de_fora_do_arquivo(arquivo):
+            contar(atalho.appid, atalho.opcoes, arquivo, nome=atalho.nome)
 
     if anotar and com_wrapper:
         gravar_registro(com_wrapper, registro, home)

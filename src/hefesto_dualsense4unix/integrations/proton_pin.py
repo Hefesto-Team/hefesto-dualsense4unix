@@ -54,6 +54,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar
 try:
     from .steam_launch_options import (
         add_appid_to_steam_input_allowlist,
+        atalhos_de_fora,
         discover_vdfs,
         parse_steam_input_allowlist,
         pastas_steamapps,
@@ -64,6 +65,7 @@ try:
 except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         add_appid_to_steam_input_allowlist,
+        atalhos_de_fora,
         discover_vdfs,
         parse_steam_input_allowlist,
         pastas_steamapps,
@@ -1512,7 +1514,7 @@ def proton_major(tool_name: str) -> int | None:
 
 
 def list_installed_appids(home: Path | None = None) -> list[str]:
-    """appids dos JOGOS instalados (appmanifest_*.acf de todas as libraries)."""
+    """appids dos JOGOS instalados: os `appmanifest_*.acf` e os de fora com executável Windows."""
     out: set[str] = set()
     for library in _pastas_de_biblioteca(home):
         for manifest in sorted(library.glob("appmanifest_*.acf")):
@@ -1532,7 +1534,13 @@ def list_installed_appids(home: Path | None = None) -> list[str]:
             if _TOOL_MANIFEST_RE.search(name):
                 continue
             out.add(appid)
+    out |= _atalhos_do_windows(home)
     return sorted(out, key=int)
+
+
+def _atalhos_do_windows(home: Path | None = None) -> set[str]:
+    """Os appids dos jogos de fora da Steam com executável de Windows: os que o Proton roda."""
+    return {a.appid for a in atalhos_de_fora(home) if a.e_do_windows}
 
 
 def _pastas_de_biblioteca(home: Path | None = None) -> list[Path]:
@@ -1788,7 +1796,10 @@ def jogos_sem_entrada_nova(
     lancamentos = executaveis_no_linux_do_appinfo(appinfo, linux) if linux else {}
     compatdatas = [lib / "compatdata" for lib in _pastas_de_biblioteca(home)]
     nativos: set[str] = set()
+    de_fora = _atalhos_do_windows(home)
     for appid in appids:
+        if appid in de_fora:
+            continue
         declarado = oslist.get(appid) if oslist is not None else None
         if declarado is not None:
             if _declara_linux(declarado) and not _oferece_o_windows_no_linux(

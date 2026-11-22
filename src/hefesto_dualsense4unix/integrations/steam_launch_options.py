@@ -68,7 +68,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import fora_do_servico
+    from . import atalhos_da_steam, fora_do_servico
     from .ambiente_do_jogo import ambiente_limpo
     from .quem_o_jogo_le import (
         _STEAM_LAUNCH_APPID_RE,
@@ -76,6 +76,7 @@ try:
         e_avaliador_do_install_script,
     )
 except ImportError:  # pragma: no cover
+    import atalhos_da_steam  # type: ignore[no-redef]
     import fora_do_servico  # type: ignore[no-redef]
     from ambiente_do_jogo import ambiente_limpo  # type: ignore[no-redef]
     from quem_o_jogo_le import (  # type: ignore[no-redef]
@@ -829,6 +830,173 @@ def nao_firmaram(vdf: Path, appids: Sequence[str], *, com_wrapper: bool) -> list
     ]
 
 
+def atalhos_do_vdf(vdf: Path) -> Path | None:
+    """O `shortcuts.vdf` da conta deste `localconfig.vdf`; ``None`` para qualquer outro arquivo."""
+    if vdf.name != "localconfig.vdf":
+        return None
+    return vdf.with_name(atalhos_da_steam.NOME_DO_ARQUIVO)
+
+
+def atalhos_de_fora_do_arquivo(arquivo: Path) -> list[atalhos_da_steam.AtalhoDeFora]:
+    """Os jogos de fora de UM `shortcuts.vdf`; vazio se ele não existe ou não se lê."""
+    return atalhos_da_steam.atalhos_do_arquivo(arquivo)
+
+
+def atalhos_de_fora(home: Path | None = None) -> list[atalhos_da_steam.AtalhoDeFora]:
+    """Os jogos de fora adicionados à Steam, de toda conta e toda árvore, um por número."""
+    vistos: set[str] = set()
+    achados: list[atalhos_da_steam.AtalhoDeFora] = []
+    for vdf in discover_vdfs(home):
+        arquivo = atalhos_do_vdf(vdf)
+        if arquivo is None:
+            continue
+        for atalho in atalhos_da_steam.atalhos_do_arquivo(arquivo):
+            if atalho.appid not in vistos:
+                vistos.add(atalho.appid)
+                achados.append(atalho)
+    return achados
+
+
+def apply_wrapper_atalhos_bruto(
+    bruto: bytes, *, excluir: Sequence[str] | None = None
+) -> tuple[bytes, list[str], list[tuple[str, str]]]:
+    """O mesmo que ``apply_wrapper_vdf_text``, para os jogos de fora de UM `shortcuts.vdf` (puro).
+
+    As opções do jogo de fora vivem no próprio atalho. Os portões são os do `localconfig.vdf`
+    (opt-out, lista estendida, atalho já no lugar, linha que o sh não compõe), e a composição é a
+    mesma ``migrate_value``. Só as opções dos jogos aplicados mudam; os outros bytes passam iguais.
+    ``ValueError`` se o arquivo não se lê inteiro.
+    """
+    fora = {str(a).strip() for a in (excluir or ())}
+    novo = bruto
+    aplicados: list[str] = []
+    pulados: list[tuple[str, str]] = []
+    vistos: set[str] = set()
+    for atalho in atalhos_da_steam.atalhos_do_bruto(bruto):
+        if atalho.appid in vistos:
+            continue
+        vistos.add(atalho.appid)
+        valor = atalho.opcoes
+        if atalho.appid in fora:
+            pulados.append((atalho.appid, "opt_out_da_usuaria"))
+        elif has_extended_ignore(valor):
+            pulados.append((atalho.appid, "ignore_estendido"))
+        elif atalho_no_lugar(valor):
+            pulados.append((atalho.appid, "ja_tem_wrapper"))
+        else:
+            composta = migrate_value(valor)
+            if composta == valor:
+                pulados.append((atalho.appid, LINHA_QUE_NAO_SE_COMPOE))
+                continue
+            novo = atalhos_da_steam.com_as_opcoes(novo, atalho.appid, composta)
+            aplicados.append(atalho.appid)
+    return novo, aplicados, pulados
+
+
+def tirar_o_atalho_bruto(
+    bruto: bytes, *, so_os_jogos: Collection[str] | None = None
+) -> tuple[bytes, list[str]]:
+    """Tira o NOSSO trecho das opções dos jogos de fora (todos, ou só ``so_os_jogos``); puro."""
+    novo = bruto
+    tirados: list[str] = []
+    vistos: set[str] = set()
+    for atalho in atalhos_da_steam.atalhos_do_bruto(bruto):
+        if atalho.appid in vistos or (so_os_jogos is not None and atalho.appid not in so_os_jogos):
+            continue
+        vistos.add(atalho.appid)
+        limpa = strip_value(atalho.opcoes)
+        if limpa != atalho.opcoes:
+            novo = atalhos_da_steam.com_as_opcoes(novo, atalho.appid, limpa)
+            tirados.append(atalho.appid)
+    return novo, tirados
+
+
+def _gravar_atalhos(arquivo: Path, bruto: bytes) -> None:
+    escrever_de_terceiro(
+        arquivo, bruto.decode("utf-8", "surrogateescape"), familia="hefesto-launch",
+        errors="surrogateescape", conferir=False,
+    )
+
+
+def _atalhos_que_nao_firmaram(
+    arquivo: Path, appids: Sequence[str], *, com_wrapper: bool
+) -> list[str]:
+    lidos = {a.appid: a.opcoes for a in atalhos_da_steam.atalhos_do_arquivo(arquivo)}
+    return [a for a in appids if tem_o_atalho(lidos.get(a, "")) != com_wrapper]
+
+
+def _aplicar_aos_atalhos(
+    vdf: Path, result: dict[str, list[dict[str, str]]], *,
+    excluir: Sequence[str] | None, dry_run: bool,
+) -> None:
+    arquivo = atalhos_do_vdf(vdf)
+    if arquivo is None or is_sandboxed_layout(vdf) or not arquivo.is_file():
+        return
+    try:
+        original = arquivo.read_bytes()
+        novo, aplicados, pulados = apply_wrapper_atalhos_bruto(original, excluir=excluir)
+    except (OSError, ValueError) as exc:
+        result["errors"].append({"vdf": str(arquivo), "appid": "", "reason": str(exc)})
+        return
+    for appid, motivo in pulados:
+        result["skipped"].append({"vdf": str(arquivo), "appid": appid, "reason": motivo})
+    if not aplicados:
+        return
+    if not dry_run:
+        try:
+            _gravar_atalhos(arquivo, novo)
+        except OSError as exc:
+            result["errors"].append({"vdf": str(arquivo), "appid": "", "reason": str(exc)})
+            return
+        soltos = set(_atalhos_que_nao_firmaram(arquivo, aplicados, com_wrapper=True))
+        for appid in soltos:
+            result["errors"].append(
+                {"vdf": str(arquivo), "appid": appid, "reason": MOTIVO_NAO_FIRMOU}
+            )
+        aplicados = [a for a in aplicados if a not in soltos]
+    for appid in aplicados:
+        result["applied"].append({"vdf": str(arquivo), "appid": appid, "reason": ""})
+
+
+def _tirar_dos_atalhos(
+    vdf: Path, result: dict[str, list[dict[str, str]]], *,
+    alvo: Collection[str] | None, dry_run: bool,
+) -> None:
+    arquivo = atalhos_do_vdf(vdf)
+    if arquivo is None or is_sandboxed_layout(vdf) or not arquivo.is_file():
+        return
+    try:
+        novo, tirados = tirar_o_atalho_bruto(arquivo.read_bytes(), so_os_jogos=alvo)
+    except (OSError, ValueError) as exc:
+        result["errors"].append({"vdf": str(arquivo), "appid": "", "reason": str(exc)})
+        return
+    if not tirados:
+        return
+    if not dry_run:
+        try:
+            _gravar_atalhos(arquivo, novo)
+        except OSError as exc:
+            result["errors"].append({"vdf": str(arquivo), "appid": "", "reason": str(exc)})
+            return
+        soltos = set(_atalhos_que_nao_firmaram(arquivo, tirados, com_wrapper=False))
+        for appid in soltos:
+            result["errors"].append(
+                {"vdf": str(arquivo), "appid": appid, "reason": MOTIVO_NAO_FIRMOU}
+            )
+        tirados = [a for a in tirados if a not in soltos]
+    for appid in tirados:
+        result["removed"].append({"vdf": str(arquivo), "appid": appid, "reason": ""})
+
+
+def process_atalhos(vdf: Path, *, dry_run: bool = False) -> int:
+    """Tira o nosso trecho dos jogos de fora da conta deste `localconfig.vdf`; devolve quantos."""
+    resultado: dict[str, list[dict[str, str]]] = {"removed": [], "skipped": [], "errors": []}
+    _tirar_dos_atalhos(vdf, resultado, alvo=None, dry_run=dry_run)
+    if resultado["errors"]:
+        raise OSError(resultado["errors"][0]["reason"])
+    return len(resultado["removed"])
+
+
 def apply_wrapper_to_all_games(
     home: Path | None = None,
     vdfs: list[Path] | None = None,
@@ -869,7 +1037,8 @@ def apply_wrapper_to_all_games(
     if not dry_run and steam_running():
         result["errors"].append({"vdf": "", "appid": "", "reason": "steam_aberta"})
         return result
-    for vdf in vdfs if vdfs is not None else discover_vdfs(home):
+    alvos = list(vdfs) if vdfs is not None else discover_vdfs(home)
+    for vdf in alvos:
         if is_sandboxed_layout(vdf):
             result["skipped"].append(
                 {"vdf": str(vdf), "appid": "", "reason": "sandbox"}
@@ -909,6 +1078,8 @@ def apply_wrapper_to_all_games(
             applied = [a for a in applied if a not in soltos]
         for appid in applied:
             result["applied"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
+    for vdf in alvos:
+        _aplicar_aos_atalhos(vdf, result, excluir=excluir, dry_run=dry_run)
     return result
 
 
@@ -954,7 +1125,8 @@ def tirar_o_atalho_dos_jogos(
     if not dry_run and steam_running():
         result["errors"].append({"vdf": "", "appid": "", "reason": "steam_aberta"})
         return result
-    for vdf in vdfs if vdfs is not None else discover_vdfs(home):
+    alvos = list(vdfs) if vdfs is not None else discover_vdfs(home)
+    for vdf in alvos:
         if is_sandboxed_layout(vdf):
             result["skipped"].append(
                 {"vdf": str(vdf), "appid": "", "reason": "sandbox"}
@@ -991,6 +1163,8 @@ def tirar_o_atalho_dos_jogos(
             tirados = [a for a in tirados if a not in soltos]
         for appid in tirados:
             result["removed"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
+    for vdf in alvos:
+        _tirar_dos_atalhos(vdf, result, alvo=alvo, dry_run=dry_run)
     return result
 
 
@@ -1635,7 +1809,7 @@ def leitura_das_pastas_steamapps(home: Path | None = None) -> tuple[list[Path], 
 
 
 def nome_do_appid(appid: str, home: Path | None = None) -> str | None:
-    """Nome do jogo pelo `appmanifest_<appid>.acf`. `None` = não instalado."""
+    """O nome pelo `appmanifest_<appid>.acf` ou, no jogo de fora, pelo atalho; `None` se não há."""
     for steamapps in pastas_steamapps(home):
         manifesto = steamapps / f"appmanifest_{appid}.acf"
         try:
@@ -1648,6 +1822,10 @@ def nome_do_appid(appid: str, home: Path | None = None) -> str | None:
                 nome = _desescapar_acf(par.group("valor")).strip()
                 if nome:
                     return nome
+    if appid.isdigit() and int(appid) >= 0x80000000:
+        for atalho in atalhos_de_fora(home):
+            if atalho.appid == appid and atalho.nome.strip():
+                return atalho.nome.strip()
     return None
 
 
@@ -2205,6 +2383,16 @@ def main(argv: list[str] | None = None) -> int:
             continue
         with contextlib.suppress(OSError):
             _warn_extended(vdf, vdf.read_text(encoding="utf-8"))
+        if effective_mode == "strip":
+            try:
+                atalhos_tirados = process_atalhos(vdf, dry_run=args.dry_run)
+            except OSError as exc:
+                print(f"[launch-options] ERRO nos jogos de fora de {vdf}: {exc}")
+                rc = 1
+                atalhos_tirados = 0
+            if atalhos_tirados:
+                total += atalhos_tirados
+                print(f"[launch-options] limpo: {atalhos_tirados} jogo(s) de fora em {vdf}")
         if changed == 0:
             print(f"[launch-options] ok (nada a fazer): {vdf}")
             continue

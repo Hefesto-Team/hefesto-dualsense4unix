@@ -17,6 +17,7 @@ from pathlib import Path
 from hefesto_dualsense4unix.integrations.steam_launch_options import (
     _PAR_ACF,
     _desescapar_acf,
+    atalhos_de_fora,
     leitura_das_pastas_steamapps,
     pastas_steamapps,
 )
@@ -139,7 +140,7 @@ def _campos_do_acf(texto: str) -> dict[str, str]:
 
 
 def jogos_da_biblioteca_steam(home: Path | None = None) -> list[JogoLocal]:
-    """Os jogos dos `appmanifest_*.acf`, de toda biblioteca configurada."""
+    """Os jogos dos `appmanifest_*.acf` de toda biblioteca e os de fora adicionados à Steam."""
     vistas: set[Path] = set()
     achados: dict[str, JogoLocal] = {}
     for pasta in pastas_steamapps(home):
@@ -166,6 +167,11 @@ def jogos_da_biblioteca_steam(home: Path | None = None) -> list[JogoLocal]:
             if e_ferramenta_da_steam(nome):
                 continue
             achados.setdefault(appid, JogoLocal(appid=appid, nome=nome, fonte="steam"))
+    for atalho in atalhos_de_fora(home):
+        if atalho.nome.strip():
+            achados.setdefault(
+                atalho.appid, JogoLocal(appid=atalho.appid, nome=atalho.nome.strip(), fonte="steam")
+            )
     return list(achados.values())
 
 
