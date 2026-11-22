@@ -352,6 +352,8 @@ def armar_o_ato_do_daemon(
         mascara: str | None = None,
         porta: str,
         mouse_ligado: bool | None = None,
+        arranjo: str | None = None,
+        marca: object | None = None,
     ) -> str | None:
         anotado.gravado.append((kind, caminho, porta))
         return None
