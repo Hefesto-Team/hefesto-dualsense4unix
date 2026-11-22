@@ -1927,6 +1927,7 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     try:
         _systemctl("restart")
     except ReinicioEmCursoError as em_curso:
+        session.marcar_o_reinicio(_daemon.prazo_do_systemctl(["start"]))
         _para_o_painel(str(em_curso))
         na_fila([FILA_DO_REINICIO], _repor_quando_o_servico_voltar, nome=FILA_DO_REINICIO)
         return
@@ -1941,7 +1942,9 @@ def _repor_quando_o_servico_voltar() -> None:
     """O `start` bloqueia até a partida: quando ele volta com sucesso, o lançador é reposto.
 
     A marca do reinício vence com o prazo do `restart` que estourou e se acende de novo pelo
-    prazo do `start`: o rodapé segue esperando o serviço em vez de mandar o perfil a ninguém.
+    prazo do `start`, já no `reiniciar` (o Salvar que esperava na fila de quem grava solta junto
+    com este fio) e de novo aqui, depois da fila: o rodapé segue esperando o serviço em vez de
+    mandar o perfil a ninguém.
     """
     from hefesto_dualsense4unix.utils import session
 

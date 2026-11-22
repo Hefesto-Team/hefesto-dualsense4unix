@@ -464,6 +464,57 @@ def test_o_restart_que_estoura_o_prazo_segue_esperando_o_start(
     assert servico.ativo == JOGO and not servico.desistiu
 
 
+@pytest.mark.parametrize("gesto", GESTOS)
+def test_o_gesto_que_solta_com_o_restart_estourado_espera_antes_do_start_da_fila(
+        mundo: _Relogio, a09: Any, monkeypatch: pytest.MonkeyPatch, gesto: str) -> None:
+    """O gesto que roda logo que o `reiniciar` estourado devolve, antes de o `start` da fila sair.
+
+    O Salvar clicado durante o `restart` espera na fila de quem grava e solta junto com o fio do
+    `start`; a marca do `restart` já venceu (o prazo da marca começa antes do `reset-failed`). Sem a
+    marca acesa no próprio `reiniciar`, o gesto não esperava e mandava o perfil ao serviço fora do
+    ar.
+
+    MORDIDA: tire do ramo do ``ReinicioEmCursoError`` de ``reiniciar`` o ``marcar_o_reinicio``.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        PRAZO_ESTOURADO_RC,
+        prazo_do_systemctl,
+    )
+
+    servico = _Servico(mundo, ativo_antigo=JOGO, restaura=JOGO)
+    filas: list[Any] = []
+    monkeypatch.setattr(a09, "na_fila", lambda _f, trabalho, **_k: filas.append(trabalho))
+
+    class _Janela:
+        def _invoke_systemctl(self, args: list[str], **_: Any) -> Any:
+            if args[0] == "restart":
+                servico.escuta = False
+                mundo.t += prazo_do_systemctl(["restart"]) + 0.1
+                return SimpleNamespace(returncode=PRAZO_ESTOURADO_RC, stderr="", stdout="")
+            if args[0] == "start":
+                servico.escuta = True
+                servico.reiniciou()
+            return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(a09, "_matriz", lambda: _Janela())
+    a09.reiniciar(SimpleNamespace(state={}), {}, None)
+    assert len(filas) == 1, "o restart estourado não pôs o start na fila"
+    soltou: list[int] = []
+
+    def o_start_sai(_agora: float) -> None:
+        if not soltou:
+            soltou.append(1)
+            filas[0]()
+
+    mundo.ao_dormir.append(o_start_sai)
+    _gesto(gesto, servico, {"active_profile": ""})
+    mundo.dormir(10.0)
+    assert soltou, "o gesto não esperou: mandou antes de o start da fila sair"
+    assert [(n, antigo) for n, antigo, _s in servico.pedidos] == [(JOGO, False)] * len(
+        servico.pedidos), servico.pedidos
+    assert servico.pedidos and servico.ativo == JOGO and not servico.desistiu
+
+
 def test_sem_a_marca_o_gesto_nao_espera_nem_pergunta(mundo: _Relogio) -> None:
     """Sem reinício desta janela (a bandeja é outro processo), o gesto manda na hora."""
     servico = _Servico(mundo, ativo_antigo=JOGO, restaura=JOGO)
