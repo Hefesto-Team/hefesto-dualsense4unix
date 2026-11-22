@@ -79,7 +79,7 @@ def observar_os_atalhos(
     if gerente is None:
         return None
     maos = botoes_de_cada_controle(daemon, buttons_pressed)
-    observar_o_gesto_da_vaga(maos)
+    observar_o_gesto_da_vaga(maos, getattr(maos, "lidos", None))
     gatilhos = _gatilhos_dos_gestos(daemon, gerente, maos, gatilhos_do_posto)
     resultado: str | None = None
     for quem, botoes in maos.items():
@@ -119,9 +119,19 @@ def _gatilhos_dos_gestos(
     return saida
 
 
+class MaosDosControles(dict[str | None, frozenset[str]]):
+    """O mapa de mãos `{MAC: botões}`, com `lidos`: de quem a mão veio de uma leitura de verdade.
+
+    O dono do posto com o leitor evdev de pé, o co-op com leitor vivo e o passivo que respondeu.
+    A mão vazia por falta de leitor e a mão sem botão são o mesmo `frozenset()`: só `lidos` separa.
+    """
+
+    lidos: frozenset[str | None] = frozenset()
+
+
 def botoes_de_cada_controle(
     daemon: object, botoes_do_posto: frozenset[str]
-) -> dict[str | None, frozenset[str]]:
+) -> MaosDosControles:
     """Os botões que os atalhos do PS leem neste tique, por controle: `{MAC: botões}`.
 
     Três fontes, e cada controle lê de uma só — a mesma ordem do `inputs` do
@@ -152,22 +162,27 @@ def botoes_de_cada_controle(
     """
     controller = getattr(daemon, "controller", None)
     dono = _mac_ou_none(getattr(controller, "primary_uniq", None))
-    maos: dict[str | None, frozenset[str]] = {dono: botoes_do_posto}
+    maos = MaosDosControles({dono: botoes_do_posto})
+    lidos: set[str | None] = {dono} if _o_posto_foi_lido(daemon) else set()
     vivos = _botoes_do_coop(daemon)
     outros = [u for u in dict.fromkeys([*_na_mesa(controller), *vivos]) if u != dono]
-    if not outros:
-        return maos
-    sem_leitor = [u for u in outros if u not in vivos]
-    sentados = _sentados_no_coop(daemon) if sem_leitor else frozenset()
-    passivos = [u for u in sem_leitor if u not in sentados]
-    entradas = _entradas_do_hub(daemon) if passivos else None
-    for uniq in outros:
-        if uniq in vivos:
-            maos[uniq] = vivos[uniq]
-        elif uniq in sentados or entradas is None:
-            maos[uniq] = frozenset()
-        else:
-            maos[uniq] = _botoes_passivos(entradas, uniq)
+    if outros:
+        sem_leitor = [u for u in outros if u not in vivos]
+        sentados = _sentados_no_coop(daemon) if sem_leitor else frozenset()
+        passivos = [u for u in sem_leitor if u not in sentados]
+        entradas = _entradas_do_hub(daemon) if passivos else None
+        for uniq in outros:
+            if uniq in vivos:
+                maos[uniq] = vivos[uniq]
+                lidos.add(uniq)
+            elif uniq in sentados or entradas is None:
+                maos[uniq] = frozenset()
+            else:
+                leitura = _leitura_passiva(entradas, uniq)
+                maos[uniq] = frozenset() if leitura is None else leitura
+                if leitura is not None:
+                    lidos.add(uniq)
+    maos.lidos = frozenset(lidos)
     return maos
 
 
@@ -357,20 +372,28 @@ def _entradas_do_hub(daemon: object) -> object | None:
     return entradas if callable(entradas) else None
 
 
-def _botoes_passivos(entradas: object, uniq: str) -> frozenset[str]:
-    """Os botões de `uniq` pelo leitor passivo do hub; vazio sem leitura."""
+def _o_posto_foi_lido(daemon: object) -> bool:
+    """O dono do posto teve a mão lida neste tique: posto de pé e leitor evdev disponível."""
+    if _o_posto_esta_vago(daemon):
+        return False
+    evdev = getattr(getattr(daemon, "controller", None), "_evdev", None)
+    return evdev is not None and bool(evdev.is_available())
+
+
+def _leitura_passiva(entradas: object, uniq: str) -> frozenset[str] | None:
+    """Os botões de `uniq` pelo leitor passivo do hub; ``None`` sem leitura."""
     if not callable(entradas):
-        return frozenset()
+        return None
     try:
         leitura = entradas(uniq)
     except Exception as exc:
         logger.debug("atalhos_leitura_passiva_falhou", identity=uniq, err=str(exc))
-        return frozenset()
+        return None
     if not isinstance(leitura, dict):
-        return frozenset()
+        return None
     botoes = leitura.get("buttons")
     if not isinstance(botoes, (list, tuple, set, frozenset)):
-        return frozenset()
+        return None
     return frozenset(str(b) for b in botoes)
 
 

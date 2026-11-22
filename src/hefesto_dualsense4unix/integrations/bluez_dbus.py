@@ -13,7 +13,7 @@ import subprocess
 import sys
 import threading
 import time
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -80,6 +80,7 @@ FRASE_OUTRO_APARELHO = "O controle foi para outro aparelho"
 BOTOES_DA_VAGA = frozenset({"cross", "circle", "square", "triangle"})
 SEGURADO_DA_VAGA_S = 2.0
 JANELA_DA_VAGA_S = 3.0
+TIQUE_LIDO_VALE_ATE_S = 1.0
 
 ESPERA_DO_BUSCTL_S = 5.0
 ESPERA_PARA_ACORDAR_S = 10.0
@@ -1476,13 +1477,23 @@ class BarramentoGio:
 
 
 class VigiaDaVaga:
-    """O gesto da troca de vaga, por controle: o PS e UM botão de face segurados."""
+    """O gesto da troca de vaga, por controle: o PS e UM botão de face segurados.
+
+    Também guarda, por controle, o PS segurado (desde quando) e o último tique LIDO de
+    verdade: a mão vazia por falta de leitor e o controle fora do mapa de mãos não
+    encerram o PS nem renovam a hora do último tique lido. `ps_segurado` responde, na
+    saída, por quanto tempo o PS estava segurado até esse tique; sem tique lido nos
+    últimos `TIQUE_LIDO_VALE_ATE_S` (medido: 98 a 123 ms entre o último tique lido e o
+    sinal do BlueZ nas quatro saídas com o PS de 21/11/2026), responde `None`.
+    """
 
     def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
         self._relogio = relogio
         self._tranca = threading.Lock()
         self._desde: dict[str, tuple[str, float]] = {}
         self._valeu_em: dict[str, float] = {}
+        self._ps_desde: dict[str, float] = {}
+        self._lido_em: dict[str, float] = {}
 
     @staticmethod
     def _botao_da_vaga(botoes: object) -> str | None:
@@ -1490,14 +1501,23 @@ class VigiaDaVaga:
         faces = BOTOES_DA_VAGA.intersection(apertados)
         return next(iter(faces)) if "ps" in apertados and len(faces) == 1 else None
 
-    def observar(self, maos: Mapping[str | None, object]) -> None:
-        """Os botões deste tique, ``{endereço: botões}`` (os atalhos do PS os leem)."""
+    def observar(
+        self, maos: Mapping[str | None, object], lidos: Collection[str | None] | None = None
+    ) -> None:
+        """Os botões deste tique, ``{endereço: botões}`` (os atalhos do PS os leem).
+
+        `lidos`: quem teve a mão lida de verdade neste tique; ``None`` = todos os do mapa.
+        """
         agora = self._relogio()
+        lidas = None if lidos is None else {
+            q.strip().lower() for q in lidos if isinstance(q, str) and q}
         with self._tranca:
             for quem, botoes in maos.items():
                 if not isinstance(quem, str) or not quem:
                     continue
                 endereco = quem.strip().lower()
+                if lidas is None or endereco in lidas:
+                    self._ler_o_ps(endereco, botoes, agora)
                 botao = self._botao_da_vaga(botoes)
                 if botao is None:
                     self._desde.pop(endereco, None)
@@ -1507,6 +1527,25 @@ class VigiaDaVaga:
                     self._desde[endereco] = (botao, agora)
                 elif agora - antes[1] >= SEGURADO_DA_VAGA_S:
                     self._valeu_em[endereco] = agora
+
+    def _ler_o_ps(self, endereco: str, botoes: object, agora: float) -> None:
+        """Um tique lido deste controle: o PS segurado desde quando, ou solto. Com a tranca."""
+        self._lido_em[endereco] = agora
+        apertados = frozenset(botoes) if isinstance(botoes, (set, frozenset, list, tuple)) else ()
+        if "ps" in apertados:
+            self._ps_desde.setdefault(endereco, agora)
+        else:
+            self._ps_desde.pop(endereco, None)
+
+    def ps_segurado(self, endereco: str) -> float | None:
+        """Segundos do PS segurado até o último tique lido; ``None`` se ele não vale. Se gasta."""
+        agora = self._relogio()
+        with self._tranca:
+            lido_em = self._lido_em.pop(endereco, None)
+            desde = self._ps_desde.pop(endereco, None)
+        if lido_em is None or agora - lido_em > TIQUE_LIDO_VALE_ATE_S:
+            return None
+        return 0.0 if desde is None else max(0.0, lido_em - desde)
 
     def tomar(self, endereco: str) -> bool:
         """O gesto valeu há pouco neste controle? Pergunta de uma vez só: ele se gasta."""
@@ -1520,10 +1559,12 @@ class VigiaDaVaga:
 _VAGA = VigiaDaVaga()
 
 
-def observar_o_gesto_da_vaga(maos: Mapping[str | None, object]) -> None:
-    """O laço do daemon entrega a cada tique os botões de cada controle. Nunca levanta."""
+def observar_o_gesto_da_vaga(
+    maos: Mapping[str | None, object], lidos: Collection[str | None] | None = None
+) -> None:
+    """O laço entrega a cada tique os botões de cada controle e quem foi lido. Nunca levanta."""
     try:
-        _VAGA.observar(maos)
+        _VAGA.observar(maos, lidos)
     except Exception:
         _registrar("bluez_vaga_nao_entendida", nivel="warning")
 
@@ -1696,11 +1737,16 @@ class DonoVivo(LeitorDoBluez):
         razao = self._razoes.pop(caminho, "")
         saida = a_saida(razao, gesto_da_vaga=self._vaga.tomar(quem["aparelho"]))
         self._saidas[quem["aparelho"]] = saida
+        segurado = self._vaga.ps_segurado(quem["aparelho"])
         _registrar(
             "bluez_controle_saiu",
             saida=saida,
             razao=razao,
             hci=hci_do_aparelho(caminho) or "",
+            uniq=quem["aparelho"],
+            adaptador=_mac(quem["adaptador"]) or "",
+            **({"ps_segurado": "nao_lido"} if segurado is None
+               else {"ps_segurado_s": round(segurado, 1)}),
         )
         if saida == SAIDA_OUTRO_APARELHO:
             return {**quem, "razao": razao, "saida": saida, "frase": FRASE_OUTRO_APARELHO}
@@ -1927,6 +1973,7 @@ __all__ = [
     "SEM_AGENTE",
     "SEM_BARRAMENTO",
     "SERVICO",
+    "TIQUE_LIDO_VALE_ATE_S",
     "TRAVA_OCUPADA",
     "AdaptadorDoBluez",
     "AparelhoDoBluez",

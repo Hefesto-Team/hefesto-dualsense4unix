@@ -478,6 +478,7 @@ class HotkeyManager:
                 "ps_solo_ignorado_hold_longo",
                 held_ms=round(held_ms, 1),
                 teto_ms=teto_ms,
+                **_de(de),
             )
             return None
 
