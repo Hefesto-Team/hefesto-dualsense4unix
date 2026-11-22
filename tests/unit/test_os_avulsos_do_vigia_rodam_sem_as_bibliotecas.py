@@ -53,7 +53,9 @@ _PREFIXOS_DE_COMANDO = (
     "$(", "if", "if !", "elif", "elif !", "!", "|", "||", "&&", ";", "then", "do", "{",
 )
 _CORTE = re.compile(r";|&&|\|\||\||\s\d?>|\s<|\)")
-_UNIDADE = re.compile(r"^ExecStart\w*=-?/usr/bin/env\s+python3\s+(?P<alvo>\S+)(?P<resto>.*)$")
+_UNIDADE = re.compile(
+    r"^ExecStart\w*=.*?/usr/bin/env\s+python3\s+(?P<alvo>__\w+__)(?P<resto>.*)$"
+)
 
 
 @dataclass(frozen=True)

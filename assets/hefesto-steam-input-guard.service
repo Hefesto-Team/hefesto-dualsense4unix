@@ -4,6 +4,14 @@ Description=Hefesto — devolve a configuração que a Steam reescreve (Steam In
 
 [Service]
 Type=oneshot
+# O resultado de cada passo chega ao estado da unidade sem que um passo que falhou derrube os
+# seguintes (22/11/2026). Cada ExecStart= abaixo roda o seu comando pelo `bash -c` do começo da
+# linha: o 0 e os códigos de rotina (a palavra depois do `--`: o 3 é «adiado», Steam ou jogo
+# abertos, que não é falha) passam; qualquer outro vai para `falhas`, na pasta de execução da
+# partida, e o passo sai 0 para os próximos rodarem. O último ExecStart= lê `falhas` e falha a
+# unidade, com o que cada passo disse no diário. A pasta morre com a partida. O `$$` é o `$`
+# do bash (o systemd expande o `$`).
+RuntimeDirectory=hefesto-steam-input-guard
 # Abrir a Steam ou baixar um jogo regrava os appmanifest a cada dois segundos, e cada
 # escrita é um PathChanged (medido em 07/11/2026: 14 partidas em 24 s). Enquanto a
 # unidade sobe, o .path não vigia, e por isso esta espera faz da rajada uma volta só
@@ -16,7 +24,7 @@ ExecStartPre=-/usr/bin/env python3 __SENTINELA__ --esperar-a-calma
 # 1) Steam Input: --apply-quiet NUNCA fecha a Steam: se a Steam estiver viva, adia.
 #    A reescrita só acontece quando a Steam já saiu (que é quando a Steam grava o
 #    vdf). Com `--keep-steam-input` o install apaga esta linha (18/09/2026).
-ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
+ExecStart=/usr/bin/env bash -c 'r=$$1; shift; "$$@" || { c=$$?; case " $$r " in *" $$c "*) ;; *) echo "rc=$$c $$*" >> "$$RUNTIME_DIRECTORY/falhas" || exit $$c ;; esac; }' -- 3 /usr/bin/env bash __SCRIPT__ --apply-quiet
 #
 # 2) O wrapper hefesto-launch, na carona do MESMO gatilho (CARONA-NO-GUARD-01,
 #    16/08/2026). A Steam guarda UMA linha de LaunchOptions por jogo, e
@@ -28,10 +36,10 @@ ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
 #    Steam reescreve o vdf é o momento em que a Steam ACABOU DE SAIR. Reparar com a
 #    Steam viva não adianta — a Steam regrava o arquivo ao fechar e engole a edição.
 #
-#    O `-` na frente é deliberado: `--reparar` devolve 3 quando ADIA (Steam ou
-#    jogo abertos), que é o caso comum e não é falha. Sem ele o guard inteiro
-#    entraria em `failed` toda vez que o usuário estivesse jogando.
-ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
+#    O código 3 de `--reparar` é quando ADIA (Steam ou jogo abertos), que é o caso
+#    comum e não é falha: o passo o deixa passar. Qualquer outro código é falha e
+#    chega ao estado da unidade pelo fecho (passo 5).
+ExecStart=/usr/bin/env bash -c 'r=$$1; shift; "$$@" || { c=$$?; case " $$r " in *" $$c "*) ;; *) echo "rc=$$c $$*" >> "$$RUNTIME_DIRECTORY/falhas" || exit $$c ;; esac; }' -- 3 /usr/bin/env python3 __SENTINELA__ --reparar
 #
 # 3) O Proton pinado, na mesma carona (18/09/2026, INSTALL-UNIVERSAL). A trava
 #    `--lock --todos` só acontecia no passo 11c do install, e só com a Steam
@@ -41,10 +49,11 @@ ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
 #    pede e o cache não o tem), trava todo jogo da Steam e fixa os jogos do
 #    Heroic e das extensões (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO).
 #
-#    O `-` pelo mesmo motivo do passo 2: com a Steam ou um jogo abertos ele
-#    adia (rc 3), e isso não é falha. Com `--no-proton-pin` o install apaga
-#    esta linha da unidade.
-ExecStart=-__PYTHON_DO_PINO__ __PROTON_PIN__ --manter
+#    Aqui a rotina é mais larga (medido em `proton_pin.py`): 2 sem rede e sem cache,
+#    3 recusado com a Steam viva, 4 adiado (pino ausente, `config.vdf` ainda não
+#    existe) e 7 Steam em caixa; 1, 5 e 6 (soma errada, extração, conf ilegível) são
+#    falha. Com `--no-proton-pin` o install apaga esta linha da unidade.
+ExecStart=/usr/bin/env bash -c 'r=$$1; shift; "$$@" || { c=$$?; case " $$r " in *" $$c "*) ;; *) echo "rc=$$c $$*" >> "$$RUNTIME_DIRECTORY/falhas" || exit $$c ;; esac; }' -- "2 3 4 7" __PYTHON_DO_PINO__ __PROTON_PIN__ --manter
 #
 # 4) As opções de inicialização que o usuário declarou, na mesma carona (21/09/2026,
 #    OPCOES-POR-JOGO-01). A Steam guarda UMA linha de LaunchOptions por jogo, e
@@ -54,6 +63,9 @@ ExecStart=-__PYTHON_DO_PINO__ __PROTON_PIN__ --manter
 #    Agora a tabela é do Hefesto (`opcoes_por_jogo.txt`) e a linha sai COMPOSTA:
 #    o atalho na frente, as opções de quem joga atrás.
 #
-#    O `-` pelo mesmo motivo dos passos 2 e 3: com a Steam ou um jogo abertos
-#    ele adia (rc 3), e isso não é falha.
-ExecStart=-/usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar
+#    O 3 dos passos 2 e 3 vale aqui: com a Steam ou um jogo abertos ele adia
+#    (rc 3), e isso não é falha.
+ExecStart=/usr/bin/env bash -c 'r=$$1; shift; "$$@" || { c=$$?; case " $$r " in *" $$c "*) ;; *) echo "rc=$$c $$*" >> "$$RUNTIME_DIRECTORY/falhas" || exit $$c ;; esac; }' -- 3 /usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar
+#
+# 5) O fecho da partida: falha a unidade se algum passo acima saiu fora da rotina.
+ExecStart=/usr/bin/env bash -c '[ ! -s "$$RUNTIME_DIRECTORY/falhas" ] || { cat "$$RUNTIME_DIRECTORY/falhas" >&2; exit 1; }'

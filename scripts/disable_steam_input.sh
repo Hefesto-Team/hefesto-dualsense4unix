@@ -177,6 +177,20 @@ ALLOWLIST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/hefesto-dualsense4unix/steam_i
 _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PONTE_PY="${PONTE_PY:-${_SCRIPT_DIR}/../src/hefesto_dualsense4unix/integrations/steam_input_ponte.py}"
 
+_imprime_linhas() {
+    printf '%s\n' "$1" | while IFS= read -r linha; do
+        [[ -n "${linha}" ]] && printf '%s\n' "${linha}"
+    done
+}
+
+_conta_o_codigo_da_ponte() {
+    case "$2" in
+        0|3|4) return 0 ;;
+    esac
+    log "ERRO: a ponte ($1) saiu com código $2 — o texto da ponte está acima"
+    return 1
+}
+
 ligar_ponte_da_allowlist() {
     if [[ ! -f "${PONTE_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
         return 0
@@ -185,40 +199,63 @@ ligar_ponte_da_allowlist() {
         log "ponte: Steam viva — não escrevo agora (a saída da Steam engoliria)"
         return 0
     fi
-    local saida
-    saida="$(python3 "${PONTE_PY}" --ligar 2>&1)" || true
-    printf '%s\n' "${saida}" | while IFS= read -r linha; do
-        [[ -n "${linha}" ]] && printf '%s\n' "${linha}"
-    done
-    saida="$(python3 "${PONTE_PY}" --desligar-fora-da-lista 2>&1)" || true
-    printf '%s\n' "${saida}" | while IFS= read -r linha; do
-        [[ -n "${linha}" ]] && printf '%s\n' "${linha}"
-    done
+    local saida rc_ponte=0 rc=0
+    saida="$(python3 "${PONTE_PY}" --ligar 2>&1)" || rc_ponte=$?
+    _imprime_linhas "${saida}"
+    _conta_o_codigo_da_ponte "--ligar" "${rc_ponte}" || rc=1
+    rc_ponte=0
+    saida="$(python3 "${PONTE_PY}" --desligar-fora-da-lista 2>&1)" || rc_ponte=$?
+    _imprime_linhas "${saida}"
+    _conta_o_codigo_da_ponte "--desligar-fora-da-lista" "${rc_ponte}" || rc=1
+    return "${rc}"
 }
 
 ponte_pendente() {
     [[ -f "${PONTE_PY}" ]] || return 1
     command -v python3 >/dev/null 2>&1 || return 1
-    python3 "${PONTE_PY}" --estado 2>/dev/null | python3 -c '
+    local estado rc_ponte=0 queixa
+    queixa="$(mktemp)"
+    estado="$(python3 "${PONTE_PY}" --estado 2>"${queixa}")" || rc_ponte=$?
+    if [[ "${rc_ponte}" -ne 0 ]]; then
+        _imprime_linhas "$(cat "${queixa}")"
+        rm -f -- "${queixa}"
+        return 2
+    fi
+    rm -f -- "${queixa}"
+    python3 -c '
 import json
 import sys
 
 try:
     dados = json.load(sys.stdin)
 except (ValueError, OSError):
-    sys.exit(1)
+    sys.exit(2)
 pendentes = dados.get("pendentes") or []
 for jogo in pendentes:
     print("[steam-input] ponte pendente: " + str(jogo.get("rotulo")))
 sys.exit(0 if pendentes else 1)
-'
+' <<<"${estado}"
 }
 
 fora_da_lista_pendente() {
     [[ -f "${PONTE_PY}" ]] || return 1
     command -v python3 >/dev/null 2>&1 || return 1
-    local saida
-    saida="$(python3 "${PONTE_PY}" --desligar-fora-da-lista --dry-run 2>/dev/null)" || return 1
+    local saida rc_ponte=0 queixa
+    queixa="$(mktemp)"
+    saida="$(python3 "${PONTE_PY}" --desligar-fora-da-lista --dry-run 2>"${queixa}")" || rc_ponte=$?
+    case "${rc_ponte}" in
+        0) ;;
+        3|4)
+            rm -f -- "${queixa}"
+            return 1
+            ;;
+        *)
+            _imprime_linhas "$(cat "${queixa}")"
+            rm -f -- "${queixa}"
+            return 2
+            ;;
+    esac
+    rm -f -- "${queixa}"
     grep -qx '\[steam-input-fora-da-lista\] resultado=desligado' <<<"${saida}" || return 1
     sed -n 's/^\[steam-input-fora-da-lista\] \([0-9][0-9]*\): desligado$/[steam-input] fora da lista pendente: \1/p' <<<"${saida}"
     return 0
@@ -377,13 +414,24 @@ case "${MODE}" in
                 any_allow=1
             fi
         done
-        if ponte_pendente; then
-            any_needs=1
-        fi
-        if fora_da_lista_pendente; then
-            any_needs=1
-        fi
-        if [[ "${any_needs}" -eq 1 ]]; then
+        pergunta_falhou=0
+        rc_ponte=0
+        ponte_pendente || rc_ponte=$?
+        case "${rc_ponte}" in
+            0) any_needs=1 ;;
+            2) pergunta_falhou=1 ;;
+        esac
+        rc_ponte=0
+        fora_da_lista_pendente || rc_ponte=$?
+        case "${rc_ponte}" in
+            0) any_needs=1 ;;
+            2) pergunta_falhou=1 ;;
+        esac
+        if [[ "${pergunta_falhou}" -eq 1 ]]; then
+            log "ERRO: a ponte não respondeu ao que está pendente — não posso dizer que está tudo limpo"
+            resultado "erro"
+            exit 1
+        elif [[ "${any_needs}" -eq 1 ]]; then
             log "ação sugerida: scripts/disable_steam_input.sh --apply"
             resultado "precisa-corrigir"
         else
@@ -428,13 +476,25 @@ case "${MODE}" in
         for vdf in "${VDFS[@]}"; do
             needs_real_fix "$vdf" && any_needs=1
         done
-        if ponte_pendente >/dev/null 2>&1; then
-            any_needs=1
-        fi
-        if fora_da_lista_pendente; then
-            any_needs=1
-        fi
+        pergunta_falhou=0
+        rc_ponte=0
+        ponte_pendente >/dev/null 2>&1 || rc_ponte=$?
+        case "${rc_ponte}" in
+            0) any_needs=1 ;;
+            2) pergunta_falhou=1 ;;
+        esac
+        rc_ponte=0
+        fora_da_lista_pendente || rc_ponte=$?
+        case "${rc_ponte}" in
+            0) any_needs=1 ;;
+            2) pergunta_falhou=1 ;;
+        esac
         if [[ "${any_needs}" -eq 0 ]]; then
+            if [[ "${pergunta_falhou}" -eq 1 ]]; then
+                log "ERRO: a ponte não respondeu ao que está pendente — não digo que não há nada a fazer"
+                resultado "erro"
+                exit 1
+            fi
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
             resultado "nada-a-fazer"
             exit 0
@@ -447,11 +507,11 @@ case "${MODE}" in
                 exit 5
             fi
         fi
-        rc=0
+        rc="${pergunta_falhou}"
         for vdf in "${VDFS[@]}"; do
             apply_vdf "$vdf" || rc=1
         done
-        ligar_ponte_da_allowlist
+        ligar_ponte_da_allowlist || rc=1
         [[ "${was_running}" -eq 1 ]] && reopen_steam
         if [[ "${rc}" -eq 0 ]]; then resultado "aplicado"; else resultado "erro"; fi
         exit "${rc}"
@@ -466,13 +526,17 @@ case "${MODE}" in
         for vdf in "${VDFS[@]}"; do
             needs_real_fix "$vdf" && any_needs=1
         done
-        ligar_ponte_da_allowlist
+        rc=0
+        ligar_ponte_da_allowlist || rc=1
         if [[ "${any_needs}" -eq 0 ]]; then
+            if [[ "${rc}" -ne 0 ]]; then
+                resultado "erro"
+                exit 1
+            fi
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
             resultado "nada-a-fazer"
             exit 0
         fi
-        rc=0
         for vdf in "${VDFS[@]}"; do
             apply_vdf "$vdf" || rc=1
         done

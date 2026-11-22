@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import re
 import pytest
 
 from hefesto_dualsense4unix.integrations import opcoes_por_jogo as opj
@@ -192,7 +193,11 @@ def test_o_vigia_aplica_a_tabela_e_o_install_resolve_o_caminho() -> None:
     """Sem estas duas linhas o módulo seria uma promessa sem chamador."""
     unidade = (RAIZ / "assets" / "hefesto-steam-input-guard.service").read_text(
         encoding="utf-8")
-    assert "ExecStart=-/usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar" in unidade
+    assert re.search(
+        r"^ExecStart=.* -- 3 /usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar$",
+        unidade,
+        re.M,
+    )
     instalador = (RAIZ / "install.sh").read_text(encoding="utf-8")
     assert "__OPCOES_POR_JOGO__#${OPCOES_POR_JOGO_PY}" in instalador
     assert "integrations/opcoes_por_jogo.py" in instalador

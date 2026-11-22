@@ -50,17 +50,17 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
         "`install.sh:3857` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
-        "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:34`); o "
+        "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:42`); o "
         "`scripts/doctor.sh:1693` (`check_sentinela_wrapper`, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
         "scripts/disable_steam_input.sh",
         "integrations/steam_input_ponte.py",
         "roda como `python3 ${PONTE_PY} --ligar` em "
-        "`scripts/disable_steam_input.sh:189` (`ligar`) e "
-        "`scripts/disable_steam_input.sh:193` (`desligar`), e esse roteiro é "
+        "`scripts/disable_steam_input.sh:203` (`ligar`) e "
+        "`scripts/disable_steam_input.sh:207` (`desligar`), e esse roteiro é "
         "o ExecStart "
-        "de `assets/hefesto-steam-input-guard.service:13` (`__SCRIPT__`), que o "
+        "de `assets/hefesto-steam-input-guard.service:27` (`__SCRIPT__`), que o "
         "`install.sh:3852` (`__SCRIPT__`) troca pelo caminho dele",
     ),
     "integrations/steam_launch_options.py": (
@@ -83,7 +83,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3846` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
-        "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:59`) — o mesmo "
+        "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:68`) — o mesmo "
         "caminho dos "
         "irmãos __SENTINELA__ e __PROTON_PIN__, que rodam na mesma unit",
     ),

@@ -42,8 +42,10 @@ class TestOSegundoPasso:
         assert "--apply-quiet" in execstarts[0]
 
     def test_adiar_nao_pode_derrubar_o_guard(self, service: str) -> None:
-        """O `-` é o que separa "adiei" de "quebrei"."""
-        assert re.search(r"^ExecStart=-/usr/bin/env python3 __SENTINELA__", service, re.M)
+        """O 3 de rotina é o que separa "adiei" de "quebrei": só ele passa sem ir para as falhas."""
+        assert re.search(
+            r"^ExecStart=.* -- 3 /usr/bin/env python3 __SENTINELA__ --reparar$", service, re.M
+        )
 
     def test_roda_no_python3_do_sistema(self, execstarts: list[str]) -> None:
         """O guard não tem venv. A sentinela é stdlib pura justamente por isto."""
