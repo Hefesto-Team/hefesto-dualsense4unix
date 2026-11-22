@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -322,29 +323,67 @@ def sha256_of_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+class DownloadIncompletoError(OSError):
+    """O corpo chegou menor que o anunciado: a rede caiu, e o parcial fica para o ``Range``."""
+
+
+def _tamanho_anunciado(resposta: http.client.HTTPResponse, parado: int) -> int | None:
+    """O tamanho final do arquivo, segundo o servidor; ``None`` quando ele não anuncia."""
+    faixa = resposta.headers.get("Content-Range", "")
+    total = faixa.rpartition("/")[2].strip()
+    if resposta.status == 206 and total.isdigit():
+        return int(total)
+    comprimento = resposta.headers.get("Content-Length", "").strip()
+    if not comprimento.isdigit():
+        return None
+    return int(comprimento) + (parado if resposta.status == 206 else 0)
+
+
 def baixar_a_release(url: str, dest: Path) -> None:
-    """Downloader padrão do install: HTTP pela stdlib, com retomada (Range) e falha explícita.
+    """Downloader do install e do vigia: HTTP pela stdlib, com retomada (Range) e falha explícita.
 
     A release do GE-Proton é um endereço público do GitHub: a porta é o HTTP, não o `curl` da
     máquina (que pode nem existir). O arquivo parcial em `dest` é retomado do byte em que parou;
-    se o servidor ignora o `Range` (200 em vez de 206), recomeça do zero. Quem confere o que veio
-    é o sha256 do `proton-pin.conf`, depois: este downloader só traz os bytes.
+    se o servidor ignora o `Range` (200 em vez de 206), recomeça do zero. O tamanho recebido se
+    confere contra o anunciado: menor é :class:`DownloadIncompletoError` (um ``OSError``) e o
+    parcial fica para a próxima tentativa continuar, nunca vai ao sha. Quem confere o conteúdo é o
+    sha256 do `proton-pin.conf`, depois: este downloader só traz os bytes.
     """
     parado = dest.stat().st_size if dest.is_file() else 0
     pedido = urllib.request.Request(url, headers={"User-Agent": "hefesto-dualsense4unix"})
     if parado:
         pedido.add_header("Range", f"bytes={parado}-")
+    anunciado: int | None = None
     try:
         with urllib.request.urlopen(pedido, timeout=60) as resposta:
             retomou = parado > 0 and resposta.status == 206
+            anunciado = _tamanho_anunciado(resposta, parado if retomou else 0)
             with dest.open("ab" if retomou else "wb") as saida:
-                shutil.copyfileobj(resposta, saida, 1024 * 1024)
+                while True:
+                    try:
+                        bloco = resposta.read(1024 * 1024)
+                    except http.client.IncompleteRead as exc:
+                        saida.write(exc.partial)
+                        raise
+                    if not bloco:
+                        break
+                    saida.write(bloco)
     except urllib.error.HTTPError as exc:
         if exc.code == 416 and parado:
             return
         raise OSError(f"download falhou (HTTP {exc.code}) baixando {url}") from exc
     except (urllib.error.URLError, TimeoutError) as exc:
         raise OSError(f"download falhou ({exc}) baixando {url}") from exc
+    except http.client.HTTPException as exc:
+        recebido = dest.stat().st_size if dest.is_file() else 0
+        raise DownloadIncompletoError(
+            f"download incompleto ({recebido} bytes recebidos) baixando {url}"
+        ) from exc
+    recebido = dest.stat().st_size
+    if anunciado is not None and recebido < anunciado:
+        raise DownloadIncompletoError(
+            f"download incompleto ({recebido} de {anunciado} bytes) baixando {url}"
+        )
 
 
 def pinned_proton_installed(name: str, compat_dir: Path) -> bool:
@@ -564,7 +603,10 @@ def _tarball_conferido_no_cache(
     try:
         downloader(conf["url"], partial)
     except OSError as exc:
-        partial.unlink(missing_ok=True)
+        if isinstance(exc, DownloadIncompletoError):
+            return None, EnsureResult(
+                "unavailable", f"a rede caiu no meio, o download continua da próxima vez: {exc}"
+            )
         return None, EnsureResult("unavailable", f"download falhou: {exc}")
     got = verifier(partial).lower()
     if got != expected:
