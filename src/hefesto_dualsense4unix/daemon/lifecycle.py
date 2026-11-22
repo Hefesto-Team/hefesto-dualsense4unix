@@ -384,6 +384,25 @@ class IpcIndisponivel(RuntimeError):  # noqa: N818
 PERIODO_DA_PREFERENCIA_DO_PAD_S = 2.0
 
 
+def _o_arquivo_de_mascaras_no_perfil_que_grava(store: Any) -> None:
+    """O arquivo de máscaras vira o modo do perfil que grava; lê e grava o disco, fora do laço."""
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        o_arquivo_de_mascaras_vira_o_modo,
+    )
+    from hefesto_dualsense4unix.profiles.manager import nome_do_perfil_que_grava
+
+    o_arquivo_de_mascaras_vira_o_modo(
+        nome_do_perfil_que_grava(getattr(store, "active_profile", None))
+    )
+
+
+def _o_caminho_global_do_usuario() -> str | None:
+    """O caminho global gravado, com o vazamento devolvido; lê e grava o disco, fora do laço."""
+    from hefesto_dualsense4unix.utils.session import load_gamepad_caminho_com_origem
+
+    return _a_escolha_do_usuario_sem_o_vazamento(*load_gamepad_caminho_com_origem())
+
+
 def _a_preferencia_do_pad(daemon: Any, *, vazio: Any = None) -> Any:
     """A preferência persistida do pad, do caderno do tique; `vazio` é a que a subida leu."""
     from hefesto_dualsense4unix.daemon.caderno_do_tique import no_caderno
@@ -798,7 +817,7 @@ class Daemon:
         from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
         from hefesto_dualsense4unix.utils.session import load_freestyle_ligado
         with contextlib.suppress(Exception):
-            o_perfil_de_fora_do_jogo()
+            await asyncio.to_thread(o_perfil_de_fora_do_jogo)
         self.store.set_freestyle_ligado(load_freestyle_ligado())
         self._carregar_o_modo_nativo()
         from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
@@ -834,14 +853,8 @@ class Daemon:
             if mouse_scroll is not None:
                 self.config.mouse_scroll_speed = max(
                     _um.SCROLL_SPEED_MIN, min(_um.SCROLL_SPEED_MAX, int(mouse_scroll)))
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            o_arquivo_de_mascaras_vira_o_modo,
-        )
-        from hefesto_dualsense4unix.profiles.manager import nome_do_perfil_que_grava
         with contextlib.suppress(Exception):
-            o_arquivo_de_mascaras_vira_o_modo(
-                nome_do_perfil_que_grava(getattr(self.store, "active_profile", None))
-            )
+            await asyncio.to_thread(_o_arquivo_de_mascaras_no_perfil_que_grava, self.store)
         from hefesto_dualsense4unix.utils.session import (
             load_gamepad_emulation,
             load_gamepad_preference,
@@ -854,23 +867,19 @@ class Daemon:
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
-        from hefesto_dualsense4unix.utils.session import (
-            load_gamepad_caminho_com_origem,
-        )
-
-        escolha = _a_escolha_do_usuario_sem_o_vazamento(*load_gamepad_caminho_com_origem())
+        escolha = await asyncio.to_thread(_o_caminho_global_do_usuario)
         self.config.gamepad_caminho_global = escolha
         self._caminho_do_boot: str | None = None
         self._wire_game_signal()
         with contextlib.suppress(Exception):
             await self._sync_game_signal()
         if not self._native_mode:
-            caminho_do_boot, mascara_do_boot, perfil_do_boot = _o_modo_do_perfil_do_boot(
-                self.store, appid_em_cena=self.appid_em_cena
+            caminho_do_boot, mascara_do_boot, perfil_do_boot = await asyncio.to_thread(
+                _o_modo_do_perfil_do_boot, self.store, appid_em_cena=self.appid_em_cena
             )
             self._caminho_do_boot = caminho_do_boot
-            if not self.config.gamepad_emulation_enabled and _o_pad_do_jogo_volta_no_boot(
-                self, perfil_do_boot
+            if not self.config.gamepad_emulation_enabled and await asyncio.to_thread(
+                _o_pad_do_jogo_volta_no_boot, self, perfil_do_boot
             ):
                 self._mode_from_profile = "gamepad"
             if mascara_do_boot is not None and self.config.gamepad_emulation_enabled:
@@ -913,7 +922,11 @@ class Daemon:
                 return
             if not self.config.ipc_enabled:
                 _dizer_pronto()
-            self._audit_config_on_boot()
+            tarefas.append(
+                loop.create_task(
+                    asyncio.to_thread(self._audit_config_on_boot), name="auditoria_dos_perfis"
+                )
+            )
             self._check_system_on_boot()
             self._wire_identity_registry()
             self._wire_external_registry()
