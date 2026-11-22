@@ -288,6 +288,7 @@ def test_o_comando_impresso_chega_aos_arquivos_e_grava_na_raiz(tmp_path: Path) -
 def test_instalar_grava_tudo_pelos_arquivos_do_flatpak_e_remover_devolve_a_raiz(
     tmp_path: Path,
 ) -> None:
+    """D-2211-O-AJUDANTE-DE-HOST-DO-FLATPAK-RODA-NO-HOST."""
     cena = _Cena(tmp_path)
     estranho = cena.raiz / "etc" / "udev" / "rules.d" / "99-de-outro.rules"
     estranho.write_text("# de outro dono\n", encoding="utf-8")

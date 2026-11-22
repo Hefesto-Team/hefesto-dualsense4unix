@@ -83,6 +83,7 @@ def test_a_gravacao_continua_estrita_com_o_campo_desconhecido() -> None:
 
 
 def test_o_formato_mais_novo_fica_fora_da_selecao_e_aparece_marcado(aviso: MagicMock) -> None:
+    """D-2211-O-PERFIL-DE-OUTRA-VERSAO-FICA-NA-LISTA-E-A-LEITURA-TOLERA."""
     _grava("bom")
     futuro = _grava("futuro", version=2)
     bytes_de_antes = futuro.read_bytes()

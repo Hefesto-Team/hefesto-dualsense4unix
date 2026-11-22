@@ -69,6 +69,7 @@ def test_o_install_anuncia_destinos_de_root() -> None:
 
 
 def test_todo_destino_de_root_do_install_tem_linha_na_pagina() -> None:
+    """D-2211-A-PAGINA-DE-INSTALACAO-LISTA-CADA-ESCRITA-DE-ROOT."""
     faltam = _sem_linha(_tabela())
     assert not faltam, f"a página não diz onde o install grava: {faltam}"
 

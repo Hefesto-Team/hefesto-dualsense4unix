@@ -213,6 +213,7 @@ async def _medir_o_laco(servidor: IpcServer) -> tuple[float, list[dict[str, Any]
 async def test_dois_clientes_a_2_hz_nao_param_o_laco_nem_multiplicam_a_leitura(
     tmp_path: Path, portas: SimpleNamespace
 ) -> None:
+    """D-2211-O-ESTADO-RESPONDE-DO-GUARDADO-E-A-LEITURA-CORRE-FORA-DO-LACO."""
     for tentativa in range(3):
         for porta in vars(portas).values():
             porta.chamadas, porta.fios = 0, []

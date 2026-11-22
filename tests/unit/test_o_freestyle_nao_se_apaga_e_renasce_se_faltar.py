@@ -91,6 +91,7 @@ def test_o_arquivo_que_sumiu_renasce_no_processo_novo(
 def test_o_arquivo_que_sumiu_renasce_na_proxima_leitura_com_o_servico_em_pe(
     semeadura_ligada: None,
 ) -> None:
+    """D-2211-O-FREESTYLE-RENASCE-NA-PROXIMA-LEITURA."""
     loader.load_all_profiles()
     _arquivo().unlink()
 

@@ -112,6 +112,7 @@ def _argv_do_exec(valor: str) -> list[str]:
 def test_cada_formato_renderiza_o_atalho_para_o_gui_que_o_pacote_instala(
     tmp_path: Path, formato: str
 ) -> None:
+    """D-2211-O-ATALHO-DO-MENU-DOS-PACOTES-APONTA-PARA-O-GUI."""
     modelo, destino, executavel, *resto = _chamada_do_renderizador(formato)
     assert modelo == "packaging/hefesto-dualsense4unix.desktop"
     assert resto == [], resto

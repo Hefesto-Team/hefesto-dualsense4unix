@@ -124,6 +124,7 @@ async def test_o_reload_recusa_o_valor_que_mataria_o_laco_e_a_config_fica_igual(
 async def test_o_reload_recusa_antes_do_replace_o_que_nao_serve(
     servico: IpcServer, campo: str, valor: Any, frase: str
 ) -> None:
+    """D-2211-O-RELOAD-SO-APLICA-A-LISTA-FECHADA-AO-VIVO."""
     antes = servico.daemon.config
 
     erro = await _erro_de(servico, "daemon.reload", {"config_overrides": {campo: valor}})
@@ -205,6 +206,7 @@ async def test_o_state_full_de_quatro_controles_e_500_pontes_cabe_no_cliente(
 async def test_duzentos_clientes_calados_sao_soltos_no_prazo_e_um_novo_e_atendido(
     servico: IpcServer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """D-2211-O-IPC-SOLTA-O-CLIENTE-CALADO-E-LIMITA-AS-CONEXOES."""
     monkeypatch.setattr(srv, "_TETO_DE_OCIOSIDADE_S", 0.5)
     calados = [await asyncio.open_unix_connection(str(servico.socket_path)) for _ in range(200)]
     try:

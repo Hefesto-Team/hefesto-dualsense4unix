@@ -348,7 +348,9 @@ def _o_vigia(
 
 def test_o_vigia_leva_a_queda_ao_diario_e_nao_leva_o_que_nao_e_queda(
         sys_usb: SysDeMentira, tmp_path: Path) -> None:
-    """As linhas de 21/11 viram ``caiu``; o cabo tirado e o pad virtual, não."""
+    """D-2211-A-QUEDA-DO-CABO-SEM-RESET-ENTRA-NO-DIARIO-POR-PORTA.
+
+    As linhas de 21/11 viram ``caiu``; o cabo tirado e o pad virtual, não."""
     sys_usb.por(PORTA, _controle("1.4", "3-1", 9, serial=True))
     diario = _diario(tmp_path)
     saida = _o_vigia(

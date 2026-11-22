@@ -282,7 +282,9 @@ def _gesto(nome: str, servico: _Servico, estado: dict[str, Any] | None) -> None:
 @pytest.mark.parametrize("gesto", GESTOS)
 def test_o_gesto_depois_do_reiniciar_manda_o_perfil_do_jogo(
         mundo: _Relogio, a09: Any, monkeypatch: pytest.MonkeyPatch, gesto: str) -> None:
-    """O Aplicar, o Salvar e o Salvar e aplicar logo depois do Reiniciar deixam o jogo valendo.
+    """D-2211-O-RODAPE-ESPERA-O-SERVICO-QUE-REINICIA.
+
+    O Aplicar, o Salvar e o Salvar e aplicar logo depois do Reiniciar deixam o jogo valendo.
 
     O reinício volta e o serviço escuta sem perfil; o gesto espera o boot restaurar o do jogo e
     manda ESSE nome, e o boot não desiste. Todos os gestos dão o mesmo desfecho.

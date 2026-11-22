@@ -2,9 +2,9 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "linhas-frageis": {
-      "data": "2026-10-19",
+      "data": "2026-11-22",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 40,
+      "piso": 41,
       "por_item": {
         "bluez": 11,
         "kernel": 1,
@@ -12,9 +12,9 @@
         "proton": 2,
         "sdl": 1,
         "sistema": 2,
-        "steam": 19
+        "steam": 20
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "22/11/2026: o leitor do shortcuts.vdf da Steam (jogo de fora adicionado à Steam) é um contrato de fora novo, a linha cfg:shortcuts.vdf do censo; o piso sobe de 40 para 41 (D-2211-JOGO-DE-FORA-SO-VAI-AO-PROTON-SE-E-DO-WINDOWS)",
       "subidas": [
         {
           "data": "2026-10-07",
@@ -39,10 +39,16 @@
           "de": 40,
           "para": 41,
           "razao": "a ficha declarada do jogo lê as categorias de controle do cache binário da Steam (O-JOGO-SE-DECLARA-NO-PRONTUARIO-PELO-QUE-A-STEAM-E-O-BINARIO-DIZEM-01); o leitor binário é o do proton_pin, importado, e o contato novo nasce porque o caminho do cache mora no módulo novo"
+        },
+        {
+          "data": "2026-11-22",
+          "de": 40,
+          "para": 41,
+          "razao": "22/11/2026: o leitor do shortcuts.vdf da Steam (jogo de fora adicionado à Steam) é um contrato de fora novo, a linha cfg:shortcuts.vdf do censo; o piso sobe de 40 para 41 (D-2211-JOGO-DE-FORA-SO-VAI-AO-PROTON-SE-E-DO-WINDOWS)"
         }
       ],
       "unidade": "linhas",
-      "universo": 304
+      "universo": 368
     }
   }
 }
