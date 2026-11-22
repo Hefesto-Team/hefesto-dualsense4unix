@@ -74,7 +74,7 @@ async def test_saida_do_context_manager_nao_fica_presa(monkeypatch):
     writer = _WriterQueNuncaFecha()
     reader = AsyncMock()
 
-    async def _abrir(_caminho):
+    async def _abrir(_caminho, **_opcoes):
         return reader, writer
 
     async def _bloco() -> str:

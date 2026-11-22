@@ -4129,7 +4129,7 @@ class IpcHandlersMixin:
                 f"daemon.reload: campos desconhecidos em config_overrides: {sorted(unknown)}"
             )
 
-        new_cfg = replace(self.daemon.config, **overrides)
+        new_cfg = replace(self.daemon.config, **config_do_reload_conferida(overrides))
         self.daemon.reload_config(new_cfg)
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.launch_env import (
@@ -6709,6 +6709,91 @@ def _sem_os_campos_aposentados(overrides: Any) -> Any:
 
 CAMPOS_APOSENTADOS = frozenset({"auto_reconnect", "reconnect_backoff_sec"})
 _APOSENTADOS_AVISADOS: set[str] = set()
+
+CAMPOS_DE_SUBIDA = frozenset({
+    "poll_hz", "ipc_enabled", "udp_enabled", "udp_host", "udp_port", "dsu_enabled", "dsu_port",
+    "autoswitch_enabled", "metrics_enabled", "metrics_port", "plugins_enabled",
+})
+
+
+def _o_booleano(campo: str, valor: Any) -> bool:
+    if not isinstance(valor, bool):
+        raise ValueError(f"daemon.reload: '{campo}' precisa ser booleano")
+    return valor
+
+
+def _o_inteiro_entre(minimo: int, maximo: int) -> Callable[[str, Any], int]:
+    def _conferir(campo: str, valor: Any) -> int:
+        if not isinstance(valor, int) or isinstance(valor, bool):
+            raise ValueError(f"daemon.reload: '{campo}' precisa ser inteiro")
+        if not minimo <= valor <= maximo:
+            raise ValueError(f"daemon.reload: '{campo}' precisa ficar entre {minimo} e {maximo}")
+        return valor
+
+    return _conferir
+
+
+def _um_de(opcoes: tuple[str, ...]) -> Callable[[str, Any], str]:
+    def _conferir(campo: str, valor: Any) -> str:
+        if not isinstance(valor, str) or valor not in opcoes:
+            raise ValueError(f"daemon.reload: '{campo}' precisa ser um de {list(opcoes)}")
+        return valor
+
+    return _conferir
+
+
+def _o_comando(campo: str, valor: Any) -> list[str]:
+    if (
+        not isinstance(valor, list)
+        or len(valor) > 32
+        or not all(isinstance(p, str) and 0 < len(p) <= 1024 for p in valor)
+    ):
+        raise ValueError(f"daemon.reload: '{campo}' precisa ser lista de até 32 textos")
+    return list(valor)
+
+
+def _o_multiplicador(campo: str, valor: Any) -> float:
+    if not isinstance(valor, (int, float)) or isinstance(valor, bool):
+        raise ValueError(f"daemon.reload: '{campo}' precisa ser número")
+    if not 0.0 <= valor <= RUMBLE_CUSTOM_MULT_MAX:
+        raise ValueError(
+            f"daemon.reload: '{campo}' precisa ficar entre 0.0 e {RUMBLE_CUSTOM_MULT_MAX}"
+        )
+    return float(valor)
+
+
+def config_do_reload_conferida(overrides: dict[str, Any]) -> dict[str, Any]:
+    """O dono do que o `daemon.reload` aplica ao vivo: nome, tipo e faixa de cada campo.
+
+    Campo de subida (a porta, a taxa do laço, o que nasce no boot) é recusado com «vale ao
+    reiniciar o serviço»; estado vivo e função (o rumble de agora, o pad, o co-op) não se mudam
+    por este pedido. Bool não vale como inteiro. Levanta ``ValueError`` (``INVALID_PARAMS``) antes
+    de qualquer ``replace``.
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICIES
+    from hefesto_dualsense4unix.integrations import uinput_mouse as _um
+
+    confere: dict[str, Callable[[str, Any], Any]] = {
+        "mouse_emulation_enabled": _o_booleano,
+        "keyboard_emulation_enabled": _o_booleano,
+        "mic_button_toggles_system": _o_booleano,
+        "mouse_speed": _o_inteiro_entre(_um.MOUSE_SPEED_MIN, _um.MOUSE_SPEED_MAX),
+        "mouse_scroll_speed": _o_inteiro_entre(_um.SCROLL_SPEED_MIN, _um.SCROLL_SPEED_MAX),
+        "ps_button_action": _um_de(("steam", "none", "custom")),
+        "ps_button_command": _o_comando,
+        "ps_long_press_ms": _o_inteiro_entre(0, 10_000),
+        "rumble_policy": _um_de(tuple(RUMBLE_POLICIES)),
+        "rumble_policy_custom_mult": _o_multiplicador,
+    }
+    conferido: dict[str, Any] = {}
+    for campo in sorted(overrides):
+        if campo in CAMPOS_DE_SUBIDA:
+            raise ValueError(f"daemon.reload: '{campo}' vale ao reiniciar o serviço")
+        conferir = confere.get(campo)
+        if conferir is None:
+            raise ValueError(f"daemon.reload: '{campo}' não se muda por aqui")
+        conferido[campo] = conferir(campo, overrides[campo])
+    return conferido
 
 
 def _o_arranjo_pedido(params: dict[str, Any]) -> dict[str, str]:

@@ -19,6 +19,8 @@ _CLOSE_TIMEOUT_S = 2.0
 
 _CONNECT_TIMEOUT_S = 1.0
 
+_LIMITE_DA_RESPOSTA_BYTES = 1024 * 1024
+
 
 def _prazo_do_metodo(method: str) -> float:
     """O prazo do método: o dono é a tabela da ponte (`app/ipc_bridge.TETOS`).
@@ -58,7 +60,7 @@ class IpcClient:
         prazo = _CONNECT_TIMEOUT_S if timeout is None else timeout
         try:
             reader, writer = await asyncio.wait_for(
-                asyncio.open_unix_connection(str(path)),
+                asyncio.open_unix_connection(str(path), limit=_LIMITE_DA_RESPOSTA_BYTES),
                 timeout=prazo,
             )
         except (TimeoutError, asyncio.TimeoutError) as exc:
@@ -114,6 +116,10 @@ class IpcClient:
             raw = await asyncio.wait_for(_enviar_e_ler(), timeout=prazo)
         except (TimeoutError, asyncio.TimeoutError) as exc:
             raise IpcError(-1, f"o daemon não respondeu em {prazo:g} s") from exc
+        except ValueError as exc:
+            raise IpcError(
+                -1, f"a resposta do daemon passou de {_LIMITE_DA_RESPOSTA_BYTES // 2**20} MiB"
+            ) from exc
 
         if not raw:
             raise IpcError(-1, "conexão fechada pelo servidor antes da resposta")

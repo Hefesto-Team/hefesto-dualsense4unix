@@ -132,12 +132,12 @@ async def test_o_reload_com_a_chave_aposentada_responde_ok_aplica_o_resto_e_avis
 
     with capture_logs() as diario:
         resposta = await ipc._handle_daemon_reload(
-            {"config_overrides": {"auto_reconnect": False, "poll_hz": 30}}
+            {"config_overrides": {"auto_reconnect": False, "ps_long_press_ms": 30}}
         )
 
     assert resposta["status"] == "ok"
-    assert resposta["config"]["poll_hz"] == 30
-    assert daemon.config.poll_hz == 30
+    assert resposta["config"]["ps_long_press_ms"] == 30
+    assert daemon.config.ps_long_press_ms == 30
     assert not set(resposta["config"]) & set(APOSENTADOS)
     avisos = [e for e in diario if e.get("event") == "daemon.reload.campo_aposentado"]
     assert [e["campo"] for e in avisos] == ["auto_reconnect"]

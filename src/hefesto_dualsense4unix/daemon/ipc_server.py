@@ -44,6 +44,8 @@ from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 logger = get_logger(__name__)
 
 TETO_DO_PEDIDO_MS = 100.0
+TETO_DE_CONEXOES = 128
+_TETO_DE_OCIOSIDADE_S = 120.0
 _TETO_DA_ESPERA_DO_FECHAMENTO_S = 1.0
 
 PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
@@ -260,10 +262,17 @@ class IpcServer(IpcHandlersMixin):
     async def _serve_client(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
+        if len(self._clientes) >= TETO_DE_CONEXOES:
+            self.store.bump("ipc.conexoes_recusadas")
+            logger.debug("ipc_conexao_recusada_pelo_teto", teto=TETO_DE_CONEXOES)
+            with contextlib.suppress(Exception):
+                writer.close()
+            return
         self._clientes.add(writer)
+        self.store.bump("ipc.conexoes")
         try:
             while not reader.at_eof():
-                raw = await reader.readline()
+                raw = await asyncio.wait_for(reader.readline(), timeout=_TETO_DE_OCIOSIDADE_S)
                 if not raw:
                     break
                 response = await self._dispatch(
@@ -272,6 +281,9 @@ class IpcServer(IpcHandlersMixin):
                 if response is not None:
                     writer.write(response + b"\n")
                     await writer.drain()
+        except TimeoutError:
+            self.store.bump("ipc.conexoes_ociosas")
+            logger.debug("ipc_cliente_ocioso_solto", prazo_s=_TETO_DE_OCIOSIDADE_S)
         except (ConnectionError, asyncio.IncompleteReadError) as exc:
             logger.debug("ipc_client_disconnect", err=str(exc))
         except Exception as exc:
@@ -296,7 +308,9 @@ class IpcServer(IpcHandlersMixin):
             )
         try:
             payload = json.loads(raw.decode("utf-8").strip() or "null")
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except RecursionError:
+            return _json_rpc_error(None, CODE_PARSE_ERROR, "parse: JSON fundo demais")
+        except ValueError as exc:
             return _json_rpc_error(None, CODE_PARSE_ERROR, f"parse: {exc}")
         if not isinstance(payload, dict):
             return _json_rpc_error(None, CODE_PARSE_ERROR, "payload não é objeto")
@@ -349,7 +363,13 @@ class IpcServer(IpcHandlersMixin):
 
         if req_id is None:
             return None
-        return _json_rpc_result(req_id, result)
+        try:
+            return _json_rpc_result(req_id, result)
+        except Exception as exc:
+            logger.warning("ipc_resultado_nao_serializa", metodo=method, err=repr(exc))
+            return _json_rpc_error(
+                req_id, CODE_INTERNAL, f"erro interno ({type(exc).__name__})"
+            )
 
 
 async def _o_perfil_em_dia() -> None:
