@@ -1766,17 +1766,28 @@ class OP1QueNasce:
     desfecho: str | None = None
     depois: list[Callable[[str], None]] = field(default_factory=list)
 
-    def mesmo_pedido(self, outro: OP1QueNasce) -> bool:
-        """O mesmo pad pedido pelos mesmos motivos: o que nasce vale pelo novo."""
+    def _o_pad(self) -> tuple[Any, ...]:
+        """O que vai ao `make_virtual_pad`: máscara, caminho efetivo, roupa, identidade e uhid."""
+        from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
+
         return (
-            self.key, self.flavor, self.identity, self.mascara_do_p1, self.caminho,
-            self.caminho_pedido, self.caminho_e_escolha, self.origin,
-            self.kwargs.get("roupa"),
-        ) == (
-            outro.key, outro.flavor, outro.identity, outro.mascara_do_p1, outro.caminho,
-            outro.caminho_pedido, outro.caminho_e_escolha, outro.origin,
-            outro.kwargs.get("roupa"),
+            self.key, self.identity, self.mascara_do_p1,
+            caminho_resolvido(self.caminho_pedido, self.mascara_do_p1),
+            self.kwargs.get("roupa"), self.kwargs.get("allow_uhid"),
         )
+
+    def mesmo_pedido(self, outro: OP1QueNasce) -> bool:
+        """O mesmo pad, pelo que sai e não pelos motivos: o que nasce vale pelo novo."""
+        return self._o_pad() == outro._o_pad()
+
+    def juntar(self, outro: OP1QueNasce) -> None:
+        """O pedido igual que se junta deixa o que traz: a escolha do caminho e a origem manual."""
+        if outro.caminho_e_escolha:
+            self.caminho, self.caminho_e_escolha = outro.caminho, True
+        if outro.origin == "manual":
+            self.origin = outro.origin
+        if self.flavor is None:
+            self.flavor = outro.flavor
 
 
 def o_p1_que_nasce(daemon: Any) -> OP1QueNasce | None:
@@ -1972,19 +1983,39 @@ def start_gamepad_emulation_desfecho(
     uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)
     roupa = a_roupa_que_o_pad_veste(daemon)
     nascendo = o_p1_que_nasce(daemon)
+
+    def gravar_o_gesto(desfecho: str) -> None:
+        """O gesto manual que pôs o pad de pé vai ao arquivo do usuário; o que falhou, não."""
+        if desfecho != EMU_APLICADO:
+            return
+        if origin == "manual":
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.session import (
+                    load_gamepad_preference,
+                    save_gamepad_emulation,
+                )
+
+                if flavor is not None:
+                    save_gamepad_emulation(True, key)
+                else:
+                    _preferencia, gravada = load_gamepad_preference()
+                    save_gamepad_emulation(True, gravada)
+
+    igual = OP1QueNasce(
+        key=key, flavor=flavor, identity=identity, mascara_do_p1=mascara_do_p1,
+        caminho=caminho, caminho_pedido=caminho_pedido,
+        caminho_e_escolha=caminho_e_escolha, origin=origin, carta=0,
+        kwargs={"roupa": roupa, "allow_uhid": controller_allows_uhid(daemon)},
+    )
     if (
         nascendo is not None
         and nascendo.desfecho is None
         and daemon._gamepad_device is None
-        and nascendo.mesmo_pedido(
-            OP1QueNasce(
-                key=key, flavor=flavor, identity=identity, mascara_do_p1=mascara_do_p1,
-                caminho=caminho, caminho_pedido=caminho_pedido,
-                caminho_e_escolha=caminho_e_escolha, origin=origin, carta=0,
-                kwargs={"roupa": roupa},
-            )
-        )
+        and nascendo.mesmo_pedido(igual)
     ):
+        if origin == "manual" and nascendo.origin != "manual":
+            nascendo.depois.append(gravar_o_gesto)
+        nascendo.juntar(igual)
         return EMU_APLICADO
     _largar_o_p1_que_nasce(daemon)
 
@@ -2053,23 +2084,6 @@ def start_gamepad_emulation_desfecho(
             **make_primary_replica_sinks(daemon),
         },
     )
-    def gravar_o_gesto(desfecho: str) -> None:
-        """O gesto manual que pôs o pad de pé vai ao arquivo do usuário; o que falhou, não."""
-        if desfecho != EMU_APLICADO:
-            return
-        if origin == "manual":
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.utils.session import (
-                    load_gamepad_preference,
-                    save_gamepad_emulation,
-                )
-
-                if flavor is not None:
-                    save_gamepad_emulation(True, key)
-                else:
-                    _preferencia, gravada = load_gamepad_preference()
-                    save_gamepad_emulation(True, gravada)
-
     if o_p1_nasce_pelo_fio(daemon, no_tique=no_tique):
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 

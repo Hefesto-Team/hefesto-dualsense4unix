@@ -1473,13 +1473,14 @@ class CoopManager:
         self._fila_do_nascimento = tuple(c for c in self._fila_do_nascimento if c != chave)
 
     def pedir_o_p1(self, contexto: Any) -> None:
-        """O P1 reerguido no tique entra na fila do nascimento, na vez dele.
+        """O P1 pedido de novo entra na frente da fila do nascimento, antes de todo secundário.
 
-        O pedido novo toma o lugar do velho numa troca só: quem fotografa de outro fio
-        nunca vê a mesa sem P1 em voo entre os dois.
+        A fila guarda a ordem das cartas (P1, depois P2 a P4), e é a ordem da fila que mantém
+        a dos nós que o jogo vê. O pedido novo toma o lugar do velho numa troca só: quem
+        fotografa de outro fio nunca vê a mesa sem P1 em voo entre os dois.
         """
         self._largar_o_p1_que_nasce(no_lugar_de=contexto)
-        self._fila_do_nascimento = (*self._fila_do_nascimento, _CHAVE_DO_P1)
+        self._fila_do_nascimento = (_CHAVE_DO_P1, *self._fila_do_nascimento)
         self._andar_a_fila()
 
     def o_p1_que_nasce(self) -> tuple[str, str | None, bool] | None:
