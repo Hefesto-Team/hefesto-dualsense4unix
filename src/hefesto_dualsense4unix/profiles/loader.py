@@ -1211,10 +1211,31 @@ def todo_perfil_no_formato_da_aba_jogar(dest_dir: Path | None = None) -> list[st
     return convertidos
 
 
+def _o_freestyle_renasce_se_faltar() -> None:
+    """Semeia de novo quando o `freestyle.json` falta depois da primeira semeadura do processo."""
+    try:
+        falta = not (profiles_dir() / ARQUIVO_DO_PADRAO).is_file()
+    except OSError:
+        return
+    if falta:
+        try:
+            seed_default_presets()
+        except Exception as exc:
+            logger.warning(
+                "freestyle_nao_renasceu", err=str(exc), err_type=type(exc).__name__)
+
+
 def _maybe_seed_presets() -> None:
-    """Dispara a semeadura uma vez por processo, antes da primeira carga."""
+    """Dispara a semeadura uma vez por processo, antes da primeira carga.
+
+    Depois da primeira, o Freestyle que faltar renasce de fábrica na próxima leitura, com o
+    serviço em pé: o botão «Modo Freestyle» pede o arquivo no disco.
+    """
     global _seed_attempted
-    if _seed_attempted or os.environ.get(SEED_SKIP_ENV_VAR) == "1":
+    if os.environ.get(SEED_SKIP_ENV_VAR) == "1":
+        return
+    if _seed_attempted:
+        _o_freestyle_renasce_se_faltar()
         return
     _seed_attempted = True
     try:
@@ -1894,7 +1915,7 @@ def reapontar_perfis_com_chave_de_executavel(
         try:
             with FileLock(str(_lock_path(caminho))):
                 bruto = json.loads(caminho.read_text(encoding="utf-8"))
-            perfis.append(perfil_do_cru(bruto))
+            perfis.append(Profile.model_validate(bruto))
         except _PROFILE_DECODE_ERRORS:
             continue
     for prof in perfis:

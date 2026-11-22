@@ -88,6 +88,19 @@ def test_o_arquivo_que_sumiu_renasce_no_processo_novo(
     assert _arquivo().read_bytes() == (FABRICA / loader.ARQUIVO_DO_PADRAO).read_bytes()
 
 
+def test_o_arquivo_que_sumiu_renasce_na_proxima_leitura_com_o_servico_em_pe(
+    semeadura_ligada: None,
+) -> None:
+    loader.load_all_profiles()
+    _arquivo().unlink()
+
+    assert loader.o_perfil_de_fora_do_jogo() == "Freestyle"
+    assert _arquivo().read_bytes() == (FABRICA / loader.ARQUIVO_DO_PADRAO).read_bytes()
+
+    _arquivo().unlink()
+    assert loader.load_profile("Freestyle").name == "Freestyle"
+
+
 def test_a_marca_nao_cresce_a_cada_processo(
     semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:

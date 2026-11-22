@@ -413,10 +413,13 @@ def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
     assert store.active_profile == FREESTYLE
 
 
-def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> None:
-    """Ligado e sem o `freestyle.json` (quem usa o apagou): o boot desliga e segue."""
+def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(
+    semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Ligado, sem o `freestyle.json` e sem a fábrica para ele renascer: o boot desliga e segue."""
     loader.load_all_profiles()
     loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
+    monkeypatch.setattr(loader, "_DEFAULT_SEED_SOURCE_DIRS", (tmp_path / "sem-fabrica",))
     (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
     session.save_last_profile("Leitura")
     session.save_active_marker("Leitura")
@@ -430,6 +433,28 @@ def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> N
 
     assert (store.freestyle_ligado, session.load_freestyle_ligado(),
             store.active_profile) == (False, False, "Leitura")
+
+
+def test_ligado_sem_o_arquivo_o_boot_o_semeia_de_novo_e_segue_ligado(
+    semeadura_ligada: None,
+) -> None:
+    """Ligado e sem o `freestyle.json`, com a fábrica: ele renasce e o modo segue ligado."""
+    loader.load_all_profiles()
+    loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
+    (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
+    session.save_last_profile("Leitura")
+    session.save_active_marker("Leitura")
+    store = StateStore()
+    ligar_o_freestyle(store, True)
+    controle = FakeController()
+    controle.connect()
+
+    asyncio.run(connection.restore_last_profile(SimpleNamespace(  # type: ignore[arg-type]
+        controller=controle, store=store, _run_blocking=_bloqueante, _native_mode=False)))
+
+    assert (profiles_dir() / loader.ARQUIVO_DO_PADRAO).is_file()
+    assert (store.freestyle_ligado, session.load_freestyle_ligado(),
+            store.active_profile) == (True, True, FREESTYLE)
 
 
 def test_sair_do_nativo_com_ele_ligado_volta_ao_freestyle(

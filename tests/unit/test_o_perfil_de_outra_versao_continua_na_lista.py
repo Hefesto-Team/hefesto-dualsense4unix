@@ -175,6 +175,29 @@ def test_o_arquivo_antigo_fora_da_faixa_se_grampeia_com_aviso(aviso: MagicMock) 
     assert arquivo.read_bytes() == bytes_de_antes
 
 
+def test_a_migracao_automatica_nao_regrava_o_que_so_a_leitura_tolerante_aceita(
+    aviso: MagicMock,
+) -> None:
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import JogoDoLancador
+
+    jogo = JogoDoLancador(chave="app", nome="Jogo", loja="Epic", instalado=True,
+                          executavel="retail/jogo.exe", umu_id="umu-9921001")
+    catalogo = [("Heroic", jogo)]
+    tolerados = [
+        _grava("com_campo", match={"type": "criteria", "window_class": ["jogo.exe"]},
+               campo_novo=1),
+        _grava("alto", match={"type": "criteria", "window_class": ["jogo.exe"]},
+               priority=99999),
+    ]
+    antes = [a.read_bytes() for a in tolerados]
+
+    loader.reapontar_perfis_com_chave_de_executavel(catalogo)
+
+    assert [a.read_bytes() for a in tolerados] == antes
+    _grava("estrito", match={"type": "criteria", "window_class": ["jogo.exe"]})
+    assert loader.reapontar_perfis_com_chave_de_executavel(catalogo) == ("estrito",)
+
+
 def test_o_erro_que_nao_e_campo_desconhecido_continua_derrubando_so_aquele_arquivo(
     aviso: MagicMock,
 ) -> None:
