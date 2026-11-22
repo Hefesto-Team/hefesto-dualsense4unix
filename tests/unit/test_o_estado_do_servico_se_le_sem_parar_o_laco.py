@@ -67,15 +67,20 @@ class _NoLed:
         return True
 
 
+_SO_RADIO = ("bt",) * 4
+_MESA_MISTA = ("bt", "usb", "bt", "usb")
+
+
 class _AMesa(FakeController):
-    def __init__(self, barra: _Porta) -> None:
+    def __init__(self, barra: _Porta, transportes: tuple[str, ...] = _SO_RADIO) -> None:
         super().__init__(transport="bt")  # type: ignore[arg-type]
+        self._transportes = transportes
         self._sysfs = {u: _NoLed(i, barra) for i, u in enumerate(_OS_QUATRO)}
         self._sysfs_written = {u: (10, 20, 30) for u in _OS_QUATRO}
 
     def describe_controllers(self) -> list[dict[str, Any]]:
         return [
-            {"index": i, "uniq": u, "transport": "bt", "connected": True}
+            {"index": i, "uniq": u, "transport": self._transportes[i], "connected": True}
             for i, u in enumerate(_OS_QUATRO)
         ]
 
@@ -127,8 +132,10 @@ def portas(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     return p
 
 
-def _o_servico(tmp_path: Path, portas: SimpleNamespace) -> IpcServer:
-    controle = _AMesa(portas.barra)
+def _o_servico(
+    tmp_path: Path, portas: SimpleNamespace, transportes: tuple[str, ...] = _SO_RADIO
+) -> IpcServer:
+    controle = _AMesa(portas.barra, transportes)
     daemon = Daemon(
         controller=controle,
         config=DaemonConfig(
@@ -250,10 +257,11 @@ async def test_o_estado_guardado_traz_o_que_a_leitura_achou(
     assert {v["evdev"] for v in vpads} == {_NO["evdev"]}
 
 
+@pytest.mark.parametrize("transportes", [_SO_RADIO, _MESA_MISTA], ids=["radio", "mista"])
 async def test_a_primeira_pergunta_ja_traz_o_lido_e_as_seguintes_sao_uma_leitura_por_porta(
-    tmp_path: Path, portas: SimpleNamespace
+    tmp_path: Path, portas: SimpleNamespace, transportes: tuple[str, ...]
 ) -> None:
-    servidor = _o_servico(tmp_path, portas)
+    servidor = _o_servico(tmp_path, portas, transportes)
     marca = ih.le_so_do_guardado.set(True)
     try:
         primeiro = await servidor._handle_daemon_state_full({})
@@ -265,7 +273,10 @@ async def test_a_primeira_pergunta_ja_traz_o_lido_e_as_seguintes_sao_uma_leitura
         ih.le_so_do_guardado.reset(marca)
 
     assert primeiro["controles_sem_driver"]["quantidade"] == 1
-    assert [c["adaptador"] for c in primeiro["controllers"]] == [_ADAPTADOR] * 3 + [None]
+    assert [c["adaptador"] for c in primeiro["controllers"]] == [
+        _ADAPTADOR if t == "bt" and u in portas.adaptador.resposta else None
+        for u, t in zip(_OS_QUATRO, transportes, strict=True)
+    ]
     assert {c["lightbar_source"] for c in primeiro["controllers"]} == {"sysfs"}
     assert primeiro["radio_ar"][_ADAPTADOR]["controles"]
     assert {v["evdev"] for v in primeiro["rumble_ff"]["per_vpad"]} == {_NO["evdev"]}
