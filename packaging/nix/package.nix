@@ -303,8 +303,9 @@ python3Packages.buildPythonApplication rec {
     grep -q "^Environment=PYTHONPATH=" $out/lib/systemd/user/hefesto-dualsense4unix-presenca.service
 
     # Desktop entry + icone.
-    install -Dm644 packaging/hefesto-dualsense4unix.desktop \
-        $out/share/applications/hefesto-dualsense4unix.desktop
+    bash scripts/atalho_do_pacote.sh packaging/hefesto-dualsense4unix.desktop \
+        $out/share/applications/hefesto-dualsense4unix.desktop \
+        $out/bin/hefesto-dualsense4unix-gui > /dev/null
     # PACKAGING-ICON-NAME-MISMATCH-01: o nome do arquivo TEM de casar o
     # `Icon=hefesto` do .desktop instalado logo acima (compartilhado por todos
     # os formatos) — como hefesto-dualsense4unix.png o lancador ficava sem

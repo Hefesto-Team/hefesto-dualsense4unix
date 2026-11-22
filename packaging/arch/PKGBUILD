@@ -134,8 +134,9 @@ package() {
         "python-uinput>=0.11"
 
     # Desktop entry + icones.
-    install -Dm644 packaging/hefesto-dualsense4unix.desktop \
-        "$pkgdir/usr/share/applications/${pkgname}.desktop"
+    bash scripts/atalho_do_pacote.sh packaging/hefesto-dualsense4unix.desktop \
+        "$pkgdir/usr/share/applications/${pkgname}.desktop" \
+        /usr/bin/hefesto-dualsense4unix-gui > /dev/null
     # PACKAGING-ICON-NAME-MISMATCH-01: o nome do arquivo TEM de casar o
     # `Icon=hefesto` do packaging/hefesto-dualsense4unix.desktop (compartilhado
     # por todos os formatos) — instalar como ${pkgname}.png deixava o lançador

@@ -254,7 +254,9 @@ python3 src/hefesto_dualsense4unix/utils/units_de_usuario.py \
     --assets assets --out "${STAGING}/usr/lib/systemd/user" \
     --bin-dir /usr/bin --python "${FINAL_VENV}/bin/python" > /dev/null
 
-cp packaging/hefesto-dualsense4unix.desktop "${STAGING}/usr/share/applications/hefesto-dualsense4unix.desktop"
+bash scripts/atalho_do_pacote.sh packaging/hefesto-dualsense4unix.desktop \
+    "${STAGING}/usr/share/applications/hefesto-dualsense4unix.desktop" \
+    /usr/bin/hefesto-dualsense4unix-gui > /dev/null
 
 cat > "${STAGING}/usr/bin/hefesto-dualsense4unix" <<WRAPPER
 #!/bin/sh

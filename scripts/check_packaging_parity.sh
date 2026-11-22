@@ -63,8 +63,15 @@ ICON_INSTALLERS=(
 while IFS= read -r desk; do
     grep -q '^X-CosmicApplet=true' "${desk}" 2>/dev/null && continue
     if grep -q '^X-HefestoNaoEmpacotado=true' "${desk}" 2>/dev/null; then
-        echo "[ -- ] ${desk}: fora dos empacotamentos por declaração própria"
-        continue
+        _levado=0
+        for inst in "${ICON_INSTALLERS[@]}"; do
+            [[ -f "${inst}" ]] || continue
+            grep -qF "$(basename "${desk}")" "${inst}" 2>/dev/null && _levado=1
+        done
+        if [[ "${_levado}" -eq 0 ]]; then
+            echo "[ -- ] ${desk}: fora dos empacotamentos por declaração própria"
+            continue
+        fi
     fi
     icon="$(sed -n 's/^Icon=//p' "${desk}" | head -1)"
     if [[ -z "${icon}" ]]; then
@@ -87,6 +94,30 @@ while IFS= read -r desk; do
 done < <(find packaging -name '*.desktop' \
     -not -path '*/target/*' -not -path '*/.flatpak-builder/*' \
     -not -path '*/flatpak-repo/*' 2>/dev/null)
+
+echo "== Atalho do menu dos pacotes: renderizado, nunca copiado =="
+ATALHO_MODELO=packaging/hefesto-dualsense4unix.desktop
+ATALHO_RENDERIZADOR=scripts/atalho_do_pacote.sh
+if [[ -f "${ATALHO_MODELO}" ]] && grep -q '^X-HefestoNaoEmpacotado=true' "${ATALHO_MODELO}" 2>/dev/null; then
+    for inst in "${ICON_INSTALLERS[@]}"; do
+        [[ -f "${inst}" ]] || continue
+        _codigo_da_receita="$(grep -v '^[[:space:]]*#' "${inst}" || true)"
+        _copia_crua="$(grep -E '(^|[[:space:];&|])(cp|install)[[:space:]].*hefesto-dualsense4unix\.desktop' \
+            <<< "${_codigo_da_receita}" | grep -v "${ATALHO_RENDERIZADOR}" || true)"
+        if [[ -n "${_copia_crua}" ]]; then
+            echo "[FAIL] ${inst}: copia o ${ATALHO_MODELO} cru — o Exec= dele é caminho de árvore (@RAIZ@/run.sh)"
+            echo "       e o menu do pacote não abriria nada. Passe por ${ATALHO_RENDERIZADOR}."
+            rc=1
+        elif ! grep -qF "${ATALHO_RENDERIZADOR}" "${inst}"; then
+            echo "[FAIL] ${inst}: não leva o atalho do menu — chame ${ATALHO_RENDERIZADOR}"
+            rc=1
+        else
+            echo "[ OK ] ${inst}: o atalho passa pelo ${ATALHO_RENDERIZADOR}"
+        fi
+    done
+else
+    echo "[ -- ] ${ATALHO_MODELO}: sem a declaração de não empacotado, ou ausente"
+fi
 
 echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="
 echo "       (o nome vem de utils/identidade.py:HEFESTO — ver o comentário aqui)"

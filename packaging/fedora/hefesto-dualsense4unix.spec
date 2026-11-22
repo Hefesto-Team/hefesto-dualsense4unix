@@ -149,8 +149,9 @@ pip3 install --root=%{buildroot} \
     "python-uinput>=0.11"
 
 # Desktop entry.
-install -Dm644 packaging/hefesto-dualsense4unix.desktop \
-    %{buildroot}%{_datadir}/applications/%{app_id}.desktop
+bash scripts/atalho_do_pacote.sh packaging/hefesto-dualsense4unix.desktop \
+    %{buildroot}%{_datadir}/applications/%{app_id}.desktop \
+    %{_bindir}/hefesto-dualsense4unix-gui > /dev/null
 
 # Icone. PACKAGING-ICON-NAME-MISMATCH-01: o nome do arquivo TEM de casar o
 # `Icon=hefesto` do packaging/hefesto-dualsense4unix.desktop (compartilhado por

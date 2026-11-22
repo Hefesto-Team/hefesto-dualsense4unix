@@ -172,6 +172,17 @@ jobs:
           # --help em runner headless pode falhar por falta de DISPLAY/GTK;
           # o critério é localizar o binário. Exit não-zero aqui é aceitável.
           hefesto-dualsense4unix-gui --help || echo "gui --help retornou não-zero em headless (esperado)"
+      - name: Validar o atalho do menu e o alvo dele
+        run: |
+          sudo apt-get install -y desktop-file-utils
+          atalho=/usr/share/applications/hefesto-dualsense4unix.desktop
+          desktop-file-validate "${atalho}"
+          if grep -qE '@[A-Za-z_]+@|^X-HefestoNaoEmpacotado' "${atalho}"; then
+            echo "o atalho do menu saiu com marcador ou com a chave de não empacotado"
+            exit 1
+          fi
+          alvo="$(sed -n 's/^Exec=env HEFESTO_NA_TELA=1 //p' "${atalho}")"
+          test -x "${alvo}"
       - name: Desinstalar (valida postrm)
         run: sudo apt-get remove -y hefesto-dualsense4unix
 
@@ -203,6 +214,17 @@ jobs:
           pacman -U --noconfirm /home/construtor/pkg/hefesto-dualsense4unix-*.pkg.tar.zst
           python -c 'import hidapi, pydualsense, uinput, jeepney'
           hefesto-dualsense4unix version
+      - name: Validar o atalho do menu e o alvo dele
+        run: |
+          pacman -S --noconfirm desktop-file-utils
+          atalho=/usr/share/applications/hefesto-dualsense4unix.desktop
+          desktop-file-validate "${atalho}"
+          if grep -qE '@[A-Za-z_]+@|^X-HefestoNaoEmpacotado' "${atalho}"; then
+            echo "o atalho do menu saiu com marcador ou com a chave de não empacotado"
+            exit 1
+          fi
+          alvo="$(sed -n 's/^Exec=env HEFESTO_NA_TELA=1 //p' "${atalho}")"
+          test -x "${alvo}"
 
   fedora-smoke:
     name: Smoke do pacote do Fedora
@@ -230,6 +252,17 @@ jobs:
           dnf install -y "$HOME"/rpmbuild/RPMS/*/hefesto-dualsense4unix-*.rpm
           python3 -c 'import hidapi, pydualsense, uinput, jeepney'
           hefesto-dualsense4unix version
+      - name: Validar o atalho do menu e o alvo dele
+        run: |
+          dnf install -y desktop-file-utils
+          atalho=/usr/share/applications/hefesto-dualsense4unix.desktop
+          desktop-file-validate "${atalho}"
+          if grep -qE '@[A-Za-z_]+@|^X-HefestoNaoEmpacotado' "${atalho}"; then
+            echo "o atalho do menu saiu com marcador ou com a chave de não empacotado"
+            exit 1
+          fi
+          alvo="$(sed -n 's/^Exec=env HEFESTO_NA_TELA=1 //p' "${atalho}")"
+          test -x "${alvo}"
 
   flatpak:
     name: Build Flatpak bundle
