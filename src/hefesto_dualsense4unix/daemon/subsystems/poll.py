@@ -122,8 +122,9 @@ def _gatilhos_dos_gestos(
 class MaosDosControles(dict[str | None, frozenset[str]]):
     """O mapa de mãos `{MAC: botões}`, com `lidos`: de quem a mão veio de uma leitura de verdade.
 
-    O dono do posto com o leitor evdev de pé, o co-op com leitor vivo e o passivo que respondeu.
-    A mão vazia por falta de leitor e a mão sem botão são o mesmo `frozenset()`: só `lidos` separa.
+    O dono do posto, o co-op e o passivo do hub, cada um só com o leitor evdev de pé
+    (`is_available`): o leitor que perdeu o nó segue entregando a mão vazia, e a mão vazia
+    por falta de leitor e a mão sem botão são o mesmo `frozenset()`: só `lidos` separa.
     """
 
     lidos: frozenset[str | None] = frozenset()
@@ -174,13 +175,14 @@ def botoes_de_cada_controle(
         for uniq in outros:
             if uniq in vivos:
                 maos[uniq] = vivos[uniq]
-                lidos.add(uniq)
+                if _o_coop_foi_lido(daemon, uniq):
+                    lidos.add(uniq)
             elif uniq in sentados or entradas is None:
                 maos[uniq] = frozenset()
             else:
                 leitura = _leitura_passiva(entradas, uniq)
                 maos[uniq] = frozenset() if leitura is None else leitura
-                if leitura is not None:
+                if leitura is not None and _o_passivo_foi_lido(entradas, uniq):
                     lidos.add(uniq)
     maos.lidos = frozenset(lidos)
     return maos
@@ -376,8 +378,31 @@ def _o_posto_foi_lido(daemon: object) -> bool:
     """O dono do posto teve a mão lida neste tique: posto de pé e leitor evdev disponível."""
     if _o_posto_esta_vago(daemon):
         return False
-    evdev = getattr(getattr(daemon, "controller", None), "_evdev", None)
-    return evdev is not None and bool(evdev.is_available())
+    return _leitor_de_pe(getattr(getattr(daemon, "controller", None), "_evdev", None))
+
+
+def _leitor_de_pe(leitor: object) -> bool:
+    """O leitor evdev está com o nó aberto (`is_available`); quem o perdeu entrega a mão vazia."""
+    disponivel = getattr(leitor, "is_available", None)
+    if not callable(disponivel):
+        return False
+    try:
+        return bool(disponivel())
+    except Exception:
+        return False
+
+
+def _o_coop_foi_lido(daemon: object, uniq: str) -> bool:
+    """O leitor do co-op de `uniq` está de pé: o `live_snapshots` segue com o que perdeu o nó."""
+    jogadores = getattr(getattr(daemon, "_coop_manager", None), "_players", None)
+    jogador = jogadores.get(uniq) if isinstance(jogadores, dict) else None
+    return _leitor_de_pe(getattr(jogador, "reader", None))
+
+
+def _o_passivo_foi_lido(entradas: object, uniq: str) -> bool:
+    """O leitor passivo do hub de `uniq` está de pé: o `entradas` responde mesmo sem o nó."""
+    leitores = getattr(getattr(entradas, "__self__", None), "_gamepad", None)
+    return isinstance(leitores, dict) and _leitor_de_pe(leitores.get(uniq))
 
 
 def _leitura_passiva(entradas: object, uniq: str) -> frozenset[str] | None:

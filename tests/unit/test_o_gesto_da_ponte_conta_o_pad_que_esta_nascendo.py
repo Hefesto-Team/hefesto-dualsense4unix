@@ -178,6 +178,37 @@ def test_dois_apertos_no_meio_do_voo_andam_dois_degraus(ensaio: SimpleNamespace)
         "só o último aperto dá o veredito", trocas)
 
 
+def test_o_segundo_aperto_para_mouse_e_teclado_larga_o_pad_em_voo_sem_acusar(
+    ensaio: SimpleNamespace,
+) -> None:
+    """Do DualSense de pé: o primeiro pede o Xbox ao fio, o segundo vai a mouse e teclado."""
+    b = ensaio
+    daemon = b.m.daemon
+    gesto = hotkey.build_next_bridge_callback(daemon)
+
+    async def _dois() -> None:
+        primeiro = asyncio.ensure_future(gesto())
+        limite = time.monotonic() + _GUARDA_S
+        while _PEDIDO not in b.m.estado.ordem:
+            assert time.monotonic() < limite, "o primeiro pedido não chegou ao broker"
+            await asyncio.sleep(_TIQUE_S)
+        assert daemon._gamepad_device is None, "o pad velho seguiu de pé no voo"
+        await gesto()
+        await primeiro
+
+    _no_laco(b.m, _dois)
+    pedidas = [(c["de"], c["para"]) for c in b.diario.dos("ponte_troca_pedida_por_gesto")]
+    assert pedidas == [
+        (hotkey.PONTE_DUALSENSE, hotkey.PONTE_XBOX),
+        (hotkey.PONTE_XBOX, hotkey.PONTE_MOUSE_TECLADO),
+    ], pedidas
+    assert hotkey.ponte_atual(daemon) == hotkey.PONTE_MOUSE_TECLADO
+    assert b.diario.dos("ponte_nao_subiu") == [], "o pad largado pelo segundo aperto acusou falha"
+    assert _pisca_de_falha(b) == [], "o controle piscou a falha"
+    trocas = b.diario.dos("ponte_trocada_por_gesto")
+    assert [t["efetiva"] for t in trocas] == [hotkey.PONTE_MOUSE_TECLADO], trocas
+
+
 def test_o_ps_r3_sem_o_p1_em_voo_da_o_veredito_na_hora(ensaio: SimpleNamespace) -> None:
     """Fora do laço o pad nasce na hora, sem fio: o veredito segue como sempre."""
     b = ensaio

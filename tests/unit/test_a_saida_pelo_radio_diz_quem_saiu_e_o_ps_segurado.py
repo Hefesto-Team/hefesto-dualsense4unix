@@ -13,7 +13,8 @@ Morde:
 
 * tirar o controle e o adaptador do `_como_saiu`: o primeiro caso reprova pela falta deles;
 * tratar o tique sem leitura como PS solto: o primeiro sai com `ps_segurado_s=0`;
-* tirar o `nao_lido`: o terceiro diz «0».
+* tirar o `nao_lido`: o terceiro diz «0»;
+* contar como lido o leitor que perdeu o nó (o co-op ou o passivo do hub): o PS de 5,0 s sai «0».
 """
 
 from __future__ import annotations
@@ -193,6 +194,98 @@ def test_o_laco_entrega_ao_vigia_quem_foi_lido_de_verdade(
     assert maos == {bm.CONTROLE: frozenset({"ps"}), bm.OUTRO: frozenset()}
     assert lidos is not None and bm.CONTROLE in lidos, lidos
     assert bm.OUTRO not in lidos, "a mão do sentado sem leitor contou como lida"
+
+
+class _Leitor:
+    """O leitor evdev de mentira: o que perde o nó segue respondendo, com a mão vazia."""
+
+    def __init__(self) -> None:
+        self.de_pe = True
+        self.botoes: frozenset[str] = frozenset()
+
+    def is_available(self) -> bool:
+        return self.de_pe
+
+    def snapshot(self) -> SimpleNamespace:
+        return SimpleNamespace(buttons_pressed=self.botoes if self.de_pe else frozenset())
+
+
+class _Hub:
+    """O `SensorHub` de mentira: `entradas` responde enquanto o leitor existe, como o real."""
+
+    def __init__(self, leitores: dict[str, _Leitor]) -> None:
+        self._gamepad = leitores
+
+    def entradas(self, uniq: str) -> dict[str, Any] | None:
+        leitor = self._gamepad.get(uniq)
+        if leitor is None:
+            return None
+        return {"buttons": sorted(leitor.snapshot().buttons_pressed)}
+
+
+def _daemon_com_o_leitor(fonte: str, leitor: _Leitor) -> SimpleNamespace:
+    """O controle que segura o PS lê pela `fonte`: o posto do P1, o co-op ou o passivo do hub."""
+    controle = SimpleNamespace(
+        primary_uniq=bm.CONTROLE, alvos_conectados=lambda: {"a": bm.CONTROLE, "b": bm.OUTRO},
+        _evdev=leitor if fonte == "posto" else _Leitor())
+    jogadores = {bm.OUTRO: SimpleNamespace(reader=leitor)} if fonte == "coop" else {}
+    coop = SimpleNamespace(
+        _players=jogadores,
+        live_snapshots=lambda: {m: j.reader.snapshot() for m, j in jogadores.items()},
+        numeros_de_jogador=lambda: dict.fromkeys(jogadores, 2))
+    hub = _Hub({bm.OUTRO: leitor} if fonte == "passivo" else {})
+    return SimpleNamespace(
+        controller=controle, _coop_manager=coop, _garantir_sensor_hub=lambda: hub)
+
+
+_FONTES = [
+    pytest.param("posto", bm.CONTROLE, id="posto-do-p1"),
+    pytest.param("coop", bm.OUTRO, id="co-op"),
+    pytest.param("passivo", bm.OUTRO, id="passivo-do-hub"),
+]
+
+
+def _segurar_e_soltar(fonte: str, *, perde_o_no: bool) -> dict[str, Any]:
+    """O PS segurado 5,0 s pelo laço de verdade; no último tique o leitor perde o nó ou o PS sai."""
+    mesa = _Mesa()
+    leitor = _Leitor()
+    daemon = _daemon_com_o_leitor(fonte, leitor)
+
+    def tique() -> None:
+        maos = poll.botoes_de_cada_controle(daemon, poll.evdev_buttons_once(daemon))
+        mesa.vaga.observar(maos, maos.lidos)
+
+    leitor.botoes = frozenset({"ps"})
+    fim = mesa.relogio.agora + PS_SEGURADO_S
+    while True:
+        tique()
+        if mesa.relogio.agora >= fim:
+            break
+        mesa.relogio.agora = min(fim, mesa.relogio.agora + TIQUE_S)
+    if perde_o_no:
+        leitor.de_pe = False
+    else:
+        leitor.botoes = frozenset()
+    mesa.relogio.agora += ANTES_DO_SINAL_S
+    tique()
+    return mesa.sair(NO if fonte == "posto" else NO_OUTRO)
+
+
+@pytest.mark.parametrize(("fonte", "quem"), _FONTES)
+def test_o_leitor_que_perdeu_o_no_nao_solta_o_ps_de_ninguem(fonte: str, quem: str) -> None:
+    """Medido em 21/11: `evdev_read_lost` 0,12 s antes do sinal, e a mão chegou vazia."""
+    linha = _segurar_e_soltar(fonte, perde_o_no=True)
+
+    assert linha["uniq"] == quem
+    assert linha["ps_segurado_s"] == PS_SEGURADO_S, linha
+
+
+@pytest.mark.parametrize(("fonte", "quem"), _FONTES)
+def test_o_leitor_de_pe_que_soltou_o_ps_diz_zero(fonte: str, quem: str) -> None:
+    linha = _segurar_e_soltar(fonte, perde_o_no=False)
+
+    assert linha["uniq"] == quem
+    assert linha["ps_segurado_s"] == 0, linha
 
 
 def test_o_ps_solo_ignorado_por_hold_longo_leva_o_controle() -> None:
