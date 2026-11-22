@@ -2130,6 +2130,28 @@ def _nenhuma_supervisora_do_mic_atravessa() -> Iterator[None]:
                 monitor.stop()
 
 
+def _aposentar_os_avisos_do_volume() -> None:
+    modulo = sys.modules.get("hefesto_dualsense4unix.integrations.audio_control")
+    if modulo is None:
+        return
+    modulo.esquecer_os_volumes_dos_controles()
+    modulo.esperar_os_avisos(2.0)
+
+
+@pytest.fixture(autouse=True)
+def _nenhum_aviso_do_volume_atravessa() -> Iterator[None]:
+    """O fio que espera o nó do microfone nascer, e o volume guardado, morrem com o caso.
+
+    O-VOLUME-DO-MICROFONE-DO-PERFIL-VOLTA-QUANDO-O-CANAL-RENASCE-01 (22/11/2026): todo canal ou
+    voz que sobe lança um fio que pergunta ao `pactl` por até 8 s. Medido com uma sonda no lote
+    do microfone: até 18 fios vivos atravessando 411 começos de caso, cada um chamando o `pactl`
+    de mentira do caso SEGUINTE.
+    """
+    _aposentar_os_avisos_do_volume()
+    yield
+    _aposentar_os_avisos_do_volume()
+
+
 def _hubs_de_sensores_vivos() -> dict[int, Any]:
     """``{ident da thread: hub}`` de toda ``hefesto-sensor-hub`` rodando."""
     vivos: dict[int, Any] = {}

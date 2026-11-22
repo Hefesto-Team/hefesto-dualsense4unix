@@ -330,6 +330,34 @@ class TestOsQuatroNosDePe:
             assert mundo.som.nos[_voz(uniq)] == volume, FRASE
 
 
+class TestOFioDoAvisoNaoSobra:
+    def test_esquecer_aposenta_na_hora_o_fio_que_espera_o_no(
+        self, mundo: _Mundo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(audio_control, "PASSO_DO_NO_NASCER_S", 5.0)
+        monkeypatch.setattr(audio_control, "TETO_DO_NO_NASCER_S", 60.0)
+        a = MESA[0]
+        mundo.perfil(a, VOLUMES[0])
+        fio = audio_control.avisar_no_de_pe(a, _voz(a))
+        assert fio is not None and fio.is_alive()
+        audio_control.esquecer_os_volumes_dos_controles()
+        assert audio_control.esperar_os_avisos(1.0), (
+            "o fio que espera o nó sobrou depois de esquecer e chama o pactl do caso seguinte")
+
+    def test_o_aviso_novo_do_mesmo_controle_aposenta_o_anterior_na_hora(
+        self, mundo: _Mundo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(audio_control, "PASSO_DO_NO_NASCER_S", 5.0)
+        monkeypatch.setattr(audio_control, "TETO_DO_NO_NASCER_S", 60.0)
+        a = MESA[1]
+        velho = audio_control.avisar_no_de_pe(a, _voz(a))
+        novo = audio_control.avisar_no_de_pe(a, _voz(a))
+        assert velho is not None and novo is not None
+        velho.join(1.0)
+        assert not velho.is_alive(), "o aviso velho seguiu esperando ao lado do novo"
+        audio_control.esquecer_os_volumes_dos_controles()
+
+
 class TestODesfechoSaiEmInfo:
     def test_o_evento_nao_e_dos_que_o_diario_derruba_no_info(self) -> None:
         assert "mic_volume_desfecho" not in EVENTOS_DE_ESTADO_NORMAL

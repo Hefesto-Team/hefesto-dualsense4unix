@@ -24,6 +24,7 @@ TETO_DO_NO_NASCER_S = 8.0
 PASSO_DO_NO_NASCER_S = 0.25
 
 _TRANCA_DO_VOLUME = threading.Lock()
+_MUDOU_O_AVISO = threading.Condition(_TRANCA_DO_VOLUME)
 _VOLUME_DO_CONTROLE: dict[str, int] = {}
 _GERACAO_DO_AVISO: dict[str, int] = {}
 _FIOS_DO_AVISO: list[threading.Thread] = []
@@ -274,10 +275,11 @@ def volume_guardado_do_controle(uniq: str | None) -> int | None:
 
 
 def esquecer_os_volumes_dos_controles() -> None:
-    """Zera a memória dos volumes e dos avisos: a régua começa limpa."""
+    """Zera a memória dos volumes e aposenta na hora todo fio de aviso: a régua começa limpa."""
     with _TRANCA_DO_VOLUME:
         _VOLUME_DO_CONTROLE.clear()
         _GERACAO_DO_AVISO.clear()
+        _MUDOU_O_AVISO.notify_all()
 
 
 def registrar_o_desfecho_do_volume(
@@ -315,6 +317,7 @@ def avisar_no_de_pe(uniq: str | None, no: str) -> threading.Thread | None:
     with _TRANCA_DO_VOLUME:
         geracao = _GERACAO_DO_AVISO.get(chave, 0) + 1
         _GERACAO_DO_AVISO[chave] = geracao
+        _MUDOU_O_AVISO.notify_all()
         _FIOS_DO_AVISO[:] = [f for f in _FIOS_DO_AVISO if f.is_alive()]
         fio = threading.Thread(
             target=_esperar_o_no,
@@ -369,7 +372,10 @@ def _esperar_o_no(chave: str, uniq: str, no: str, geracao: int) -> None:
                     return
                 ultimo = "recusado"
             if volta + 1 < voltas:
-                time.sleep(PASSO_DO_NO_NASCER_S)
+                with _MUDOU_O_AVISO:
+                    _MUDOU_O_AVISO.wait_for(
+                        lambda: _GERACAO_DO_AVISO.get(chave) != geracao, PASSO_DO_NO_NASCER_S
+                    )
         if _aviso_vigente(chave, geracao):
             registrar_o_desfecho_do_volume(
                 uniq, ultimo, volume=volume_guardado_do_controle(chave),
