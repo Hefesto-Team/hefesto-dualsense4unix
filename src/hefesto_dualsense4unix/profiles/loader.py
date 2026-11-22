@@ -1214,15 +1214,10 @@ def todo_perfil_no_formato_da_aba_jogar(dest_dir: Path | None = None) -> list[st
 def _o_freestyle_renasce_se_faltar() -> None:
     """Semeia de novo quando o `freestyle.json` falta depois da primeira semeadura do processo."""
     try:
-        falta = not (profiles_dir() / ARQUIVO_DO_PADRAO).is_file()
-    except OSError:
-        return
-    if falta:
-        try:
+        if not (profiles_dir() / ARQUIVO_DO_PADRAO).is_file():
             seed_default_presets()
-        except Exception as exc:
-            logger.warning(
-                "freestyle_nao_renasceu", err=str(exc), err_type=type(exc).__name__)
+    except Exception as exc:
+        logger.warning("freestyle_nao_renasceu", err=str(exc), err_type=type(exc).__name__)
 
 
 def _maybe_seed_presets() -> None:
