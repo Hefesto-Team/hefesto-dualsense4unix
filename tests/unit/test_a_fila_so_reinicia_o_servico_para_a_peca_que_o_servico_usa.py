@@ -103,6 +103,7 @@ def _linha(ident: str) -> dict[str, Any]:
 
 
 def test_a_fila_so_da_peca_que_o_servico_nao_usa_nao_o_reinicia() -> None:
+    """D-2211-A-FILA-SO-REINICIA-O-SERVICO-PARA-A-PECA-QUE-ELE-USA."""
     servico = _Servico()
     rc = _rodar([_peca("fora", reinicia=False)], servico)
     assert rc == 0

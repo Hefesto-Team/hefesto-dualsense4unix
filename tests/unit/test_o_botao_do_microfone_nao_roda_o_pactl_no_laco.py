@@ -149,6 +149,7 @@ class TestAPalavraNaoParaOLaco:
     def test_dois_apertos_voltam_na_hora_e_o_mudo_final_e_o_da_ultima_palavra(
         self, mesa: _Mesa
     ) -> None:
+        """D-2211-A-PALAVRA-DO-MUDO-SAI-DO-FIO-DO-LACO."""
         _sobe_a_mesa(mesa)
         mesa.pactl.dorme_s = DORME_S
         a, b = MESA[0], MESA[3]

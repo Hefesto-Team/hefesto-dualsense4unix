@@ -188,7 +188,9 @@ async def test_state_full_buttons_de_state_buttons_pressed(
 async def test_state_full_neutro_nao_escreve_aviso_nem_toma_a_trava(
     running_server: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """50 chamadas com o estado neutro e conectado: nenhum aviso, nenhum `is_connected`."""
+    """D-2211-O-AVISO-DE-ENTRADA-PARADA-E-DE-QUEM-MEDE-O-SILENCIO.
+
+    50 chamadas com o estado neutro e conectado: nenhum aviso, nenhum `is_connected`."""
     _server, socket_path, fc, store, daemon = running_server
     daemon._last_state = _make_state(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,

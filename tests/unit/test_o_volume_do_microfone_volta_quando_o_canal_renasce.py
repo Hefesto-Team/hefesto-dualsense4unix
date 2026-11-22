@@ -316,6 +316,7 @@ class TestOsQuatroNosDePe:
                     and n not in {_voz(u) for u in MESA}]
 
     def test_quatro_renascem_em_ordem_trocada_e_cada_um_volta_ao_seu(self, mundo: _Mundo) -> None:
+        """D-2211-O-VOLUME-DO-MICROFONE-E-DO-CONTROLE."""
         mundo.sobe_a_mesa(MESA)
         for uniq, volume in zip(MESA, VOLUMES, strict=True):
             mundo.perfil(uniq, volume)

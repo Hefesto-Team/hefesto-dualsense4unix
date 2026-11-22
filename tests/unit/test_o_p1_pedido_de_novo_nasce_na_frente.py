@@ -159,7 +159,9 @@ def test_o_pedido_igual_com_outros_motivos_se_junta_e_a_ordem_e_a_das_cartas(
 def test_o_pedido_de_outro_pad_entra_na_frente_dos_secundarios(
     mesa: _Mesa, antes: str, depois: str, secundarios: int
 ) -> None:
-    """O primeiro P1 é descartado, o P2 a P4 esperam, e o P1 novo nasce antes deles."""
+    """D-2211-O-P1-PEDIDO-DE-NOVO-SE-JUNTA-PELO-PAD-E-NASCE-NA-FRENTE.
+
+    O primeiro P1 é descartado, o P2 a P4 esperam, e o P1 novo nasce antes deles."""
     mesa.daemon.config.gamepad_flavor = antes
     mesa.pedir_o_p1(None, caminho=None, caminho_e_escolha=False)
     for i in range(2, secundarios + 2):

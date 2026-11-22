@@ -337,7 +337,9 @@ def test_a_mesa_parada_responde_como_antes(casa: _Fio, transportes: tuple[str, .
 def test_o_arme_inteiro_entrega_o_ignore_com_o_secundario_na_fila(
     mesa: tuple[SimpleNamespace, _Fio], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O `ambiente_do_lancamento` do arme com troca de roupa e dois secundários na fila."""
+    """D-2211-O-LANCAMENTO-CONTA-O-PAD-EM-VOO-E-A-PROMESSA.
+
+    O `ambiente_do_lancamento` do arme com troca de roupa e dois secundários na fila."""
     daemon, _fio = mesa
     daemon.config.coop_enabled = True
     daemon.controller = _Controlador(("usb", "bt", "bt"))

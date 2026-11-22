@@ -71,6 +71,7 @@ class _Mesa:
 
 
 def test_a_steam_em_foco_sem_jogo_nao_liga_o_ouvido_e_o_toque_segue_contando_o_jogo() -> None:
+    """D-2211-O-OUVIDO-DO-TATO-SO-LIGA-COM-JOGO-ABERTO."""
     mesa = _Mesa("steam")
     assert tv.ha_jogo(mesa.daemon), "a D-1510 muda: a Steam em foco deixou de contar para o toque"
     assert not mesa.passo.ouvido_quer(), "a Steam em foco sem jogo ligou o ouvido do tato"

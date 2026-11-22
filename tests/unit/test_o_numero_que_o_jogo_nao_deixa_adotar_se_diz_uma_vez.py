@@ -81,6 +81,7 @@ def _sync(gerente: CoopManager, vezes: int) -> None:
 def test_cem_sync_com_a_mesma_recusa_dizem_uma_linha(
     nascimentos: list[str], registro: _Registro, espiao: _Espiao  # noqa: F811
 ) -> None:
+    """D-2211-A-RECUSA-DO-NUMERO-SE-DIZ-UMA-VEZ-POR-MUDANCA."""
     daemon, gerente = _mesa(registro)
     registro.numeros = {P1: 1, P2: 2}
     _o_jogo_marca(daemon, registro, {P2: 1})

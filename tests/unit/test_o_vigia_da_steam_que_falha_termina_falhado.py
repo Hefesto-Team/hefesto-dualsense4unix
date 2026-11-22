@@ -129,7 +129,9 @@ MODOS = ["--apply-quiet", "--apply", "--status"]
 
 @pytest.mark.parametrize("modo", MODOS)
 def test_a_ponte_que_cai_nao_vira_nada_a_fazer(mesa: Mesa, modo: str) -> None:
-    """MORDIDA: o `|| true` e o «nada pendente» à falha de perguntar devolvem o `nada-a-fazer`."""
+    """D-2211-O-VIGIA-DA-STEAM-QUE-FALHA-TERMINA-FALHADO.
+
+    MORDIDA: o `|| true` e o «nada pendente» à falha de perguntar devolvem o `nada-a-fazer`."""
     proc = mesa.roda(modo, rc_da_ponte=1)
     saida = proc.stdout + proc.stderr
     assert "resultado=erro" in saida, saida

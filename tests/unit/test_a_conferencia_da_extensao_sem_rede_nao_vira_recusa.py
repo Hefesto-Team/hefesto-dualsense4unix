@@ -71,6 +71,7 @@ def _conferir(lar: Lugares, monkeypatch: pytest.MonkeyPatch) -> tuple[_Diario, A
 def test_a_rede_fora_grava_o_aviso_de_sem_rede_e_nao_a_recusa(
     lar: Lugares, remoto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """D-2211-A-CONFERENCIA-DA-EXTENSAO-SEM-REDE-NAO-E-RECUSA."""
     _instalar_ligada(lar, remoto, intervalo_da_atualizacao_s=21600.0)
     shutil.rmtree(remoto)
     diario, _sup = _conferir(lar, monkeypatch)

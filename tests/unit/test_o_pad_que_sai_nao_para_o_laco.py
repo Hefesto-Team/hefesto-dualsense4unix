@@ -234,7 +234,9 @@ def _pad_de(mesa: Mesa, tipo: str, identidade: str, jogador: int) -> Any:
 def test_com_quatro_na_mesa_o_no_de_quem_volta_nunca_e_o_quinto(
     mesa: Mesa, velho_tipo: str, novo_tipo: str
 ) -> None:
-    """O jogo dá ao nó novo a primeira vaga livre e ignora o quinto (XInput, SDL).
+    """D-2211-O-DESFAZER-DO-PAD-CORRE-NA-FILA-E-O-NOVO-ESPERA.
+
+    O jogo dá ao nó novo a primeira vaga livre e ignora o quinto (XInput, SDL).
 
     Quatro jogadores; o P2 sai e volta (a recriação, a troca de modo, a promoção ao uhid):
     quem para segue sem esperar, e o nó novo só nasce depois de o velho sair do kernel.

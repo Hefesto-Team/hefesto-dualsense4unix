@@ -185,7 +185,9 @@ def test_o_prazo_cobre_o_pior_gemeo_medido() -> None:
 
 
 def test_o_pad_nao_nasce_com_o_gemeo_vivo_no_kernel(mundo: Mundo) -> None:
-    """O gêmeo sai em 100 ms: o `UHID_CREATE2` só é escrito depois, e com o primeiro endereço."""
+    """D-2211-O-PAD-VIRTUAL-SO-NASCE-COM-O-ENDERECO-SOLTO.
+
+    O gêmeo sai em 100 ms: o `UHID_CREATE2` só é escrito depois, e com o primeiro endereço."""
     mac = _primeiro(P2, 2)
     mundo.plantar(mac)
     mundo.soltar_em(mac, 0.1)
