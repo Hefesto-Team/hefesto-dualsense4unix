@@ -22,8 +22,9 @@ MORDIDAS (cada uma reprova o que diz, e o md5 do arquivo volta igual):
   vale depois do restart;
 - trocar ``session.reinicio_subiu()`` por ``reinicio_em_curso()`` na espera reprova
   ``test_so_o_estado_depois_do_restart_vale``;
-- tirar de ``a09_sistema.reiniciar`` o ``marcar_o_reinicio`` reprova o do teto e o do gesto depois
-  do reiniciar;
+- tirar de ``a09_sistema.reiniciar`` o ``marcar_o_reinicio`` reprova
+  ``test_o_aplicar_durante_o_restart_espera_o_servico_voltar``; o ``marcar_que_o_servico_subiu``,
+  o do gesto depois do reiniciar;
 - tirar de ``a09_sistema._repor_quando_o_servico_voltar`` o ``marcar_o_reinicio`` reprova
   ``test_o_restart_que_estoura_o_prazo_segue_esperando_o_start``.
 """
@@ -286,8 +287,8 @@ def test_o_gesto_depois_do_reiniciar_manda_o_perfil_do_jogo(
     O reinício volta e o serviço escuta sem perfil; o gesto espera o boot restaurar o do jogo e
     manda ESSE nome, e o boot não desiste. Todos os gestos dão o mesmo desfecho.
 
-    MORDIDA: tire ``_esperar_o_servico_que_reinicia`` do gesto, ou o ``marcar_o_reinicio`` do
-    ``reiniciar``: o gesto manda a escolha «Azahar» e o boot desiste.
+    MORDIDA: tire o ``marcar_que_o_servico_subiu`` do ``reiniciar``: o gesto espera um serviço
+    que nunca vale e recusa.
     """
     servico = _Servico(mundo, ativo_antigo=JOGO, restaura=JOGO)
     _reiniciar(a09, monkeypatch, servico)
@@ -376,6 +377,41 @@ def test_estourado_o_teto_recusa_com_a_frase_do_reinicio_e_nao_manda(
     assert REINICIO in str(erro.value)
     assert servico.pedidos == [], "o gesto mandou o perfil com o serviço ainda sem perfil ativo"
     assert prazo_do_systemctl(["start"]) <= mundo.t - antes < prazo_do_systemctl(["start"]) + 1
+
+
+def test_o_aplicar_durante_o_restart_espera_o_servico_voltar(
+        mundo: _Relogio, a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Aplicar não grava e não entra na fila do Reiniciar: o clique cai com o `restart` no ar.
+
+    Medido às 18h13min14,039 de 21/11. A marca nasce antes do `restart`; o clique que cai durante
+    ele espera o serviço voltar e manda o perfil do jogo, e o boot não desiste.
+
+    MORDIDA: tire de ``a09_sistema.reiniciar`` o ``marcar_o_reinicio``.
+    """
+    servico = _Servico(mundo, ativo_antigo=JOGO, restaura=JOGO)
+    passos: list[int] = []
+
+    def volta(_agora: float) -> None:
+        passos.append(1)
+        if len(passos) == 4:
+            servico.escuta = True
+            servico.reiniciou()
+            session.marcar_que_o_servico_subiu(35.0)
+
+    class _Janela:
+        def _invoke_systemctl(self, args: list[str], **_: Any) -> Any:
+            if args[0] == "restart":
+                servico.escuta = False
+                mundo.ao_dormir.append(volta)
+                _gesto("aplicar", servico, {"active_profile": JOGO})
+            return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(a09, "_matriz", lambda: _Janela())
+    a09.reiniciar(SimpleNamespace(state={}), {}, None)
+    mundo.dormir(10.0)
+    assert servico.pedidos, "o gesto não mandou nada"
+    assert [(n, antigo) for n, antigo, _s in servico.pedidos] == [(JOGO, False)], servico.pedidos
+    assert servico.ativo == JOGO and not servico.desistiu
 
 
 @pytest.mark.parametrize("gesto", GESTOS)
