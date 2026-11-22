@@ -259,14 +259,14 @@
       "data": "2026-11-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1300427,
+      "piso": 1301327,
       "por_item": {
         "docs": 107904,
-        "scripts": 116032,
-        "src": 328599,
-        "tests": 747892
+        "scripts": 116096,
+        "src": 328672,
+        "tests": 748655
       },
-      "razao": "tamanho: +842 linhas (1299585 -> 1300427), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo fa4999920a93",
+      "razao": "tamanho: +900 linhas (1300427 -> 1301327), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo daee84f44288",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2379,10 +2379,16 @@
           "de": 1299585,
           "para": 1300427,
           "razao": "tamanho: +842 linhas (1299585 -> 1300427), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo fa4999920a93"
+        },
+        {
+          "data": "2026-11-22",
+          "de": 1300427,
+          "para": 1301327,
+          "razao": "tamanho: +900 linhas (1300427 -> 1301327), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo daee84f44288"
         }
       ],
       "unidade": "linhas",
-      "universo": 3632
+      "universo": 3635
     }
   }
 }
