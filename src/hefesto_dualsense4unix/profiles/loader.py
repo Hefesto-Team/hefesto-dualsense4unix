@@ -1992,6 +1992,18 @@ _PRIORIDADES_JA_AVISADAS: set[tuple[str, int]] = set()
 _TETO_DAS_VOLTAS_DA_LEITURA = 16
 
 
+_SEM_FILHO: Any = object()
+
+
+def _filho_do_cru(pai: Any, passo: int | str) -> Any:
+    """O filho de ``pai`` no ``passo``, ou ``_SEM_FILHO`` (o passo é só a etiqueta da união)."""
+    if isinstance(pai, dict):
+        return pai.get(passo, _SEM_FILHO)
+    if isinstance(pai, list) and isinstance(passo, int) and 0 <= passo < len(pai):
+        return pai[passo]
+    return _SEM_FILHO
+
+
 def _tira_o_campo(cru: dict[str, Any], caminho: tuple[int | str, ...]) -> str | None:
     """Tira de ``cru`` o campo que o erro aponta; devolve o caminho, ou None se não achou.
 
@@ -2001,10 +2013,9 @@ def _tira_o_campo(cru: dict[str, Any], caminho: tuple[int | str, ...]) -> str | 
     atual: Any = cru
     trilha: list[str] = []
     for passo in caminho[:-1]:
-        if (isinstance(atual, dict) and passo in atual) or (
-            isinstance(atual, list) and isinstance(passo, int) and passo < len(atual)
-        ):
-            atual = atual[passo]
+        filho = _filho_do_cru(atual, passo)
+        if filho is not _SEM_FILHO:
+            atual = filho
             trilha.append(str(passo))
     ultimo = caminho[-1]
     if isinstance(atual, dict) and ultimo in atual:
