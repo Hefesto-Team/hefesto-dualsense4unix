@@ -16,7 +16,9 @@ MORDIDAS (md5 conferido na volta):
 * o registro trocado pelo recibo da última materialização reprova as duas noites (17h33 e 17h29);
 * sem a guarda de `fisicos <= 0` reprova «não sei nunca vira tinha cobertura»;
 * sem a conferência do `epoch` ou da fonte reprova os casos sem registro da sessão;
-* sem a condição da promessa do co-op reprova o co-op desligado.
+* sem a condição da promessa do co-op reprova o co-op desligado;
+* sem o sossego que volta a perguntar enquanto a fonte não chega reprova a fonte que chega depois
+  do sossego, e sem o prazo reprova o sossego que para de perguntar.
 """
 from __future__ import annotations
 
@@ -159,6 +161,58 @@ def test_as_17h29_a_entrega_sem_cobertura_nao_passa_calada_pela_materializacao_d
     assert len(avisos) == 1 and avisos[0]["appid"] == APPID
     assert avisos[0]["cobertura_entregue"] is False
     assert avisos[0]["cobertura_agora"] is True
+
+
+@pytest.mark.parametrize(
+    "fonte_velha", [None, "arquivo"], ids=["sem fonte", "fonte do jogo de antes"]
+)
+def test_as_17h29_com_a_fonte_chegando_depois_do_sossego_o_aviso_ainda_sai(
+    lar: Path, espiao: _Espiao, fonte_velha: str | None
+) -> None:
+    """O wrapper grava o `fonte_do_ambiente` depois da resposta, e a folha o relê a cada 1 s.
+
+    Os pads em voo nascem logo depois do arme e o sossego corre antes de a fonte chegar: ele volta a
+    perguntar, e o aviso sai quando a fonte chega. Passado o prazo sem fonte, o sossego não se
+    rearma.
+    """
+    epoch = _jogo_aberto(lar, fonte=None)
+    if fonte_velha is not None:
+        (lar / "fonte_do_ambiente").write_text(
+            f"appid={APPID}\nfonte={fonte_velha}\narquivo=\nepoch={epoch - 600}\n",
+            encoding="utf-8",
+        )
+    mesa = _daemon(vpads=1, fisicos=3)
+    le.materialize_launch_env(mesa)
+    le.ambiente_do_lancamento(mesa, APPID)
+    _mesa_de(mesa, vpads=3, fisicos=3)
+    le.materialize_launch_env(mesa)
+
+    _sossegar(mesa)
+    assert _avisos(espiao) == []
+    prazo = mesa._launch_env_sossego_em
+    assert prazo is not None, "o sossego desistiu antes de o wrapper dizer de onde veio a env"
+
+    _jogo_aberto(lar, epoch=epoch)
+    le.rematerializar_se_sossegou(mesa, agora=prazo)
+
+    avisos = _avisos(espiao)
+    assert len(avisos) == 1
+    assert (avisos[0]["cobertura_entregue"], avisos[0]["cobertura_agora"]) == (False, True)
+
+
+def test_sem_fonte_no_prazo_o_sossego_para_de_perguntar(lar: Path, espiao: _Espiao) -> None:
+    _jogo_aberto(lar, fonte=None)
+    mesa = _daemon(vpads=1, fisicos=3)
+    le.ambiente_do_lancamento(mesa, APPID)
+    _mesa_de(mesa, vpads=3, fisicos=3)
+
+    _sossegar(mesa)
+    assert mesa._launch_env_sossego_em is not None
+    depois = le.JANELA_DE_SOSSEGO_SEC + le.PRAZO_DA_FONTE_DO_AMBIENTE_SEC + 1.0
+    le.rematerializar_se_sossegou(mesa, agora=depois)
+
+    assert mesa._launch_env_sossego_em is None
+    assert _avisos(espiao) == []
 
 
 @pytest.mark.parametrize("reiniciado", [False, True], ids=["mesmo processo", "serviço reiniciado"])

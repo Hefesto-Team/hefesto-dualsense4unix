@@ -1812,7 +1812,7 @@ def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bo
         anterior = getattr(daemon, "_launch_env_assinatura", None)
         sem_foto_assentada = getattr(daemon, "_foto_em_transito", False) is True
         daemon._foto_em_transito = False
-        _avisar_se_o_jogo_ja_congelou(daemon, assinatura)
+        _avisar_se_o_jogo_ja_congelou(daemon, assinatura, agora=momento)
         if assinatura == anterior and not sem_foto_assentada:
             return False
     except Exception:
@@ -1853,7 +1853,41 @@ def _a_entrega_da_sessao(
     return None
 
 
-def _avisar_se_o_jogo_ja_congelou(daemon: Any, atual: AssinaturaDaMesa) -> None:
+PRAZO_DA_FONTE_DO_AMBIENTE_SEC = 10.0
+
+
+def _esperar_a_fonte_da_entrega(
+    daemon: Any, folha: FolhaDoLancamento | None, appid: int, marker: tuple[int, int],
+    agora: float,
+) -> None:
+    """A entrega da sessão saiu deste serviço e o wrapper ainda não disse de onde veio a env.
+
+    O `fonte_do_ambiente` chega depois da resposta, e a folha o relê a cada período do caderno; o
+    sossego que corre antes disso volta a perguntar até `PRAZO_DA_FONTE_DO_AMBIENTE_SEC`, para a
+    entrega sem cobertura não passar calada.
+    """
+    entregue = getattr(daemon, "_launch_env_entregue", None)
+    if not (
+        isinstance(entregue, EntregaDoAmbiente)
+        and entregue.appid == appid
+        and entregue.epoch == marker[1]
+    ):
+        return
+    fonte = read_a_fonte() if folha is None else folha.fonte
+    if fonte is not None and fonte[0] == appid and fonte[2] >= marker[1]:
+        return
+    sessao = (appid, marker[1])
+    espera = getattr(daemon, "_launch_env_espera_da_fonte", None)
+    if not (isinstance(espera, tuple) and espera[0] == sessao):
+        espera = (sessao, agora + PRAZO_DA_FONTE_DO_AMBIENTE_SEC)
+        daemon._launch_env_espera_da_fonte = espera
+    if agora < espera[1]:
+        armar_rematerializacao(daemon, motivo="a fonte do ambiente ainda não chegou", agora=agora)
+
+
+def _avisar_se_o_jogo_ja_congelou(
+    daemon: Any, atual: AssinaturaDaMesa, *, agora: float | None = None
+) -> None:
     """Grita no journal quando a mesa de agora e a entrega que o jogo de pé recebeu discordam.
 
     Sem registro da entrega da sessão, ou com `fisicos <= 0` em um dos lados, não há aviso: «não
@@ -1866,7 +1900,11 @@ def _avisar_se_o_jogo_ja_congelou(daemon: Any, atual: AssinaturaDaMesa) -> None:
         if appid is None or marker is None:
             return
         entrega = _a_entrega_da_sessao(daemon, folha, appid, marker)
-        if entrega is None or entrega.fisicos <= 0 or atual[4] <= 0:
+        if entrega is None:
+            momento = agora if agora is not None else time.monotonic()
+            _esperar_a_fonte_da_entrega(daemon, folha, appid, marker, momento)
+            return
+        if entrega.fisicos <= 0 or atual[4] <= 0:
             return
         agora_tem = cobertura_total(backends=list(atual[3]), fisicos=atual[4])
         if agora_tem == entrega.cobertura:

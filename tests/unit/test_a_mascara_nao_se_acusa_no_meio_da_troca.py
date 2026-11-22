@@ -15,7 +15,8 @@ MORDIDAS (cada uma com o md5 do arquivo conferido na volta):
 * `em_transito` devolvendo sempre False reprova a parada, o escritor em curso e as duas fotos do
   setter, com `perfil_dualsense_vs_vivo_sem_emulacao` e `perfil_dualsense_vs_vivo_xbox`;
 * acender a marca depois da derrubada (no fim do corpo do setter) reprova a foto da janela;
-* tirar o `soltar` do corpo de `_gravar_o_modo_no_fio` reprova o escritor que falha.
+* tirar o `soltar` do corpo de `_gravar_o_modo_no_fio` reprova o escritor que falha;
+* acender a marca de `aplicar_o_arranjo_do_desktop` depois do mouse reprova a Navegação.
 """
 from __future__ import annotations
 
@@ -329,3 +330,70 @@ def _pelo_ipc_vazio() -> None:
     from hefesto_dualsense4unix.daemon.ipc_server import _o_perfil_em_dia
 
     asyncio.run(_o_perfil_em_dia())
+
+
+def test_a_navegacao_com_a_porta_acende_a_marca_antes_do_mouse_e_a_solta_na_gravacao(
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O terceiro modo: a Navegação pela mão derruba o pad pelo mouse, com a marca já acesa."""
+    d = _daemon()
+    _perfil_do_jogo_ativo(d, "dualsense")
+    no_mouse: list[bool] = []
+    na_gravacao: list[bool] = []
+    mouse = d.set_mouse_emulation
+
+    def espiar_o_mouse(*a: Any, **kw: Any) -> bool:
+        no_mouse.append(le.em_transito(d))
+        return mouse(*a, **kw)
+
+    corpo = lifecycle._gravar_o_modo_sob_a_trava
+
+    def espiar_a_gravacao(*a: Any, **kw: Any) -> Any:
+        na_gravacao.append(le.em_transito(d))
+        return corpo(*a, **kw)
+
+    monkeypatch.setattr(d, "set_mouse_emulation", espiar_o_mouse)
+    monkeypatch.setattr(lifecycle, "_gravar_o_modo_sob_a_trava", espiar_a_gravacao)
+    h = _Handlers(d, _gerente(d))
+
+    casa._pelo_ipc(h._handle_desktop_arranjo_apply({"origin": "manual"}))
+
+    assert no_mouse == [True], "o pad caiu pelo mouse antes de a marca acender"
+    assert na_gravacao == [True]
+    assert getattr(d, "_marcas_do_escritor", set()) == set()
+
+
+@pytest.mark.parametrize("fisicos", [2, 3, 4])
+@pytest.mark.parametrize(
+    "transportes", [("usb",), ("bt",), ("usb", "bt")], ids=["cabo", "rádio", "misturada"]
+)
+def test_a_mesa_de_varios_controles_em_transito_nao_publica_e_a_assentada_decide(
+    lar: Path, monkeypatch: pytest.MonkeyPatch, fisicos: int, transportes: tuple[str, ...]
+) -> None:
+    """A foto é do modo único: com dois, três e quatro controles, no cabo e no rádio, vale igual."""
+    _com_perfil(monkeypatch, "dualsense")
+    mesa = _mesa("xbox")
+    mesa._coop_manager = SimpleNamespace(_players={
+        f"p{i}": SimpleNamespace(vpad=SimpleNamespace(backend="uhid"))
+        for i in range(2, fisicos + 1)
+    })
+    mesa.controller = SimpleNamespace(describe_controllers=lambda: [
+        {"connected": True, "transport": transportes[i % len(transportes)]} for i in range(fisicos)
+    ])
+    marca = le.acender_o_escritor(mesa, "controle")
+    assert marca is not None
+
+    MATERIALIZAR(mesa)
+    assert _motivos(mesa) == set()
+    mesa._is_stopping = lambda: True
+    marca.soltar()
+    mesa.config.gamepad_emulation_enabled = False
+    mesa._gamepad_device = None
+    MATERIALIZAR(mesa)
+    assert _motivos(mesa) == set()
+
+    mesa._is_stopping = lambda: False
+    mesa.config.gamepad_emulation_enabled = True
+    mesa._gamepad_device = SimpleNamespace(backend="uhid")
+    MATERIALIZAR(mesa)
+    assert _motivos(mesa) == {"perfil_dualsense_vs_vivo_xbox"}

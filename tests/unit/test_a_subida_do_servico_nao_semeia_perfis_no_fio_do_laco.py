@@ -11,9 +11,10 @@ verdade); só os subsistemas que tocariam aparelho são dublados, e cada leitura
 no fio em que roda. O batimento do laço mede o maior intervalo entre dois acordares. O que a
 subida deixa no `config` é o mesmo de antes.
 
-MORDIDAS (md5 conferido na volta): devolver `o_perfil_de_fora_do_jogo`, o arquivo de máscaras, o
-caminho do pad ou o perfil do boot ao fio do laço reprova «a subida parou o laço»; devolver o
-`_audit_config_on_boot` ao fio do laço reprova a régua da auditoria.
+MORDIDAS (md5 conferido na volta): devolver `o_perfil_de_fora_do_jogo`, o perfil que grava (o
+`nome_do_perfil_que_grava`, que semeia os perfis dos jogos e espera o leitor de lançador), o arquivo
+de máscaras, o caminho do pad ou o perfil do boot ao fio do laço reprova «a subida parou o laço»;
+devolver o `_audit_config_on_boot` ao fio do laço reprova a régua da auditoria.
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon import connection, lifecycle, subsystems
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import external_mask
-from hefesto_dualsense4unix.profiles import loader, o_padrao_do_computador
+from hefesto_dualsense4unix.profiles import loader, manager, o_padrao_do_computador
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
@@ -92,6 +93,7 @@ class _Ensaio:
         monkeypatch.setattr(connection, "reaplicar_som_em_todos_os_alvos", _som)
         monkeypatch.setattr(connection, "reconnect_loop", _religar)
         monkeypatch.setattr(loader, "o_perfil_de_fora_do_jogo", dormir("de_fora", "Freestyle"))
+        monkeypatch.setattr(manager, "nome_do_perfil_que_grava", dormir("grava", "Freestyle"))
         monkeypatch.setattr(
             external_mask, "o_arquivo_de_mascaras_vira_o_modo", dormir("mascaras", None)
         )
@@ -149,7 +151,7 @@ class _ControleQueAnota(FakeController):
 async def test_a_subida_nao_para_o_laco_com_a_leitura_dos_perfis_lenta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quatro leituras de 1 s e a auditoria: o laço nunca passa do teto parado."""
+    """Cinco leituras de 1 s e a auditoria: o laço nunca passa do teto parado."""
     ensaio = _Ensaio(monkeypatch)
 
     daemon = await ensaio.subir()
@@ -160,7 +162,8 @@ async def test_a_subida_nao_para_o_laco_com_a_leitura_dos_perfis_lenta(
         f"{[nome for nome, lidas in ensaio.onde_dormiu.items() if True in lidas]}"
     )
     assert ensaio.onde_dormiu == {
-        "de_fora": [False], "mascaras": [False], "caminho": [False], "boot": [False, False],
+        "de_fora": [False], "grava": [False], "mascaras": [False], "caminho": [False],
+        "boot": [False, False],
     }, "uma leitura de perfil rodou no fio do laço, ou não rodou"
     assert daemon.config.gamepad_caminho_global == "xbox"
 
