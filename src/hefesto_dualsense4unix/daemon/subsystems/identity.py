@@ -1446,24 +1446,30 @@ class ControllerIdentityRegistry:
 
         return config_dir(ensure=True) / _CONTROLLERS_FILE
 
+    _geracao_pedida: int = 0
+    _geracao_gravada: int = 0
+
     def _save_locked(self, *, sem_parar_o_laco: bool = False) -> None:
         """Grava a fila persistível; com ``sem_parar_o_laco`` o tique no fio de um laço não espera.
 
         O conteúdo sai da memória aqui, sob o lock do registro; a leitura do arquivo, a fusão e a
         troca atômica (``CONTROLLERS_FILE_LOCK``) rodam no gravador, ou aqui mesmo fora de um laço.
-        O gesto explícito (renumerar, alinhar, escolha da mão) segue síncrono: responde gravado.
+        O gesto explícito (renumerar, alinhar, escolha da mão) segue síncrono: responde gravado, e
+        a gravação do tique que ainda esperava na fila não volta por cima dele.
         """
+        self._geracao_pedida += 1
+        geracao = self._geracao_pedida
         ordem = {
             key: rank for key, rank in self._ordem.items() if key not in self._volatile
         }
         try:
             if sem_parar_o_laco:
                 futuro = gravar_sem_parar_o_laco(
-                    f"controllers:{id(self)}", lambda: self._gravar_a_fila(ordem)
+                    f"controllers:{id(self)}", lambda: self._gravar_a_fila(ordem, geracao)
                 )
             else:
                 futuro = None
-                self._gravar_a_fila(ordem)
+                self._gravar_a_fila(ordem, geracao)
         except Exception as exc:
             logger.debug("identity_save_falhou", err=str(exc))
             return
@@ -1476,9 +1482,14 @@ class ControllerIdentityRegistry:
         if erro is not None:
             logger.debug("identity_save_falhou", err=str(erro))
 
-    def _gravar_a_fila(self, ordem: dict[str, int]) -> None:
-        """Grava ``ordem`` no ``controllers.json`` (mkstemp + os.replace); a falha levanta."""
+    def _gravar_a_fila(self, ordem: dict[str, int], geracao: int) -> None:
+        """Grava ``ordem`` no ``controllers.json`` (mkstemp + os.replace); a falha levanta.
+
+        A geração mais velha que a última gravada não grava: o arquivo fica com a mais nova.
+        """
         with CONTROLLERS_FILE_LOCK:
+            if geracao < self._geracao_gravada:
+                return
             path = self._path()
             existente: Any = None
             bruto = ler_a_fila_para_gravar(path)
@@ -1501,6 +1512,7 @@ class ControllerIdentityRegistry:
             except BaseException:
                 Path(tmp).unlink(missing_ok=True)
                 raise
+            self._geracao_gravada = geracao
             logger.debug("identity_fila_salva", ordem=payload[ORDER_FIELD])
 
     def o_lugar_espera(self, uniq: str | None) -> bool:

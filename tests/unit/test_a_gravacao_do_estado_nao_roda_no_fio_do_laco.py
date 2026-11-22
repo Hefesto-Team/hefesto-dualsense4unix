@@ -226,6 +226,38 @@ def test_fora_do_laco_o_escrever_sem_parar_grava_e_levanta_na_hora(tmp_path: Pat
     assert ei.ler_o_que_esta_na_fila(alvo) is None
 
 
+def test_a_gravacao_do_tique_na_fila_nao_volta_por_cima_do_gesto(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    porta, chegou = threading.Event(), threading.Event()
+    real = os.replace
+
+    def outro_alvo_lento(origem: Any, destino: Any) -> None:
+        if str(destino).endswith("outro.json"):
+            chegou.set()
+            porta.wait(5.0)
+        real(origem, destino)
+
+    monkeypatch.setattr(os, "replace", outro_alvo_lento)
+    registro = id_mod.ControllerIdentityRegistry()
+    registro.load()
+
+    async def laco() -> dict[str, int]:
+        ei.escrever_inteiro_sem_parar_o_laco(config / "outro.json", "x")
+        await asyncio.to_thread(chegou.wait, 5.0)
+        registro.sync_connected([CABO_1, RADIO_2])
+        trocado = {chave: 3 - lugar for chave, lugar in registro.snapshot().items()}
+        registro.compact(trocado)
+        return trocado
+
+    try:
+        trocado = asyncio.run(laco())
+    finally:
+        porta.set()
+    assert ei.esperar_a_fila(5.0)
+    assert _fila(config) == trocado, "a fila do tique voltou por cima do gesto"
+
+
 def test_o_gesto_explicito_de_renumerar_responde_depois_de_gravar(config: Path) -> None:
     registro = id_mod.ControllerIdentityRegistry()
     registro.load()

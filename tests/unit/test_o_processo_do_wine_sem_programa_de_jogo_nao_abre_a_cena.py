@@ -23,6 +23,7 @@ AVALIADOR = "/x/reaper SteamLaunch AppId=2424420 Install=1 -- /x/proton waitfore
 REAPER_DO_JOGO = "/x/reaper SteamLaunch AppId=2424420 -- /x/proton waitforexitandrun /x/jogo.exe"
 PREFIXO = {"STEAM_COMPAT_DATA_PATH": "/home/u/.steam/compatdata/2424420"}
 MOTIVO_DO_AVALIADOR = "o avaliador do script de instalação da Steam"
+FRASE = "o Wine do avaliador da Steam não é jogo"
 
 SEM_OUTRA_EVIDENCIA: dict[str, Any] = {
     "window_healthy": True,
@@ -78,7 +79,7 @@ class Proc:
         return por_que_conta(nome, cmdline, pid=pid, meu_pid=MEU_PID, raiz_proc=self.proc)
 
     def jogos(self) -> dict[str, Any]:
-        pad = SimpleNamespace(mac="02:fe:aa:bb:cc:01", name="pad (Hefesto)")
+        pad = SimpleNamespace(mac="aa:bb:cc:00:00:01", name="pad (Hefesto)")
         ino = self.no.stat().st_ino
 
         def resolvedor(**_kw: Any) -> dict[str, Any]:
@@ -128,7 +129,10 @@ def _partida(proc: Proc) -> int:
 
 def test_o_wine_neto_do_avaliador_do_install_script_nao_e_jogo(proc: Proc) -> None:
     pid = _avaliador(proc)
-    assert proc.por_que(pid, "winedevice.exe", "winedevice.exe") == (False, MOTIVO_DO_AVALIADOR)
+    assert proc.por_que(pid, "winedevice.exe", "winedevice.exe") == (
+        False,
+        MOTIVO_DO_AVALIADOR,
+    ), FRASE
 
 
 def test_o_wine_neto_do_reaper_sem_install_e_jogo(proc: Proc) -> None:
@@ -167,12 +171,12 @@ def test_o_pad_segurado_so_pelo_wine_do_avaliador_fica_sem_jogo_e_sem_cena(
 ) -> None:
     _avaliador(proc)
     por_pad = proc.jogos()
-    assert por_pad == {}
+    assert por_pad == {}, FRASE
     segurador = next(iter(por_pad.values()), None)
     veredito = classify(
         **SEM_OUTRA_EVIDENCIA, processo_no_pad=segurador.nome if segurador else None
     )
-    assert veredito == "daemon", "o Wine do avaliador da Steam não é jogo"
+    assert veredito == "daemon", FRASE
     assert diario == []
 
 
