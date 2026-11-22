@@ -1678,8 +1678,25 @@ check_ultimo_device_ks() {
     esac
 }
 
+_o_vigia_da_steam_falhou() {
+    local unidade="hefesto-steam-input-guard.service" saida carga ativo resultado
+    command -v systemctl >/dev/null 2>&1 || return 0
+    saida="$(systemctl --user show -p LoadState -p ActiveState -p Result "${unidade}" 2>/dev/null || true)"
+    carga="$(sed -n 's/^LoadState=//p' <<<"${saida}")"
+    ativo="$(sed -n 's/^ActiveState=//p' <<<"${saida}")"
+    resultado="$(sed -n 's/^Result=//p' <<<"${saida}")"
+    [[ "${carga}" == "loaded" && "${ativo}" != "activating" ]] || return 0
+    [[ -n "${resultado}" && "${resultado}" != "success" ]] || return 0
+    printf '%s\n' "${resultado}"
+}
+
 check_sentinela_wrapper() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    local vigia_falhou
+    vigia_falhou="$(_o_vigia_da_steam_falhou)"
+    if [[ -n "${vigia_falhou}" ]]; then
+        warn "o vigia da Steam falhou na última partida (${vigia_falhou}): o atalho dos jogos pode não ter sido reposto — o porquê: journalctl --user -u hefesto-steam-input-guard.service -n 50"
+    fi
     if [[ ! -f "${py}" ]] || ! command -v python3 >/dev/null 2>&1; then
         return
     fi
@@ -1713,7 +1730,9 @@ print("erros=" + str(len(d.get("erros") or [])))
     jogo="$(sed -n 's/^jogo=//p' <<<"${resumo}")"
 
     local como="o Hefesto repõe sozinho assim que a Steam fechar; para não esperar: python3 ${py} --reparar"
-    if [[ "${jogo}" == "1" ]]; then
+    if [[ -n "${vigia_falhou}" ]]; then
+        como="o vigia da Steam falhou na última partida, então a reposição automática não é certa; para repor: python3 ${py} --reparar (com a Steam e os jogos fechados)"
+    elif [[ "${jogo}" == "1" ]]; then
         como="há um JOGO aberto — o reparo fica para quando a Steam fechar (fechá-la agora mataria o jogo)"
     elif [[ "${steam}" == "1" ]]; then
         como="a Steam está aberta — o Hefesto repõe assim que a Steam fechar (com a Steam viva a edição seria engolida na saída)"

@@ -51,7 +51,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3857` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:34`); o "
-        "`scripts/doctor.sh:1681` (`check_sentinela_wrapper`, --censo) também o roda",
+        "`scripts/doctor.sh:1693` (`check_sentinela_wrapper`, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
         "scripts/disable_steam_input.sh",
@@ -68,14 +68,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
         "`install.sh:3889` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
         "`uninstall.sh:1767` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
-        "`scripts/doctor.sh:1878` (`steam_launch_options`) o publica como cura",
+        "`scripts/doctor.sh:1897` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
         "`install.sh:3754` (`PROTON_PIN_PY`, com `--ensure`) e "
         "`uninstall.sh:1695` (`PROTON_PIN_PY`) o rodam; "
-        "`scripts/doctor.sh:3964` (`check_proton_pin`, --report) também",
+        "`scripts/doctor.sh:3983` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
@@ -99,7 +99,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "`scripts/doctor.sh:3905` (`check_exame_da_mesa`) o roda — e o "
+        "`scripts/doctor.sh:3924` (`check_exame_da_mesa`) o roda — e o "
         "`install.sh:3996` (`bash`) roda o doctor",
     ),
     "mods/por_dentro_da_caixa.py": (
@@ -1406,7 +1406,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/ensaios/o_travamento_fator_a_fator.py:884` (`quem_esta_varrendo`) pergunta quem "
         "varre "
         "com a classe, e `QUEDA_MINIMA_MEDIDA` e `QUEDA_MAXIMA_MEDIDA` são os que o "
-        "`scripts/doctor.sh:3022` (`Discovering`) cita (régua: "
+        "`scripts/doctor.sh:3041` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
         "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4802 (`varrendo`))."
@@ -1513,14 +1513,14 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "opt-out continua gravado. Sai com o piloto da aba Controles."
     ),
     "integrations/storm_doctor.py::classificar_o_historico": (
-        "30/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3233` "
+        "30/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3252` "
         "(`classificar_o_historico`), num heredoc Python, para resumir as famílias do rádio no "
         "kernel-watch (régua: `tests/unit/test_o_doctor_resume_as_familias_do_radio.py`). O "
         "leitor do produto era o sino da Conexões, que saiu com tudo o que só ele usava em "
         "114ffb079 (D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS)."
     ),
     "integrations/storm_doctor.py::laudo_dos_resets_do_diario": (
-        "21/11/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3309` "
+        "21/11/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3328` "
         "(`laudo_dos_resets_do_diario`), num heredoc Python, para contar por porta os resets do "
         "cabo lidos do diário do USB (régua: "
         "`tests/unit/test_o_reset_do_cabo_se_registra_por_porta.py`). Nenhuma tela lê a contagem."
