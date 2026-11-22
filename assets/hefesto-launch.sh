@@ -286,7 +286,9 @@ registrar_audio_ks() {
 hefesto_gm_prev=""
 
 _hefesto_on_exit() {
-    [ -n "$hefesto_gm_prev" ] && gm_set_profile "$hefesto_gm_prev" 2>/dev/null
+    if [ -n "$hefesto_gm_prev" ] && gm_largar "$$"; then
+        gm_set_profile "$hefesto_gm_prev" 2>/dev/null
+    fi
     record_last_exit
     return 0
 }
@@ -371,17 +373,113 @@ _restaurar_quando_sair() {
     fi
 }
 
+gm_pasta=""
+[ -z "${XDG_RUNTIME_DIR:-}" ] || gm_pasta="$XDG_RUNTIME_DIR/hefesto-dualsense4unix/modo-de-energia"
+
+_GM_VIVO='gm_inicio() {
+    sed "s/^.*) //" "/proc/$1/stat" 2>/dev/null | {
+        read -r _a _b _c _d _e _f _g _h _i _j _k _l _m _n _o _p _q _r _s gm_t _z
+        printf "%s" "$gm_t"
+    }
+}
+gm_vivo() {
+    kill -0 "$2" 2>/dev/null || return 1
+    [ "$(cat "$1/$2" 2>/dev/null)" = "$(gm_inicio "$2")" ]
+}
+gm_outro_vivo() {
+    for gm_f in "$1"/[0-9]*; do
+        [ -e "$gm_f" ] || continue
+        gm_o="${gm_f##*/}"
+        [ "$gm_o" != "$2" ] || continue
+        gm_vivo "$1" "$gm_o" && return 0
+    done
+    return 1
+}'
+eval "$_GM_VIVO"
+
+_RESTAURADOR_DE_ENERGIA='p=$1; t=$2; d=$3; shift 3
+while kill -0 "$p" 2>/dev/null; do sleep "$t" || break; done
+rm -f "$d/$p"
+gm_outro_vivo "$d" "$p" && exit 0
+rm -f "$d/anterior"
+printf "%s\n" "$p" | "$@"'
+
+_restaurar_o_ultimo_a_sair() {
+    rq_pid="$1"
+    shift
+    tem_quem_restaure || return 1
+    rq_poll="${HEFESTO_GM_POLL_SECS:-2}"
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 5 systemd-run --user --collect --quiet -- /bin/sh -c "$_GM_VIVO
+$_RESTAURADOR_DE_ENERGIA" hefesto-restaurador "$rq_pid" "$rq_poll" "$gm_pasta" "$@" \
+            </dev/null >/dev/null 2>&1
+    else
+        systemd-run --user --collect --quiet -- /bin/sh -c "$_GM_VIVO
+$_RESTAURADOR_DE_ENERGIA" hefesto-restaurador "$rq_pid" "$rq_poll" "$gm_pasta" "$@" \
+            </dev/null >/dev/null 2>&1
+    fi
+}
+
+gm_inscrever() {
+    [ -n "$gm_pasta" ] || return 0
+    (umask 077; mkdir -p "$gm_pasta") 2>/dev/null || return 1
+    gm_inicio "$$" > "$gm_pasta/$$" 2>/dev/null
+}
+
+gm_largar() {
+    [ -n "$gm_pasta" ] || return 0
+    rm -f "$gm_pasta/$1" 2>/dev/null
+    if gm_outro_vivo "$gm_pasta" "$1"; then
+        return 1
+    fi
+    rm -f "$gm_pasta/anterior" 2>/dev/null
+    return 0
+}
+
+gm_anterior_de_quem_vive() {
+    gm_outro_vivo "$gm_pasta" "$$" || return 1
+    gm_ant="$(cat "$gm_pasta/anterior" 2>/dev/null)" || return 1
+    case "$gm_ant" in
+        battery|balanced) printf '%s' "$gm_ant" ;;
+        *) return 1 ;;
+    esac
+}
+
 enter_game_mode() {
     tem_quem_restaure || return 0
     gm_have_transport || return 0
     gm_prev="$(gm_current_profile)" || gm_prev=""
+    gm_ja_em_desempenho=""
     case "$gm_prev" in
-        battery|balanced) ;;
+        battery|balanced)
+            gm_inscrever || gm_pasta=""
+            ;;
+        performance)
+            [ -n "$gm_pasta" ] || return 0
+            gm_inscrever || return 0
+            gm_prev="$(gm_anterior_de_quem_vive)" || gm_prev=""
+            if [ -z "$gm_prev" ]; then
+                gm_largar "$$" || true
+                return 0
+            fi
+            gm_ja_em_desempenho=1
+            ;;
         *) return 0 ;;
     esac
-    gm_set_profile performance || return 0
-    if ! gm_pelo_transporte "_restaurar_quando_sair $$" "$gm_prev"; then
-        gm_set_profile "$gm_prev"
+    gm_restaurador="_restaurar_quando_sair"
+    if [ -n "$gm_pasta" ]; then
+        gm_restaurador="_restaurar_o_ultimo_a_sair"
+        if [ -z "$gm_ja_em_desempenho" ]; then
+            printf '%s\n' "$gm_prev" > "$gm_pasta/anterior" 2>/dev/null
+        fi
+    fi
+    if [ -z "$gm_ja_em_desempenho" ]; then
+        gm_set_profile performance || { gm_largar "$$" || true; return 0; }
+    fi
+    if ! gm_pelo_transporte "$gm_restaurador $$" "$gm_prev"; then
+        if gm_largar "$$" && [ -z "$gm_ja_em_desempenho" ]; then
+            gm_set_profile "$gm_prev"
+        fi
         return 0
     fi
     hefesto_gm_prev="$gm_prev"

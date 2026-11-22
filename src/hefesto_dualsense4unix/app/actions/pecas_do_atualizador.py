@@ -1734,7 +1734,7 @@ def registro() -> list[Peca]:
     não a lê enquanto vive declara falso, com a prova aqui. ``umu`` é falso: o ``_aplicar_o_umu``
     só aponta o elo ``atual`` e apaga pasta e pacote velhos (``pecas_do_atualizador.py:856``), e o
     serviço só conhece ``umu-run`` como nome de processo (``identidade_do_jogo.py:56``) e como
-    texto de atalho no censo (``censo_dos_lancadores.py:2091``); quem executa o ``umu-run`` é o
+    texto de atalho no censo (``censo_dos_lancadores.py:2092``); quem executa o ``umu-run`` é o
     lançador, na hora do jogo, e nada do pacote ``daemon`` o importa ou o abre ao subir. As
     outras ficam verdadeiras até o ``grep`` do que o serviço abre de cada uma.
     """

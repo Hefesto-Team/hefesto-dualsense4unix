@@ -21,6 +21,7 @@ from typing import Any, cast
 from hefesto_dualsense4unix.integrations.identidade_de_janela import (
     umu_por_chave_do_heroic,
 )
+from hefesto_dualsense4unix.integrations.steam_launch_options import e_deste_lar
 from hefesto_dualsense4unix.utils.arquivo_de_terceiro import escrever as escrever_de_terceiro
 
 NUNCA_ABERTO = "nunca_aberto"
@@ -524,16 +525,16 @@ def _proton_do_heroic(pasta: Path) -> tuple[list[str], list[str]]:
     return versoes, duvida
 
 
-def heroic_aberto() -> bool:
+def heroic_aberto(proc: Path = Path("/proc")) -> bool:
     """O Heroic está rodando? Ele regrava a configuração ao sair: aberto, nada se escreve."""
-    for pid in os.listdir("/proc"):
+    for pid in os.listdir(proc):
         if not pid.isdigit():
             continue
         with contextlib.suppress(OSError):
-            argv0 = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0", 1)[0]
+            argv0 = (proc / pid / "cmdline").read_bytes().split(b"\0", 1)[0]
             if Path(argv0.decode("utf-8", "replace")).name.casefold() in (
                 "heroic", "heroic-games-launcher",
-            ):
+            ) and e_deste_lar(int(pid), proc):
                 return True
     return False
 

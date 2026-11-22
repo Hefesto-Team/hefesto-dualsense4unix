@@ -92,7 +92,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
         "`install.sh:3186` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
-        "`assets/hefesto-launch.sh:497` (`curar_audio_ks`) o roda a cada jogo lançado; "
+        "`assets/hefesto-launch.sh:595` (`curar_audio_ks`) o roda a cada jogo lançado; "
         "`uninstall.sh:1806-1807` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
@@ -176,21 +176,21 @@ _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
 _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_PROTON_NOME": (
         "30/10/2026 — o contrato que o censo passa ao script da extensão de lançador: "
-        "`src/hefesto_dualsense4unix/integrations/censo_dos_lancadores.py:1455` (`nome`); "
+        "`src/hefesto_dualsense4unix/integrations/censo_dos_lancadores.py:1456` (`nome`); "
         "o produto escreve a chave no ambiente do filho e não "
         "a lê; nenhuma feature se liga pela chave. Viraria promessa se o produto passasse "
         "a ler a chave do próprio ambiente."
     ),
     "HEFESTO_PROTON_PINO": (
         "30/10/2026 — o contrato que o censo passa ao script da extensão de lançador: "
-        "`src/hefesto_dualsense4unix/integrations/censo_dos_lancadores.py:1455` (`nome`); "
+        "`src/hefesto_dualsense4unix/integrations/censo_dos_lancadores.py:1456` (`nome`); "
         "o produto escreve a chave no ambiente do filho e não "
         "a lê; nenhuma feature se liga pela chave. Viraria promessa se o produto passasse "
         "a ler a chave do próprio ambiente."
     ),
     "HEFESTO_PROTON_TARBALL": (
         "30/10/2026 — o contrato que o censo passa ao script da extensão de lançador: "
-        "`src/hefesto_dualsense4unix/integrations/censo_dos_lancadores.py:1455` (`nome`); "
+        "`src/hefesto_dualsense4unix/integrations/censo_dos_lancadores.py:1456` (`nome`); "
         "o produto escreve a chave no ambiente do filho e não "
         "a lê; nenhuma feature se liga pela chave. Viraria promessa se o produto passasse "
         "a ler a chave do próprio ambiente."
