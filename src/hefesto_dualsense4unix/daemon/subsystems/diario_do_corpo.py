@@ -112,15 +112,16 @@ class DiarioDoCorpo:
 
     def andar(
         self, agora: float, *, jogo: bool, pedido: bool, surdo_ha_s: float,
-        por_que: tuple[str, int] = ("", 0),
+        por_que: tuple[str, int] = ("", 0), jogo_por: str = "",
     ) -> None:
         """Um passo fora do tique: a borda do ouvido surdo e, a cada minuto, a linha.
 
-        ``por_que`` é o motivo da surdez e quantos fluxos o jogo tinha (``OuvidoDoJogo``).
+        ``por_que`` é o motivo da surdez e quantos fluxos o jogo tinha (``OuvidoDoJogo``);
+        ``jogo_por`` diz o que deu o jogo (``autoridade``, ``appid`` ou ``janela:<classe>``).
         """
         self._ver_o_surdo(
             jogo and pedido and surdo_ha_s >= PRAZO_DO_SURDO_S, surdo_ha_s, ouve=jogo and pedido,
-            por_que=por_que)
+            por_que=por_que, jogo_por=jogo_por)
         self._jogo = self._jogo or jogo
         self._pedido = self._pedido or pedido
         if self._aberto_em is None:
@@ -130,7 +131,8 @@ class DiarioDoCorpo:
             self._fechar_o_minuto()
 
     def _ver_o_surdo(
-        self, surdo: bool, ha_s: float, *, ouve: bool, por_que: tuple[str, int] = ("", 0)
+        self, surdo: bool, ha_s: float, *, ouve: bool, por_que: tuple[str, int] = ("", 0),
+        jogo_por: str = "",
     ) -> None:
         """A borda do surdo. O jogo que fechou encerra a surdez, sem dizer que voltou a ouvir."""
         if surdo == self._surdo:
@@ -139,7 +141,8 @@ class DiarioDoCorpo:
         if surdo:
             self._subir(CHAVE_DO_SURDO, 1)
             logger.warning(
-                "tato_ouvido_surdo", ha_s=round(ha_s), motivo=por_que[0], fluxos=por_que[1])
+                "tato_ouvido_surdo", ha_s=round(ha_s), motivo=por_que[0], fluxos=por_que[1],
+                jogo_por=jogo_por)
         elif ouve:
             logger.info("tato_ouvido_voltou_a_ouvir")
 

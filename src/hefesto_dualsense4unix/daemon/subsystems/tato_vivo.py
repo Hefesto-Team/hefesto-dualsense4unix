@@ -2520,6 +2520,31 @@ def ha_jogo(daemon: Any) -> bool:
     return False
 
 
+def jogo_do_ouvido(daemon: Any) -> str:
+    """Por que o ouvido tem um jogo para ouvir, ou vazio: ``autoridade`` (a do sinal de jogo é
+    ``game``), ``appid`` (há appid em cena) ou ``janela:<classe>`` (a janela em foco é de jogo
+    por identidade: ``steam_app_<id>`` ou jogo local do catálogo). O cliente da Steam, outro
+    lançador e o navegador não contam; ``ha_jogo`` os conta para o resto do tato."""
+    if getattr(daemon, "display_authority", "unknown") == "game":
+        return "autoridade"
+    appid = getattr(daemon, "appid_em_cena", None)
+    if isinstance(appid, int) and not isinstance(appid, bool) and appid > 0:
+        return "appid"
+    classe = str(getattr(getattr(daemon, "store", None), "window_detect_current_class", "") or "")
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    if steam_appid_from_wm_class(classe) is not None:
+        return f"janela:{classe}"
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela, jogos_de_janela
+
+        if jogo_da_janela(classe, jogos_de_janela()) is not None:
+            return f"janela:{classe}"
+    except Exception:
+        logger.debug("tato_catalogo_de_janelas_indisponivel", exc_info=True)
+    return ""
+
+
 def estado_do_controle(
     controle: Controle, jogo: bool, sessao_ha_s: float | None = None,
     *, motores_no_audio: bool = False,
@@ -4117,6 +4142,7 @@ class Passo:
         self.receita_vigente: Receita = DESLIGADA
         self.aviso = AvisoPorMinuto()
         self.jogo = False
+        self.jogo_por = ""
         self._lida_em = float("-inf")
         self._vivas: frozenset[str] = frozenset()
         self._aberta_em: dict[str, float | None] = {}
@@ -4160,13 +4186,17 @@ class Passo:
         return not self._o_tato_quer_o_som() and self.som_assinado()
 
     def ouvido_quer(self) -> bool:
-        """O ouvido grava com jogo em cena quando o tato vivo pede o som ou a porta o assina."""
+        """O ouvido grava com jogo aberto quando o tato vivo pede o som ou a porta o assina."""
         return (self._o_tato_quer_o_som() or self.som_assinado()) and self.jogo
+
+    def _ver_o_jogo_do_ouvido(self) -> None:
+        self.jogo_por = jogo_do_ouvido(self.daemon)
+        self.jogo = bool(self.jogo_por)
 
     def _som_para_a_porta(self) -> None:
         if not self.som_assinado():
             return
-        self.jogo = ha_jogo(self.daemon)
+        self._ver_o_jogo_do_ouvido()
         ouvido = self.motor.ouvido
         if ouvido is not None:
             ouvido.comecar()
@@ -4330,7 +4360,7 @@ class Passo:
             self._ler_a_lista_do_steam_input()
             ouvido = self.motor.ouvido
             self.diario_do_corpo.andar(
-                agora, jogo=self.jogo, pedido=self.ouvido_quer(),
+                agora, jogo=self.jogo, pedido=self.ouvido_quer(), jogo_por=self.jogo_por,
                 surdo_ha_s=ouvido.surdo_ha_s() if ouvido is not None else 0.0,
                 por_que=ouvido.por_que_surdo() if ouvido is not None else ("", 0))
         except Exception:
@@ -4480,7 +4510,8 @@ class Passo:
         for solta in self.dedo.tirar_as_soltas():
             self.motor.anotar(solta)
         self._ouvir_o_jogo(receita, controles)
-        jogo = self.jogo = ha_jogo(self.daemon)
+        jogo = ha_jogo(self.daemon)
+        self._ver_o_jogo_do_ouvido()
         por_uniq = {
             c.uniq: com_o_rumble_anotado(
                 estado_do_controle(
