@@ -763,6 +763,64 @@ _SENO_DO_FRACO = np.array(_seno(FREQUENCIA_DO_FRACO_HZ), dtype=np.float64)
 _BLOCO_MUDO = bytes(QUADROS_POR_BLOCO * _BYTES_POR_QUADRO)
 _FLOAT32_LE = np.dtype("<f4")
 
+TETO_DA_MISTURA = 0.9
+JOELHO_DA_MISTURA = 0.85
+ATAQUE_DO_LIMITADOR_QUADROS = 48
+SOLTURA_DO_LIMITADOR_S = 0.08
+LEITURA_DO_GANHO_S = 0.5
+
+
+class LimitadorSuave:
+    """O limitador da soma do bloco: um ganho por canal, com ataque e soltura, e um joelho.
+
+    O teto de cada canal é dele (``tetos``). O ganho desce até o teto sobre o pico do bloco em
+    :data:`ATAQUE_DO_LIMITADOR_QUADROS` quadros e sobe de volta em :data:`SOLTURA_DO_LIMITADOR_S`;
+    o que ainda passa do teto no ataque entra no joelho (``tanh``), que acaba no teto sem quina.
+    Sob o joelho e com o ganho em 1, o bloco sai o mesmo objeto, byte a byte. O estado é de
+    UM tocador: quem chama é o fio de escrita dele, um bloco de cada vez.
+    """
+
+    def __init__(self, canais: int = CANAIS_DA_HAPTICA, taxa: int = _TAXA) -> None:
+        self._ganho = np.ones(canais, dtype=np.float64)
+        self._taxa = int(taxa)
+
+    @property
+    def ganho(self) -> np.ndarray:
+        """O ganho de cada canal no fim do último bloco (1 = sem redução)."""
+        return self._ganho.copy()
+
+    def passar(self, quadros: np.ndarray, tetos: np.ndarray) -> np.ndarray:
+        """``quadros`` (n, canais) em ``float64`` sob ``tetos`` (canais); nunca passa do teto."""
+        n = len(quadros)
+        joelho = tetos * JOELHO_DA_MISTURA
+        pico = np.abs(quadros).max(axis=0) if n else np.zeros_like(tetos)
+        if not n or (bool((self._ganho == 1.0).all()) and bool((pico <= joelho).all())):
+            return quadros
+        alvo = np.where(pico > tetos, tetos / np.maximum(pico, 1e-12), 1.0)
+        antes = self._ganho
+        descendo = alvo < antes
+        subida = 1.0 - math.exp(-n / (self._taxa * SOLTURA_DO_LIMITADOR_S))
+        fim = np.where(descendo, alvo, antes + (alvo - antes) * subida)
+        fim = np.where(fim > 1.0 - 1e-4, 1.0, fim)
+        passos = np.where(descendo, min(n, ATAQUE_DO_LIMITADOR_QUADROS), n)
+        andado = np.minimum((np.arange(1, n + 1, dtype=np.float64)[:, None]) / passos, 1.0)
+        z = quadros * (antes + (fim - antes) * andado)
+        self._ganho = fim
+        absoluto = np.abs(z)
+        folga = tetos - joelho
+        sobre = absoluto > joelho
+        if not bool(sobre.any()):
+            return z
+        dobrado = joelho + folga * np.tanh((absoluto - joelho) / folga)
+        return np.copysign(np.where(sobre, dobrado, absoluto), z)
+
+
+def ganho_do_perfil(dono: str) -> float:
+    """O fator linear da háptica do controle ``dono`` (o do perfil que vale); 1 sem dono."""
+    from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+
+    return float(GANHO.fator(dono or None))
+
 
 def rotulo_do_tocador(marca: str) -> str:
     """O ``node.name`` do tocador do aparelho desta marca. Sem endereço: a marca não é."""
@@ -888,7 +946,7 @@ def forma_do_toque(
 def misturar_o_toque(
     bloco: bytes, toque: array[float] | np.ndarray, inicio: int, canais: tuple[int, ...]
 ) -> bytes:
-    """Soma o trecho ``inicio`` do toque aos ``canais`` do bloco, sem passar de 1."""
+    """Soma o trecho ``inicio`` do toque aos ``canais`` do bloco; o teto é do limitador."""
     quadros = np.frombuffer(bloco, dtype=_FLOAT32_LE).reshape(-1, CANAIS_DA_HAPTICA)
     k = max(0, min(len(quadros), len(toque) - inicio))
     if not k:
@@ -896,14 +954,14 @@ def misturar_o_toque(
     trecho = np.asarray(toque[inicio:inicio + k], dtype=np.float64)
     soma = quadros.copy()
     for canal in canais:
-        soma[:k, canal] = np.clip(quadros[:k, canal].astype(np.float64) + trecho, -1.0, 1.0)
+        soma[:k, canal] = quadros[:k, canal].astype(np.float64) + trecho
     return soma.tobytes()
 
 
 def somar_os_corpos(
     bloco: bytes, corpos: Sequence[tuple[array[float], tuple[int, ...]]]
 ) -> bytes:
-    """Soma ao bloco o trecho de cada fila do corpo nos canais do próprio lado, sem passar de 1."""
+    """Soma ao bloco o trecho de cada fila do corpo nos canais do próprio lado, sem cortar."""
     quadros = np.frombuffer(bloco, dtype=_FLOAT32_LE).reshape(-1, CANAIS_DA_HAPTICA)
     soma = quadros.astype(np.float64)
     for trecho, canais in corpos:
@@ -911,7 +969,7 @@ def somar_os_corpos(
         valores = np.asarray(trecho[:k], dtype=np.float64)
         for canal in canais:
             soma[:k, canal] += valores
-    return np.clip(soma, -1.0, 1.0).astype(_FLOAT32_LE).tobytes()
+    return soma.astype(_FLOAT32_LE).tobytes()
 
 
 def somar_os_lados(
@@ -1059,6 +1117,7 @@ class TocadorDoRumble:
         conferir: Callable[[str], str | None] | None = None,
         folga_s: float = FOLGA_DO_TOCADOR_S,
         relogio: Callable[[], float] = time.monotonic,
+        ganho_da_via: Callable[[str], float] | None = None,
     ) -> None:
         self.marca = str(marca)
         self.rotulo = rotulo_do_tocador(self.marca)
@@ -1090,6 +1149,9 @@ class TocadorDoRumble:
         self._lados: tuple[int, int] = (0, 0)
         self._lados_antes: tuple[int, int] = (0, 0)
         self._lados_valem_ate = 0.0
+        self._limitador = LimitadorSuave()
+        self._ganho_da_via = ganho_da_via or ganho_do_perfil
+        self._ganho_lido: tuple[float, str, float] = (-LEITURA_DO_GANHO_S, "", 1.0)
 
 
     @property
@@ -1300,9 +1362,38 @@ class TocadorDoRumble:
             bloco = somar_os_lados(bloco, lados, lados_antes, fase)
         if corpos:
             bloco = somar_os_corpos(bloco, corpos)
-        if toque is None:
+        if toque is not None:
+            bloco = misturar_o_toque(bloco, toque[0], inicio, toque[1])
+        return self._limitar(bloco)
+
+    def _limitar(self, bloco: bytes) -> bytes:
+        """A soma do bloco sob o teto de cada canal; sem nada a limitar, o mesmo ``bytes``."""
+        quadros = np.frombuffer(bloco, dtype=_FLOAT32_LE).reshape(-1, CANAIS_DA_HAPTICA)
+        em_64 = quadros.astype(np.float64)
+        saida = self._limitador.passar(em_64, self.tetos_da_mistura())
+        if saida is em_64:
             return bloco
-        return misturar_o_toque(bloco, toque[0], inicio, toque[1])
+        return saida.astype(_FLOAT32_LE).tobytes()
+
+    def tetos_da_mistura(self) -> np.ndarray:
+        """O teto de cada canal na saída do bloco: os dois motores descontam o ganho da via.
+
+        O ganho da háptica do controle (``1.0 1.0 G G`` no laço do cabo, a amostra da ponte no
+        rádio) multiplica o bloco DEPOIS daqui: o que passa de ``teto / G`` aqui passa do teto
+        lá, e o corte volta no servidor de som. Ganho abaixo de 1 não sobe o teto.
+        """
+        agora, dono, fator = self._ganho_lido
+        if self._dono != dono or self._relogio() - agora >= LEITURA_DO_GANHO_S:
+            try:
+                fator = float(self._ganho_da_via(self._dono))
+            except Exception:
+                fator = 1.0
+            if not math.isfinite(fator) or fator < 1.0:
+                fator = 1.0
+            self._ganho_lido = (self._relogio(), self._dono, fator)
+        return np.array(
+            [TETO_DA_MISTURA, TETO_DA_MISTURA, TETO_DA_MISTURA / fator, TETO_DA_MISTURA / fator]
+        )
 
     def parar(self) -> None:
         """Derruba o processo e o fio. Idempotente."""
@@ -1515,6 +1606,7 @@ __all__ = [
     "VID_SONY",
     "Ancora",
     "EndpointDeHaptica",
+    "LimitadorSuave",
     "TocadorDoRumble",
     "a_porta_e_dele",
     "ancora_da_interface",
@@ -1528,6 +1620,7 @@ __all__ = [
     "endpoints_de_pe",
     "fluxos_nos_endpoints",
     "forma_do_toque",
+    "ganho_do_perfil",
     "marca_do_aparelho",
     "misturar_o_toque",
     "nasceu_com_o_relogio",

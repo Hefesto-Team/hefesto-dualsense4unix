@@ -50,7 +50,8 @@ def _tocador(marca: str = "prova", relogio: _Relogio | None = None) -> eh.Tocado
         raise AssertionError("o teste não sobe processo de som")
 
     return eh.TocadorDoRumble(
-        marca, argv_de=lambda _s, _r: [], lancar=_nao_lanca, relogio=relogio or _Relogio()
+        marca, argv_de=lambda _s, _r: [], lancar=_nao_lanca, relogio=relogio or _Relogio(),
+        ganho_da_via=lambda _dono: 1.0,
     )
 
 

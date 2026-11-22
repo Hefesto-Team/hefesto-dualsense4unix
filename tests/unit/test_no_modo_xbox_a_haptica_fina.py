@@ -395,6 +395,7 @@ def _tocador(**kw: Any) -> eh.TocadorDoRumble:
         "lancar": _Processo,
         "conferir": lambda _r: _ENDPOINT_1,
         "folga_s": 0.15,
+        "ganho_da_via": lambda _dono: 1.0,
     }
     base.update(kw)
     return eh.TocadorDoRumble(_MARCA[_P1], **base)
@@ -409,7 +410,7 @@ def test_o_tocador_sobe_com_o_rumble_toca_o_nivel_e_sai_no_silencio(processos: A
     assert _esperar(lambda: len(processos.criados[0].lido) >= 7680 * 3)
     assert _esperar(lambda: avisos == ["mudou"]), avisos
     _fl, _fr, esquerdo, direito = _canais(bytes(processos.criados[0].lido[: 7680 * 3]))
-    assert max(esquerdo) > 0.9 and max(map(abs, direito)) == 0.0
+    assert max(esquerdo) > 0.8 and max(map(abs, direito)) == 0.0
     tocador.calar()
     assert _esperar(lambda: not tocador.vivo), "o silêncio não tirou o tocador do endpoint"
     assert _esperar(lambda: processos.criados[0].poll() is not None), "o processo ficou de pé"

@@ -189,8 +189,14 @@ def test_o_tocador_soma_o_toque_ao_bloco_e_volta_ao_silencio() -> None:
 
 
 def test_o_toque_por_cima_do_seno_nao_passa_de_um() -> None:
-    base = eh.bloco_da_haptica(255, 255)
-    misturado = eh.misturar_o_toque(base, eh.forma_do_toque(1.0, 40), 0, (2, 3))
+    tocador = eh.TocadorDoRumble(
+        "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=lambda _dono: 1.0
+    )
+    try:
+        tocador.tocar_o_toque(1.0, "centro", 40, sink="", dono="d")
+        misturado = tocador.proximo_bloco((255, 255), (255, 255), 0)
+    finally:
+        tocador.parar()
     assert max(abs(x) for c in _canais(misturado) for x in c) <= 1.0
 
 

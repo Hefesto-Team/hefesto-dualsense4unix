@@ -27,7 +27,7 @@ PASSO_S = eh.QUADROS_POR_BLOCO / TAXA
 
 
 def _valor(n: int) -> float:
-    return (1 + n % (MARCA - 1)) / MARCA
+    return 0.5 * (1 + n % (MARCA - 1)) / MARCA
 
 
 def _tocar(soluco_s: float, *, de_s: float = 20.0, ate_s: float = 30.0) -> tuple[int, int]:
@@ -36,7 +36,9 @@ def _tocar(soluco_s: float, *, de_s: float = 20.0, ate_s: float = 30.0) -> tuple
     O laço entrega, a cada tique, o que deve desde a última entrega, no máximo um décimo de
     segundo (o ``_amostras_devidas`` de hoje); no soluço ele não entrega nada.
     """
-    tocador = eh.TocadorDoRumble("APARELHOTESTEX", argv_de=lambda *_a: [])
+    tocador = eh.TocadorDoRumble(
+        "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=lambda _dono: 1.0
+    )
     levadas = mudas = 0
     entregue_ate = -tv.INTERVALO_S
     proximo_tique = 0.0
@@ -55,7 +57,7 @@ def _tocar(soluco_s: float, *, de_s: float = 20.0, ate_s: float = 30.0) -> tuple
         bloco = np.frombuffer(tocador.proximo_bloco((0, 0), (0, 0), 0), "<f4")[2::4]
         mudas += int((bloco == 0).sum())
         if fila < 0 and soluco_s and agora >= de_s + soluco_s + 1.0:
-            ultimo = round(float(bloco[-1]) * MARCA) - 1
+            ultimo = round(float(bloco[-1]) * 2 * MARCA) - 1
             fila = ((levadas - 1) % (MARCA - 1) - ultimo) % (MARCA - 1)
     return fila, mudas
 
@@ -80,7 +82,9 @@ def test_o_alvo_e_o_de_dois_tiques_do_laco() -> None:
 
 def test_o_padrao_de_fora_toca_desde_o_primeiro_golpe() -> None:
     """D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES: a fila nova não corta o começo do padrão."""
-    tocador = eh.TocadorDoRumble("APARELHOTESTEX", argv_de=lambda *_a: [])
+    tocador = eh.TocadorDoRumble(
+        "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=lambda _dono: 1.0
+    )
     origem, uniq = tv.PREFIXO_DA_EXTENSAO + "a", "aa:bb:cc:00:00:71"
 
     def levar(_uniq: str, amostras: array[float], lado: str) -> bool:
@@ -90,7 +94,7 @@ def test_o_padrao_de_fora_toca_desde_o_primeiro_golpe() -> None:
     fonte = tv.FonteDeFora(tv.Teto(), modo_de=lambda _u: tv.MODO_DUALSENSE, tocar_haptica=levar)
     padrao = tv.padrao_de({"golpes": [[0, 200, 60, 1.0]], "repete": False})
     fonte.registrar(origem, "golpe", padrao)
-    assert fonte.tocar(origem, uniq, "esquerdo", "golpe", 1.0, None, 0.0, None).vale
+    assert fonte.tocar(origem, uniq, "esquerdo", "golpe", 0.5, None, 0.0, None).vale
     tocado, proximo_tique = [], tv.INTERVALO_S
     for passo in range(round(0.3 / PASSO_S)):
         agora = passo * PASSO_S
@@ -98,7 +102,7 @@ def test_o_padrao_de_fora_toca_desde_o_primeiro_golpe() -> None:
             fonte.andar(agora)
             proximo_tique += tv.INTERVALO_S
         tocado.append(np.frombuffer(tocador.proximo_bloco((0, 0), (0, 0), 0), "<f4")[2::4])
-    esperado = np.asarray(tv.amostras_de(padrao, 0.0, round(0.2 * TAXA), 1.0, None))
+    esperado = np.asarray(tv.amostras_de(padrao, 0.0, round(0.2 * TAXA), 0.5, None))
     saida = np.concatenate(tocado)[: len(esperado)]
     assert np.allclose(saida, esperado, atol=1e-6), "o ataque do padrão ficou fora do corpo"
 
