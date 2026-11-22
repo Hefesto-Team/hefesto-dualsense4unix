@@ -368,8 +368,8 @@ def test_remover_tira_os_modulos_dkms_que_a_pasta_do_dono_declara(tmp_path: Path
     r = cena.rodar("--remover")
     assert r.returncode == 0, r.stdout + r.stderr
     chamadas = cena.chamadas()
-    for nome, versao in pacotes.items():
-        assert f"dkms remove {nome}/{versao} --all" in chamadas, (nome, chamadas)
+    for pacote, ver in pacotes.items():
+        assert f"dkms remove {pacote}/{ver} --all" in chamadas, (pacote, chamadas)
     assert list(cena.dkms_estado.iterdir()) == []
 
 
