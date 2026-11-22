@@ -154,7 +154,9 @@ def test_sem_troca_de_numero_cada_controle_recebe_so_o_dele(
 def test_o_desligar_nao_escreve_no_no_herdado_por_outro_controle(
     mundo: _Mundo, que_sai: str
 ) -> None:
-    """**A MORDIDA.** O controle saiu, o intruso herdou o número e o backend ainda não soube:
+    """D-2211-O-DESLIGAR-SO-ESCREVE-NO-NO-CONFERIDO.
+
+    **A MORDIDA.** O controle saiu, o intruso herdou o número e o backend ainda não soube:
     o desligar do que saiu não escreve no intruso.
 
     MORDIDA: a conferência do endereço arrancada reprova aqui pela frase do assert.
