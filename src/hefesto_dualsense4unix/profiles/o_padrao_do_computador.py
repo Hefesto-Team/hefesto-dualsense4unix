@@ -1008,13 +1008,22 @@ def _o_ps_do_freestyle_vai_ao_sexto(freestyle: Profile | None) -> None:
 
 
 def migrar_uma_vez() -> dict[str, int] | None:
-    """O computador nasce do Freestyle, e cada perfil perde o que já vale igual."""
+    """Dois passos de uma vez só: o perfil do Dungeons II passa ao Modo imersão (a falha dele
+    não segura o seguinte), e o computador nasce do Freestyle, com cada perfil perdendo o que
+    já vale igual."""
     from pathlib import Path
 
     from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.o_jogo_que_passa_ao_modo_da_extensao import (
+        passar_uma_vez,
+    )
     from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
+    try:
+        passar_uma_vez()
+    except Exception as exc:
+        logger.warning("jogo_nao_passou_ao_modo_da_extensao", err=str(exc)[:200])
     computador = o_computador()
     if computador.migrado:
         return None
