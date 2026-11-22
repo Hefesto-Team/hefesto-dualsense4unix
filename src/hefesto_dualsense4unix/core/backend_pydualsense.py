@@ -7,6 +7,7 @@ hidraw (`_PinnedPyDualSense`); a saída vai a todos (fan-out) com o perfil guard
 from __future__ import annotations
 
 import contextlib
+import errno
 import fcntl
 import os
 import select
@@ -412,6 +413,61 @@ def _read_feature_via_hidraw(
         return bytes(buf[:ret]) if ret > 0 else b""
     finally:
         os.close(fd)
+
+
+class NoDeOutroControleError(OSError):
+    """O nó hidraw aberto pelo caminho copiado é de OUTRO controle (o número foi reusado)."""
+
+    def __init__(self, caminho: str) -> None:
+        super().__init__(errno.ENXIO, "o nó pertence a outro controle", caminho)
+
+
+_HIDIOCGRAWUNIQ_TAMANHO = 64
+
+
+def _uniq_do_no_aberto(fd: int, caminho: str) -> str | None:
+    """O endereço do controle dono do nó que o `fd` abriu, ou None (ilegível).
+
+    `HIDIOCGRAWUNIQ` lê do próprio fd, imune a troca de número. Onde o kernel não o conhece
+    (ENOTTY/EINVAL), o uevent do hidraw lê o mesmo dado: o kernel segura o número enquanto o fd
+    está aberto, e o nó que some deixa o uevent ilegível (None, que recusa).
+    """
+    pedido = (2 << 30) | (_HIDIOCGRAWUNIQ_TAMANHO << 16) | (ord("H") << 8) | 0x08
+    buf = bytearray(_HIDIOCGRAWUNIQ_TAMANHO)
+    try:
+        fcntl.ioctl(fd, pedido, buf, True)
+    except OSError as exc:
+        if exc.errno not in (errno.ENOTTY, errno.EINVAL, errno.ENOSYS):
+            return None
+        return _hidraw_uevent(os.path.basename(caminho)).get("HID_UNIQ") or None
+    texto = bytes(buf).split(b"\0", 1)[0].decode("ascii", "replace")
+    return texto or None
+
+
+def _opener_que_confere(
+    opener: Callable[[str], int] | None, esperado: str
+) -> Callable[[str], int]:
+    """O opener que só entrega o fd se o nó aberto for do controle `esperado` (12 hex).
+
+    Quem abre por caminho copiado confere o aparelho DEPOIS do `open` e antes de ler ou escrever:
+    a identidade do alvo é o controle, não o `/dev/hidrawN`. Nó de outro controle, ou sem
+    endereço legível, fecha o fd e levanta `NoDeOutroControleError`.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    def _abrir(caminho: str) -> int:
+        fd = opener(caminho) if opener is not None else os.open(caminho, os.O_RDWR)
+        try:
+            achado = _uniq_do_no_aberto(fd, caminho)
+            if achado is None or norm_mac(achado) != esperado:
+                raise NoDeOutroControleError(caminho)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                os.close(fd)
+            raise
+        return fd
+
+    return _abrir
 
 
 _VPAD_PHYS = "hefesto-vpad"
@@ -1848,6 +1904,8 @@ class PyDualSenseController(IController):
         broker, mesma conferência (tamanho, id e, no rádio, CRC-32). O `_io_lock` só copia handle,
         transporte e caminho; o `ioctl` corre fora dele e o resultado só vale se o handle de `key`
         ainda for o mesmo ao voltar (senão None): a leitura de um controle não prende os outros.
+        O fd só serve se o nó aberto for o do controle de `key` (o número do hidraw pode ter sido
+        reusado).
         """
         from hefesto_dualsense4unix.core.ds_output_report import (
             BT_FEATURE_CRC_SEED,
@@ -1864,8 +1922,14 @@ class PyDualSenseController(IController):
         path = caminho.decode("utf-8", "replace") if isinstance(caminho, bytes) else ""
         if not path.startswith("/dev/hidraw"):
             return None
+        esperado = self._key_to_uniq(key)
+        if esperado is not None:
+            opener = _opener_que_confere(opener, esperado)
         try:
             data = _read_feature_via_hidraw(path, feature_id, size, opener=opener)
+        except NoDeOutroControleError:
+            logger.info(f"{rotulo}_no_de_outro_controle", uniq=_endereco_mascarado(esperado))
+            return None
         except OSError as exc:
             logger.info(f"{rotulo}_read_failed", key=key, err=str(exc))
             return None
@@ -6288,7 +6352,8 @@ class PyDualSenseController(IController):
         O-CONTROLE-SE-DESLIGA-PELO-BOTAO-PELO-GESTO-E-PELA-OCIOSIDADE-01: o SET_FEATURE `0x08`
         («Set Bluetooth Control», 47 B, `buf[1] = 2`) sai no hidraw DESTE controle, assinado com a
         semente `0x53`, fora do `_io_lock`. Só pelo rádio: no cabo a energia vem do fio e o efeito
-        do `0x08` não foi medido: recusa. Devolve se o pedido saiu inteiro e o handle não trocou.
+        do `0x08` não foi medido: recusa. Devolve se o pedido saiu inteiro, no nó que a conferência
+        do endereço provou ser DESTE controle, e o handle não trocou.
         """
         mascarado = _endereco_mascarado(uniq)
         with self._io_lock:
@@ -6302,8 +6367,14 @@ class PyDualSenseController(IController):
                 logger.info("controle_desligar_recusado", uniq=mascarado, motivo="cabo")
                 return False
             pedido, opener, path = pedido_de_desligar(), self._feature_opener, os.fsdecode(caminho)
+        esperado = self._key_to_uniq(key)
+        if esperado is not None:
+            opener = _opener_que_confere(opener, esperado)
         try:
             escritos = _write_feature_via_hidraw(path, pedido, opener=opener)
+        except NoDeOutroControleError:
+            logger.info("controle_desligar_recusado", uniq=mascarado, motivo="no_de_outro_controle")
+            return False
         except OSError as exc:
             logger.warning("controle_desligar_falhou", uniq=mascarado, err=str(exc))
             return False

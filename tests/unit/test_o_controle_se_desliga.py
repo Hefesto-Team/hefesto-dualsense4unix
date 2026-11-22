@@ -71,6 +71,7 @@ class _Hidraw:
     def __init__(self) -> None:
         self.escritas: list[tuple[str, int, bytes]] = []
         self._caminhos: dict[int, str] = {}
+        self.dono_do_caminho: dict[str, str] = {}
 
     def abrir(self, caminho: str) -> int:
         fd = os.open(os.devnull, os.O_RDONLY)
@@ -78,6 +79,10 @@ class _Hidraw:
         return fd
 
     def ioctl(self, fd: int, pedido: int, buf: Any, mutavel: bool = False) -> int:
+        if pedido & 0xFF == 0x08 and pedido >> 30 == 2:
+            nome = self.dono_do_caminho.get(self._caminhos[fd], "").encode() + b"\0"
+            buf[: len(nome)] = nome
+            return len(nome)
         self.escritas.append((self._caminhos[fd], pedido, bytes(buf)))
         return len(buf)
 
@@ -91,6 +96,8 @@ def hidraw(monkeypatch: pytest.MonkeyPatch) -> _Hidraw:
 
 def _mesa_no_hidraw(hidraw: _Hidraw, **handles: _Handle) -> PyDualSenseController:
     inst = _mesa(**handles)
+    for key, handle in handles.items():
+        hidraw.dono_do_caminho[os.fsdecode(handle._pinned_path)] = key
     inst.set_feature_opener(hidraw.abrir)
     return inst
 
