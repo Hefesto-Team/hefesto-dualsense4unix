@@ -17,6 +17,7 @@ from pathlib import Path
 from hefesto_dualsense4unix.integrations.steam_launch_options import (
     _PAR_ACF,
     _desescapar_acf,
+    atalhos_das_contas,
     atalhos_de_fora,
     leitura_das_pastas_steamapps,
     pastas_steamapps,
@@ -203,9 +204,12 @@ def appids_instalados_na_steam(home: Path | None = None) -> frozenset[str] | Non
 
 
 def assinatura_da_biblioteca(home: Path | None = None) -> tuple[tuple[str, int], ...]:
-    """Impressão BARATA da biblioteca: ``(pasta, mtime_ns)`` de cada `steamapps`."""
+    """Impressão BARATA da biblioteca: ``(caminho, mtime_ns)``, ``-1`` no que não existe.
+
+    Entram cada `steamapps` e o `shortcuts.vdf` de cada conta, onde moram os jogos de fora.
+    """
     linhas: list[tuple[str, int]] = []
-    for pasta in pastas_steamapps(home):
+    for pasta in [*pastas_steamapps(home), *atalhos_das_contas(home)]:
         try:
             linhas.append((str(pasta), os.stat(pasta).st_mtime_ns))
         except OSError:

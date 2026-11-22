@@ -12,7 +12,8 @@ reprova o leitor, o catálogo, o censo e o apply; o apply sem a passada dos atal
 a idempotência; o strip sem a passada dos atalhos reprova o desfazer; a lista de jogos sem os de
 fora e o pino que os trata como nativos reprovam o caso do pino; o censo sem os atalhos reprova o
 censo; o global do pino que alcança o jogo de fora reprova o caso do global; a linha de comando do
-desinstalar sem os atalhos reprova o caso do strip pela linha de comando.
+desinstalar sem os atalhos reprova o caso do strip pela linha de comando; a assinatura da biblioteca
+sem o `shortcuts.vdf` reprova o caso do jogo de fora adicionado com a lista já lida.
 """
 from __future__ import annotations
 
@@ -166,6 +167,26 @@ def test_o_catalogo_e_o_nome_do_jogo_trazem_os_jogos_de_fora(lar: Path) -> None:
     assert jogos["9949958"] == "Um Jogo da Loja"
     assert slo.nome_do_appid(str(JANELA), lar) == "Jogo do Açaí"
     assert slo.rotulo_do_jogo(str(JANELA), lar) == f"Jogo do Açaí (appid {JANELA})"
+
+
+def test_o_jogo_de_fora_adicionado_depois_entra_na_lista_de_jogos_ja_lida(
+        lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A lista do «Nome do jogo» se relê quando a biblioteca muda, e o jogo de fora a muda."""
+    from hefesto_dualsense4unix.profiles import jogo_desinstalado as catalogo
+
+    monkeypatch.setattr(catalogo, "_NOMES_DOS_JOGOS", None)
+    _, atalho = _conta(lar)
+    atalho.unlink()
+    _steam_de_verdade(lar)
+    _jogo(lar / ".steam/steam", "9949958", "Um Jogo da Loja")
+
+    antes = catalogo.nomes_dos_jogos()
+    atalho.write_bytes(_jogos())
+    depois = catalogo.nomes_dos_jogos()
+
+    assert str(JANELA) not in antes
+    assert depois[str(JANELA)] == "Jogo do Açaí"
+    assert depois["9949958"] == "Um Jogo da Loja"
 
 
 def test_o_apply_poe_o_atalho_nas_opcoes_do_jogo_de_fora_e_o_resto_passa_igual(

@@ -842,14 +842,16 @@ def atalhos_de_fora_do_arquivo(arquivo: Path) -> list[atalhos_da_steam.AtalhoDeF
     return atalhos_da_steam.atalhos_do_arquivo(arquivo)
 
 
+def atalhos_das_contas(home: Path | None = None) -> list[Path]:
+    """O lugar do `shortcuts.vdf` de cada conta de toda árvore, exista ele ou não."""
+    return [a for a in map(atalhos_do_vdf, discover_vdfs(home)) if a is not None]
+
+
 def atalhos_de_fora(home: Path | None = None) -> list[atalhos_da_steam.AtalhoDeFora]:
     """Os jogos de fora adicionados à Steam, de toda conta e toda árvore, um por número."""
     vistos: set[str] = set()
     achados: list[atalhos_da_steam.AtalhoDeFora] = []
-    for vdf in discover_vdfs(home):
-        arquivo = atalhos_do_vdf(vdf)
-        if arquivo is None:
-            continue
+    for arquivo in atalhos_das_contas(home):
         for atalho in atalhos_da_steam.atalhos_do_arquivo(arquivo):
             if atalho.appid not in vistos:
                 vistos.add(atalho.appid)
