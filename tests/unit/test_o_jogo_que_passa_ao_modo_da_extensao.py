@@ -232,8 +232,9 @@ def _sem_o_modo(dados: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_com_a_extensao_desligada_o_aparelho_recebe_o_que_o_personalizado_dava() -> None:
-    """Medida de 22/11: sem a extensão viva a vista é a do personalizado; com a extensão viva,
-    o efeito fixo dos gatilhos e da luz cala (a vibração é da extensão, por cima)."""
+    """D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, medida de 22/11: sem a extensão
+    viva a vista é a do personalizado; com a extensão viva, o efeito fixo dos gatilhos e da luz
+    cala (a vibração é da extensão, por cima)."""
     caminho = _grava(_dungeons())
     antes = perfil_no_modo(load_profile(caminho.stem), frozenset()).model_dump(mode="json")
     assert passo.passar_uma_vez() is not None
