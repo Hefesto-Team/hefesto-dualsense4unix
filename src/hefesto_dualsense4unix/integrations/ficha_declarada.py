@@ -23,6 +23,7 @@ from typing import Any
 
 try:
     from .api_de_entrada import Evidencia, escolher_executavel
+    from .logger_do_avulso import get_logger
     from .proton_pin import (
         _APPINFO_CABECALHO_DA_ENTRADA,
         _APPINFO_MAGICS,
@@ -32,6 +33,7 @@ try:
     )
 except ImportError:  # pragma: no cover
     from api_de_entrada import Evidencia, escolher_executavel  # type: ignore[no-redef]
+    from logger_do_avulso import get_logger  # type: ignore[no-redef]
     from proton_pin import (  # type: ignore[no-redef]
         _APPINFO_CABECALHO_DA_ENTRADA,
         _APPINFO_MAGICS,
@@ -39,8 +41,6 @@ except ImportError:  # pragma: no cover
         _ler_vdf_binario,
         default_steam_root,
     )
-
-from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

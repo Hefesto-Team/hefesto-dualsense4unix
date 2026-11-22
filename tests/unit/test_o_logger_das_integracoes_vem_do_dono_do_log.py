@@ -2,8 +2,9 @@
 
 O ``logging.getLogger`` direto dava ao módulo um logger que o dono do log não entrega, não solta
 no reset e não alcança no ``capture_logs``. Os módulos de ``integrations`` pegam o logger pelo
-``get_logger`` de ``utils/logging_config``. O leitor do estado, que roda como arquivo avulso,
-fica no ``logging``.
+``get_logger`` de ``utils/logging_config``. Quem roda como arquivo avulso no Python do sistema
+(o leitor do estado, o adaptador ``logger_do_avulso`` e o canal do microfone) fica no ``logging``;
+os módulos que o vigia da Steam chama pedem o logger ao adaptador, que no pacote devolve o do dono.
 """
 
 from __future__ import annotations
@@ -19,7 +20,13 @@ from hefesto_dualsense4unix.utils import logging_config as lc
 _SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 _INTEGRACOES = _SRC / "integrations"
 
-AINDA_COM_LOGGING_DIRETO = frozenset({"canal_do_microfone.py", "leitor_do_estado.py"})
+AINDA_COM_LOGGING_DIRETO = {
+    "canal_do_microfone.py": "roda avulso, sem o pacote",
+    "leitor_do_estado.py": "roda avulso, copiado para o bin, em python3 -I",
+    "logger_do_avulso.py": "o adaptador dos avulsos do vigia da Steam: só a biblioteca padrão",
+}
+
+DOS_AVULSOS_DO_VIGIA = ("api_de_entrada", "ficha_declarada", "a_roupa_do_jogo")
 
 OS_MIGRADOS = {
     "a_roupa_do_jogo": "logger",
@@ -102,3 +109,26 @@ def test_o_leitor_do_estado_roda_avulso_so_com_a_biblioteca_padrao() -> None:
     assert _importa_o_pacote_no_topo(arvore) == []
     assert _quem_pega_o_logger_do_logging(arvore) != []
     assert _importa_o_pacote_no_topo(ast.parse("from hefesto_dualsense4unix.x import y\n")) == [1]
+
+
+@pytest.mark.parametrize("o_modulo", DOS_AVULSOS_DO_VIGIA)
+def test_os_modulos_do_vigia_pedem_o_logger_ao_adaptador(o_modulo: str) -> None:
+    """MORDIDA: o ``get_logger`` do dono pedido direto traz o ``structlog`` ao avulso."""
+    arvore = ast.parse((_INTEGRACOES / f"{o_modulo}.py").read_text(encoding="utf-8"))
+    de_onde = {
+        (no.level, no.module)
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.ImportFrom) and any(a.name == "get_logger" for a in no.names)
+    }
+    assert de_onde == {(1, "logger_do_avulso"), (0, "logger_do_avulso")}
+
+
+def test_o_adaptador_importa_so_a_biblioteca_padrao_e_o_dono_so_dentro_do_pacote() -> None:
+    """MORDIDA: um import de fora no topo do adaptador derruba todo avulso que o pede."""
+    arvore = ast.parse((_INTEGRACOES / "logger_do_avulso.py").read_text(encoding="utf-8"))
+    do_topo = {
+        (no.module or "").split(".")[0] if isinstance(no, ast.ImportFrom) else no.names[0].name
+        for no in arvore.body
+        if isinstance(no, (ast.Import, ast.ImportFrom))
+    }
+    assert do_topo <= {"__future__", "logging", "typing"}

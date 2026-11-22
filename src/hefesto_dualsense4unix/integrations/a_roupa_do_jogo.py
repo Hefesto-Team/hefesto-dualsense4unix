@@ -29,6 +29,7 @@ try:
         _lote,
         _sinais_guardados,
     )
+    from .logger_do_avulso import get_logger
     from .steam_launch_options import (
         discover_vdfs,
         has_poison,
@@ -46,14 +47,13 @@ except ImportError:  # pragma: no cover
         _lote,
         _sinais_guardados,
     )
+    from logger_do_avulso import get_logger  # type: ignore[no-redef]
     from steam_launch_options import (  # type: ignore[no-redef]
         discover_vdfs,
         has_poison,
         is_sandboxed_layout,
         read_launch_options_by_appid,
     )
-
-from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

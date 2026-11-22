@@ -83,7 +83,10 @@ from enum import Enum
 from pathlib import Path
 from typing import BinaryIO
 
-from hefesto_dualsense4unix.utils.logging_config import get_logger
+try:
+    from .logger_do_avulso import get_logger
+except ImportError:  # pragma: no cover
+    from logger_do_avulso import get_logger  # type: ignore[no-redef]
 
 logger = get_logger(__name__)
 
