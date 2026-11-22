@@ -31,12 +31,11 @@ def _perfil(
     return Profile(
         name=nome,
         match=match if match is not None else MatchCriteria(window_class=[nome]),
-        priority=priority,
         leds=LedsConfig(lightbar=(0, 0, 0)),
         mode=ProfileModeConfig(kind=modo) if modo is not None else None,
         suppress_desktop_emulation=suprime,
         controllers=controles,
-    )
+    ).model_copy(update={"priority": priority})
 
 
 def _regras(achados: Sequence[Achado]) -> set[str]:

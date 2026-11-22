@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeVar
 
 from filelock import FileLock
 from pydantic import ValidationError
@@ -42,6 +42,9 @@ from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as _mascarar
 from hefesto_dualsense4unix.profiles.schema import (
     CHAVE_DO_COMANDO_NO_ARQUIVO,
+    PRIORIDADE_MAXIMA,
+    PRIORIDADE_MINIMA,
+    VERSAO_DO_PERFIL,
     MatchCriteria,
     Profile,
 )
@@ -63,10 +66,23 @@ logger = get_logger(__name__)
 
 LOCK_SUFFIX = ".lock"
 
+class PerfilDeVersaoMaisNovaError(ValueError):
+    """O arquivo do perfil é de uma versão do formato que esta versão do Hefesto não lê."""
+
+    def __init__(self, nome: str, versao: int) -> None:
+        self.nome = nome
+        self.versao = versao
+        super().__init__(
+            f"“{nome}” é de uma versão mais nova do Hefesto (formato {versao}): "
+            f"esta versão lê até o formato {VERSAO_DO_PERFIL}"
+        )
+
+
 _PROFILE_DECODE_ERRORS: tuple[type[BaseException], ...] = (
     json.JSONDecodeError,
     ValidationError,
     UnicodeDecodeError,
+    PerfilDeVersaoMaisNovaError,
 )
 
 _FORBIDDEN_IDENTIFIER_TOKENS = ("/", "\\", "\x00")
@@ -1878,7 +1894,7 @@ def reapontar_perfis_com_chave_de_executavel(
         try:
             with FileLock(str(_lock_path(caminho))):
                 bruto = json.loads(caminho.read_text(encoding="utf-8"))
-            perfis.append(Profile.model_validate(bruto))
+            perfis.append(perfil_do_cru(bruto))
         except _PROFILE_DECODE_ERRORS:
             continue
     for prof in perfis:
@@ -1971,10 +1987,108 @@ def _ler_o_cru(path: Path) -> dict[str, Any]:
     return cru  # type: ignore[no-any-return]
 
 
+_CAMPOS_JA_AVISADOS: set[tuple[str, tuple[str, ...]]] = set()
+_PRIORIDADES_JA_AVISADAS: set[tuple[str, int]] = set()
+_TETO_DAS_VOLTAS_DA_LEITURA = 16
+
+
+def _tira_o_campo(cru: dict[str, Any], caminho: tuple[int | str, ...]) -> str | None:
+    """Tira de ``cru`` o campo que o erro aponta; devolve o caminho, ou None se não achou.
+
+    O ``loc`` do pydantic traz também a etiqueta da união (``match.criteria.campo``): o passo
+    que não existe no dado é só etiqueta e se pula.
+    """
+    atual: Any = cru
+    trilha: list[str] = []
+    for passo in caminho[:-1]:
+        if (isinstance(atual, dict) and passo in atual) or (
+            isinstance(atual, list) and isinstance(passo, int) and passo < len(atual)
+        ):
+            atual = atual[passo]
+            trilha.append(str(passo))
+    ultimo = caminho[-1]
+    if isinstance(atual, dict) and ultimo in atual:
+        del atual[ultimo]
+        return ".".join([*trilha, str(ultimo)])
+    return None
+
+
+def perfil_do_cru(cru: object) -> Profile:
+    """O perfil lido do disco: a gravação é estrita e a leitura é tolerante.
+
+    O campo que esta versão não conhece sai com aviso e o resto vale; a ``priority`` fora de
+    0-200 se grampeia com aviso; a ``version`` maior que a conhecida levanta
+    ``PerfilDeVersaoMaisNovaError`` (o arquivo fica fora da seleção, e o disco não muda). O que
+    sobra de erro depois disso sobe como ``ValidationError``. Nada aqui grava o arquivo.
+    """
+    if not isinstance(cru, dict):
+        return Profile.model_validate(cru)
+    nome = str(cru.get("name") or "?")
+    versao = cru.get("version")
+    if isinstance(versao, int) and not isinstance(versao, bool) and versao > VERSAO_DO_PERFIL:
+        raise PerfilDeVersaoMaisNovaError(nome, versao)
+    trabalho = json.loads(json.dumps(cru))
+    prioridade = trabalho.get("priority")
+    if (isinstance(prioridade, int) and not isinstance(prioridade, bool)
+            and not PRIORIDADE_MINIMA <= prioridade <= PRIORIDADE_MAXIMA):
+        trabalho["priority"] = min(max(prioridade, PRIORIDADE_MINIMA), PRIORIDADE_MAXIMA)
+        if (nome, prioridade) not in _PRIORIDADES_JA_AVISADAS:
+            _PRIORIDADES_JA_AVISADAS.add((nome, prioridade))
+            logger.warning(
+                "profile_prioridade_grampeada", nome=nome, lida=prioridade,
+                valendo=trabalho["priority"])
+    tirados: list[str] = []
+    for _ in range(_TETO_DAS_VOLTAS_DA_LEITURA):
+        try:
+            perfil = Profile.model_validate(trabalho)
+        except ValidationError as exc:
+            sobrando = [e for e in exc.errors() if e["type"] == "extra_forbidden"]
+            achados = [t for t in (_tira_o_campo(trabalho, e["loc"]) for e in sobrando) if t]
+            if not achados:
+                raise
+            tirados.extend(achados)
+            continue
+        if tirados:
+            chave = (nome, tuple(sorted(tirados)))
+            if chave not in _CAMPOS_JA_AVISADOS:
+                _CAMPOS_JA_AVISADOS.add(chave)
+                logger.warning("profile_campo_desconhecido", nome=nome, campos=sorted(tirados))
+        return perfil
+    return Profile.model_validate(trabalho)
+
+
+class PerfilDeVersaoMaisNova(NamedTuple):
+    """Um perfil que esta versão não lê: o nome, o arquivo e o formato em que foi gravado."""
+
+    nome: str
+    arquivo: str
+    versao: int
+
+
+def perfis_de_versao_mais_nova() -> list[PerfilDeVersaoMaisNova]:
+    """Os perfis da pasta gravados por uma versão mais nova: fora da seleção, mas à vista."""
+    achados: list[PerfilDeVersaoMaisNova] = []
+    try:
+        arquivos = sorted(profiles_dir(ensure=True).glob("*.json"))
+    except OSError:
+        return achados
+    for path in arquivos:
+        cru: Any = None
+        try:
+            cru = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            cru = None
+        versao = cru.get("version") if isinstance(cru, dict) else None
+        if isinstance(versao, int) and not isinstance(versao, bool) and versao > VERSAO_DO_PERFIL:
+            achados.append(PerfilDeVersaoMaisNova(
+                str(cru.get("name") or path.stem), path.name, versao))
+    return achados
+
+
 def _read_profile(path: Path) -> Profile:
     with _trava_da_leitura(path):
         raw = _ler_o_cru(path)
-    return Profile.model_validate(raw)
+    return perfil_do_cru(raw)
 
 
 def _refazer_a_mudanca(base: object, novo: object, disco: object) -> object:
@@ -2008,8 +2122,8 @@ def _sobre_o_que_esta_no_disco(
     try:
         if _assinatura(os.stat(path)) == assinatura:
             return profile
-        disco = Profile.model_validate(json.loads(anterior))
-        de_antes = Profile.model_validate(base)
+        disco = perfil_do_cru(json.loads(anterior))
+        de_antes = perfil_do_cru(base)
     except OSError:
         return profile
     except _PROFILE_DECODE_ERRORS:
@@ -2038,7 +2152,7 @@ def mudar_o_perfil(
     _talvez_semear_jogos()
     alvo = _arquivo_para_carregar(nome)
     with _trava_do_perfil(alvo):
-        perfil = Profile.model_validate(_ler_o_cru(alvo))
+        perfil = perfil_do_cru(_ler_o_cru(alvo))
         novo, extra = mudar(perfil)
         if novo is None:
             return perfil, False, extra
@@ -2131,7 +2245,7 @@ def perfil_em_disco(identifier: str) -> Profile | None:
 
 def _decodificar_o_perfil(path: Path) -> Profile:
     """O perfil do arquivo, lido e validado (a exceção de decodificação sobe)."""
-    return Profile.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    return perfil_do_cru(json.loads(path.read_text(encoding="utf-8")))
 
 
 _PERFIS_PELA_ASSINATURA: LeituraPelaAssinatura[Profile] = LeituraPelaAssinatura(
@@ -2217,7 +2331,7 @@ def _ler_todos_os_perfis(*, copiar: bool) -> list[Profile]:
                 continue
             with _trava_da_leitura(path):
                 raw = json.loads(path.read_text(encoding="utf-8"))
-            profiles.append(Profile.model_validate(raw))
+            profiles.append(perfil_do_cru(raw))
         except _PROFILE_DECODE_ERRORS as exc:
             _avisa_perfil_invalido(path, exc)
             continue
@@ -2236,7 +2350,7 @@ def audit_profiles() -> list[tuple[str, str]]:
         try:
             with FileLock(str(_lock_path(path))):
                 raw = json.loads(path.read_text(encoding="utf-8"))
-            Profile.model_validate(raw)
+            perfil_do_cru(raw)
         except _PROFILE_DECODE_ERRORS as exc:
             invalid.append((path.name, f"{type(exc).__name__}: {exc}"))
     return invalid
@@ -2854,6 +2968,8 @@ __all__ = [
     "SEED_SKIP_ENV_VAR",
     "MoldeDePerfil",
     "OFreestyleNaoSeApagaError",
+    "PerfilDeVersaoMaisNova",
+    "PerfilDeVersaoMaisNovaError",
     "PerfilSemeado",
     "ResultadoDaSemeadura",
     "ResultadoDosEstilos",
@@ -2878,8 +2994,10 @@ __all__ = [
     "o_mudo_do_microfone_vai_para_o_controle",
     "o_perfil_de_fora_do_jogo",
     "o_personalizado_vira_freestyle",
+    "perfil_do_cru",
     "perfil_do_molde",
     "perfis_de_jogo_semeados",
+    "perfis_de_versao_mais_nova",
     "perfis_para_consulta",
     "perfis_que_casam_com_o_cliente_steam",
     "reapontar_perfis_com_chave_de_executavel",

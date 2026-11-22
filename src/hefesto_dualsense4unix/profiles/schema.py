@@ -1514,6 +1514,7 @@ def _e_combinacao_de_teclas(acao: str) -> bool:
 
 PRIORIDADE_MINIMA = 0
 PRIORIDADE_MAXIMA = 200
+VERSAO_DO_PERFIL = 1
 
 
 _MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"})
@@ -1576,7 +1577,7 @@ class Profile(BaseModel):
     name: str
     version: Literal[1] = 1
     match: Match = Field(discriminator="type")
-    priority: int = 0
+    priority: int = Field(default=0, ge=PRIORIDADE_MINIMA, le=PRIORIDADE_MAXIMA)
     triggers: TriggersConfig = Field(default_factory=TriggersConfig)
     leds: LedsConfig = Field(default_factory=LedsConfig)
     rumble: RumbleConfig = Field(default_factory=RumbleConfig)
@@ -3155,6 +3156,7 @@ __all__ = [
     "POLITICA_DA_VIBRACAO_NA_ECONOMIA",
     "PRIORIDADE_MAXIMA",
     "PRIORIDADE_MINIMA",
+    "VERSAO_DO_PERFIL",
     "ControllerMicOverride",
     "ControllerOverrides",
     "ControllerRumbleOverride",

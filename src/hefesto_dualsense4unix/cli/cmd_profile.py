@@ -60,10 +60,14 @@ def cmd_list(
     como_json: bool = typer.Option(False, "--json", help="Saída como JSON (scripts)."),
 ) -> None:
     """Lista os perfis a escolher no diretório XDG — o Freestyle é o botão, não linha."""
-    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.loader import (
+        load_all_profiles,
+        perfis_de_versao_mais_nova,
+    )
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
     profiles = os_perfis_de_escolher(load_all_profiles())
+    mais_novos = perfis_de_versao_mais_nova()
     if como_json:
         console.print_json(data=[
             {
@@ -74,9 +78,12 @@ def cmd_list(
                 "gatilho_direito": p.triggers.right.mode,
             }
             for p in profiles
+        ] + [
+            {"nome": n.nome, "de_versao_mais_nova": True, "formato": n.versao}
+            for n in mais_novos
         ])
         return
-    if not profiles:
+    if not profiles and not mais_novos:
         console.print("[dim]nenhum perfil encontrado[/dim]")
         return
 
@@ -91,18 +98,30 @@ def cmd_list(
         triggers_desc = f"L={p.triggers.left.mode} R={p.triggers.right.mode}"
         table.add_row(p.name, str(p.priority), match_desc, triggers_desc)
 
-    console.print(table)
+    if profiles:
+        console.print(table)
+    for n in mais_novos:
+        console.print(
+            f"[yellow]{n.nome}[/yellow]: de uma versão mais nova do Hefesto "
+            f"(formato {n.versao}); esta versão não o usa."
+        )
 
 
 @app.command("show")
 def cmd_show(name: str) -> None:
     """Mostra o JSON bruto de um perfil."""
-    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.loader import (
+        PerfilDeVersaoMaisNovaError,
+        load_profile,
+    )
 
     try:
         profile = load_profile(name)
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
+        raise typer.Exit(code=1) from None
+    except PerfilDeVersaoMaisNovaError as exc:
+        console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from None
     console.print_json(data=profile.model_dump(mode="json"))
 
@@ -115,12 +134,18 @@ def cmd_activate(name: str) -> None:
     controle local e grava a escolha pelo dono. Recusa sai com o motivo (rc 2) e serviço que não
     responde a tempo, com a frase do prazo (rc 1): nada se grava por baixo do serviço vivo.
     """
-    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.loader import (
+        PerfilDeVersaoMaisNovaError,
+        load_profile,
+    )
 
     try:
         profile = load_profile(name)
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
+        raise typer.Exit(code=1) from None
+    except PerfilDeVersaoMaisNovaError as exc:
+        console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from None
 
     from hefesto_dualsense4unix.app.ipc_bridge import ATENDEU, pedir_ao_servico
@@ -154,7 +179,9 @@ def cmd_activate(name: str) -> None:
 @app.command("create")
 def cmd_create(
     name: str = typer.Argument(..., help="Nome do perfil."),
-    priority: int = typer.Option(5, help="Prioridade para resolução de match."),
+    priority: int = typer.Option(
+        5, min=0, max=200, help="Prioridade para resolução de match (0 a 200)."
+    ),
     match_regex: str | None = typer.Option(None, help="Regex contra wm_name."),
     match_class: list[str] = typer.Option(  # noqa: B008
         default_factory=list, help="Window class (repetir para multiplos)."

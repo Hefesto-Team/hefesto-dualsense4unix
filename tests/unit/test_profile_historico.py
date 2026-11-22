@@ -246,12 +246,12 @@ def test_fora_da_semana_ficam_as_dez_ultimas_e_a_primeira_de_cada_dia(
     sobram a versão de antes de cada uma; a rajada de agora fica por inteiro.
     """
     save_profile(_perfil(priority=1))
-    for dia, base in (("20260901", 2700), ("20260915", 2800), ("20260929", 2900)):
+    for dia, base in (("20260901", 20), ("20260915", 60), ("20260929", 100)):
         relogio.dia = dia
         for passo in range(12):
             save_profile(_perfil(priority=base + passo))
 
-    assert _prioridades() == [1, 2711, 2811, *range(2900, 2911)]
+    assert _prioridades() == [1, 31, 71, *range(100, 111)]
 
 
 def test_os_dias_guardados_tem_teto(dir_perfis: Path, relogio: _Relogio) -> None:

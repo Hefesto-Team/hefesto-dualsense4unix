@@ -176,7 +176,8 @@ def test_o_relatorio_da_sanidade_diz_preferencia(tmp_path: Path) -> None:
         Profile(name="sala", match=MatchAny(), priority=100),
         Profile(name="pragmata", match=MatchCriteria(window_class=["p"]), priority=100),
         Profile(name="outro", match=MatchCriteria(window_class=["p"]), priority=100),
-        Profile(name="fora", match=MatchCriteria(window_class=["f"]), priority=250),
+        Profile(name="fora", match=MatchCriteria(window_class=["f"])).model_copy(
+            update={"priority": 250}),
         Profile(name="sobra1", match=MatchAny(), priority=5),
         Profile(name="sobra2", match=MatchAny(), priority=6),
     ]
