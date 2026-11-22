@@ -6,6 +6,7 @@ import threading
 import time
 from collections import deque
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import hidapi as hidapi_do_wrapper
@@ -395,13 +396,14 @@ def test_os_dois_que_saem_no_hotplug_pagam_um_teto(ensaio: _Ensaio) -> None:
 
 
 def _find_device_de_mentira(
-    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch, *, com_report: bool = True
 ) -> list[_No]:
     criados: list[_No] = []
 
     def _achar(self: bp._PinnedPyDualSense) -> tuple[Any, bool]:
         no = _No()
-        no.fila.append(_report_do_radio())
+        if com_report:
+            no.fila.append(_report_do_radio())
         criados.append(no)
         return ensaio.device(no), False
 
@@ -410,10 +412,15 @@ def _find_device_de_mentira(
 
 
 def test_pelo_open_one_a_thread_e_daemon_e_tem_o_nome_do_no(
-    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O `init()` dentro do `_runner` do `_open_one` de produção."""
-    _find_device_de_mentira(ensaio, monkeypatch)
+    """O `init()` dentro do `_runner` do `_open_one` de produção. O transporte vem do barramento
+    do nó, e o controle ainda calado abre (O-CONTROLE-ABRE-SEM-ESPERAR-O-PRIMEIRO-REPORT-01)."""
+    pasta = tmp_path / "hidraw" / "hidraw5" / "device"
+    pasta.mkdir(parents=True)
+    (pasta / "uevent").write_text("HID_ID=0005:0000054C:00000CE6\n", encoding="utf-8")
+    monkeypatch.setattr(bp, "RAIZ_CLASS_HIDRAW", str(tmp_path / "hidraw"))
+    _find_device_de_mentira(ensaio, monkeypatch, com_report=False)
     ctl = bp.PyDualSenseController()
 
     handle = ctl._open_one(b"/dev/hidraw5", is_edge=False)

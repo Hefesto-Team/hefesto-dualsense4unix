@@ -49,6 +49,7 @@ class _NoDeLed:
         self.atraso = atraso
         self.preso = preso
         self.cores: list[tuple[int, int, int]] = []
+        self.numeros: list[tuple[bool, ...]] = []
         self.indicator_dir = "/sys/class/leds/x"
 
     def writable(self) -> bool:
@@ -62,6 +63,7 @@ class _NoDeLed:
         return True
 
     def set_players(self, bits: tuple[bool, ...]) -> bool:
+        self.numeros.append(tuple(bits))
         return True
 
     def set_players_verified(self, bits: tuple[bool, ...]) -> bool:
@@ -228,6 +230,44 @@ def test_quem_usa_o_resultado_escreve_na_vez_e_depois_do_que_estava_na_fila(
     )
     assert saiu is True
     assert nos[mac].cores == [_cor(2), _cor(3)], "o gesto saiu antes do que estava na fila"
+    _fechar(handles)
+
+
+def test_a_cor_e_o_numero_pedidos_em_quadros_seguidos_saem_os_dois(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A barra do efeito e, logo depois, as luzinhas do medidor no mesmo controle: os dois quadros
+    se juntam campo a campo, e a cor que o segundo não traz não se perde."""
+    monkeypatch.setattr(bp._EscritorDaLuz, "_girar", lambda self: None)
+    ctl, handles, nos = _mesa(atraso=0.0)
+    mac = MACS[0]
+    numero = (False, False, True, False, False)
+    ctl._write_partial_output(handles[0], nos[mac], bp._DesiredOutput(led=_cor(5)), what="barra")
+    ctl._write_partial_output(
+        handles[0], nos[mac], bp._DesiredOutput(player_leds=numero), what="luzinhas"
+    )
+    handles[0]._escritor_da_luz.agora(lambda: None)
+    assert nos[mac].cores == [_cor(5)], "o quadro seguinte apagou a cor que ele não trazia"
+    assert nos[mac].numeros == [numero]
+    _fechar(handles)
+
+
+def test_a_repintura_forcada_seguida_de_outra_nao_perde_o_forcar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No rádio, o quadro igual ao último não sai de novo, salvo `forcar`: a repintura forçada que
+    se junta a uma comum ainda escreve."""
+    monkeypatch.setattr(bp._EscritorDaLuz, "_girar", lambda self: None)
+    ctl, handles, _nos = _mesa(atraso=0.0)
+    radio = handles[2]
+    desejo = bp._DesiredOutput(led=(200, 0, 0))
+    radio._quadro_da_luz = ((200, 0, 0), None, None)
+    for forcar in (True, False):
+        ctl._repintar_a_luz_de_um(
+            MACS[2], radio, None, desejo, pode_player=True, what="vigia", forcar=forcar
+        )
+    radio._escritor_da_luz.agora(lambda: None)
+    assert _cores_no_radio(radio) == [(200, 0, 0)], "a repintura forçada se perdeu na fila"
     _fechar(handles)
 
 
