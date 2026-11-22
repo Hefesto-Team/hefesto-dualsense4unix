@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -46,9 +47,12 @@ NAO_APARECEU = "não apareceu neste início"
 COMECOU_A_OUVIR = "começou a ouvir"
 PAROU_DE_OUVIR = "parou de ouvir"
 RESETOU = "resetou"
+CAIU = "caiu"
 
 MOTIVO_RESET_USB = "reset_usb"
+MOTIVO_QUEDA_USB = "queda_usb"
 JANELA_DO_RESET_S = 15.0
+PRAZO_DA_QUEDA_S = 30.0
 
 _NO_LOG = {
     ENTROU: "usb_entrou",
@@ -59,6 +63,7 @@ _NO_LOG = {
     COMECOU_A_OUVIR: "usb_ouvindo",
     PAROU_DE_OUVIR: "usb_parou_de_ouvir",
     RESETOU: "usb_resetou",
+    CAIU: "usb_caiu",
 }
 
 AUSENTE_DEPOIS_DE_S = 60.0
@@ -151,11 +156,15 @@ def registrar(
     depois: Any = None,
     agora: float | None = None,
     por_que: str = "",
+    fora_s: float | None = None,
 ) -> dict[str, Any]:
-    """Uma linha no diário e a mesma no log do daemon; ``por_que`` é o motivo, quando se sabe."""
+    """Uma linha no diário e a mesma no log do daemon; ``por_que`` é o motivo, quando se sabe.
+
+    ``fora_s`` é o tempo que o aparelho ficou fora, pelo que o kernel avisou, quando a volta o diz.
+    """
     entrada = diario_do_radio.registrar(
         QUEM, o_que, por_que, antes=antes, depois=depois, caminho=caminho, agora=agora,
-        boot_id=boot_id, **dict(campos))
+        boot_id=boot_id, fora_s=fora_s, **dict(campos))
     logger.info(_NO_LOG.get(o_que, "usb_evento"), **{
         k: v for k, v in entrada.items() if k not in ("quem", "por_que", "quando")},
         **({"motivo": por_que} if por_que else {}))
@@ -226,6 +235,44 @@ def ler_o_reset(mensagem: str) -> ResetDoKernel | None:
     )
 
 
+_QUEDA_DO_KERNEL = re.compile(
+    r"^usb (?P<no>\d+-\d+(?:\.\d+)*): USB disconnect, device number (?P<antes>\d+), "
+    r"voltou em (?P<ms>\d+) ms como new (?P<velocidade>.+?) USB device number "
+    r"(?P<devnum>\d+) using (?P<host>\S+)\s*$"
+)
+
+
+@dataclass(frozen=True)
+class QuedaDoKernel:
+    """O par que o vigia entrega: ``USB disconnect`` e o ``new … USB device number`` da mesma porta.
+
+    A queda de 21/11/2026, 18h10min28, na porta ``3-1.4``: o ``disconnect`` às 28,691 e o
+    ``new high-speed USB device number 9`` às 29,044, 353 ms depois, sem reset no meio.
+    """
+
+    no: str
+    devnum_antes: int
+    fora_ms: int
+    velocidade: str
+    devnum: int
+    host: str
+
+
+def ler_a_queda(mensagem: str) -> QuedaDoKernel | None:
+    """A queda que o vigia montou (``usb 3-1.4: USB disconnect, device number 8, voltou em …``)."""
+    achado = _QUEDA_DO_KERNEL.match(mensagem.strip())
+    if achado is None:
+        return None
+    return QuedaDoKernel(
+        no=achado["no"],
+        devnum_antes=int(achado["antes"]),
+        fora_ms=int(achado["ms"]),
+        velocidade=achado["velocidade"],
+        devnum=int(achado["devnum"]),
+        host=achado["host"],
+    )
+
+
 def carimbo_do_kernel(quando: str) -> float | None:
     """``2026-11-21T11:25:18-0300`` (ou ``-03:00``) em segundos.
 
@@ -282,6 +329,29 @@ def _boot_id_do_kernel() -> str:
     return _read_boot_id() or ""
 
 
+def _campos_da_porta(censo: Censo, porta: str) -> dict[str, Any]:
+    """O que a porta tem no censo (``vid:pid``, tipo), os hubs acima e a controladora."""
+    aparelho = _aparelho_da_porta(censo, porta)
+    return {
+        "no": porta,
+        "vid": aparelho.vid if aparelho else "",
+        "pid": aparelho.pid if aparelho else "",
+        "tipo": ("Receptor 2.4G" if aparelho.receptor else aparelho.especie) if aparelho else "",
+        "produto": aparelho.produto if aparelho else "",
+        "hubs": list(_hubs_acima(censo, porta)),
+        "controladora": _controladora_da_porta(censo, porta),
+    }
+
+
+def _ja_registrado(caminho: Path, o_que: str, no: str, quando: float) -> bool:
+    return any(
+        antiga.get("o_que") == o_que
+        and antiga.get("no") == no
+        and float(antiga.get("carimbo") or 0.0) == quando
+        for antiga in ler(caminho)
+    )
+
+
 def registrar_o_reset(
     mensagem: str,
     *,
@@ -296,40 +366,66 @@ def registrar_o_reset(
     linha leva só a porta. A mesma linha do kernel não entra duas vezes. O ``serial`` nunca entra.
     """
     reset = ler_o_reset(mensagem)
-    if reset is None:
+    if reset is None or _ja_registrado(caminho, RESETOU, reset.no, quando):
         return None
-    for antiga in ler(caminho):
-        if (
-            antiga.get("o_que") == RESETOU
-            and antiga.get("no") == reset.no
-            and float(antiga.get("carimbo") or 0.0) == quando
-        ):
-            return None
-    aparelho = _aparelho_da_porta(censo, reset.no)
-    campos: dict[str, Any] = {
-        "no": reset.no,
-        "vid": aparelho.vid if aparelho else "",
-        "pid": aparelho.pid if aparelho else "",
-        "tipo": ("Receptor 2.4G" if aparelho.receptor else aparelho.especie) if aparelho else "",
-        "produto": aparelho.produto if aparelho else "",
+    campos = {
+        **_campos_da_porta(censo, reset.no),
         "velocidade": reset.velocidade,
         "devnum": reset.devnum,
         "host": reset.host,
-        "hubs": list(_hubs_acima(censo, reset.no)),
-        "controladora": _controladora_da_porta(censo, reset.no),
     }
     return registrar(
         RESETOU, campos, boot_id=_boot_id_do_kernel() if boot_id is None else boot_id,
         caminho=caminho, agora=quando)
 
 
-def ultimo_reset_da_porta(entradas: Sequence[Mapping[str, Any]], no: str) -> float | None:
-    """A hora (``carimbo``) do último ``resetou`` desta porta, ou ``None``."""
+def registrar_a_queda(
+    mensagem: str,
+    *,
+    quando: float,
+    caminho: Path,
+    censo: Censo,
+    boot_id: str | None = None,
+) -> dict[str, Any] | None:
+    """A queda do kernel numa linha ``caiu`` do diário: a porta, os hubs acima e a controladora.
+
+    É o aparelho que sai e volta à MESMA porta de controladora física em até um segundo, sem
+    reset: nenhuma mão tira e põe um cabo nesse tempo. Vale para todo aparelho, em toda porta; a
+    linha leva ``fora_ms`` (o que o kernel mediu entre as duas linhas). A mesma queda não entra
+    duas vezes. O ``serial`` nunca entra.
+    """
+    queda = ler_a_queda(mensagem)
+    if queda is None or _ja_registrado(caminho, CAIU, queda.no, quando):
+        return None
+    campos = {
+        **_campos_da_porta(censo, queda.no),
+        "velocidade": queda.velocidade,
+        "devnum": queda.devnum,
+        "devnum_antes": queda.devnum_antes,
+        "host": queda.host,
+        "fora_ms": queda.fora_ms,
+    }
+    return registrar(
+        CAIU, campos, boot_id=_boot_id_do_kernel() if boot_id is None else boot_id,
+        caminho=caminho, agora=quando)
+
+
+def _ultima_da_porta(entradas: Sequence[Mapping[str, Any]], o_que: str, no: str) -> float | None:
     horas = [
         float(e["carimbo"]) for e in entradas
-        if e.get("o_que") == RESETOU and e.get("no") == no
+        if e.get("o_que") == o_que and e.get("no") == no
     ]
     return max(horas) if horas else None
+
+
+def ultimo_reset_da_porta(entradas: Sequence[Mapping[str, Any]], no: str) -> float | None:
+    """A hora (``carimbo``) do último ``resetou`` desta porta, ou ``None``."""
+    return _ultima_da_porta(entradas, RESETOU, no)
+
+
+def ultima_queda_da_porta(entradas: Sequence[Mapping[str, Any]], no: str) -> float | None:
+    """A hora (``carimbo``) da última ``caiu`` desta porta, ou ``None``."""
+    return _ultima_da_porta(entradas, CAIU, no)
 
 
 Registro = Callable[..., Any]
@@ -338,9 +434,10 @@ Registro = Callable[..., Any]
 class Comparador:
     """Compara cada leitura com a anterior e diz o que mudou.
 
-    A primeira leitura não registra entrada: o diário sabe desde que o Hefesto ouve. A volta se
-    prova por duas vias: a saída e a entrada no mesmo caminho em até :data:`REENUMERA_EM_S`, ou o
-    ``devnum`` que mudou no mesmo caminho entre duas leituras (a que o laço sem netlink acha).
+    A primeira leitura não registra entrada. A volta se prova por três vias: a saída e a entrada no
+    mesmo caminho em até :data:`REENUMERA_EM_S` (contados até o ``add`` que o kernel avisou, por
+    :meth:`chegou`, e não até a leitura do censo; sem aviso, até a leitura), o ``devnum`` que mudou
+    no mesmo caminho, ou a entrada até :data:`PRAZO_DA_QUEDA_S` depois de uma ``caiu`` da porta.
     """
 
     def __init__(
@@ -353,6 +450,7 @@ class Comparador:
         relogio: Callable[[], float] = time.monotonic,
         agora: Callable[[], float] = time.time,
         reset_da_porta: Callable[[str], float | None] | None = None,
+        queda_da_porta: Callable[[str], float | None] | None = None,
     ) -> None:
         self.boot_id = boot_id
         self.vistos = vistos
@@ -361,6 +459,10 @@ class Comparador:
         self._relogio = relogio
         self._agora = agora
         self._reset_da_porta = reset_da_porta
+        self._queda_da_porta = queda_da_porta
+        self._trava = threading.Lock()
+        self._chegadas: dict[str, float] = {}
+        self._partidas: dict[str, float] = {}
         self._anterior: dict[str, Foto] | None = None
         self._saidas: dict[tuple[str, str], float] = {}
         self._ausentes_conferidos = False
@@ -369,15 +471,59 @@ class Comparador:
         self._registro(o_que, foto.campos(), **extras)
         return o_que, foto
 
+    def chegou(self, caminho: str, quando: float | None = None) -> None:
+        """O kernel avisou o ``add`` de um aparelho neste caminho (pelo relógio do comparador)."""
+        with self._trava:
+            self._chegadas[caminho] = self._relogio() if quando is None else quando
+
+    def partiu(self, caminho: str, quando: float | None = None) -> None:
+        """O kernel avisou o ``remove`` de um aparelho neste caminho."""
+        with self._trava:
+            self._partidas[caminho] = self._relogio() if quando is None else quando
+
+    def _fora_pelo_kernel(self, caminho: str, saiu_em: float | None) -> float | None:
+        """Quanto o aparelho ficou fora, da saída à chegada que o kernel avisou; ``None`` sem aviso.
+
+        A saída é o ``remove`` do kernel quando ele precede a leitura que a anotou em até
+        :data:`REENUMERA_EM_S`; senão, a hora dessa leitura. Aviso fora de ordem não vale.
+        """
+        with self._trava:
+            chegou = self._chegadas.pop(caminho, None)
+            partiu = self._partidas.pop(caminho, None)
+        if chegou is None:
+            return None
+        if partiu is not None and (saiu_em is None or 0.0 <= saiu_em - partiu <= REENUMERA_EM_S):
+            ponto: float | None = partiu
+        else:
+            ponto = saiu_em
+        if ponto is None or chegou < ponto:
+            return None
+        return chegou - ponto
+
+    def _dentro(self, quando: float | None, janela: float) -> bool:
+        return quando is not None and -1.0 <= self._agora() - quando <= janela
+
+    def _motivo_da_queda(self, caminho: str) -> str:
+        """``queda_usb`` quando o vigia viu a porta cair e voltar até :data:`PRAZO_DA_QUEDA_S`."""
+        if self._queda_da_porta is None:
+            return ""
+        em = self._queda_da_porta(caminho)
+        return MOTIVO_QUEDA_USB if self._dentro(em, PRAZO_DA_QUEDA_S) else ""
+
     def _motivo_da_volta(self, caminho: str) -> str:
-        """``reset_usb`` quando o kernel resetou esta porta até :data:`JANELA_DO_RESET_S` antes."""
-        if self._reset_da_porta is None:
-            return ""
-        quando = self._reset_da_porta(caminho)
-        if quando is None:
-            return ""
-        atraso = self._agora() - quando
-        return MOTIVO_RESET_USB if -1.0 <= atraso <= JANELA_DO_RESET_S else ""
+        """``reset_usb`` quando o kernel resetou esta porta até :data:`JANELA_DO_RESET_S` antes.
+
+        Sem reset, ``queda_usb`` quando a porta caiu e voltou (:meth:`_motivo_da_queda`).
+        """
+        if self._reset_da_porta is not None and self._dentro(
+            self._reset_da_porta(caminho), JANELA_DO_RESET_S
+        ):
+            return MOTIVO_RESET_USB
+        return self._motivo_da_queda(caminho)
+
+    @staticmethod
+    def _o_fora(fora_s: float | None) -> dict[str, float]:
+        return {} if fora_s is None else {"fora_s": round(fora_s, 1)}
 
     def _velocidade(self, foto: Foto) -> list[tuple[str, Foto]]:
         visto = self.vistos.get(foto.identidade)
@@ -413,14 +559,20 @@ class Comparador:
                 if velho is not None and velho.vid_pid == foto.vid_pid:
                     if velho.devnum != foto.devnum:
                         eventos.append(self._anotar(
-                            VOLTOU, foto, por_que=self._motivo_da_volta(caminho)))
+                            VOLTOU, foto, por_que=self._motivo_da_volta(caminho),
+                            **self._o_fora(self._fora_pelo_kernel(caminho, None))))
                     eventos += self._velocidade(foto)
                     continue
                 saiu_em = self._saidas.pop((caminho, foto.vid_pid), None)
-                volta = saiu_em is not None and agora - saiu_em <= REENUMERA_EM_S
+                fora_s = self._fora_pelo_kernel(caminho, saiu_em)
+                volta = False
+                if saiu_em is not None:
+                    fora = agora - saiu_em if fora_s is None else fora_s
+                    volta = fora <= REENUMERA_EM_S or self._motivo_da_queda(caminho) != ""
                 if volta:
                     eventos.append(self._anotar(
-                        VOLTOU, foto, por_que=self._motivo_da_volta(caminho)))
+                        VOLTOU, foto, por_que=self._motivo_da_volta(caminho),
+                        **self._o_fora(fora_s)))
                 else:
                     eventos.append(self._anotar(ENTROU, foto))
                 eventos += self._velocidade(foto)
@@ -451,14 +603,17 @@ class Comparador:
 
 __all__ = [
     "AUSENTE_DEPOIS_DE_S",
+    "CAIU",
     "COMECOU_A_OUVIR",
     "ENTROU",
     "JANELA_DO_RESET_S",
+    "MOTIVO_QUEDA_USB",
     "MOTIVO_RESET_USB",
     "MUDOU_DE_VELOCIDADE",
     "NAO_APARECEU",
     "NOME_DO_DIARIO",
     "PAROU_DE_OUVIR",
+    "PRAZO_DA_QUEDA_S",
     "REENUMERA_EM_S",
     "RESETOU",
     "SAIU",
@@ -466,6 +621,7 @@ __all__ = [
     "VOLTOU",
     "Comparador",
     "Foto",
+    "QuedaDoKernel",
     "ResetDoKernel",
     "caminho_do_diario",
     "caminho_dos_vistos",
@@ -474,36 +630,46 @@ __all__ = [
     "fotos_do_censo",
     "gravar_os_vistos",
     "ler",
+    "ler_a_queda",
     "ler_o_reset",
     "main",
     "registrar",
+    "registrar_a_queda",
     "registrar_o_reset",
+    "ultima_queda_da_porta",
     "ultimo_reset_da_porta",
 ]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """``reset --quando <hora do kernel> --mensagem <texto>``: grava o reset no diário.
+    """``reset|queda --quando <hora do kernel> --mensagem <texto>``: grava no diário.
 
-    Sai com 0 quando a linha entrou, 3 quando a mensagem não é um reset ou a linha já estava lá, 4
-    quando a hora do kernel não se lê (o reset não entrou, e o vigia diz isso) e 1 quando o censo ou
-    o diário falharam.
+    Sai com 0 quando a linha entrou, 3 quando a mensagem não é um reset (ou uma queda) ou a linha
+    já estava lá, 4 quando a hora do kernel não se lê (a linha não entrou, e o vigia diz isso) e 1
+    quando o censo ou o diário falharam.
     """
     parser = argparse.ArgumentParser(prog="diario_do_usb")
     sub = parser.add_subparsers(dest="comando", required=True)
-    reset = sub.add_parser("reset", help="grava o reset de um aparelho USB que o kernel disse")
-    reset.add_argument("--quando", required=True)
-    reset.add_argument("--mensagem", required=True)
-    reset.add_argument("--diario", default="")
-    reset.add_argument("--raiz-usb", default="")
+    leitores = {"reset": ler_o_reset, "queda": ler_a_queda}
+    gravadores = {"reset": registrar_o_reset, "queda": registrar_a_queda}
+    ajuda = {
+        "reset": "grava o reset de um aparelho USB que o kernel disse",
+        "queda": "grava a queda: o disconnect e o new da mesma porta em menos de um segundo",
+    }
+    for nome in leitores:
+        filho = sub.add_parser(nome, help=ajuda[nome])
+        filho.add_argument("--quando", required=True)
+        filho.add_argument("--mensagem", required=True)
+        filho.add_argument("--diario", default="")
+        filho.add_argument("--raiz-usb", default="")
     args = parser.parse_args(argv)
-    if ler_o_reset(args.mensagem) is None:
+    if leitores[args.comando](args.mensagem) is None:
         return 3
     quando = carimbo_do_kernel(args.quando)
     if quando is None:
         return 4
     try:
-        entrada = registrar_o_reset(
+        entrada = gravadores[args.comando](
             args.mensagem, quando=quando,
             caminho=Path(args.diario) if args.diario else caminho_do_diario(),
             censo=ler_o_barramento(**({"raiz_usb": args.raiz_usb} if args.raiz_usb else {})))

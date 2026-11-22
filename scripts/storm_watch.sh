@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)|: reset [a-z -]+ usb device number [0-9]+ using|playstation 0005:[0-9a-f:.]+: probe with driver playstation failed"
+GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)|: reset [a-z -]+ usb device number [0-9]+ using|usb [0-9]+-[0-9.]+: usb disconnect, device number [0-9]+|usb [0-9]+-[0-9.]+: new [a-z -]+ usb device number [0-9]+ using|playstation 0005:[0-9a-f:.]+: probe with driver playstation failed"
 
 _escolher_awk() {
     if [[ -z "$(awk -W interactive 'BEGIN { exit 0 }' </dev/null 2>&1 || echo falhou)" ]]; then
@@ -15,7 +15,8 @@ _AWK_CMD="$(_escolher_awk)"
 classify() {
     ${_AWK_CMD:-awk} \
         -v janela="${HEFESTO_KERNELWATCH_JANELA_S:-10}" \
-        -v resumo="${HEFESTO_KERNELWATCH_RESUMO_S:-60}" '
+        -v resumo="${HEFESTO_KERNELWATCH_RESUMO_S:-60}" \
+        -v queda_s="${HEFESTO_KERNELWATCH_QUEDA_S:-1}" '
     # "2026-09-22T16:46:32-03:00" -> segundos. O fuso é ignorado de propósito:
     # só se compara hora com hora do MESMO fluxo. Aritmética de calendário
     # (dias desde 1970) em vez de mktime(), que nem todo awk tem.
@@ -29,6 +30,16 @@ classify() {
         doe = yoe * 365 + int(yoe / 4) - int(yoe / 100) + doy
         return (era * 146097 + doe - 719468) * 86400 \
             + substr(ts, 12, 2) * 3600 + substr(ts, 15, 2) * 60 + substr(ts, 18, 2)
+    }
+    # ".691289" da hora precisa do journal ("...:28.691289-03:00"); 0 quando a hora não a traz.
+    # Os dígitos viram inteiro e se dividem depois: o ponto decimal "+0" quebra no locale pt_BR.
+    function fracao(ts,   d, m, i) {
+        if (substr(ts, 20, 1) != ".") return 0
+        if (!match(substr(ts, 20), /^\.[0-9]+/)) return 0
+        d = substr(ts, 21, RLENGTH - 1)
+        m = 1
+        for (i = 0; i < length(d); i++) m *= 10
+        return (d + 0) / m
     }
     function fechar(k) {
         if (extra[k] > 0)
@@ -54,6 +65,8 @@ classify() {
         else if (low ~ /bluetooth: hci[0-9].*(timeout|failed|error)/) { tag = "[BT-HCI]"; borda = 1 }
         # short-iso: "TS host identificador: msg" → "TS [TAG] msg"
         ts = $1
+        tsp = ts
+        sub(/\.[0-9]+/, "", ts)      # o log segue com a hora em segundos; a precisa é só da queda
         rest = $0
         sub(/^[^ ]+ +/, "", rest)     # remove o timestamp
         sub(/^[^ ]+ +/, "", rest)     # remove o hostname
@@ -68,6 +81,37 @@ classify() {
                 dist = t - ult[j]
                 if (dist < 0) dist = -dist
                 if (dist > janela) fechar(j)
+            }
+        }
+        # A queda: "USB disconnect" e o "new ... USB device number" da MESMA porta em até queda_s
+        # (21/11/2026: 353 ms, na 3-1.4, sem reset no meio). Só controladora física: o pad virtual
+        # do produto (vhci_hcd) é desfeito e recriado pelo serviço, e não é queda de cabo. Quem
+        # sai de vez (o disconnect sem aparelho novo) não gera linha.
+        if (t >= 0) {
+            tf = t + fracao(tsp)
+            for (pq in saiu_em) if (tf - saiu_em[pq] > queda_s) delete saiu_em[pq]
+            baixo = tolower(rest)
+            if (baixo ~ /^usb [0-9]+-[0-9.]+: usb disconnect, device number [0-9]+/) {
+                split(rest, dq, " ")
+                pq = dq[2]; sub(/:$/, "", pq)
+                nq = rest; sub(/^.*device number /, "", nq); sub(/[^0-9].*$/, "", nq)
+                saiu_em[pq] = tf; saiu_n[pq] = nq
+                next
+            }
+            if (baixo ~ /^usb [0-9]+-[0-9.]+: new [a-z -]+ usb device number [0-9]+ using /) {
+                split(rest, dq, " ")
+                pq = dq[2]; sub(/:$/, "", pq)
+                if (pq in saiu_em) {
+                    hq = rest; sub(/^.* using /, "", hq); sub(/[^A-Za-z0-9_.-].*$/, "", hq)
+                    if (hq != "vhci_hcd") {
+                        vq = rest; sub(/^[^:]*: new /, "", vq); sub(/ USB device number.*$/, "", vq)
+                        dn = rest; sub(/^.*USB device number /, "", dn); sub(/[^0-9].*$/, "", dn)
+                        print tsp " [USB-QUEDA] usb " pq ": USB disconnect, device number " saiu_n[pq] ", voltou em " int((tf - saiu_em[pq]) * 1000 + 0.5) " ms como new " vq " USB device number " dn " using " hq
+                        fflush()
+                    }
+                    delete saiu_em[pq]; delete saiu_n[pq]
+                }
+                next
             }
         }
         if (!borda || t < 0) {
@@ -201,21 +245,22 @@ python_do_produto() {
     return 0
 }
 
-registrar_o_reset() {
-    local quando="$1" mensagem="$2" py rc
+levar_ao_diario() {
+    local o_que="$1" quando="$2" mensagem="$3" py rc artigo="o"
+    [[ "${o_que}" == "queda" ]] && artigo="a"
     py="$(python_do_produto)"
     if [[ -z "${py}" ]]; then
-        printf '# %s kernel-watch: o reset não entrou no usb-diario, o python do produto não foi achado: %s\n' \
-            "$(date '+%F %T')" "${mensagem}"
+        printf '# %s kernel-watch: %s %s não entrou no usb-diario, o python do produto não foi achado: %s\n' \
+            "$(date '+%F %T')" "${artigo}" "${o_que}" "${mensagem}"
         return 0
     fi
-    timeout 30 "${py}" -m hefesto_dualsense4unix.integrations.diario_do_usb reset \
+    timeout 30 "${py}" -m hefesto_dualsense4unix.integrations.diario_do_usb "${o_que}" \
         --quando "${quando}" --mensagem "${mensagem}" --raiz-usb "${SYSFS_USB}" \
         </dev/null >/dev/null 2>&1
     rc=$?
     if (( rc != 0 && rc != 3 )); then
-        printf '# %s kernel-watch: o reset não entrou no usb-diario (saída %d): %s\n' \
-            "$(date '+%F %T')" "${rc}" "${mensagem}"
+        printf '# %s kernel-watch: %s %s não entrou no usb-diario (saída %d): %s\n' \
+            "$(date '+%F %T')" "${artigo}" "${o_que}" "${rc}" "${mensagem}"
     fi
     return 0
 }
@@ -258,13 +303,21 @@ religar_em_fundo() {
 }
 
 anotar() {
-    local trava="${1:-}" linha porta lugar reset_de="" reset_em=""
+    local trava="${1:-}" linha porta lugar reset_de="" reset_em="" queda_de="" queda_em=""
     while IFS= read -r linha || [[ -n "${linha}" ]]; do
         reset_de=""
+        queda_de=""
         if [[ "${linha}" == *" [USB-RESET] "* && "${linha}" != *" · lugar "* ]]; then
             reset_em="${linha%% *}"
             reset_de="${linha#* \[USB-RESET\] }"
             porta="$(porta_da_mensagem "${reset_de}")"
+            lugar=""
+            [[ -n "${porta}" ]] && lugar="$(lugar_da_porta "${porta}")"
+            [[ -n "${lugar}" ]] && linha="${linha} · lugar ${lugar}"
+        elif [[ "${linha}" == *" [USB-QUEDA] "* && "${linha}" != *" · lugar "* ]]; then
+            queda_em="${linha%% *}"
+            queda_de="${linha#* \[USB-QUEDA\] }"
+            porta="$(porta_da_mensagem "${queda_de}")"
             lugar=""
             [[ -n "${porta}" ]] && lugar="$(lugar_da_porta "${porta}")"
             [[ -n "${lugar}" ]] && linha="${linha} · lugar ${lugar}"
@@ -275,7 +328,8 @@ anotar() {
             [[ -n "${lugar}" ]] && linha="${linha} · lugar ${lugar}"
         fi
         printf '%s\n' "${linha}"
-        [[ -n "${reset_de}" ]] && registrar_o_reset "${reset_em}" "${reset_de}"
+        [[ -n "${reset_de}" ]] && levar_ao_diario reset "${reset_em}" "${reset_de}"
+        [[ -n "${queda_de}" ]] && levar_ao_diario queda "${queda_em}" "${queda_de}"
         if [[ -n "${trava}" ]] && pede_religar "${linha}"; then
             religar_em_fundo "${trava}"
         fi
@@ -355,13 +409,13 @@ mapfile -t DESDE < <(desde_do_journal "${STATE_DIR}/kernel-watch.boot" \
 if [[ "${DESDE[0]:-}" == "-b" ]]; then
     echo "# $(date '+%F %T') kernel-watch: primeira volta deste boot — relendo o arranque (o -71 da enumeração nasce antes da vigia)" >>"${LOG}"
 fi
-echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 USB-RESET JOYCON JOYCON-PROBE PROBE-PERDIDA FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo; o -71 e o reset levam o lugar, e o reset entra no usb-diario; a probe perdida chama o religar)" >>"${LOG}"
+echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 USB-RESET USB-QUEDA JOYCON JOYCON-PROBE PROBE-PERDIDA FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo; o -71, o reset e a queda levam o lugar, e o reset e a queda entram no usb-diario; a probe perdida chama o religar)" >>"${LOG}"
 
 bt_delta_loop &
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 trap 'exit 0' INT TERM
 
-journalctl -f "${DESDE[@]}" -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
+journalctl -f "${DESDE[@]}" -o short-iso-precise --case-sensitive=false --grep="${GREP_UNION}" \
     _TRANSPORT=kernel + _SYSTEMD_UNIT=bluetooth.service \
     2>>"${LOG}" | classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}" &
 wait "$!"

@@ -3311,7 +3311,7 @@ check_resets_do_usb() {
     local py saida marca texto
     [[ -f "${diario}" ]] || return 0
     py="$(_python_do_produto)"
-    [[ -n "${py}" ]] || { info "sem python para contar os resets USB por porta"; return; }
+    [[ -n "${py}" ]] || { info "sem python para contar os resets e as quedas USB por porta"; return; }
     saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - "${diario}" <<'PY' 2>/dev/null
 import os
 import sys
@@ -3330,7 +3330,7 @@ for marca, texto in laudo_dos_resets_do_diario(Path(sys.argv[1])):
 PY
 )" || saida=""
     if [[ -z "${saida}" || "${saida}" == "sem-produto" ]]; then
-        info "NÃO SEI contar os resets USB por porta: o storm_doctor não está ao alcance do python ${py}"
+        info "NÃO SEI contar os resets e as quedas USB por porta: o storm_doctor não está ao alcance do python ${py}"
         return
     fi
     while IFS=$'\t' read -r marca texto; do
@@ -3338,8 +3338,10 @@ PY
         case "${marca}" in
             total) warn "${texto}" ;;
             porta) info "  ${texto}" ;;
-            hub) warn "${texto}. É o suspeito a trocar primeiro: ligue o aparelho direto numa porta do computador, ou troque o hub (de preferência um com fonte própria)" ;;
-            vazio) info "${texto}" ;;
+            hub|queda-hub) warn "${texto}. É o suspeito a trocar primeiro: ligue o aparelho direto numa porta do computador, ou troque o hub (de preferência um com fonte própria)" ;;
+            queda-total) warn "${texto}" ;;
+            queda-porta) info "  ${texto}" ;;
+            vazio|queda-vazio) info "${texto}" ;;
         esac
     done <<<"${saida}"
 }

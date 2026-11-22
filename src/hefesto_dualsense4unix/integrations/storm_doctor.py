@@ -894,21 +894,13 @@ def _lugar_da_entrada(entrada: Mapping[str, Any]) -> str:
     return lugar_de(controladora, devpath) or porta
 
 
-def contar_os_resets(
-    entradas: Iterable[Mapping[str, Any]],
-    *,
-    agora: float,
-    dias: int = JANELA_DOS_RESETS_DIAS,
+def _contar_por_porta(
+    entradas: Iterable[Mapping[str, Any]], o_que: str, *, agora: float, dias: int
 ) -> list[ResetsDaPorta]:
-    """Os ``resetou`` do ``usb-diario`` dos últimos ``dias``, por porta, do mais frequente ao menos.
-
-    A porta é o lugar físico (controladora e caminho), não o número do barramento, que muda de boot
-    para boot. Cada porta conta só os resets da própria porta, seja qual for o aparelho encaixado.
-    """
     corte = agora - dias * 86400.0
     por_lugar: dict[str, list[Mapping[str, Any]]] = {}
     for entrada in entradas:
-        if entrada.get("o_que") != "resetou" or float(entrada.get("carimbo") or 0.0) < corte:
+        if entrada.get("o_que") != o_que or float(entrada.get("carimbo") or 0.0) < corte:
             continue
         por_lugar.setdefault(_lugar_da_entrada(entrada), []).append(entrada)
     contagem: list[ResetsDaPorta] = []
@@ -925,17 +917,41 @@ def contar_os_resets(
     return sorted(contagem, key=lambda c: (-c.quantos, c.porta))
 
 
-def laudo_dos_resets(contagem: Sequence[ResetsDaPorta]) -> list[tuple[str, str]]:
-    """``(marca, texto)``: ``total``, ``porta`` (uma por porta), ``hub`` ou ``vazio``.
+def contar_os_resets(
+    entradas: Iterable[Mapping[str, Any]],
+    *,
+    agora: float,
+    dias: int = JANELA_DOS_RESETS_DIAS,
+) -> list[ResetsDaPorta]:
+    """Os ``resetou`` do ``usb-diario`` dos últimos ``dias``, por porta, do mais frequente ao menos.
 
-    O ``hub`` só sai quando há reset atrás de hub e nenhum em porta do computador.
+    A porta é o lugar físico (controladora e caminho), não o número do barramento, que muda de boot
+    para boot. Cada porta conta só os resets da própria porta, seja qual for o aparelho encaixado.
     """
+    return _contar_por_porta(entradas, "resetou", agora=agora, dias=dias)
+
+
+def contar_as_quedas_do_cabo(
+    entradas: Iterable[Mapping[str, Any]],
+    *,
+    agora: float,
+    dias: int = JANELA_DOS_RESETS_DIAS,
+) -> list[ResetsDaPorta]:
+    """Os ``caiu`` do ``usb-diario`` dos últimos ``dias``, por porta, do mais frequente ao menos.
+
+    A queda é o aparelho que sai e volta à mesma porta em menos de um segundo, sem reset. Conta
+    como o reset: pelo lugar físico, seja qual for o aparelho encaixado.
+    """
+    return _contar_por_porta(entradas, "caiu", agora=agora, dias=dias)
+
+
+def _laudo_por_porta(
+    contagem: Sequence[ResetsDaPorta], *, vazio: str, total: str, hub: str
+) -> list[tuple[str, str]]:
     if not contagem:
-        return [("vazio", "nenhum reset de aparelho USB registrado nos últimos "
-                 f"{JANELA_DOS_RESETS_DIAS} dias")]
-    total = sum(c.quantos for c in contagem)
-    laudo = [("total", f"{total} reset(s) de aparelho USB nos últimos {JANELA_DOS_RESETS_DIAS} "
-              f"dias, em {len(contagem)} porta(s)")]
+        return [("vazio", vazio)]
+    soma = sum(c.quantos for c in contagem)
+    laudo = [("total", total.format(soma=soma, portas=len(contagem), dias=JANELA_DOS_RESETS_DIAS))]
     for c in contagem:
         atras = f", atrás do hub {c.hubs[0]}" if c.hubs else ", direto no computador"
         quem = f" ({', '.join(c.tipos)})" if c.tipos else ""
@@ -945,20 +961,56 @@ def laudo_dos_resets(contagem: Sequence[ResetsDaPorta]) -> list[tuple[str, str]]
     com_hub = [c for c in contagem if c.hubs]
     if com_hub and len(com_hub) == len(contagem):
         hubs = sorted({c.hubs[0] for c in com_hub})
-        laudo.append(("hub", f"todos os resets foram em portas atrás de hub ({', '.join(hubs)}) e "
-                      "nenhum em porta do computador: a queda acompanha o hub"))
+        laudo.append(("hub", hub.format(hubs=", ".join(hubs))))
     return laudo
+
+
+def laudo_dos_resets(contagem: Sequence[ResetsDaPorta]) -> list[tuple[str, str]]:
+    """``(marca, texto)``: ``total``, ``porta`` (uma por porta), ``hub`` ou ``vazio``.
+
+    O ``hub`` só sai quando há reset atrás de hub e nenhum em porta do computador.
+    """
+    return _laudo_por_porta(
+        contagem,
+        vazio=f"nenhum reset de aparelho USB registrado nos últimos {JANELA_DOS_RESETS_DIAS} dias",
+        total="{soma} reset(s) de aparelho USB nos últimos {dias} dias, em {portas} porta(s)",
+        hub="todos os resets foram em portas atrás de hub ({hubs}) e nenhum em porta do "
+            "computador: a queda acompanha o hub",
+    )
+
+
+def laudo_das_quedas_do_cabo(contagem: Sequence[ResetsDaPorta]) -> list[tuple[str, str]]:
+    """O mesmo laudo para as quedas sem reset: ``total``, ``porta``, ``hub`` ou ``vazio``."""
+    return _laudo_por_porta(
+        contagem,
+        vazio="nenhuma queda de aparelho USB registrada nos últimos "
+              f"{JANELA_DOS_RESETS_DIAS} dias",
+        total="{soma} queda(s) de aparelho USB nos últimos {dias} dias, em {portas} porta(s): "
+              "o aparelho saiu e voltou à mesma porta em menos de um segundo, sem reset",
+        hub="todas as quedas foram em portas atrás de hub ({hubs}) e nenhuma em porta do "
+            "computador: a queda acompanha o hub",
+    )
 
 
 def laudo_dos_resets_do_diario(
     caminho: Path | None = None, *, agora: float | None = None
 ) -> list[tuple[str, str]]:
-    """O laudo dos resets lido do ``usb-diario`` (com o girado)."""
+    """O laudo dos resets e das quedas lido do ``usb-diario`` (com o girado).
+
+    Os resets saem com as marcas ``total``, ``porta``, ``hub`` e ``vazio``; as quedas, com as
+    mesmas marcas prefixadas por ``queda-``.
+    """
     from hefesto_dualsense4unix.integrations import diario_do_usb
 
     entradas = diario_do_usb.ler(caminho)
-    return laudo_dos_resets(
-        contar_os_resets(entradas, agora=time.time() if agora is None else agora))
+    quando = time.time() if agora is None else agora
+    laudo = laudo_dos_resets(contar_os_resets(entradas, agora=quando))
+    laudo += [
+        (f"queda-{marca}", texto)
+        for marca, texto in laudo_das_quedas_do_cabo(
+            contar_as_quedas_do_cabo(entradas, agora=quando))
+    ]
+    return laudo
 
 
 def _safe_read(path: Path) -> str:
@@ -989,6 +1041,7 @@ __all__ = [
     "check_steam_input",
     "check_wireplumber",
     "classificar_o_historico",
+    "contar_as_quedas_do_cabo",
     "contar_os_resets",
     "contar_placas_dualsense",
     "controles_no_cabo",
@@ -996,6 +1049,7 @@ __all__ = [
     "formato_desta_instalacao",
     "gesto_de_atualizar",
     "gesto_de_instalar",
+    "laudo_das_quedas_do_cabo",
     "laudo_dos_resets",
     "laudo_dos_resets_do_diario",
     "ler_eventos_do_radio",

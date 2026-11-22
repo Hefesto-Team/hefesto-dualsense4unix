@@ -5,12 +5,14 @@ Um socket ``NETLINK_KOBJECT_UEVENT``, grupo do kernel, só stdlib e sem root: a 
 (:class:`~hefesto_dualsense4unix.integrations.diario_do_usb.Comparador`). Sem netlink (sandbox,
 ou o socket que caiu), o mesmo laço relê a cada :data:`RELEITURA_SEM_NETLINK_S`, a reenumeração se
 prova pelo ``devnum``, e a abertura do socket se repete com recuo de :data:`RECUO_INICIAL_S` até
-:data:`RECUO_MAXIMO_S`.
+:data:`RECUO_MAXIMO_S`. O ``add`` e o ``remove`` de todo aparelho chegam ao comparador com a hora
+do aviso, que decide a volta.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import errno
 import socket
 import time
@@ -87,8 +89,17 @@ def a_volta_quer_saber(dado: bytes) -> bool:
     )
 
 
+_ASSINANTES: list[Callable[[bytes], None]] = []
+
+
 def _avisar_a_volta(daemon: Any, dado: bytes) -> None:
-    """O sino da volta toca assim que o kernel diz, antes de o censo assentar."""
+    """O sino da volta toca assim que o kernel diz, antes de o censo assentar.
+
+    O ``add`` e o ``remove`` de todo aparelho USB vão antes aos assinantes (o laço assina o
+    :meth:`Ouvido.ouviu`), com a hora do aviso, não a da leitura do censo.
+    """
+    for assinante in tuple(_ASSINANTES):
+        assinante(dado)
     if not a_volta_quer_saber(dado):
         return
     from hefesto_dualsense4unix.daemon.connection import acordar_a_volta
@@ -145,11 +156,28 @@ class Ouvido:
             relogio=relogio,
             agora=agora,
             reset_da_porta=self._o_ultimo_reset_da,
+            queda_da_porta=self._a_ultima_queda_da,
         )
         self._gravado: dict[str, Any] = {}
 
     def _o_ultimo_reset_da(self, porta: str) -> float | None:
         return diario_do_usb.ultimo_reset_da_porta(diario_do_usb.ler(self.diario), porta)
+
+    def _a_ultima_queda_da(self, porta: str) -> float | None:
+        return diario_do_usb.ultima_queda_da_porta(diario_do_usb.ler(self.diario), porta)
+
+    def ouviu(self, dado: bytes) -> None:
+        """O aviso do kernel de que um aparelho USB entrou ou saiu, com a hora em que chegou."""
+        if not interessa(dado):
+            return
+        campos = eventos_de(dado)
+        caminho = campos.get("DEVPATH", "").rsplit("/", 1)[-1]
+        if not caminho:
+            return
+        if campos["ACTION"] == "add":
+            self.comparador.chegou(caminho)
+        else:
+            self.comparador.partiu(caminho)
 
     def _registrar(self, o_que: str, campos: dict[str, Any], **extras: Any) -> None:
         diario_do_usb.registrar(
@@ -257,6 +285,7 @@ async def ouvido_do_usb_loop(
     sock = _abrir_sem_cair(abrir)
     recuo = recuo_inicial
     tentar_em = relogio() + recuo
+    _ASSINANTES.append(ouvido.ouviu)
     try:
         await asyncio.to_thread(ouvido.comecar, com_netlink=sock is not None)
         while not daemon._is_stopping():
@@ -283,6 +312,8 @@ async def ouvido_do_usb_loop(
                     logger.info("ouvido_do_usb_netlink_reaberto")
                     recuo = recuo_inicial
     finally:
+        with contextlib.suppress(ValueError):
+            _ASSINANTES.remove(ouvido.ouviu)
         if sock is not None:
             sock.close()
         try:
