@@ -1862,21 +1862,38 @@ class _PedidosDoVolumeDoMic(PedidosEmFioProprio):
     def __init__(self) -> None:
         super().__init__("hefesto-volume-do-mic")
 
+    def pedir(self, chave: str, pedido: Any) -> None:
+        """Guarda o volume no dono (o controle) antes de pedir: o nó que renascer o recebe."""
+        _controller, volume, uniq, _origin = pedido
+        if uniq:
+            from hefesto_dualsense4unix.integrations.audio_control import (
+                guardar_o_volume_do_controle,
+            )
+
+            guardar_o_volume_do_controle(uniq, volume)
+        super().pedir(chave, pedido)
+
     def _atender(self, chave: str, pedido: Any) -> None:
         controller, volume, uniq, origin = pedido
         from hefesto_dualsense4unix.integrations.audio_control import (
             definir_volume_da_captura,
             fonte_de_captura_do_controle,
             fonte_de_captura_do_uniq,
+            registrar_o_desfecho_do_volume,
         )
 
         try:
             fonte = fonte_de_captura_do_uniq(uniq) if uniq else fonte_de_captura_do_controle()
             if not fonte:
-                logger.debug("profile_mic_sem_fonte", origin=origin, uniq=uniq)
+                registrar_o_desfecho_do_volume(
+                    uniq, "sem_fonte", volume=volume, origem=origin
+                )
                 return
             if not definir_volume_da_captura(volume, fonte=fonte):
                 logger.warning("profile_mic_volume_nao_aplicado", volume=volume, origin=origin)
+                registrar_o_desfecho_do_volume(
+                    uniq, "recusado", volume=volume, origem=origin, fonte=fonte
+                )
                 return
             aparelho = getattr(controller, "set_microphone_volume", None)
             if callable(aparelho):
@@ -1885,6 +1902,9 @@ class _PedidosDoVolumeDoMic(PedidosEmFioProprio):
                 except Exception as exc:
                     logger.warning("profile_mic_byte_do_aparelho_falhou", uniq=uniq, err=str(exc))
             logger.info("profile_mic_volume_applied", volume=volume, fonte=fonte, origin=origin)
+            registrar_o_desfecho_do_volume(
+                uniq, "aplicado", volume=volume, origem=origin, fonte=fonte
+            )
         except Exception as exc:
             logger.warning(
                 "profile_mic_volume_apply_failed", volume=volume, origin=origin, err=str(exc)

@@ -9,7 +9,7 @@ import threading
 from typing import Any
 
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as sem_o_endereco
-from hefesto_dualsense4unix.integrations import microfone_filtrado
+from hefesto_dualsense4unix.integrations import audio_control, microfone_filtrado
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_AMOSTRAS_POR_QUADRO,
     MIC_BYTES_POR_AMOSTRA,
@@ -441,11 +441,18 @@ def _reerguer(
 
 
 def _filtrar(uniq: str, nome: str, descricao: str, lancar: Any) -> None:
-    """A voz filtrada sobre o canal que acabou de subir. Nunca levanta."""
+    """A voz filtrada sobre o canal que acabou de subir. Nunca levanta.
+
+    Sem voz (o filtro não subiu), o canal cru é o nó do controle e é ele que o dono do volume
+    espera aparecer.
+    """
     try:
-        microfone_filtrado.abrir(uniq, nome, descricao, lancar=lancar)
+        voz = microfone_filtrado.abrir(uniq, nome, descricao, lancar=lancar)
     except Exception:
         logger.warning("canal_do_mic_filtro_nao_subiu", exc_info=True)
+        voz = ""
+    if not voz:
+        audio_control.avisar_no_de_pe(uniq, nome)
 
 
 def renomear(

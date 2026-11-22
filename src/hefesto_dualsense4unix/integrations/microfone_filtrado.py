@@ -22,6 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import audio_control
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     PRIORIDADE_SESSAO_DA_PONTE,
 )
@@ -193,7 +194,11 @@ def abrir(
     *,
     lancar: Callable[[list[str]], Any] | None = None,
 ) -> str:
-    """Sobe o filtro deste controle sobre ``canal``. Devolve o nome da voz, "" se não subiu."""
+    """Sobe o filtro deste controle sobre ``canal``. Devolve o nome da voz, "" se não subiu.
+
+    A voz que subiu é avisada ao dono do volume (:func:`audio_control.avisar_no_de_pe`): o nó
+    novo nasce no volume de nascença e o do controle volta a ele quando ele aparece no grafo.
+    """
     voz = nome_da_voz(canal)
     if not uniq or not voz:
         return ""
@@ -220,6 +225,7 @@ def abrir(
     with _TRANCA:
         _DE_PE[uniq] = _Filtro(canal, voz, descricao, caminho, proc)
     logger.info("microfone_filtrado_de_pe", voz=voz)
+    audio_control.avisar_no_de_pe(uniq, voz)
     return voz
 
 

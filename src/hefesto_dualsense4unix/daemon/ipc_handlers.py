@@ -4559,14 +4559,18 @@ class IpcHandlersMixin:
             definir_volume_da_captura,
             fonte_de_captura_do_controle,
             fonte_de_captura_do_uniq,
+            guardar_o_volume_do_controle,
+            registrar_o_desfecho_do_volume,
             volume_da_captura,
         )
 
         if uniq:
+            guardar_o_volume_do_controle(uniq, volume)
             fonte = await asyncio.to_thread(
                 fonte_de_captura_do_uniq,
                 uniq, mesa=recado_do_microfone.mesa_de_agora(self.daemon))
             if not fonte:
+                registrar_o_desfecho_do_volume(uniq, "sem_fonte", volume=volume, origem="tela")
                 return {"status": "sem_fonte", "fonte": None, "volume": None,
                         "por_uniq": True}
             por_uniq = True
@@ -4576,6 +4580,9 @@ class IpcHandlersMixin:
         if not fonte:
             return {"status": "sem_fonte", "fonte": None, "volume": None}
         ok = await asyncio.to_thread(definir_volume_da_captura, volume, fonte=fonte)
+        registrar_o_desfecho_do_volume(
+            uniq, "aplicado" if ok else "recusado", volume=volume, origem="tela", fonte=fonte
+        )
         aparelho = None
         escritor = getattr(self.controller, "set_microphone_volume", None)
         if callable(escritor):

@@ -8,14 +8,25 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import threading
+import time
 from typing import Literal
 
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 SUBPROCESS_TIMEOUT_SEC = 2.0
 _MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = ("dualsense",)
+
+TETO_DO_NO_NASCER_S = 8.0
+PASSO_DO_NO_NASCER_S = 0.25
+
+_TRANCA_DO_VOLUME = threading.Lock()
+_VOLUME_DO_CONTROLE: dict[str, int] = {}
+_GERACAO_DO_AVISO: dict[str, int] = {}
+_FIOS_DO_AVISO: list[threading.Thread] = []
 
 
 def fonte_de_captura_do_controle() -> str | None:
@@ -235,6 +246,139 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
     return True
 
 
+def _chave_do_controle(uniq: str | None) -> str:
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    texto = str(uniq or "")
+    return (norm_mac(texto) if texto else None) or texto
+
+
+def guardar_o_volume_do_controle(uniq: str | None, volume_pct: int) -> None:
+    """O último volume pedido para o microfone DESTE controle: o dono é o controle, não o nó.
+
+    Perfil (na ativação e na volta) e `mic.volume.set` escrevem aqui, e vale o último. O nó que
+    renasce nasce no volume de nascença; :func:`avisar_no_de_pe` devolve este valor a ele. Sem
+    `uniq` não há dono e nada se guarda.
+    """
+    chave = _chave_do_controle(uniq)
+    if not chave:
+        return
+    with _TRANCA_DO_VOLUME:
+        _VOLUME_DO_CONTROLE[chave] = max(0, min(100, int(volume_pct)))
+
+
+def volume_guardado_do_controle(uniq: str | None) -> int | None:
+    """O volume guardado deste controle, ou `None` (ninguém pediu)."""
+    with _TRANCA_DO_VOLUME:
+        return _VOLUME_DO_CONTROLE.get(_chave_do_controle(uniq))
+
+
+def esquecer_os_volumes_dos_controles() -> None:
+    """Zera a memória dos volumes e dos avisos: a régua começa limpa."""
+    with _TRANCA_DO_VOLUME:
+        _VOLUME_DO_CONTROLE.clear()
+        _GERACAO_DO_AVISO.clear()
+
+
+def registrar_o_desfecho_do_volume(
+    uniq: str | None,
+    desfecho: Literal["aplicado", "sem_fonte", "recusado"],
+    *,
+    volume: int | None,
+    origem: str,
+    fonte: str | None = None,
+) -> None:
+    """Uma linha `info` por episódio do volume do microfone, por controle."""
+    logger.info(
+        "mic_volume_desfecho",
+        controle=mascarar(str(uniq)) if uniq else "global",
+        desfecho=desfecho,
+        volume=volume,
+        origem=origem,
+        fonte=fonte,
+    )
+
+
+def avisar_no_de_pe(uniq: str | None, no: str) -> threading.Thread | None:
+    """O nó `no` deste controle acabou de ser lançado: o volume guardado volta a ele ao nascer.
+
+    Quem faz o canal ou a voz renascer avisa aqui. Um fio próprio espera o nó aparecer em
+    `pactl list sources short` (no máximo :data:`TETO_DO_NO_NASCER_S`) e escreve nele o volume
+    guardado do controle; sem volume guardado, nada se escreve. Uma escrita recusada (o nome
+    ainda é o do nó que morreu) segue esperando o nó novo dentro do mesmo teto. Um aviso novo do
+    mesmo controle aposenta o fio anterior. O fio nasce sempre, com ou sem volume guardado, para
+    o pedido que chega depois do aviso também encontrar o nó.
+    """
+    chave = _chave_do_controle(uniq)
+    if not chave or not no:
+        return None
+    with _TRANCA_DO_VOLUME:
+        geracao = _GERACAO_DO_AVISO.get(chave, 0) + 1
+        _GERACAO_DO_AVISO[chave] = geracao
+        _FIOS_DO_AVISO[:] = [f for f in _FIOS_DO_AVISO if f.is_alive()]
+        fio = threading.Thread(
+            target=_esperar_o_no,
+            args=(chave, str(uniq), no, geracao),
+            name="hefesto-volume-do-no",
+            daemon=True,
+        )
+        _FIOS_DO_AVISO.append(fio)
+    fio.start()
+    return fio
+
+
+def esperar_os_avisos(teto_s: float) -> bool:
+    """Todo fio de aviso terminou dentro de ``teto_s``?"""
+    with _TRANCA_DO_VOLUME:
+        fios = list(_FIOS_DO_AVISO)
+    limite = time.monotonic() + teto_s
+    for fio in fios:
+        fio.join(max(0.0, limite - time.monotonic()))
+    return not any(f.is_alive() for f in fios)
+
+
+def _aviso_vigente(chave: str, geracao: int) -> bool:
+    with _TRANCA_DO_VOLUME:
+        return _GERACAO_DO_AVISO.get(chave) == geracao
+
+
+def _no_listado(no: str) -> bool:
+    curta = _texto_do_pactl(["pactl", "list", "sources", "short"])
+    for linha in (curta or "").splitlines():
+        partes = linha.split("\t")
+        if len(partes) >= 2 and partes[1].strip() == no:
+            return True
+    return False
+
+
+def _esperar_o_no(chave: str, uniq: str, no: str, geracao: int) -> None:
+    ultimo: Literal["sem_fonte", "recusado"] = "sem_fonte"
+    voltas = max(1, int(TETO_DO_NO_NASCER_S / max(PASSO_DO_NO_NASCER_S, 1e-3)))
+    try:
+        for volta in range(voltas):
+            if not _aviso_vigente(chave, geracao):
+                return
+            if _no_listado(no):
+                volume = volume_guardado_do_controle(chave)
+                if volume is None:
+                    return
+                if definir_volume_da_captura(volume, fonte=no):
+                    registrar_o_desfecho_do_volume(
+                        uniq, "aplicado", volume=volume, origem="no_de_pe", fonte=no
+                    )
+                    return
+                ultimo = "recusado"
+            if volta + 1 < voltas:
+                time.sleep(PASSO_DO_NO_NASCER_S)
+        if _aviso_vigente(chave, geracao):
+            registrar_o_desfecho_do_volume(
+                uniq, ultimo, volume=volume_guardado_do_controle(chave),
+                origem="no_de_pe", fonte=no,
+            )
+    except Exception as exc:
+        logger.warning("mic_volume_do_no_falhou", fonte=no, err=str(exc))
+
+
 def volume_da_captura(*, fonte: str | None) -> int | None:
     """O volume ATUAL da captura do controle, em por cento, ou `None`."""
     alvo = fonte
@@ -313,10 +457,18 @@ def _avisar(evento: str, exc: BaseException, **campos: object) -> None:
 
 
 __all__ = [
+    "PASSO_DO_NO_NASCER_S",
     "SUBPROCESS_TIMEOUT_SEC",
+    "TETO_DO_NO_NASCER_S",
     "PactlEmRecuoError",
+    "avisar_no_de_pe",
     "definir_volume_da_captura",
+    "esperar_os_avisos",
+    "esquecer_os_volumes_dos_controles",
     "fonte_de_captura_do_controle",
     "fonte_de_captura_do_uniq",
+    "guardar_o_volume_do_controle",
+    "registrar_o_desfecho_do_volume",
     "volume_da_captura",
+    "volume_guardado_do_controle",
 ]
