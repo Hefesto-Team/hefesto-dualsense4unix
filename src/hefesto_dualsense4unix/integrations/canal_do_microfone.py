@@ -239,6 +239,7 @@ _ALIMENTANDO: dict[str, _Alimentador] = {}
 _FONTE_PEDIDA: dict[str, str] = {}
 
 _MUDO_ESCRITO: dict[str, bool] = {}
+_TRAVAS_DO_CANAL: dict[str, threading.Lock] = {}
 _TRANCA = threading.Lock()
 
 
@@ -310,8 +311,9 @@ def abrir(
     if not nome:
         logger.debug("canal_do_mic_sem_identidade", extra={"uniq": uniq})
         return None
-    with _TRANCA:
-        ja = _DE_PE.get(uniq)
+    with _trava_do_canal(uniq):
+        with _TRANCA:
+            ja = _DE_PE.get(uniq)
         if ja is not None:
             return ja
         construir = fabrica or SourceVirtualPipeWire
@@ -323,38 +325,80 @@ def abrir(
         except Exception:
             logger.warning("canal_do_mic_nao_subiu", exc_info=True)
             return None
-        _DE_PE[uniq] = source
-        _FONTE_PEDIDA[uniq] = str(fonte or "")
         _passar_a_escolha_do_usuario(uniq, nome)
-        _ligar_o_canal(uniq, source, fonte, lancar=lancar, rodar=rodar)
+        escrito, alimentador = _ligar_o_canal(uniq, source, fonte, lancar=lancar, rodar=rodar)
+        with _TRANCA:
+            _DE_PE[uniq] = source
+            _FONTE_PEDIDA[uniq] = str(fonte or "")
+            _guardar_o_ligado(uniq, escrito, alimentador)
+        _seguir_a_palavra_que_mudou(uniq, escrito, lancar=lancar, rodar=rodar)
     _filtrar(uniq, nome, descricao, filtrar)
     return source
 
 
-def _ligar_o_canal(uniq: str, source: Any, fonte: str | None, *, lancar: Any, rodar: Any) -> None:
-    """O mudo escrito e o alimentador no ar, no canal que acabou de subir. Chamado com a trava.
+def _trava_do_canal(uniq: str) -> threading.Lock:
+    """A trava de quem constrói ou refaz o canal DESTE controle: serializa o `abrir`, o
+    renascimento e o `fechar`, e deixa a `_TRANCA` das tabelas livre enquanto o processo filho roda.
+    """
+    with _TRANCA:
+        return _TRAVAS_DO_CANAL.setdefault(uniq, threading.Lock())
 
+
+def _guardar_o_ligado(
+    uniq: str, escrito: bool | None, alimentador: _Alimentador | None
+) -> None:
+    """O mudo escrito e o alimentador entram nas tabelas. Chamado com a trava."""
+    if escrito is not None:
+        _MUDO_ESCRITO[uniq] = escrito
+    if alimentador is not None:
+        _ALIMENTANDO[uniq] = alimentador
+
+
+def _seguir_a_palavra_que_mudou(
+    uniq: str, escrito: bool | None, *, lancar: Any, rodar: Any
+) -> None:
+    """A palavra que mudou enquanto o canal subia, fora das tabelas, chega ao nó já publicado."""
+    if escrito is None:
+        return
+    agora = _a_palavra_do_usuario(uniq) is False
+    if agora is not escrito:
+        escrever_o_mudo(uniq, agora, lancar=lancar, rodar=rodar)
+
+
+def _ligar_o_canal(
+    uniq: str, source: Any, fonte: str | None, *, lancar: Any, rodar: Any
+) -> tuple[bool | None, _Alimentador | None]:
+    """O mudo escrito e o alimentador no ar, no canal que acabou de subir. Fora da trava.
+
+    Devolve `(mudo escrito ou None, alimentador de pé ou None)` para quem publica nas tabelas.
     Com o microfone desligado por quem usa (a palavra `False`), o nó nasce calado e o alimentador
     não nasce: a captura do aparelho no cabo fica fechada até a palavra mudar
     (D-2011-O-MICROFONE-DESLIGADO-NAO-ABRE-A-CAPTURA-DO-CABO).
     """
     mudo = _a_palavra_do_usuario(uniq) is False
+    escrito: bool | None = None
     if escrever_o_mudo_no_no(source.nome, mudo, rodar=rodar):
-        _MUDO_ESCRITO[uniq] = mudo
+        escrito = mudo
     else:
         logger.warning("canal_do_mic_nao_escreveu_o_mudo_ao_nascer", extra={"source": source.nome})
     if not fonte:
-        return
+        return escrito, None
     if mudo:
         logger.info("canal_do_mic_alimentador_espera_a_palavra", extra={"uniq": uniq})
-        return
-    _erguer_o_alimentador(uniq, source, fonte, lancar=lancar)
+        return escrito, None
+    return escrito, _novo_alimentador(uniq, source, fonte, lancar=lancar)
+
+
+def _novo_alimentador(uniq: str, source: Any, fonte: str, *, lancar: Any) -> _Alimentador | None:
+    """O `parec` deste canal no ar, pela fonte pedida; `None` = não subiu."""
+    alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
+    return alimentador if alimentador.iniciar() else None
 
 
 def _erguer_o_alimentador(uniq: str, source: Any, fonte: str, *, lancar: Any) -> bool:
-    """O `parec` deste canal no ar, pela fonte pedida. Chamado com a trava."""
-    alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
-    if not alimentador.iniciar():
+    """O `parec` deste canal no ar e na tabela. Chamado com a trava."""
+    alimentador = _novo_alimentador(uniq, source, fonte, lancar=lancar)
+    if alimentador is None:
         return False
     _ALIMENTANDO[uniq] = alimentador
     return True
@@ -430,13 +474,18 @@ def _reerguer(
             alimentador.parar()
         except Exception:
             logger.warning("canal_do_mic_alimentador_nao_parou", exc_info=True)
-    with _TRANCA:
-        if _DE_PE.get(uniq) is not source:
-            return False
+    with _trava_do_canal(uniq):
+        with _TRANCA:
+            if _DE_PE.get(uniq) is not source:
+                return False
+            fonte = _FONTE_PEDIDA.get(uniq) or None
         if not source.renascer():
             logger.warning("canal_do_mic_nao_renasceu_no_servidor", extra={"uniq": uniq})
             return False
-        _ligar_o_canal(uniq, source, _FONTE_PEDIDA.get(uniq) or None, lancar=lancar, rodar=rodar)
+        escrito, novo = _ligar_o_canal(uniq, source, fonte, lancar=lancar, rodar=rodar)
+        with _TRANCA:
+            _guardar_o_ligado(uniq, escrito, novo)
+        _seguir_a_palavra_que_mudou(uniq, escrito, lancar=lancar, rodar=rodar)
     return True
 
 
@@ -552,7 +601,7 @@ def canal_de_pe(uniq: str) -> SourceVirtualPipeWire | None:
 
 def fechar(uniq: str) -> bool:
     """Derruba o canal deste controle. False = não havia nada de pé."""
-    with _TRANCA:
+    with _trava_do_canal(uniq), _TRANCA:
         source = _DE_PE.pop(uniq, None)
         alimentador = _ALIMENTANDO.pop(uniq, None)
         _FONTE_PEDIDA.pop(uniq, None)

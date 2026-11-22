@@ -48,6 +48,8 @@ SRCVERSION_DO_0003_SEM_A_MARCA: frozenset[str] = frozenset({"CFB81A3D4C7FAA41489
 
 MOTIVO_SEM_A_GUARDA = "driver_sem_a_guarda_do_audio"
 
+_TRANCA_DO_MUDO_DOS_CANAIS = threading.Lock()
+
 
 def o_driver_le_este_no(caminho: str, raiz_hidraw: str | None = None) -> bool:
     """O nó `/dev/hidrawN` está ligado ao driver `playstation`?"""
@@ -424,6 +426,9 @@ class BtMicSubsystem:
         self._laco: asyncio.AbstractEventLoop | None = None
         self._herancas_em_voo: set[asyncio.Task[None]] = set()
 
+    _mudo_pedido = False
+    _fio_do_mudo: threading.Thread | None = None
+
     @property
     def motivo(self) -> str:
         """O que do SISTEMA segura a ponte do rádio agora, ou `""`.
@@ -540,9 +545,51 @@ class BtMicSubsystem:
     def _dizer_o_mudo_aos_canais(self) -> None:
         """O mudo da palavra de produto chega ao nó de CADA canal de pé, no cabo e no rádio.
 
-        `False` cala o `hefesto_mic_*`; `True` e `None` o abrem. O canal só
-        escreve quando o mudo difere do último escrito (`escrever_o_mudo`): a
-        volta do laço não desfaz um mudo posto de fora.
+        Porta única por onde a palavra chega aos canais. Quem a diz de dentro do laço do asyncio
+        só pede, e um fio próprio escreve (cada escrita é um `pactl`); fora do laço escreve na
+        hora. O fio lê a palavra no instante em que escreve, então vale a última de cada canal.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._escrever_o_mudo_nos_canais()
+            return
+        with _TRANCA_DO_MUDO_DOS_CANAIS:
+            self._mudo_pedido = True
+            if self._fio_do_mudo is not None:
+                return
+            fio = threading.Thread(
+                target=self._esvaziar_o_mudo, name="hefesto-mudo-dos-canais", daemon=True
+            )
+            self._fio_do_mudo = fio
+        fio.start()
+
+    def _esvaziar_o_mudo(self) -> None:
+        while True:
+            with _TRANCA_DO_MUDO_DOS_CANAIS:
+                if not self._mudo_pedido:
+                    self._fio_do_mudo = None
+                    return
+                self._mudo_pedido = False
+            try:
+                self._escrever_o_mudo_nos_canais()
+            except Exception:
+                logger.warning("bt_mic_mudo_dos_canais_falhou", exc_info=True)
+
+    def esperar_o_mudo_dos_canais(self, teto_s: float) -> bool:
+        """O fio do mudo esvaziou dentro de ``teto_s``?"""
+        with _TRANCA_DO_MUDO_DOS_CANAIS:
+            fio = self._fio_do_mudo
+        if fio is None:
+            return True
+        fio.join(teto_s)
+        return not fio.is_alive()
+
+    def _escrever_o_mudo_nos_canais(self) -> None:
+        """`False` cala o `hefesto_mic_*`; `True` e `None` o abrem.
+
+        O canal só escreve quando o mudo difere do último escrito (`escrever_o_mudo`): a volta do
+        laço não desfaz um mudo posto de fora.
         """
         from hefesto_dualsense4unix.integrations import canal_do_microfone
 
