@@ -80,9 +80,9 @@ def test_a_pasta_local_segue_para_a_copia(lar: Lugares, curto: Path) -> None:
 
 
 def _anotando(perguntas: list[str]) -> Any:
-    def remoto(endereco: str, _ref: str | None) -> str:
+    def remoto(endereco: str, _ref: str | None) -> instalador.RespostaDoRemoto:
         perguntas.append(endereco)
-        return "b" * 40
+        return instalador.RespostaDoRemoto("b" * 40)
     return remoto
 
 
@@ -96,7 +96,7 @@ def _sem_cifra(lar: Lugares) -> Entrada:
 def test_a_instalada_sem_cifra_nao_pergunta_ao_git_e_diz_o_motivo(
         lar: Lugares, monkeypatch: pytest.MonkeyPatch) -> None:
     perguntas: list[str] = []
-    monkeypatch.setattr(instalador, "commit_remoto", _anotando(perguntas))
+    monkeypatch.setattr(instalador, "perguntar_ao_remoto", _anotando(perguntas))
     assert commit_novo(_sem_cifra(lar), lugares=lar) is None
     assert perguntas == []
     entrada = ler_registro(lar.registro)["exemplo"]
@@ -117,7 +117,7 @@ def test_a_vigia_nao_atualiza_a_instalada_sem_cifra(lar: Lugares,
                                                     monkeypatch: pytest.MonkeyPatch) -> None:
     entrada = _sem_cifra(lar)
     perguntas: list[str] = []
-    monkeypatch.setattr(instalador, "commit_remoto", _anotando(perguntas))
+    monkeypatch.setattr(instalador, "perguntar_ao_remoto", _anotando(perguntas))
     sup = _base._supervisor(lar, procurar_bwrap=False)
     assert asyncio.run(sup.atualizar_sozinha(entrada)) is False
     assert perguntas == []
