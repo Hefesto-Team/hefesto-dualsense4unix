@@ -275,3 +275,54 @@ def test_a_falha_da_passada_nao_segura_o_computador(monkeypatch: pytest.MonkeyPa
     _grava(_dungeons())
     assert opc.migrar_uma_vez() is not None
     assert opc.o_computador().migrado is True
+
+
+def _cada_controle_com_a_sua_secao() -> dict[str, Any]:
+    """A forma medida no perfil de quem usa: cada controle com gatilho, luz e vibração próprios,
+    sem `modo` escrito neles."""
+    return {
+        uniq: {"triggers": {"left": GATILHO, "right": GATILHO},
+               "leds": {"lightbar": [10, 20, 200]},
+               "rumble": {"policy": "max"}}
+        for uniq in (CABO_1, CABO_2, RADIO_1, RADIO_2)
+    }
+
+
+def _folhas(dados: Any, prefixo: str = "") -> dict[str, Any]:
+    if not isinstance(dados, dict):
+        return {prefixo: dados}
+    folhas: dict[str, Any] = {}
+    for chave, valor in dados.items():
+        folhas.update(_folhas(valor, f"{prefixo}.{chave}"))
+    return folhas
+
+
+def test_so_o_modo_das_tres_secoes_muda_no_arquivo_com_a_secao_de_cada_controle() -> None:
+    """Com a seção própria de cada controle (cabo e rádio, P1 a P4), o arquivo muda só nos três
+    `modo` do perfil: a seção de cada controle segue sem `modo` e com os seus valores."""
+    caminho = _grava(_dungeons(controllers=_cada_controle_com_a_sua_secao()))
+    antes = _folhas(_cru(caminho))
+    assert passo.passar_uma_vez() == {caminho.stem: ["triggers", "leds", "rumble"]}
+    depois = _folhas(_cru(caminho))
+    mudou = sorted(k for k in set(antes) | set(depois) if antes.get(k) != depois.get(k))
+    assert mudou == [".leds.modo", ".rumble.modo", ".triggers.modo"], mudou
+
+
+def test_cada_controle_tem_o_personalizado_desligada_e_cala_o_efeito_fixo_viva() -> None:
+    """A medida de 22/11 em cada um dos quatro controles, não só no perfil: desligada, cada um
+    recebe o que o personalizado dava; viva, o gatilho e a cor fixos de cada um calam."""
+    caminho = _grava(_dungeons(controllers=_cada_controle_com_a_sua_secao()))
+    antes = perfil_no_modo(load_profile(caminho.stem), frozenset()).model_dump(mode="json")
+    assert passo.passar_uma_vez() is not None
+    passado = load_profile(caminho.stem)
+    desligada = perfil_no_modo(passado, frozenset()).model_dump(mode="json")
+    ligada = perfil_no_modo(passado, frozenset({"imersao"})).model_dump(mode="json")
+    uniqs = sorted(antes["controllers"])
+    assert len(uniqs) == 4
+    for uniq in uniqs:
+        assert desligada["controllers"][uniq] == antes["controllers"][uniq], uniq
+        assert desligada["controllers"][uniq]["triggers"]["left"] == GATILHO, uniq
+        dele = ligada["controllers"][uniq]
+        assert dele["triggers"]["left"]["mode"] == "Off", uniq
+        assert dele["triggers"]["right"]["mode"] == "Off", uniq
+        assert (dele.get("leds") or {}).get("lightbar") is None, uniq
