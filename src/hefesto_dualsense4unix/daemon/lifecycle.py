@@ -16,7 +16,7 @@ from collections.abc import Awaitable, Callable, Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Final, Literal, cast, get_args
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
 from hefesto_dualsense4unix.core.ds_output_report import (
@@ -65,6 +65,9 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
 from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import PoolQueDizQuem, vigia_ativo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.daemon.launch_env import MarcaDoEscritor
 
 logger = get_logger(__name__)
 
@@ -1069,52 +1072,57 @@ class Daemon:
             save_native_mode,
         )
 
-        if origin == "manual":
-            self._emu_manual_ts = time.monotonic()
-            self._mode_from_profile = self._par_do_computador = None
-        if enabled == self._native_mode:
-            if enabled and grava_o_modo:
-                self.gravar_o_modo_escolhido("native", porta=grava_o_modo)
-            return self._native_mode
-        if enabled:
-            m_on, m_speed, m_scroll = load_mouse_emulation()
-            g_on, g_flavor = load_gamepad_emulation()
-            self._native_emu_stash = {
-                "mouse": [bool(m_on), m_speed, m_scroll],
-                "gamepad": [bool(g_on), self._mascara_viva() or g_flavor],
-            }
-            self._native_mode = True
-            self.store.set_native_mode_active(True, origin=origin)
-            save_native_mode(True, emu_stash=self._native_emu_stash)
-            self._exposicao_do_modo_nativo(True)
-            self._release_controller_to_game()
-        else:
-            self._native_mode = False
-            self.store.set_native_mode_active(False)
-            save_native_mode(False)
-            unmute = getattr(self.controller, "set_output_mute", None)
-            if callable(unmute):
-                with contextlib.suppress(Exception):
-                    unmute(False)
-            self._zero_rumble_motors()
-            if reapply:
-                self._reapply_last_profile()
-            if reapply or restore_stash:
-                self._restore_emulation_from_stash()
-            self._native_emu_stash = {}
-            self._exposicao_do_modo_nativo(False)
-        if origin == "manual":
-            self._mode_from_profile = None
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.daemon.launch_env import (
-                materialize_launch_env,
-            )
+        marca = _acender_o_escritor(self, grava_o_modo if enabled else False)
+        try:
+            if origin == "manual":
+                self._emu_manual_ts = time.monotonic()
+                self._mode_from_profile = self._par_do_computador = None
+            if enabled == self._native_mode:
+                if enabled and grava_o_modo:
+                    self.gravar_o_modo_escolhido("native", porta=grava_o_modo, marca=marca)
+                return self._native_mode
+            if enabled:
+                m_on, m_speed, m_scroll = load_mouse_emulation()
+                g_on, g_flavor = load_gamepad_emulation()
+                self._native_emu_stash = {
+                    "mouse": [bool(m_on), m_speed, m_scroll],
+                    "gamepad": [bool(g_on), self._mascara_viva() or g_flavor],
+                }
+                self._native_mode = True
+                self.store.set_native_mode_active(True, origin=origin)
+                save_native_mode(True, emu_stash=self._native_emu_stash)
+                self._exposicao_do_modo_nativo(True)
+                self._release_controller_to_game()
+            else:
+                self._native_mode = False
+                self.store.set_native_mode_active(False)
+                save_native_mode(False)
+                unmute = getattr(self.controller, "set_output_mute", None)
+                if callable(unmute):
+                    with contextlib.suppress(Exception):
+                        unmute(False)
+                self._zero_rumble_motors()
+                if reapply:
+                    self._reapply_last_profile()
+                if reapply or restore_stash:
+                    self._restore_emulation_from_stash()
+                self._native_emu_stash = {}
+                self._exposicao_do_modo_nativo(False)
+            if origin == "manual":
+                self._mode_from_profile = None
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    materialize_launch_env,
+                )
 
-            materialize_launch_env(self)
-        logger.info("native_mode_changed", native=enabled, origin=origin)
-        if enabled and grava_o_modo:
-            self.gravar_o_modo_escolhido("native", porta=grava_o_modo)
-        return self._native_mode
+                materialize_launch_env(self)
+            logger.info("native_mode_changed", native=enabled, origin=origin)
+            if enabled and grava_o_modo:
+                self.gravar_o_modo_escolhido("native", porta=grava_o_modo, marca=marca)
+            return self._native_mode
+        finally:
+            if marca is not None:
+                marca.soltar_se_nao_entregue()
 
     def _release_controller_to_game(self) -> None:
         """Neutraliza a saída do hefesto no controle (FEAT-NATIVE-MODE-01).
@@ -1424,67 +1432,73 @@ class Daemon:
         que aplicar"* de *"não deu"*. NUNCA LEVANTA: falhar em carregar o
         arranjo não é falhar em entrar no modo.
         """
-        relatorio: dict[str, str] = {}
-        profile = self._perfil_do_arranjo()
-        arranjo = self._guardar_o_arranjo(arranjo)
-        tabelas = self._tabelas_do_arranjo(arranjo, profile)
-        secao_mouse = getattr(profile, "mouse", None) if profile is not None else None
-
-        speed, scroll = _velocidades_ou_as_da_sessao(
-            getattr(secao_mouse, "speed", None),
-            getattr(secao_mouse, "scroll_speed", None),
-        )
+        marca = _acender_o_escritor(self, grava_o_modo)
         try:
-            ok = self.set_mouse_emulation(
-                True,
-                speed,
-                scroll,
-                origin="manual" if origin == "manual" else "profile",
+            relatorio: dict[str, str] = {}
+            profile = self._perfil_do_arranjo()
+            arranjo = self._guardar_o_arranjo(arranjo)
+            tabelas = self._tabelas_do_arranjo(arranjo, profile)
+            secao_mouse = getattr(profile, "mouse", None) if profile is not None else None
+
+            speed, scroll = _velocidades_ou_as_da_sessao(
+                getattr(secao_mouse, "speed", None),
+                getattr(secao_mouse, "scroll_speed", None),
             )
-            relatorio["mouse"] = APLICADO if ok else "falhou"
-        except Exception as exc:
-            relatorio["mouse"] = "falhou"
-            logger.warning("arranjo_do_desktop_mouse_falhou", err=str(exc))
-        mouse_vivo = bool(
-            getattr(self.config, "mouse_emulation_enabled", False)
-            and getattr(self, "_mouse_device", None) is not None
-        )
+            try:
+                ok = self.set_mouse_emulation(
+                    True,
+                    speed,
+                    scroll,
+                    origin="manual" if origin == "manual" else "profile",
+                )
+                relatorio["mouse"] = APLICADO if ok else "falhou"
+            except Exception as exc:
+                relatorio["mouse"] = "falhou"
+                logger.warning("arranjo_do_desktop_mouse_falhou", err=str(exc))
+            mouse_vivo = bool(
+                getattr(self.config, "mouse_emulation_enabled", False)
+                and getattr(self, "_mouse_device", None) is not None
+            )
 
-        try:
-            self._ligar_o_teclado_do_perfil(profile, sempre=True)
-            relatorio["teclado_emulado"] = APLICADO
-        except Exception as exc:
-            relatorio["teclado_emulado"] = "falhou"
-            logger.warning("arranjo_do_desktop_teclado_falhou", err=str(exc))
+            try:
+                self._ligar_o_teclado_do_perfil(profile, sempre=True)
+                relatorio["teclado_emulado"] = APLICADO
+            except Exception as exc:
+                relatorio["teclado_emulado"] = "falhou"
+                logger.warning("arranjo_do_desktop_teclado_falhou", err=str(exc))
 
-        if tabelas is not None:
-            self._aplicar_as_tabelas(tabelas, relatorio)
-        else:
-            relatorio["keyboard"] = "ignorado_sem_perfil"
+            if tabelas is not None:
+                self._aplicar_as_tabelas(tabelas, relatorio)
+            else:
+                relatorio["keyboard"] = "ignorado_sem_perfil"
 
-        try:
-            self.set_emulation_suppressed(False)
-            relatorio["supressao"] = APLICADO
-        except Exception as exc:
-            relatorio["supressao"] = "falhou"
-            logger.warning("arranjo_do_desktop_supressao_falhou", err=str(exc))
+            try:
+                self.set_emulation_suppressed(False)
+                relatorio["supressao"] = APLICADO
+            except Exception as exc:
+                relatorio["supressao"] = "falhou"
+                logger.warning("arranjo_do_desktop_supressao_falhou", err=str(exc))
 
-        logger.info(
-            "arranjo_do_desktop_aplicado",
-            profile=getattr(profile, "name", None),
-            arranjo=arranjo,
-            origin=origin,
-            mouse_vivo="ligado" if mouse_vivo else "desligado",
-            **relatorio,
-        )
-        if grava_o_modo:
-            self.gravar_o_modo_escolhido(
-                "desktop",
-                porta=grava_o_modo,
-                mouse_ligado=True if mouse_vivo else None,
+            logger.info(
+                "arranjo_do_desktop_aplicado",
+                profile=getattr(profile, "name", None),
                 arranjo=arranjo,
+                origin=origin,
+                mouse_vivo="ligado" if mouse_vivo else "desligado",
+                **relatorio,
             )
-        return relatorio
+            if grava_o_modo:
+                self.gravar_o_modo_escolhido(
+                    "desktop",
+                    porta=grava_o_modo,
+                    mouse_ligado=True if mouse_vivo else None,
+                    arranjo=arranjo,
+                    marca=marca,
+                )
+            return relatorio
+        finally:
+            if marca is not None:
+                marca.soltar_se_nao_entregue()
 
     def _flag_global_do_teclado(self) -> bool:
         """A «Função do teclado» da máquina, da memória: a ativação roda no laço e não lê o disco.
@@ -1834,60 +1848,70 @@ class Daemon:
             stop_gamepad_emulation,
         )
 
-        def depois_de_ligar(feito: str, *, recriou: bool) -> None:
-            """O que segue o pad de pé: o co-op, as tabelas do perfil e o modo gravado.
+        marca = _acender_o_escritor(self, grava_o_modo if enabled else False)
+        try:
+            def depois_de_ligar(feito: str, *, recriou: bool) -> None:
+                """O que segue o pad de pé: o co-op, as tabelas do perfil e o modo gravado.
 
-            Roda depois do `start`, ou no tique em que o P1 que nasceu pelo fio se
-            instalou (`gamepad.fechar_o_p1_que_nasceu`), com o desfecho de verdade.
-            """
-            ok = feito in (EMU_APLICADO, EMU_JA_ESTAVA)
-            if ok and recriou:
-                from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+                Roda depois do `start`, ou no tique em que o P1 que nasceu pelo fio se
+                instalou (`gamepad.fechar_o_p1_que_nasceu`), com o desfecho de verdade.
+                """
+                ok = feito in (EMU_APLICADO, EMU_JA_ESTAVA)
+                if ok and recriou:
+                    from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
-                with self._emu_lock, contextlib.suppress(Exception):
-                    get_coop_manager(self).sync(force=True, origem=origin)
-            elif ok:
-                logger.debug("gamepad_apply_identico_sem_recriacao")
-            if ok:
-                self._devolver_as_tabelas_do_perfil()
-            if grava_o_modo and ok:
-                self.gravar_o_modo_escolhido(
-                    "gamepad",
-                    caminho=caminho if caminho_e_escolha else None,
-                    mascara=flavor,
-                    porta=grava_o_modo,
-                )
-
-        if origin == "manual":
-            self._emu_manual_ts = time.monotonic()
-            self._mode_from_profile = self._par_do_computador = None
-            self._esquecer_mascara_adiada("gesto_manual")
-        with self._emu_lock:
-            if enabled:
-                if self._native_mode:
-                    self.set_native_mode(
-                        False, origin="manual" if origin == "manual" else "profile"
+                    with self._emu_lock, contextlib.suppress(Exception):
+                        get_coop_manager(self).sync(force=True, origem=origin)
+                elif ok:
+                    logger.debug("gamepad_apply_identico_sem_recriacao")
+                if ok:
+                    self._devolver_as_tabelas_do_perfil()
+                if grava_o_modo and ok:
+                    self.gravar_o_modo_escolhido(
+                        "gamepad",
+                        caminho=caminho if caminho_e_escolha else None,
+                        mascara=flavor,
+                        porta=grava_o_modo,
+                        marca=marca,
                     )
-                device_antes = self._gamepad_device
-                desfecho = start_gamepad_emulation_desfecho(
-                    self,
-                    flavor=flavor,
-                    origin=origin,
-                    caminho=caminho,
-                    caminho_e_escolha=caminho_e_escolha,
-                )
-                nascendo = depois_do_p1(self)
-                if nascendo is not None:
-                    seguir_o_p1_uma_vez(nascendo, ("ligar", grava_o_modo),
-                                        lambda feito: depois_de_ligar(feito, recriou=True))
-                    return desfecho
-                recriou = self._gamepad_device is not device_antes
-            else:
-                tinha_device = self._gamepad_device is not None
-                stop_gamepad_emulation(self, persist=(origin == "manual"))
-                return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
-        depois_de_ligar(desfecho, recriou=recriou)
-        return desfecho
+                elif marca is not None:
+                    marca.soltar()
+
+            if origin == "manual":
+                self._emu_manual_ts = time.monotonic()
+                self._mode_from_profile = self._par_do_computador = None
+                self._esquecer_mascara_adiada("gesto_manual")
+            with self._emu_lock:
+                if enabled:
+                    if self._native_mode:
+                        self.set_native_mode(
+                            False, origin="manual" if origin == "manual" else "profile"
+                        )
+                    device_antes = self._gamepad_device
+                    desfecho = start_gamepad_emulation_desfecho(
+                        self,
+                        flavor=flavor,
+                        origin=origin,
+                        caminho=caminho,
+                        caminho_e_escolha=caminho_e_escolha,
+                    )
+                    nascendo = depois_do_p1(self)
+                    if nascendo is not None:
+                        if marca is not None:
+                            marca.entregar()
+                        seguir_o_p1_uma_vez(nascendo, ("ligar", grava_o_modo),
+                                            lambda feito: depois_de_ligar(feito, recriou=True))
+                        return desfecho
+                    recriou = self._gamepad_device is not device_antes
+                else:
+                    tinha_device = self._gamepad_device is not None
+                    stop_gamepad_emulation(self, persist=(origin == "manual"))
+                    return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
+            depois_de_ligar(desfecho, recriou=recriou)
+            return desfecho
+        finally:
+            if marca is not None:
+                marca.soltar_se_nao_entregue()
 
     def gravar_o_modo_escolhido(
         self,
@@ -1898,6 +1922,7 @@ class Daemon:
         porta: PortaQueGrava,
         mouse_ligado: bool | None = None,
         arranjo: str | None = None,
+        marca: MarcaDoEscritor | None = None,
     ) -> str | None:
         """O modo que o usuário escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
 
@@ -1906,26 +1931,36 @@ class Daemon:
         mudou, nada se grava. A gravação vai ao fio único do perfil, na ordem dos gestos, sob a
         trava de `mudar_o_perfil`: no fio do laço o gesto não espera o disco e devolve ``None``.
         Nunca levanta: o aparelho já trocou.
+
+        `marca`: a do escritor, acesa antes da derrubada do pad; sai quando o corpo grava ou falha.
         """
         from hefesto_dualsense4unix.profiles import manager
 
+        if marca is not None:
+            marca.entregar()
         velocidades = (
             (self.config.mouse_speed, self.config.mouse_scroll_speed)
             if mouse_ligado is not None
             else None
         )
-        feito = manager.no_fio_do_perfil(
-            contextvars.copy_context().run,
-            _gravar_o_modo_no_fio,
-            getattr(getattr(self, "store", None), "active_profile", None),
-            kind=kind,
-            caminho=caminho,
-            mascara=mascara,
-            porta=porta,
-            mouse_ligado=mouse_ligado,
-            velocidades=velocidades,
-            arranjo=arranjo,
-        )
+        try:
+            feito = manager.no_fio_do_perfil(
+                contextvars.copy_context().run,
+                _gravar_o_modo_no_fio,
+                getattr(getattr(self, "store", None), "active_profile", None),
+                kind=kind,
+                caminho=caminho,
+                mascara=mascara,
+                porta=porta,
+                mouse_ligado=mouse_ligado,
+                velocidades=velocidades,
+                arranjo=arranjo,
+                marca=marca,
+            )
+        except BaseException:
+            if marca is not None:
+                marca.soltar()
+            raise
         return None if _no_fio_de_um_laco() else feito.result()
 
     def escolher_o_modo_unico(self, modo: object, *, porta: PortaQueGrava) -> str:
@@ -5064,8 +5099,28 @@ def _no_fio_de_um_laco() -> bool:
     return True
 
 
-def _gravar_o_modo_no_fio(ativo: str | None, *, kind: str, **modo: Any) -> str | None:
-    """O corpo de `Daemon.gravar_o_modo_escolhido`, no fio do perfil. Nunca levanta."""
+def _gravar_o_modo_no_fio(
+    ativo: str | None, *, kind: str, marca: MarcaDoEscritor | None = None, **modo: Any
+) -> str | None:
+    """O corpo de `Daemon.gravar_o_modo_escolhido`, no fio do perfil. Nunca levanta.
+
+    Solta a `marca` do escritor ao gravar e ao falhar, e o `finally` cobre qualquer saída.
+    """
+    try:
+        return _gravar_o_modo_sob_a_trava(ativo, kind=kind, **modo)
+    finally:
+        if marca is not None:
+            marca.soltar()
+
+
+def _acender_o_escritor(daemon: Any, porta: object) -> MarcaDoEscritor | None:
+    """A marca do escritor do modo, acesa antes da derrubada do pad velho; None sem `porta`."""
+    from hefesto_dualsense4unix.daemon import launch_env
+
+    return launch_env.acender_o_escritor(daemon, porta)
+
+
+def _gravar_o_modo_sob_a_trava(ativo: str | None, *, kind: str, **modo: Any) -> str | None:
     from hefesto_dualsense4unix.daemon import launch_env
     from hefesto_dualsense4unix.profiles.manager import (
         gravar_o_modo_no_perfil_ativo,

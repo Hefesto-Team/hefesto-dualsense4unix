@@ -1399,7 +1399,7 @@ def _armar_o_jogo(
         emulacao_viva=enabled_pos,
         flavor_vivo=flavor_pos,
     )
-    if divergencia is not None:
+    if divergencia is not None and not em_transito(daemon):
         logger.warning(
             "launch_arm_mascara_nao_convergiu",
             appid=appid,
@@ -1752,10 +1752,15 @@ def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bo
             return False
         if _a_escrita_em_voo():
             return False
+        if em_transito(daemon, momento):
+            armar_rematerializacao(daemon, motivo="a troca ainda não assentou", agora=momento)
+            return False
         daemon._launch_env_sossego_em = None
         assinatura = _assinatura_da_mesa(daemon)
         anterior = getattr(daemon, "_launch_env_assinatura", None)
-        if assinatura == anterior:
+        sem_foto_assentada = getattr(daemon, "_foto_em_transito", False) is True
+        daemon._foto_em_transito = False
+        if assinatura == anterior and not sem_foto_assentada:
             return False
     except Exception:
         logger.debug("launch_env_sossego_indisponivel", exc_info=True)
@@ -1906,6 +1911,63 @@ class ModoAntecipado:
             and bool(self.backends)
             and all(b == "uhid" for b in self.backends)
         )
+
+
+TTL_DA_MARCA_DO_ESCRITOR_SEC = 15.0
+
+
+class MarcaDoEscritor:
+    """A marca acesa pelo gesto que muda o modo, antes de o pad velho cair.
+
+    Vive até o corpo de `Daemon.gravar_o_modo_escolhido` gravar (ou falhar), ou até o gesto
+    desistir sem gravar. Passa o prazo `TTL_DA_MARCA_DO_ESCRITOR_SEC` e a marca esquece: uma
+    gravação que nunca chegou não cala a divergência de verdade para sempre.
+    """
+
+    __slots__ = ("_daemon", "ate", "entregue")
+
+    def __init__(self, daemon: Any, ate: float) -> None:
+        self._daemon = daemon
+        self.ate = ate
+        self.entregue = False
+
+    def entregar(self) -> None:
+        """Quem grava assume a marca e a solta no fim; o gesto que a acendeu não a solta mais."""
+        self.entregue = True
+
+    def soltar(self) -> None:
+        """Apaga a marca; idempotente."""
+        marcas = getattr(self._daemon, "_marcas_do_escritor", None)
+        if isinstance(marcas, set):
+            marcas.discard(self)
+
+    def soltar_se_nao_entregue(self) -> None:
+        """O fim do gesto: solta a marca que ninguém assumiu (falha, ramo que não grava)."""
+        if not self.entregue:
+            self.soltar()
+
+
+def acender_o_escritor(daemon: Any, porta: object) -> MarcaDoEscritor | None:
+    """Acende a marca do escritor do modo; None sem `porta` (o gesto não grava o modo)."""
+    if not porta:
+        return None
+    marca = MarcaDoEscritor(daemon, time.monotonic() + TTL_DA_MARCA_DO_ESCRITOR_SEC)
+    marcas = getattr(daemon, "_marcas_do_escritor", None)
+    if not isinstance(marcas, set):
+        marcas = set()
+        daemon._marcas_do_escritor = marcas
+    marcas.add(marca)
+    return marca
+
+
+def em_transito(daemon: Any, agora: float | None = None) -> bool:
+    """O aparelho está no meio de uma troca? O serviço parando, ou o escritor do modo em curso."""
+    parando = getattr(daemon, "_is_stopping", None)
+    if callable(parando) and parando() is True:
+        return True
+    momento = agora if agora is not None else time.monotonic()
+    marcas = getattr(daemon, "_marcas_do_escritor", None)
+    return isinstance(marcas, set) and any(marca.ate > momento for marca in tuple(marcas))
 
 
 def divergencia_de_mascara(
@@ -2734,6 +2796,7 @@ def _foto_do_lancamento(
 
     freestyle_ligado = o_freestyle_manda(getattr(daemon, "store", None))
     recibo = a_assinatura(daemon, native, enabled, flavor, backends, fisicos)
+    em_transito_na_foto = em_transito(daemon)
 
     ordem = next(_ORDEM_DAS_FOTOS)
 
@@ -2745,6 +2808,10 @@ def _foto_do_lancamento(
 
     def publicar(divergencias: list[dict[str, Any]]) -> None:
         if ordem < _ULTIMA_ORDEM_ESCRITA:
+            return
+        if em_transito_na_foto:
+            daemon._foto_em_transito = True  # type: ignore[attr-defined]
+            armar_rematerializacao(daemon, motivo="foto em trânsito sem divergência publicada")
             return
         _publicar_divergencias(daemon, divergencias)
 

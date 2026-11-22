@@ -1688,7 +1688,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
     (`daemon/ipc_handlers.py:3840`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
-    teclado comparam `old` com `new` (`daemon/lifecycle.py:1216` e `:1237`) e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:1216` e `:1245`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1214-1215` derruba e sobe
     o leitor dos atalhos do controle, e `ipc_handlers.py:4139` reescreve os
