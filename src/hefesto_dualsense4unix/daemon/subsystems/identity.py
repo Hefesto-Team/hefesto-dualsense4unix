@@ -16,9 +16,11 @@ import os
 import re
 import tempfile
 import threading
+from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.utils.escrita_inteira import gravar_sem_parar_o_laco
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -1062,7 +1064,7 @@ class ControllerIdentityRegistry:
                 if key not in anteriores:
                     self._marcar_chegada_locked(key)
             if self._dirty:
-                self._save_locked()
+                self._save_locked(sem_parar_o_laco=True)
                 self._dirty = False
         if chegou_gente_nova:
             self._soltar_os_lugares_dos_externos()
@@ -1444,43 +1446,62 @@ class ControllerIdentityRegistry:
 
         return config_dir(ensure=True) / _CONTROLLERS_FILE
 
-    def _save_locked(self) -> None:
-        """Grava a fila persistível (atômico: mkstemp + os.replace). Sob lock."""
+    def _save_locked(self, *, sem_parar_o_laco: bool = False) -> None:
+        """Grava a fila persistível; com ``sem_parar_o_laco`` o tique no fio de um laço não espera.
+
+        O conteúdo sai da memória aqui, sob o lock do registro; a leitura do arquivo, a fusão e a
+        troca atômica (``CONTROLLERS_FILE_LOCK``) rodam no gravador, ou aqui mesmo fora de um laço.
+        O gesto explícito (renumerar, alinhar, escolha da mão) segue síncrono: responde gravado.
+        """
+        ordem = {
+            key: rank for key, rank in self._ordem.items() if key not in self._volatile
+        }
         try:
-            with CONTROLLERS_FILE_LOCK:
-                path = self._path()
-                existente: Any = None
-                bruto = ler_a_fila_para_gravar(path)
-                if (
-                    bruto is not None
-                    and bruto.get("version") == CONTROLLERS_SCHEMA_VERSION
-                ):
-                    existente = bruto
-                payload: dict[str, Any] = {}
-                payload["version"] = CONTROLLERS_SCHEMA_VERSION
-                payload["boot_id"] = _session_anchor()
-                payload[ORDER_FIELD] = merged_order_payload(
-                    existente,
-                    KIND_DUALSENSE,
-                    {
-                        key: rank
-                        for key, rank in self._ordem.items()
-                        if key not in self._volatile
-                    },
+            if sem_parar_o_laco:
+                futuro = gravar_sem_parar_o_laco(
+                    f"controllers:{id(self)}", lambda: self._gravar_a_fila(ordem)
                 )
-                data = json.dumps(payload, ensure_ascii=False)
-                fd, tmp = tempfile.mkstemp(
-                    dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
-                )
+            else:
+                futuro = None
+                self._gravar_a_fila(ordem)
+        except Exception as exc:
+            logger.debug("identity_save_falhou", err=str(exc))
+            return
+        if futuro is not None:
+            futuro.add_done_callback(self._dizer_a_falha_da_gravacao)
+
+    @staticmethod
+    def _dizer_a_falha_da_gravacao(futuro: Future[None]) -> None:
+        erro = futuro.exception()
+        if erro is not None:
+            logger.debug("identity_save_falhou", err=str(erro))
+
+    def _gravar_a_fila(self, ordem: dict[str, int]) -> None:
+        """Grava ``ordem`` no ``controllers.json`` (mkstemp + os.replace); a falha levanta."""
+        with CONTROLLERS_FILE_LOCK:
+            path = self._path()
+            existente: Any = None
+            bruto = ler_a_fila_para_gravar(path)
+            if bruto is not None and bruto.get("version") == CONTROLLERS_SCHEMA_VERSION:
+                existente = bruto
+            payload: dict[str, Any] = {}
+            payload["version"] = CONTROLLERS_SCHEMA_VERSION
+            payload["boot_id"] = _session_anchor()
+            payload[ORDER_FIELD] = merged_order_payload(existente, KIND_DUALSENSE, ordem)
+            data = json.dumps(payload, ensure_ascii=False)
+            fd, tmp = tempfile.mkstemp(
+                dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
+            )
+            try:
                 try:
                     os.write(fd, data.encode())
                 finally:
                     os.close(fd)
                 os.replace(tmp, path)
-                logger.debug("identity_fila_salva", ordem=payload[ORDER_FIELD])
-        except Exception as exc:
-            logger.debug("identity_save_falhou", err=str(exc))
-
+            except BaseException:
+                Path(tmp).unlink(missing_ok=True)
+                raise
+            logger.debug("identity_fila_salva", ordem=payload[ORDER_FIELD])
 
     def o_lugar_espera(self, uniq: str | None) -> bool:
         """O lugar de ``uniq`` ainda está na mesa? — ligado, ou guardado no prazo."""
