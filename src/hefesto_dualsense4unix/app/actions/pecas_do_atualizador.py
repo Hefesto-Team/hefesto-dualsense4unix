@@ -1728,7 +1728,16 @@ def _reinstalacao_do_apt(grupo: str, aplicar: Etapa | None) -> Reinstalacao:
 
 
 def registro() -> list[Peca]:
-    """As peças, na ordem da fila: o kernel antes dos módulos, o repositório por último."""
+    """As peças, na ordem da fila: o kernel antes dos módulos, o repositório por último.
+
+    ``reinicia_o_servico``: o padrão é verdadeiro, e só a peça cuja medida provou que o serviço
+    não a lê enquanto vive declara falso, com a prova aqui. ``umu`` é falso: o ``_aplicar_o_umu``
+    só aponta o elo ``atual`` e apaga pasta e pacote velhos (``pecas_do_atualizador.py:856``), e o
+    serviço só conhece ``umu-run`` como nome de processo (``identidade_do_jogo.py:56``) e como
+    texto de atalho no censo (``censo_dos_lancadores.py:2091``); quem executa o ``umu-run`` é o
+    lançador, na hora do jogo, e nada do pacote ``daemon`` o importa ou o abre ao subir. As
+    outras ficam verdadeiras até o ``grep`` do que o serviço abre de cada uma.
+    """
     return [
         Peca("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto",
              "O serviço do Bluetooth", versoes_do_bluetooth,
@@ -1767,7 +1776,8 @@ def registro() -> list[Peca]:
         Peca("umu", "umu", "Os jogos de fora da Steam no Proton", "Os jogos de fora da Steam",
              versoes_do_umu, _baixar_o_umu, _instalar_o_umu, _aplicar_o_umu, _voltar_o_umu,
              reinstalacao=Reinstalacao(_baixar_de_novo_o_umu, _instalar_o_umu, _reapontar_o_umu,
-                                       _umu_sem_reinstalar)),
+                                       _umu_sem_reinstalar),
+             reinicia_o_servico=False),
         Peca("proton", "GE-Proton", "Os jogos da Steam e do Heroic",
              "Todos os jogos da Steam e do Heroic", versoes_do_proton,
              _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton,

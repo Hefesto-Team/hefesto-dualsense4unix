@@ -204,6 +204,7 @@ class Peca:
     anterior: Callable[[], dict[str, Any] | None] | None = None
     steam_fechada: bool = False
     trocar: Callable[[dict[str, Any]], None] | None = None
+    reinicia_o_servico: bool = True
 
 
 def pecas() -> list[Peca]:
@@ -1043,6 +1044,13 @@ def _prontas(andamento: _Andamento) -> set[str]:
     return {str(p.get("id")) for p in andamento.dado["pecas"] if p.get("selo") == PRONTA}
 
 
+def _prontas_que_reiniciam(andamento: _Andamento, registro: dict[str, Peca]) -> set[str]:
+    """As peças prontas que o serviço lê enquanto vive: só essas pedem o reinício do serviço. A peça
+    fora do registro conta (o padrão é reiniciar)."""
+    return {i for i in _prontas(andamento)
+            if i not in registro or registro[i].reinicia_o_servico}
+
+
 def _devolver_a_steam(fechou: list[bool], reabrir: Callable[[], bool]) -> None:
     """A Steam que a fila fechou volta uma vez, no fim, no «Parar» ou no prazo."""
     if not fechou:
@@ -1083,13 +1091,13 @@ def rodar(
     inibidor: Callable[[str], AbstractContextManager[None]] | None = None,
 ) -> int:
     """A fila: uma peça por vez, em baixar, instalar e aplicar em todos; um processo por vez (o
-    segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez (e ao fim
-    da espera, se ainda não começou) e, já em dia, fica «Atualizado» sem baixar. A que espera (a
-    Steam, o voo, o jogo que abriu depois do baixar) vai para o fim e volta da mesma etapa quando
-    passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma falha não para as
-    outras. Se alguma peça mudou, reinicia o serviço e reabre a janela, antes de esperar a que
-    ficou para trás e de novo se a peça mudar. A tomada, o disco e o inibidor do desligar vêm de
-    quem chama (o ``--rodar`` liga os reais); ``corte`` vai a cada peça como ``dados["corte"]``.
+    segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez e, já em
+    dia, fica «Atualizado» sem baixar. A que espera (a Steam, o voo, o jogo que abriu depois do
+    baixar) vai para o fim e volta da mesma etapa. Com jogo aberto, espera ele fechar de vez antes
+    de cada peça. Uma falha não para as outras. Mudou peça com ``reinicia_o_servico``: reinicia o
+    serviço e reabre a janela, antes de esperar a que ficou para trás e de novo se mudar; só
+    peça sem ele, nem toca o serviço nem espera o jogo. A tomada, o disco e o inibidor do desligar
+    vêm de quem chama; ``corte`` vai a cada peça como ``dados["corte"]``.
     Devolve 0 pronto, 1 com falha, 2 parada ou esperando.
     """
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
@@ -1210,7 +1218,8 @@ def rodar(
                 espera = _rodar(peca, vez)
                 if espera is not None:
                     adiadas.append((peca, espera, vez))
-            if adiadas and (_prontas(andamento) - reiniciadas or por_trocar):
+            if adiadas and (_prontas_que_reiniciam(andamento, registro) - reiniciadas
+                            or por_trocar):
                 if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
                     raise FilaParadaError
                 _trocar_antes_do_reinicio()
@@ -1252,14 +1261,17 @@ def rodar(
                 linha["selo"], linha["motivo"] = FILA, str(espera)
                 _anotar(f"{peca.id}: a espera passou do prazo ({espera}); fica para a próxima")
             _devolver_a_steam(fechou, reabrir_a_steam)
-            if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
+            vai_reiniciar = bool(por_trocar) \
+                or bool(_prontas_que_reiniciam(andamento, registro) - reiniciadas)
+            if vai_reiniciar and not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir,
+                                                       prazo()):
                 raise FilaParadaError
             andamento.dado["fase"], andamento.dado["fim_em"] = FIM, agora()
             andamento.gravar()
             trocadas = set(por_trocar)
             _trocar_antes_do_reinicio()
             reiniciadas -= trocadas
-            if _prontas(andamento) - reiniciadas:
+            if _prontas_que_reiniciam(andamento, registro) - reiniciadas:
                 _rodar_o_servico(andamento, reiniciar, reabrir)
             elif not reiniciadas:
                 andamento.dado["reinicio"]["selo"] = ATUALIZADA
