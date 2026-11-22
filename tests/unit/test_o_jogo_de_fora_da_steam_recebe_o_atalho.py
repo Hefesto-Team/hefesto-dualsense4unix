@@ -11,7 +11,8 @@ AS MORDIDAS (feitas na sprint, com a cura devolvida e o md5 conferido): o leitor
 reprova o leitor, o catálogo, o censo e o apply; o apply sem a passada dos atalhos reprova o apply e
 a idempotência; o strip sem a passada dos atalhos reprova o desfazer; a lista de jogos sem os de
 fora e o pino que os trata como nativos reprovam o caso do pino; o censo sem os atalhos reprova o
-censo.
+censo; o global do pino que alcança o jogo de fora reprova o caso do global; a linha de comando do
+desinstalar sem os atalhos reprova o caso do strip pela linha de comando.
 """
 from __future__ import annotations
 
@@ -33,6 +34,7 @@ from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sentinel
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from tests.unit.test_o_pino_chega_a_qualquer_computador import (
     PINO,
+    _config_vdf,
     _jogo,
     _pino_na,
     _steam_de_verdade,
@@ -286,6 +288,40 @@ def test_o_pino_alcanca_o_jogo_de_fora_do_windows_e_deixa_o_nativo(lar: Path) ->
     assert mapa.get(str(JANELA)) == PINO
     assert mapa.get(str(OPT_OUT)) == PINO
     assert str(LINUX) not in mapa
+
+
+def test_com_o_global_no_pino_o_jogo_de_fora_sem_entrada_sai_fora_do_proton_fixado(
+        lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A Steam só põe o jogo de fora no Proton pela entrada dele: o global não o alcança."""
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    _conta(lar)
+    raiz = _steam_de_verdade(lar)
+    _pino_na(raiz)
+    _jogo(raiz, "9949958")
+    (raiz / "config" / "config.vdf").write_text(_config_vdf({"0": PINO}), encoding="utf-8")
+    conf = lar / "proton-pin.conf"
+    conf.write_text(f"name={PINO}\nurl=https://exemplo.invalido/x.tar.gz\nsha256={'0' * 64}\n",
+                    encoding="utf-8")
+    monkeypatch.setattr(pp, "default_pin_conf_path", lambda: conf)
+
+    fora = imp._fora_do_proton_fixado(lar)
+
+    assert str(JANELA) in fora
+    assert str(OPT_OUT) in fora
+    assert "9949958" not in fora
+    assert str(LINUX) not in fora
+
+
+def test_o_strip_pela_linha_de_comando_do_desinstalar_alcanca_os_jogos_de_fora(
+        lar: Path) -> None:
+    local, atalho = _conta(lar)
+    original = atalho.read_bytes()
+    slo.apply_wrapper_to_all_games(home=lar, vdfs=[local])
+    assert atalho.read_bytes() != original
+
+    assert slo.main(["--strip", "--vdf", str(local)]) == 0
+    assert atalho.read_bytes() == original
 
 
 def test_o_avulso_sem_a_estrutura_do_produto_ainda_poe_o_atalho_no_jogo_de_fora(

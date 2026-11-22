@@ -1776,9 +1776,16 @@ def _os_que_declaram_linux(appids: Sequence[str], oslist: dict[str, str] | None)
 def jogos_que_o_global_nao_alcanca(
     appids: Sequence[str], *, home: Path | None = None
 ) -> set[str]:
-    """Dos `appids`, os que declaram `linux`: o global (`"0"`) da Steam não vale para eles."""
+    """Dos `appids`, os que o global (`"0"`) da Steam não alcança.
+
+    São os que declaram `linux` e os jogos de fora com executável de Windows: a Steam só põe o
+    jogo de fora no Proton pela entrada dele, nunca pelo global.
+    """
     appinfo = default_steam_root(home) / "appcache" / "appinfo.vdf"
-    return set(_os_que_declaram_linux(appids, oslist_do_appinfo(appinfo, appids)))
+    de_fora = _atalhos_do_windows(home)
+    return set(_os_que_declaram_linux(appids, oslist_do_appinfo(appinfo, appids))) | {
+        a for a in appids if a in de_fora
+    }
 
 
 def jogos_sem_entrada_nova(
