@@ -259,14 +259,14 @@
       "data": "2026-11-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1301327,
+      "piso": 1301924,
       "por_item": {
         "docs": 107904,
         "scripts": 116096,
-        "src": 328672,
-        "tests": 748655
+        "src": 328770,
+        "tests": 749154
       },
-      "razao": "tamanho: +900 linhas (1300427 -> 1301327), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo daee84f44288",
+      "razao": "tamanho: +597 linhas (1301327 -> 1301924), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1510-A-JANELA-DA-STEAM-NAO-TOMA-O-TOQUE, D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo 0d28e46ce7a1",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2385,10 +2385,16 @@
           "de": 1300427,
           "para": 1301327,
           "razao": "tamanho: +900 linhas (1300427 -> 1301327), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo daee84f44288"
+        },
+        {
+          "data": "2026-11-22",
+          "de": 1301327,
+          "para": 1301924,
+          "razao": "tamanho: +597 linhas (1301327 -> 1301924), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1510-A-JANELA-DA-STEAM-NAO-TOMA-O-TOQUE, D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, D-2011-TODO-LOGGER-PASSA-PELO-DONO-DO-LOG, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-VIGIA-DO-STEAM-INPUT; registrado no fecho, topo 0d28e46ce7a1"
         }
       ],
       "unidade": "linhas",
-      "universo": 3635
+      "universo": 3638
     }
   }
 }
