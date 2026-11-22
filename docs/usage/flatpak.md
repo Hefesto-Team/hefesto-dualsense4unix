@@ -6,11 +6,12 @@ sandbox.
 
 ## Instalar
 
-Com o arquivo `io.github.hefesto_team.hefesto_dualsense4unix.flatpak` em mãos
-(gerado pelo CI ou por `scripts/build_flatpak.sh --bundle`):
+Com o arquivo `Hefesto-Dualsense4Unix-<versão>-x86_64.flatpak` da release em
+mãos (ou o `io.github.hefesto_team.hefesto_dualsense4unix.flatpak` que o
+`scripts/build_flatpak.sh --bundle` grava na raiz do repositório):
 
 ```bash
-flatpak install --user io.github.hefesto_team.hefesto_dualsense4unix.flatpak
+flatpak install --user Hefesto-Dualsense4Unix-<versão>-x86_64.flatpak
 ```
 
 Ou construa a partir do código (precisa do `flatpak-builder` e do remoto

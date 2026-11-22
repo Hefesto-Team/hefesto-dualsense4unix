@@ -296,7 +296,12 @@ class TestDocumentacaoHonesta:
         )
 
     def test_curas_de_bluetooth_default_estao_nomeadas(self) -> None:
-        for termo in ("5.86", "bt-agent", "hefesto-bt-health-watchdog.timer", "bt-bonds"):
+        for termo in (
+            "assets/bluez-backport/BASELINE",
+            "bt-agent",
+            "hefesto-bt-health-watchdog.timer",
+            "bt-bonds",
+        ):
             assert termo in DOC, f"cura de BT default ausente da página: {termo}"
 
 
