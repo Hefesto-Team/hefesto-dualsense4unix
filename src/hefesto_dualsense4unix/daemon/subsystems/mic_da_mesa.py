@@ -80,7 +80,11 @@ INTERVALO_S: float = 0.05
 
 
 def _bordas(backend: Any) -> dict[str, tuple[Any, ...]]:
-    """`backend.bordas_do_mic()` quando o backend sabe responder; `{}` senão."""
+    """`backend.bordas_do_mic()` quando o backend sabe responder; `{}` senão.
+
+    Toma o `_io_lock` e o mapa da posse, que qualquer fio pode segurar: o laço só a chama por
+    `asyncio.to_thread` (O-LACO-NAO-ESPERA-A-TRAVA-DE-ESCRITA-NAS-BORDAS-DO-MICROFONE-01).
+    """
     ler = getattr(backend, "bordas_do_mic", None)
     if not callable(ler):
         return {}
@@ -120,7 +124,7 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
         if backend is None:
             continue
         agora = relogio()
-        atual = _bordas(backend)
+        atual = await asyncio.to_thread(_bordas, backend)
         for uniq in list(visto):
             if uniq not in atual:
                 visto.pop(uniq, None)

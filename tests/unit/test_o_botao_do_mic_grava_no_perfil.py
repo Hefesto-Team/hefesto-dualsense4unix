@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import types
 from pathlib import Path
 from typing import Any
@@ -112,7 +113,7 @@ class _Kernel(FakeController):  # type: ignore[misc]
         self._firmware_mudo[uniq] = self._kernel_mudo[uniq]
 
     def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
-        self.varreduras.append(asyncio.get_running_loop().time())
+        self.varreduras.append(time.monotonic())
         return {
             u: (self._seq[u], self._pedido.get(u, self._firmware_mudo[u]), None)
             for u in self.uniqs
