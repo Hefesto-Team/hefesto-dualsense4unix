@@ -196,18 +196,29 @@ def _pai(raiz_proc: str, pid: int) -> int:
     return int(campos[1]) if len(campos) > 1 and campos[1].isdigit() else 0
 
 
-def _descende_do_reaper_do_jogo(raiz_proc: str, pid: int) -> bool:
+def _reaper_da_steam_acima(raiz_proc: str, pid: int) -> str | None:
+    """A linha de comando do reaper da Steam mais perto acima de ``pid``; ``None`` sem nenhum."""
     vistos = {pid}
     atual = _pai(raiz_proc, pid)
     while atual > 1 and atual not in vistos:
         vistos.add(atual)
         pasta = os.path.join(raiz_proc, str(atual))
-        if _texto(os.path.join(pasta, "comm")) == NOME_DO_REAPER and _o_reaper_do_jogo(
-            _texto(os.path.join(pasta, "cmdline"))
-        ):
-            return True
+        if _texto(os.path.join(pasta, "comm")) == NOME_DO_REAPER:
+            cmdline = _texto(os.path.join(pasta, "cmdline"))
+            if _STEAM_LAUNCH_RE.search(cmdline):
+                return cmdline
         atual = _pai(raiz_proc, atual)
-    return False
+    return None
+
+
+def _descende_do_reaper_do_jogo(raiz_proc: str, pid: int) -> bool:
+    acima = _reaper_da_steam_acima(raiz_proc, pid)
+    return acima is not None and _o_reaper_do_jogo(acima)
+
+
+def _descende_do_avaliador_do_install_script(raiz_proc: str, pid: int) -> bool:
+    acima = _reaper_da_steam_acima(raiz_proc, pid)
+    return acima is not None and e_avaliador_do_install_script(acima)
 
 
 def _e_do_wine(nome: str) -> bool:
@@ -295,6 +306,8 @@ def por_que_conta(
         if _o_reaper_do_jogo(cmdline):
             return True, "o reaper do jogo"
         return False, "o reaper fora de jogo"
+    if _descende_do_avaliador_do_install_script(raiz, pid):
+        return False, "o avaliador do script de instalação da Steam"
     assinatura = _assinatura_de_jogo(raiz, pid)
     if assinatura is not None:
         return True, f"{assinatura} no ambiente"

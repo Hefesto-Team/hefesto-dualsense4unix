@@ -15,9 +15,14 @@ from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
     por_que_conta,
     seguradores,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 RAIZ_PROC = "/proc"
 RAIZ_DEV = "/dev"
+
+_APROVADOS_NO_DIARIO: dict[str, tuple[int, str, str]] = {}
 
 
 def _caminho(valor: Any) -> str | None:
@@ -93,7 +98,7 @@ def jogos_por_pad(
             alvos[ino] = caminho
             dono_do_no[caminho] = chave
     eu = os.getpid() if meu_pid is None else meu_pid
-    e_jogo: dict[int, bool] = {}
+    e_jogo: dict[int, tuple[bool, str]] = {}
     achados: dict[str, Segurador] = {}
     for segurador in seguradores(alvos, raiz_proc=raiz_proc, todos_os_nos=True):
         dono = dono_do_no.get(segurador.no)
@@ -101,12 +106,36 @@ def jogos_por_pad(
             continue
         if segurador.pid not in e_jogo:
             cmdline = _texto(os.path.join(raiz_proc, str(segurador.pid), "cmdline"))
-            e_jogo[segurador.pid] = conta_como_jogo(
+            e_jogo[segurador.pid] = por_que_conta(
                 segurador.nome, cmdline, pid=segurador.pid, meu_pid=eu, raiz_proc=raiz_proc
             )
-        if e_jogo[segurador.pid]:
+        if e_jogo[segurador.pid][0]:
             achados[dono] = segurador
+    _diz_quem_aprovou(achados, e_jogo, dono_do_no)
     return achados
+
+
+def _diz_quem_aprovou(
+    achados: dict[str, Segurador],
+    e_jogo: dict[int, tuple[bool, str]],
+    dono_do_no: dict[str, str],
+) -> None:
+    """Registra, só quando muda, o processo que segura cada pad como jogo e o motivo."""
+    for dono in set(dono_do_no.values()) - set(achados):
+        _APROVADOS_NO_DIARIO.pop(dono, None)
+    for dono, segurador in achados.items():
+        motivo = e_jogo[segurador.pid][1]
+        marca = (segurador.pid, segurador.nome, motivo)
+        if _APROVADOS_NO_DIARIO.get(dono) == marca:
+            continue
+        _APROVADOS_NO_DIARIO[dono] = marca
+        logger.info(
+            "pad_segurado_por_jogo",
+            pad=dono,
+            processo=segurador.nome,
+            pid=segurador.pid,
+            motivo=motivo,
+        )
 
 
 def quem_segura(
