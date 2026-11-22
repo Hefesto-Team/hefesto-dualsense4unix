@@ -379,7 +379,7 @@ def o_nome_que_o_boot_restaura(
     return nome
 
 
-_PERFIL_DO_JOGO_LEMBRADO: list[Any] = [None, None]
+_PERFIL_DO_JOGO_LEMBRADO: list[tuple[Any, str | None]] = [(None, None)]
 
 
 def _o_perfil_do_jogo_lembrado(appid: int) -> str | None:
@@ -396,10 +396,11 @@ def _o_perfil_do_jogo_lembrado(appid: int) -> str | None:
         chave = (appid, str(pasta), pasta.stat().st_mtime_ns)
     except OSError:
         return _o_perfil_do_jogo(appid)
-    if _PERFIL_DO_JOGO_LEMBRADO[0] == chave:
-        return _PERFIL_DO_JOGO_LEMBRADO[1]  # type: ignore[no-any-return]
+    lembrada, lembrado = _PERFIL_DO_JOGO_LEMBRADO[0]
+    if lembrada == chave:
+        return lembrado
     nome = _o_perfil_do_jogo(appid)
-    _PERFIL_DO_JOGO_LEMBRADO[:] = [chave, nome]
+    _PERFIL_DO_JOGO_LEMBRADO[0] = (chave, nome)
     return nome
 
 

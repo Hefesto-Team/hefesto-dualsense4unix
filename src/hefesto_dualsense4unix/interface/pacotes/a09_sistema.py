@@ -1938,9 +1938,14 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 def _repor_quando_o_servico_voltar() -> None:
-    """O `start` bloqueia até a partida: quando ele volta com sucesso, o lançador é reposto."""
+    """O `start` bloqueia até a partida: quando ele volta com sucesso, o lançador é reposto.
+
+    A marca do reinício vence com o prazo do `restart` que estourou e se acende de novo pelo
+    prazo do `start`: o rodapé segue esperando o serviço em vez de mandar o perfil a ninguém.
+    """
     from hefesto_dualsense4unix.utils import session
 
+    session.marcar_o_reinicio(_daemon.prazo_do_systemctl(["start"]))
     resultado = _matriz()._invoke_systemctl(["start", _unidade()], capture=True)
     if getattr(resultado, "returncode", -1) == 0:
         session.marcar_que_o_servico_subiu(_daemon.prazo_do_systemctl(["start"]))

@@ -23,7 +23,9 @@ MORDIDAS (cada uma reprova o que diz, e o md5 do arquivo volta igual):
 - trocar ``session.reinicio_subiu()`` por ``reinicio_em_curso()`` na espera reprova
   ``test_so_o_estado_depois_do_restart_vale``;
 - tirar de ``a09_sistema.reiniciar`` o ``marcar_o_reinicio`` reprova o do teto e o do gesto depois
-  do reiniciar.
+  do reiniciar;
+- tirar de ``a09_sistema._repor_quando_o_servico_voltar`` o ``marcar_o_reinicio`` reprova
+  ``test_o_restart_que_estoura_o_prazo_segue_esperando_o_start``.
 """
 from __future__ import annotations
 
@@ -374,6 +376,56 @@ def test_estourado_o_teto_recusa_com_a_frase_do_reinicio_e_nao_manda(
     assert REINICIO in str(erro.value)
     assert servico.pedidos == [], "o gesto mandou o perfil com o serviço ainda sem perfil ativo"
     assert prazo_do_systemctl(["start"]) <= mundo.t - antes < prazo_do_systemctl(["start"]) + 1
+
+
+@pytest.mark.parametrize("gesto", GESTOS)
+def test_o_restart_que_estoura_o_prazo_segue_esperando_o_start(
+        mundo: _Relogio, a09: Any, monkeypatch: pytest.MonkeyPatch, gesto: str) -> None:
+    """O `restart` que estoura o prazo segue no `start` da fila, e o rodapé espera esse `start`.
+
+    A marca nasce com o prazo do `restart` e vence com ele; o clique que cai durante o `start` que
+    vem depois esperava nada, mandava o perfil ao serviço fora do ar e dizia «Não consegui aplicar a
+    cor». Agora ele espera o serviço voltar e manda o perfil do jogo.
+
+    MORDIDA: tire de ``_repor_quando_o_servico_voltar`` o ``marcar_o_reinicio``.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        PRAZO_ESTOURADO_RC,
+        prazo_do_systemctl,
+    )
+
+    servico = _Servico(mundo, ativo_antigo=JOGO, restaura=JOGO)
+    filas: list[Any] = []
+    monkeypatch.setattr(a09, "na_fila", lambda _f, trabalho, **_k: filas.append(trabalho))
+    passos: list[int] = []
+
+    def volta(_agora: float) -> None:
+        passos.append(1)
+        if len(passos) == 4:
+            servico.escuta = True
+            servico.reiniciou()
+            session.marcar_que_o_servico_subiu(35.0)
+
+    class _Janela:
+        def _invoke_systemctl(self, args: list[str], **_: Any) -> Any:
+            if args[0] == "restart":
+                servico.escuta = False
+                mundo.t += prazo_do_systemctl(["restart"]) + 0.1
+                return SimpleNamespace(returncode=PRAZO_ESTOURADO_RC, stderr="", stdout="")
+            if args[0] == "start":
+                mundo.ao_dormir.append(volta)
+                _gesto(gesto, servico, {"active_profile": ""})
+            return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(a09, "_matriz", lambda: _Janela())
+    a09.reiniciar(SimpleNamespace(state={}), {}, None)
+    assert len(filas) == 1, "o restart estourado não pôs o start na fila"
+    filas[0]()
+    mundo.dormir(10.0)
+    assert servico.pedidos, "o gesto não mandou nada"
+    assert [(n, antigo) for n, antigo, _s in servico.pedidos] == [(JOGO, False)] * len(
+        servico.pedidos), servico.pedidos
+    assert servico.ativo == JOGO and not servico.desistiu
 
 
 def test_sem_a_marca_o_gesto_nao_espera_nem_pergunta(mundo: _Relogio) -> None:
