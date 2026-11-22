@@ -30,7 +30,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -153,6 +153,15 @@ class InstalacaoRecusadaError(Exception):
     def __init__(self, frase: str) -> None:
         super().__init__(frase)
         self.frase = frase
+
+
+class SemRespostaDoGitError(InstalacaoRecusadaError):
+    """O endereço não respondeu ao ``ls-remote`` (sem rede, endereço que sumiu): não é recusa da
+    versão, e quem tenta de novo depois a registra à parte. ``motivo`` é o que o git disse."""
+
+    def __init__(self, frase: str, motivo: str) -> None:
+        super().__init__(frase)
+        self.motivo = motivo
 
 
 class AvisoParaVerError(InstalacaoRecusadaError):
@@ -532,12 +541,26 @@ def _clonar(endereco: str, ref: str | None, destino: Path) -> str:
     return commit
 
 
-def commit_remoto(endereco: str, ref: str | None) -> str | None:
-    """O commit que o ``ref`` aponta no endereço (``HEAD`` sem ``ref``), sem baixar nada.
+class RespostaDoRemoto(NamedTuple):
+    """O que o ``ls-remote`` disse: o ``commit`` (``None`` sem ele), se o endereço ``respondeu``
+    e o ``motivo`` de não haver commit (o que o git escreveu, ou a referência que não existe)."""
 
-    ``None`` quando o endereço não responde (sem rede, endereço que sumiu); o git que não
-    roda ou passa do prazo é recusa. Nos dois, quem pergunta tenta de novo depois, e a
-    extensão instalada fica como está.
+    commit: str | None
+    respondeu: bool = True
+    motivo: str = ""
+
+
+def _motivo_do_git(erro: str) -> str:
+    """O ``stderr`` do git sem o trecho entre aspas (traz o endereço), em uma linha curta."""
+    linhas = [" ".join(re.sub(r"'[^'\n]*'", "", linha).split()) for linha in erro.splitlines()]
+    return " / ".join(linha for linha in linhas if linha)[:200] or "o git saiu sem dizer o porquê"
+
+
+def perguntar_ao_remoto(endereco: str, ref: str | None) -> RespostaDoRemoto:
+    """O commit que o ``ref`` aponta no endereço (``HEAD`` sem ``ref``), sem baixar nada, e o
+    porquê de não haver: o endereço que não responde (sem rede, endereço que sumiu) traz o
+    ``stderr`` do git, e a referência que não existe traz a referência. Git que não roda ou
+    passa do prazo é recusa.
     """
     conferir_a_cifra(endereco)
     padroes = (
@@ -556,18 +579,25 @@ def commit_remoto(endereco: str, ref: str | None) -> str | None:
     except (OSError, subprocess.SubprocessError) as exc:
         raise InstalacaoRecusadaError(f"O git não respondeu: {exc}") from exc
     if feito.returncode != 0:
-        return None
+        return RespostaDoRemoto(None, False, _motivo_do_git(feito.stderr))
     achados: dict[str, str] = {}
     for linha in feito.stdout.splitlines():
         partes = linha.split()
         if len(partes) == 2:
             achados[partes[1]] = partes[0]
     if not ref:
-        return achados.get("HEAD")
+        commit = achados.get("HEAD")
+        return RespostaDoRemoto(commit, True, "" if commit else "o endereço não tem HEAD")
     for nome in (f"refs/tags/{ref}^{{}}", f"refs/tags/{ref}", f"refs/heads/{ref}"):
         if nome in achados:
-            return achados[nome]
-    return None
+            return RespostaDoRemoto(achados[nome])
+    return RespostaDoRemoto(None, True, f"a referência «{ref}» não existe")
+
+
+def commit_remoto(endereco: str, ref: str | None) -> str | None:
+    """O commit que o ``ref`` aponta no endereço, ou ``None`` sem resposta ou sem a referência;
+    o porquê está em :func:`perguntar_ao_remoto`."""
+    return perguntar_ao_remoto(endereco, ref).commit
 
 
 def origem_da_tag(pasta: Path, ref: str | None, chaves: Sequence[str]) -> Origem:
@@ -1160,9 +1190,11 @@ def atualizar(
 def commit_novo(entrada: Entrada, *, lugares: Lugares | None = None) -> str | None:
     """O commit do endereço quando ele é outro que o instalado e o que já espera.
 
-    ``None`` sem novidade ou para a origem «local», que nunca pergunta ao git; o git que
-    não responde (sem rede) é recusa, para quem pergunta tentar de novo mais cedo. O endereço
-    sem cifra também é ``None``, sem perguntar: a recusa fica no ``motivo_da_espera``.
+    ``None`` sem novidade ou para a origem «local», que nunca pergunta ao git. O endereço que
+    não responde (sem rede) levanta :class:`SemRespostaDoGitError`, e a referência que não
+    existe ou o git que não roda, :class:`InstalacaoRecusadaError`; nos dois quem pergunta tenta
+    de novo mais cedo. O endereço sem cifra é ``None``, sem perguntar: a recusa fica no
+    ``motivo_da_espera``.
     """
     if entrada.origem == "local":
         return None
@@ -1171,12 +1203,15 @@ def commit_novo(entrada: Entrada, *, lugares: Lugares | None = None) -> str | No
     except InstalacaoRecusadaError as exc:
         _anotar_o_motivo(lugares or Lugares.do_xdg(), entrada.id, exc.frase)
         return None
-    remoto = commit_remoto(entrada.endereco, entrada.ref)
-    if not remoto:
-        raise InstalacaoRecusadaError(f"O git não respondeu sobre «{entrada.nome}».")
-    if remoto in (entrada.commit, entrada.commit_esperando):
+    resposta = perguntar_ao_remoto(entrada.endereco, entrada.ref)
+    if not resposta.commit:
+        if not resposta.respondeu:
+            raise SemRespostaDoGitError(
+                f"O git não respondeu sobre «{entrada.nome}».", resposta.motivo)
+        raise InstalacaoRecusadaError(f"«{entrada.nome}»: {resposta.motivo}.")
+    if resposta.commit in (entrada.commit, entrada.commit_esperando):
         return None
-    return remoto
+    return resposta.commit
 
 
 def manifesto_instalado(mod_id: str, *, lugares: Lugares | None = None) -> Manifesto:
@@ -1419,7 +1454,9 @@ __all__ = [
     "Entrada",
     "InstalacaoRecusadaError",
     "Lugares",
+    "RespostaDoRemoto",
     "Resultado",
+    "SemRespostaDoGitError",
     "aceitos_de",
     "anotar_o_gesto",
     "atualizar",
@@ -1445,6 +1482,7 @@ __all__ = [
     "migrar_os_aparelhos",
     "o_css_que_fica",
     "origem_da_tag",
+    "perguntar_ao_remoto",
     "remover",
     "rodar_sem_caixa",
     "tirar_da_caixa",

@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     Entrada,
     InstalacaoRecusadaError,
     Lugares,
+    SemRespostaDoGitError,
     aceitos_de,
     atualizar,
     aviso_por_ver,
@@ -1696,6 +1697,7 @@ class Supervisor:
         fica na versão de agora, viva como estava.
         """
         intervalo = max(float(entrada.intervalo_da_atualizacao_s), self.piso_da_atualizacao_s)
+        espera = min(intervalo, max(self.espera_depois_da_falha_s, self.piso_da_atualizacao_s))
         self._proxima_conferencia[entrada.id] = time.monotonic() + intervalo
         try:
             novo = await asyncio.to_thread(commit_novo, entrada, lugares=self.lugares)
@@ -1704,6 +1706,9 @@ class Supervisor:
             feito = await asyncio.to_thread(
                 atualizar, entrada.id, lugares=self.lugares, chaves=self.chaves, sozinha=True
             )
+        except SemRespostaDoGitError as exc:
+            logger.info("mods_sem_rede_para_conferir", mod=entrada.id, motivo=exc.motivo,
+                        proxima_as=time.strftime("%H:%M:%S", time.localtime(time.time() + espera)))
         except InstalacaoRecusadaError as exc:
             logger.warning("mods_atualizacao_recusada", mod=entrada.id, err=exc.frase)
         except Exception as exc:
@@ -1716,7 +1721,6 @@ class Supervisor:
                     "mods_versao_esperando", mod=entrada.id, motivo=feito.entrada.motivo_da_espera
                 )
             return feito.trocou
-        espera = min(intervalo, max(self.espera_depois_da_falha_s, self.piso_da_atualizacao_s))
         self._proxima_conferencia[entrada.id] = time.monotonic() + espera
         return False
 

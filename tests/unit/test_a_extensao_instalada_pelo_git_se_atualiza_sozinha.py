@@ -125,7 +125,8 @@ def test_a_chave_desligada_no_registro_nao_pergunta_ao_git(
 ) -> None:
     _instalar_ligada(lar, remoto, atualiza_sozinha=False, intervalo_da_atualizacao_s=0.0)
     perguntas: list[str] = []
-    monkeypatch.setattr(instalador, "commit_remoto", lambda e, r: perguntas.append(e) or None)
+    monkeypatch.setattr(instalador, "perguntar_ao_remoto",
+                        lambda e, r: perguntas.append(e) or instalador.RespostaDoRemoto(None))
 
     async def corrida() -> None:
         sup = _supervisor_rapido(lar)
@@ -292,7 +293,7 @@ def test_a_origem_local_nunca_se_atualiza_sozinha(
     def nunca(*_a: Any) -> None:
         raise AssertionError("a origem local perguntou ao git")
 
-    monkeypatch.setattr(instalador, "commit_remoto", nunca)
+    monkeypatch.setattr(instalador, "perguntar_ao_remoto", nunca)
     assert commit_novo(ler_registro(lar.registro)["exemplo"]) is None
     with pytest.raises(InstalacaoRecusadaError, match="não se atualiza sozinha"):
         atualizar("exemplo", lugares=lar, sozinha=True)
