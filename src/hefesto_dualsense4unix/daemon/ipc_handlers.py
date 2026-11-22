@@ -1913,26 +1913,6 @@ class IpcHandlersMixin:
             getattr(self.daemon, "_last_state", None) if self.daemon else None
         ) or snap.controller
 
-        stale_warn_threshold = 3
-        if (
-            state is not None
-            and self.controller.is_connected()
-            and state.raw_lx == 128
-            and state.raw_ly == 128
-            and state.raw_rx == 128
-            and state.raw_ry == 128
-            and state.l2_raw == 0
-            and state.r2_raw == 0
-            and not state.buttons_pressed
-        ):
-            stale_count = self.store.bump("state_full.stale_neutral")
-            if stale_count == stale_warn_threshold:
-                logger.warning(
-                    "state_stale_neutral_warning",
-                    state_full_calls=stale_count,
-                    hint="evdev_reader pode não ter conectado; HID-raw fallback estagnado",
-                )
-
         buttons: list[str] = sorted(state.buttons_pressed) if state else []
         result: dict[str, Any] = {
             "connected": bool(state and state.connected),

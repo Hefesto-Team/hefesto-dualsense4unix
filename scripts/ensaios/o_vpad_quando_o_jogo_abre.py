@@ -40,7 +40,8 @@ _EVENTOS = (
     ("motion_reader_stopped", "leitor de movimento PAROU"),
     ("motion_reader_open_failed", "leitor de movimento FALHOU"),
     ("controller_disconnected", "controle DESCONECTOU"),
-    ("state_stale_neutral_warning", "estado ESTAGNADO"),
+    ("motion_reader_peca_muda", "leitor de movimento MUDO"),
+    ("report_thread_entrada_muda", "entrada do controle MUDA"),
 )
 
 _RE_PERFIL = re.compile(r"profile_activated\s+name=('([^']*)'|(\S+))")

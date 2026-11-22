@@ -10,8 +10,10 @@ Critérios cobertos:
   2. buttons populados de state.buttons_pressed (sem chamar `_evdev.snapshot`).
   3. fallback gracioso quando _last_state é None: cai no store.
   4. fallback final quando ambos None: campos neutros canônicos.
-  5. log `state_stale_neutral_warning` aciona após 3 chamadas com
-     state neutro + controller conectado.
+  5. o `state_full` não mede silêncio: o estado neutro e conectado, por mais chamadas que
+     sejam, não escreve aviso de entrada parada nem pergunta ao backend se está conectado (quem
+     mede o silêncio é o leitor de cada controle: `motion_reader_peca_muda` e
+     `report_thread_entrada_muda`).
 """
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from structlog.testing import capture_logs
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.controller import ControllerState
@@ -182,21 +185,33 @@ async def test_state_full_buttons_de_state_buttons_pressed(
 
 
 @pytest.mark.asyncio
-async def test_state_full_aciona_warning_quando_neutro_persistente(
-    running_server: Any,
+async def test_state_full_neutro_nao_escreve_aviso_nem_toma_a_trava(
+    running_server: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Após 3 chamadas com state neutro + connected, contador stale incrementa."""
-    _server, socket_path, _fc, store, daemon = running_server
+    """50 chamadas com o estado neutro e conectado: nenhum aviso, nenhum `is_connected`."""
+    _server, socket_path, fc, store, daemon = running_server
     daemon._last_state = _make_state(
         lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
         buttons=frozenset(), connected=True,
     )
+    perguntas: list[int] = []
+    conectado = fc.is_connected
 
-    async with IpcClient.connect(socket_path) as client:
-        for _ in range(4):
-            await client.call("daemon.state_full")
+    def espiar() -> bool:
+        perguntas.append(1)
+        return bool(conectado())
 
-    assert store.counter("state_full.stale_neutral") >= 3
+    monkeypatch.setattr(fc, "is_connected", espiar)
+
+    with capture_logs() as linhas:
+        async with IpcClient.connect(socket_path) as client:
+            for _ in range(50):
+                await client.call("daemon.state_full")
+
+    avisos = [linha for linha in linhas if linha["event"] == "state_stale_neutral_warning"]
+    assert not avisos, "o `state_full` avisou entrada parada sem medir silêncio"
+    assert not perguntas, "o `state_full` tomou a trava do backend só para contar amostras neutras"
+    assert store.counter("state_full.stale_neutral") == 0
 
 
 class TestPlayerPorControle:
