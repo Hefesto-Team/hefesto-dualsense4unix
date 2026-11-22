@@ -154,7 +154,7 @@ Os formatos abaixo existem, mas o caminho testado é o do código-fonte.
 
 - **`.deb`**: `scripts/build_deb.sh`. No Ubuntu e no Pop!_OS 22.04 e 24.04, o
   `pydantic` do apt é o 1.x; rode antes `pip install --user 'pydantic>=2'`.
-- **Flatpak**: `scripts/build_flatpak.sh`; ver [flatpak.md](flatpak.md).
+- **Flatpak**: `scripts/build_flatpak.sh`; ver [flatpak.md](flatpak.md), que traz o comando do sistema que libera o controle e o que o desfaz (`--remover`).
 - **AppImage**: `scripts/build_appimage_gui.sh`.
 - **Arch**: `packaging/arch/PKGBUILD`. **Fedora**: `packaging/fedora/hefesto-dualsense4unix.spec`.
   **Nix**: `packaging/nix/package.nix`, pelo `flake.nix` da raiz.
@@ -166,7 +166,7 @@ Depois de trocar de kernel ou perder a permissão do controle:
 ```bash
 sudo bash scripts/install_udev.sh                                        # código-fonte
 sudo bash /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh # .deb
-flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
+sudo bash "$(flatpak info --show-location io.github.hefesto_team.hefesto_dualsense4unix)/files/bin/install-host-udev.sh" # Flatpak, fora do sandbox
 ```
 
 Desconecte e reconecte o controle. `ls -l /dev/hidraw* /dev/uinput /dev/uhid`

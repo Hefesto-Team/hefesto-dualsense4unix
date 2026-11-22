@@ -26,16 +26,46 @@ O Hefesto ainda não está publicado no Flathub.
 
 ### As regras udev, uma vez só
 
-O sandbox não instala regras udev. Rode uma vez, com a senha de administrador:
+O sandbox não grava no sistema. O ajudante que grava mora dentro do pacote e roda
+no sistema, num terminal fora do Flatpak, com a senha de administrador:
 
 ```bash
-flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
+sudo bash "$(flatpak info --show-location io.github.hefesto_team.hefesto_dualsense4unix)/files/bin/install-host-udev.sh"
 ```
 
-Ele instala as mesmas regras do `install_udev.sh` (a lista está em
-[instalacao.md](instalacao.md)). Depois, desconecte e reconecte o controle, e
-feche o Hefesto por inteiro (inclusive na bandeja) antes de abri-lo de novo: o
-Flatpak só monta os caminhos de `/run` ao abrir.
+Rodado de dentro do Flatpak, o ajudante não grava nada: só imprime esse comando.
+Depois de gravar, desconecte e reconecte o controle, e feche o Hefesto por inteiro
+(inclusive na bandeja) antes de abri-lo de novo: o Flatpak só monta os caminhos de
+`/run` ao abrir.
+
+### O que o ajudante grava no sistema
+
+Os mesmos arquivos do `install_udev.sh`, do `.deb` e do `install.sh` (os caminhos
+estão em [instalacao.md](instalacao.md)):
+
+```text
+/etc/udev/rules.d/
+  70-ps5-controller.rules (só é apagada: é o nome antigo da 73)
+  71-uhid.rules  71-uinput.rules
+  72-hefesto-touchpad-motion-uaccess.rules  72-ps5-controller-autosuspend.rules
+  73-hefesto-ps5-controller.rules  76-dualsense-touchpad-libinput-ignore.rules
+  77-dualsense-leds.rules  78-dualsense-motion-not-joystick.rules
+  79-external-controller-leds.rules  80-motion-joydev-hide.rules
+  81-hefesto-usb-host-power.rules  81-hefesto-usb-power.rules
+  82-nintendo-pro-nosniff.rules  83-hefesto-bond-snapshot.rules
+  84-nintendo-pro-variant.rules  85-hefesto-o-cabo-assume.rules
+/etc/modules-load.d/hefesto-dualsense4unix.conf
+/etc/modprobe.d/hefesto-dualsense-storm.conf  hefesto-btusb-no-autosuspend.conf
+                hefesto-hid-nintendo.conf     hefesto-hid-playstation.conf
+/etc/systemd/system/hefesto-hidraw-broker.service  hefesto-hidraw-broker.socket
+                    hefesto-bt-bonds-snapshot.service
+/usr/local/lib/hefesto-dualsense4unix/  o broker e os scripts do Bluetooth
+/var/lib/hefesto-dualsense4unix/bt-bonds/  a pasta das cópias dos pareamentos
+```
+
+Mais o grupo `hefesto` (você entra nele) e os módulos de kernel `hefesto-hid-nintendo`,
+`hefesto-hid-playstation`, `hefesto-rtw88-usb` e `hefesto-usb-f-hid`, que valem a partir
+do próximo boot e exigem `dkms` no sistema.
 
 ### Se você tem o id antigo
 
@@ -116,20 +146,22 @@ as janelas.
 
 ## Desinstalar
 
+Primeiro as regras e os arquivos do sistema, porque o ajudante que os tira mora no
+Flatpak. Num terminal fora do Flatpak:
+
+```bash
+sudo bash "$(flatpak info --show-location io.github.hefesto_team.hefesto_dualsense4unix)/files/bin/install-host-udev.sh" --remover
+```
+
+Ele apaga tudo o que a lista acima mostra, para o serviço do broker, devolve os
+nós do controle e remove os módulos DKMS. Ficam o grupo `hefesto` e as cópias dos
+pareamentos Bluetooth em `/var/lib/hefesto-dualsense4unix/bt-bonds/`, se existirem.
+Como os arquivos são os mesmos do `install.sh` e do `.deb`, o comando também tira os
+deles: use-o só se você não vai mais usar o Hefesto por nenhum formato.
+
+Depois, o aplicativo:
+
 ```bash
 flatpak uninstall --user io.github.hefesto_team.hefesto_dualsense4unix
 rm -rf ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/   # opcional: os seus perfis
 ```
-
-As regras udev do sistema ficam. Para tirá-las:
-
-```bash
-sudo rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
-        /etc/udev/rules.d/70-ps5-controller.rules \
-        /etc/udev/rules.d/71-uinput.rules \
-        /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
-sudo udevadm control --reload-rules
-```
-
-A `70-ps5-controller.rules` é o nome antigo da `73`, e pode existir numa
-instalação antiga.

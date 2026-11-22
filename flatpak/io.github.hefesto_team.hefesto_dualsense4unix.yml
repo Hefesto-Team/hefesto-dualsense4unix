@@ -361,7 +361,10 @@ modules:
           /app/share/metainfo/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml
 
       # Copiar regras udev para dentro do bundle (leitura apenas)
-      # Instalação no host via scripts/install-host-udev.sh + pkexec.
+      # O ajudante roda no HOST, não no sandbox: `sudo bash "$(flatpak info
+      # --show-location <id>)/files/bin/install-host-udev.sh"` (`--remover`
+      # desfaz). Ele acha estes arquivos por `../share/hefesto-dualsense4unix`,
+      # relativo a si mesmo, e dentro do sandbox só imprime esse comando.
       # PACKAGING-UDEV-CANONICAL-FIX-01: conjunto CANÔNICO 71/72/73-hefesto. As 73/74
       # (hotplug-GUI) foram removidas por alimentarem a re-enumeração do storm
       # -71 — paridade com scripts/install_udev.sh (assets/ é fonte de verdade).

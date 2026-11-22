@@ -4,10 +4,56 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+MODO="instalar"
+for argumento in "$@"; do
+    case "${argumento}" in
+        --remover) MODO="remover" ;;
+        *)
+            echo "uso: install-host-udev.sh [--remover]" >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [[ -e "${HEFESTO_MARCA_SANDBOX:-/.flatpak-info}" ]]; then
+    _opcao=""
+    [[ "${MODO}" == "remover" ]] && _opcao=" --remover"
+    echo "Este ajudante grava no sistema, e de dentro do Flatpak o sistema não é alcançável."
+    echo "Rode este comando num terminal do sistema (fora do Flatpak):"
+    echo ""
+    echo "  sudo bash \"\$(flatpak info --show-location ${FLATPAK_ID:-io.github.hefesto_team.hefesto_dualsense4unix})/files/bin/install-host-udev.sh\"${_opcao}"
+    exit 1
+fi
+
+_elevar() {
+    local cmd="$1" sem_elevacao="$2"
+    if [[ "$(id -u)" -eq 0 ]]; then
+        bash -c "${cmd}"
+    elif command -v pkexec &>/dev/null; then
+        echo "Esta operação requer senha de administrador (polkit)."
+        echo ""
+        pkexec bash -c "${cmd}"
+    elif command -v sudo &>/dev/null; then
+        if ! sudo -n true 2>/dev/null; then
+            echo "AVISO: sudo requer senha para gravar em ${RULES_DEST}." >&2
+            echo "       Se você está rodando sem TTY (CI, headless), cancele com Ctrl+C" >&2
+            echo "       e use 'sudo bash $0' diretamente." >&2
+            echo "" >&2
+        fi
+        sudo bash -c "${cmd}"
+    else
+        echo "ERRO: nenhum método de elevação de privilégio encontrado (pkexec ou sudo)." >&2
+        echo "" >&2
+        "${sem_elevacao}"
+        exit 1
+    fi
+}
+
 RULES_SRC=""
 MODLOAD_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/udev-rules" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/udev-rules" \
     "/usr/share/hefesto-dualsense4unix/udev-rules" \
     "${SCRIPT_DIR}/../assets" \
 ; do
@@ -19,6 +65,7 @@ done
 
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modules-load" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/modules-load" \
     "/usr/share/hefesto-dualsense4unix/modules-load" \
     "${SCRIPT_DIR}/../assets" \
 ; do
@@ -31,6 +78,7 @@ done
 SNDQUIRK_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/modprobe" \
     "/usr/share/hefesto-dualsense4unix/modprobe" \
     "/app/share/hefesto-dualsense4unix/assets/modprobe" \
     "/usr/share/hefesto-dualsense4unix/assets/modprobe" \
@@ -46,6 +94,7 @@ SNDQUIRK_DEST="/etc/modprobe.d"
 BTUSB_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe.d" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/modprobe.d" \
     "/usr/share/hefesto-dualsense4unix/modprobe.d" \
     "${SCRIPT_DIR}/../assets/modprobe.d" \
 ; do
@@ -58,6 +107,7 @@ done
 HIDNINTENDO_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe.d" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/modprobe.d" \
     "/usr/share/hefesto-dualsense4unix/modprobe.d" \
     "${SCRIPT_DIR}/../assets/modprobe.d" \
 ; do
@@ -70,6 +120,7 @@ done
 HIDPLAYSTATION_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe.d" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/modprobe.d" \
     "/usr/share/hefesto-dualsense4unix/modprobe.d" \
     "${SCRIPT_DIR}/../assets/modprobe.d" \
 ; do
@@ -82,6 +133,7 @@ done
 BROKER_BIN_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/broker" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/broker" \
     "/usr/share/hefesto-dualsense4unix/broker" \
     "${SCRIPT_DIR}/../src/hefesto_dualsense4unix/broker" \
 ; do
@@ -94,6 +146,7 @@ done
 BROKER_UNITS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/systemd" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/systemd" \
     "/usr/share/hefesto-dualsense4unix/systemd" \
     "${SCRIPT_DIR}/../assets/systemd" \
 ; do
@@ -117,6 +170,7 @@ fi
 BTRES_SCRIPTS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/scripts" \
     "/usr/share/hefesto-dualsense4unix/scripts" \
     "${SCRIPT_DIR}" \
 ; do
@@ -129,6 +183,7 @@ done
 BTRES_UNIT_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/systemd" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/systemd" \
     "/usr/share/hefesto-dualsense4unix/systemd" \
     "${SCRIPT_DIR}/../assets/systemd" \
 ; do
@@ -146,6 +201,7 @@ fi
 REGRA_ABERTA_SH=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/scripts" \
     "/usr/share/hefesto-dualsense4unix/scripts" \
     "${SCRIPT_DIR}" \
 ; do
@@ -158,6 +214,7 @@ done
 DISPARO_SH=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/scripts" \
     "/usr/share/hefesto-dualsense4unix/scripts" \
     "${SCRIPT_DIR}" \
 ; do
@@ -167,13 +224,38 @@ for candidate in \
     fi
 done
 
-if [[ -z "${RULES_SRC}" ]]; then
+DKMS_LIB_SH=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
+    "/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
+    "${SCRIPT_DIR}/dkms_lib.sh" \
+; do
+    if [[ -f "${candidate}" ]]; then
+        DKMS_LIB_SH="${candidate}"
+        break
+    fi
+done
+DKMS_DIR=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/dkms" \
+    "${SCRIPT_DIR}/../share/hefesto-dualsense4unix/dkms" \
+    "/usr/share/hefesto-dualsense4unix/dkms" \
+    "${SCRIPT_DIR}/../assets/dkms" \
+; do
+    if compgen -G "${candidate}/*/dkms.conf" >/dev/null; then
+        DKMS_DIR="${candidate}"
+        break
+    fi
+done
+
+if [[ "${MODO}" == "instalar" && -z "${RULES_SRC}" ]]; then
     echo "ERRO: regras udev não encontradas em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
     exit 1
 fi
 
-if [[ -z "${DISPARO_SH}" ]]; then
+if [[ "${MODO}" == "instalar" && -z "${DISPARO_SH}" ]]; then
     echo "ERRO: disparo_do_udev.sh não encontrado em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
     exit 1
@@ -200,6 +282,120 @@ RULES=(
     "84-nintendo-pro-variant.rules"
     "85-hefesto-o-cabo-assume.rules"
 )
+
+if [[ "${MODO}" == "remover" ]]; then
+    REGRA_DO_NO_VELHA="70-ps5-controller.rules"
+    LIB_DEST="/usr/local/lib/hefesto-dualsense4unix"
+    UNIT_DEST="/etc/systemd/system"
+    BONDS_DEST="/var/lib/hefesto-dualsense4unix"
+    CONFS_DO_MODPROBE=(
+        "hefesto-dualsense-storm.conf"
+        "hefesto-btusb-no-autosuspend.conf"
+        "hefesto-hid-nintendo.conf"
+        "hefesto-hid-playstation.conf"
+    )
+    ARQUIVOS_DA_LIB=(
+        "hefesto-hidraw-broker"
+        "bt_nosniff_now.sh"
+        "bt_bonds_snapshot.sh"
+        "bt_active_mode.sh"
+        "bt_ponte_privilegiada.sh"
+    )
+    UNIDADES=(
+        "hefesto-hidraw-broker.service"
+        "hefesto-hidraw-broker.socket"
+        "hefesto-bt-bonds-snapshot.service"
+    )
+
+    _build_remove_cmd() {
+        local cmd="" regra conf arquivo unidade
+        cmd+="if command -v systemctl >/dev/null 2>&1; then "
+        cmd+="systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service "
+        cmd+="2>/dev/null || true; fi; "
+        cmd+="if [ -x '${LIB_DEST}/hefesto-hidraw-broker' ]; then "
+        cmd+="'${LIB_DEST}/hefesto-hidraw-broker' --restore-all-and-exit 2>/dev/null || true; fi; "
+        for regra in "${RULES[@]}" "${REGRA_DO_NO_VELHA}"; do
+            cmd+="rm -f '${RULES_DEST}/${regra}'; "
+        done
+        cmd+="rm -f '${MODLOAD_DEST}/hefesto-dualsense4unix.conf'; "
+        for conf in "${CONFS_DO_MODPROBE[@]}"; do
+            cmd+="rm -f '${SNDQUIRK_DEST}/${conf}'; "
+        done
+        for unidade in "${UNIDADES[@]}"; do
+            cmd+="rm -f '${UNIT_DEST}/${unidade}'; "
+        done
+        for arquivo in "${ARQUIVOS_DA_LIB[@]}"; do
+            cmd+="rm -f '${LIB_DEST}/${arquivo}'; "
+        done
+        cmd+="rmdir '${LIB_DEST}' 2>/dev/null || true; "
+        cmd+="rmdir '${BONDS_DEST}/bt-bonds' 2>/dev/null || true; "
+        cmd+="rmdir '${BONDS_DEST}' 2>/dev/null || true; "
+        cmd+="systemctl daemon-reload 2>/dev/null || true; "
+        cmd+="udevadm control --reload-rules; "
+        if [[ -n "${DISPARO_SH}" ]]; then
+            cmd+="bash '${DISPARO_SH}'; "
+        fi
+        cmd+="echo 'Regras e arquivos removidos.'"
+        printf '%s' "${cmd}"
+    }
+
+    _manual_da_volta() {
+        echo "Execute manualmente como root:" >&2
+        echo "  sudo systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service" >&2
+        echo "  sudo rm -f ${RULES_DEST}/${REGRA_DO_NO_VELHA} \\" >&2
+        for regra in "${RULES[@]}"; do
+            echo "       ${RULES_DEST}/${regra} \\" >&2
+        done
+        echo "       ${MODLOAD_DEST}/hefesto-dualsense4unix.conf" >&2
+        for conf in "${CONFS_DO_MODPROBE[@]}"; do
+            echo "  sudo rm -f ${SNDQUIRK_DEST}/${conf}" >&2
+        done
+        for conf in "${UNIDADES[@]}"; do
+            echo "  sudo rm -f ${UNIT_DEST}/${conf}" >&2
+        done
+        echo "  sudo rm -rf ${LIB_DEST}" >&2
+        echo "  sudo systemctl daemon-reload" >&2
+        echo "  sudo udevadm control --reload-rules" >&2
+    }
+
+    _dkms_da_volta() {
+        local conf fonte pacote ko ver
+        for conf in "${DKMS_DIR}"/*/dkms.conf; do
+            [[ -f "${conf}" ]] || continue
+            fonte="${conf%/dkms.conf}"
+            pacote="$(sed -n 's/^PACKAGE_NAME="\(.*\)"$/\1/p' "${conf}")"
+            ko="$(sed -n 's/^BUILT_MODULE_NAME\[0\]="\(.*\)"$/\1/p' "${conf}")"
+            ver="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${conf}")"
+            [[ -n "${pacote}" && -n "${ko}" && -n "${ver}" ]] || continue
+            if [[ -z "$(_dkms_status_texto "${pacote}/${ver}")" \
+                  && ! -d "$(_dkms_src_root)/${pacote}-${ver}" ]]; then
+                continue
+            fi
+            echo ""
+            echo "Módulo DKMS patchado ${ko} (${pacote}) ..."
+            dkms_remove_patched_module "${pacote}" "${ver}" "${ko}"
+        done
+    }
+
+    echo "Hefesto - DualSense4Unix — remoção do que o ajudante gravou no sistema"
+    echo ""
+    _elevar "$(_build_remove_cmd)" _manual_da_volta
+
+    if [[ -n "${DKMS_LIB_SH}" && -n "${DKMS_DIR}" ]]; then
+        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+            sudo() { "$@"; }
+        fi
+        # shellcheck source=dkms_lib.sh
+        source "${DKMS_LIB_SH}"
+        _dkms_da_volta
+        dkms_flush_initramfs
+    fi
+
+    echo ""
+    echo "Feito. O grupo 'hefesto' e as cópias dos pareamentos em /var/lib/hefesto-dualsense4unix/bt-bonds/ ficam."
+    echo "Os módulos do kernel de fábrica voltam a valer no próximo boot."
+    exit 0
+fi
 
 echo "Hefesto - DualSense4Unix — instalação de regras udev"
 echo ""
@@ -419,23 +615,7 @@ _build_install_cmd() {
 
 INSTALL_CMD="$(_build_install_cmd)"
 
-if [[ "$(id -u)" -eq 0 ]]; then
-    bash -c "${INSTALL_CMD}"
-elif command -v pkexec &>/dev/null; then
-    echo "Esta operação requer senha de administrador (polkit)."
-    echo ""
-    pkexec bash -c "${INSTALL_CMD}"
-elif command -v sudo &>/dev/null; then
-    if ! sudo -n true 2>/dev/null; then
-        echo "AVISO: sudo requer senha para instalar regras udev em ${RULES_DEST}." >&2
-        echo "       Se você está rodando sem TTY (CI, headless), cancele com Ctrl+C" >&2
-        echo "       e use 'sudo bash $0' diretamente." >&2
-        echo "" >&2
-    fi
-    sudo bash -c "${INSTALL_CMD}"
-else
-    echo "ERRO: nenhum método de elevação de privilégio encontrado (pkexec ou sudo)." >&2
-    echo "" >&2
+_manual_da_ida() {
     echo "Execute manualmente como root:" >&2
     for regra in "${RULES[@]}"; do
         if [[ "${regra}" == "${REGRA_DO_NO}" ]]; then
@@ -461,31 +641,9 @@ else
     fi
     echo "  sudo udevadm control --reload-rules" >&2
     echo "  sudo bash ${DISPARO_SH}" >&2
-    exit 1
-fi
+}
 
-DKMS_LIB_SH=""
-for candidate in \
-    "/app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
-    "/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
-    "${SCRIPT_DIR}/dkms_lib.sh" \
-; do
-    if [[ -f "${candidate}" ]]; then
-        DKMS_LIB_SH="${candidate}"
-        break
-    fi
-done
-DKMS_DIR=""
-for candidate in \
-    "/app/share/hefesto-dualsense4unix/dkms" \
-    "/usr/share/hefesto-dualsense4unix/dkms" \
-    "${SCRIPT_DIR}/../assets/dkms" \
-; do
-    if compgen -G "${candidate}/*/dkms.conf" >/dev/null; then
-        DKMS_DIR="${candidate}"
-        break
-    fi
-done
+_elevar "${INSTALL_CMD}" _manual_da_ida
 
 _depois_do_usb_f_hid() {
     if ! dkms_modulo_da_casa usb_f_hid; then
