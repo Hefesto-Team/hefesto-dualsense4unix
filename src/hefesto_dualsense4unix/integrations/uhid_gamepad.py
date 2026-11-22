@@ -1910,6 +1910,7 @@ class UhidDualSense:
             return True
         self._as_janelas_do_eco().clear()
         self._mic_bit_que_saiu = False
+        esperar_os_nos_que_saem()
         _DESCIDA_AO_BROKER.esperar_o_aparelho(self, _DESCIDA_DO_SERIAL_ESPERA_S)
         _MACS_DOS_VPADS_VIVOS.vestir(self)
         if self._criar_o_device(_O_KERNEL_ESPERA_S):
@@ -3680,6 +3681,14 @@ class _DescidaAoBroker:
                 segundos,
             )
 
+    def esperar_os_desfazeres(self, segundos: float) -> bool:
+        """True = nenhum desfazer de pad (:class:`_DesfazerDoPad`) pendente, em até ``segundos``."""
+        with self._trava:
+            return self._trava.wait_for(
+                lambda: not any(isinstance(vez, _DesfazerDoPad) for _, vez in self._pendentes()),
+                segundos,
+            )
+
     def esperar_tudo(self, segundos: float) -> bool:
         """True = a fila esvaziou, o fio terminou, nenhum pedido largado segue em voo e o
         MAC de quem parou no tique voltou."""
@@ -3769,6 +3778,19 @@ def esperar_as_descidas(segundos: float = _DESCIDA_DO_SERIAL_ESPERA_S) -> bool:
     if _DESCIDA_AO_BROKER.esperar_tudo(segundos):
         return True
     logger.warning("pad_usb_descida_nao_terminou", segundos=segundos)
+    return False
+
+
+def esperar_os_nos_que_saem(segundos: float = _DESCIDA_ESPERA_S) -> bool:
+    """O pad novo só nasce depois de sair do kernel o nó de quem parou antes dele.
+
+    O jogo dá ao nó novo a primeira vaga livre (XInput, SDL) e ignora o quinto: o nó que
+    ainda desce na fila (:func:`parar_fora_do_tique`) tomaria a vaga do novo. Roda no
+    nascimento, nunca no tique. True = nenhum desfazer pendente, em até ``segundos``.
+    """
+    if _DESCIDA_AO_BROKER.esperar_os_desfazeres(segundos):
+        return True
+    logger.warning("pad_nasce_com_o_no_velho_descendo", segundos=segundos)
     return False
 
 

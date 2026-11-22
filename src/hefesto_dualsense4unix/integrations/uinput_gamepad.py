@@ -572,7 +572,10 @@ class UinputGamepad:
         self.product = spec["product"]
 
     def start(self) -> bool:
-        """Cria o device. Retorna False se /dev/uinput indisponível."""
+        """Cria o device. Retorna False se /dev/uinput indisponível.
+
+        O nó nasce depois de sair o de quem parou antes (`esperar_os_nos_que_saem`).
+        """
         if self._device is not None:
             return True
         try:
@@ -580,6 +583,9 @@ class UinputGamepad:
         except ImportError:
             logger.warning("python-evdev não instalado — emulação de gamepad indisponível")
             return False
+        from hefesto_dualsense4unix.integrations.uhid_gamepad import esperar_os_nos_que_saem
+
+        esperar_os_nos_que_saem()
         device = self._create_device(with_ff=True)
         if device is not None:
             self._ff_supported = True

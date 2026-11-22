@@ -72,8 +72,17 @@ class Mesa(Mundo):
             return original(fd, dados)
 
         self.kernel.escrever = escrever  # type: ignore[method-assign]
+        self.vivos_ao_nascer: list[int] = []
+        criar_no_uhid = self.kernel._criar
+
+        def criar_o_uhid(device: Any, dados: bytes) -> None:
+            self.vivos_ao_nascer.append(self.vivos())
+            criar_no_uhid(device, dados)
+
+        self.kernel._criar = criar_o_uhid  # type: ignore[method-assign]
 
         def criar(_pad: Any, *, with_ff: bool) -> _NoLento:
+            self.vivos_ao_nascer.append(self.vivos())
             no = _NoLento()
             self.nos.append(no)
             return no
@@ -85,6 +94,11 @@ class Mesa(Mundo):
         pad = make_virtual_pad(flavor, identity=identidade, player=jogador, allow_uhid=False)
         assert pad is not None and pad.backend == "uinput" and pad.is_active()
         return pad
+
+    def vivos(self) -> int:
+        """Os nós de pad que o jogo vê agora: os do uinput não fechados e os do uhid criados."""
+        no_uinput = sum(1 for no in self.nos if not no.fechado)
+        return no_uinput + sum(1 for d in self.kernel.devices.values() if d.criado)
 
     def com_o_fio_do_rumble_demorando(self, pad: Any) -> None:
         """O fio do rumble só sai no `join` estourar: o `stop` leva o `join` inteiro."""
@@ -186,19 +200,66 @@ def test_sai_e_volta_o_mesmo_jogador_no_uhid_sem_trocar_de_endereco(mesa: Mesa) 
 
 
 @pytest.mark.parametrize("flavor", ["xbox", "dualsense"])
-def test_sai_e_volta_o_mesmo_jogador_no_uinput_com_o_no_velho_descendo(
+def test_sai_e_volta_o_mesmo_jogador_no_uinput_sem_dois_nos_no_jogo(
     mesa: Mesa, flavor: str
 ) -> None:
-    """O nó novo nasce na hora; o velho desce na fila sem tocar no novo."""
+    """Quem para volta na hora; o nó novo nasce depois de o velho descer na fila."""
     velho = mesa.uinput(P1, 1, flavor)
 
     comeco = time.monotonic()
     parar_fora_do_tique(velho)
-    novo = mesa.uinput(P1, 1, flavor)
     levou = time.monotonic() - comeco
+    novo = mesa.uinput(P1, 1, flavor)
 
-    assert levou < 0.1
+    assert levou < TETO_DO_CHAMADOR_S
     assert novo is not velho and novo._device is not velho._device
+    assert mesa.vivos_ao_nascer == [0, 0], "o nó novo nasceu com o velho ainda no jogo"
     assert esperar_as_descidas(5.0)
     assert not velho.is_active() and novo.is_active()
     assert [no.fechado for no in mesa.nos] == [True, False]
+
+
+def _pad_de(mesa: Mesa, tipo: str, identidade: str, jogador: int) -> Any:
+    if tipo == "uinput":
+        return mesa.uinput(identidade, jogador, "xbox")
+    pad = mesa.nascer(identidade, jogador)
+    assert pad.backend == "uhid"
+    return pad
+
+
+@pytest.mark.parametrize(
+    ("velho_tipo", "novo_tipo"),
+    [("uinput", "uinput"), ("uinput", "uhid"), ("uhid", "uinput"), ("uhid", "uhid")],
+)
+def test_com_quatro_na_mesa_o_no_de_quem_volta_nunca_e_o_quinto(
+    mesa: Mesa, velho_tipo: str, novo_tipo: str
+) -> None:
+    """O jogo dá ao nó novo a primeira vaga livre e ignora o quinto (XInput, SDL).
+
+    Quatro jogadores; o P2 sai e volta (a recriação, a troca de modo, a promoção ao uhid):
+    quem para segue sem esperar, e o nó novo só nasce depois de o velho sair do kernel.
+    """
+    outros = [
+        mesa.uinput("aabbcc000001", 1, "xbox"),
+        mesa.nascer("aabbcc000003", 3),
+        mesa.uinput("aabbcc000004", 4, "xbox"),
+    ]
+    velho = _pad_de(mesa, velho_tipo, P2, 2)
+    if velho_tipo == "uhid":
+        mesa.lentos.add(velho._fd)
+    else:
+        mesa.com_o_fio_do_rumble_demorando(velho)
+    assert mesa.vivos() == 4
+
+    comeco = time.monotonic()
+    parar_fora_do_tique(velho)
+    levou = time.monotonic() - comeco
+    _pad_de(mesa, novo_tipo, P2, 2)
+
+    assert levou < TETO_DO_CHAMADOR_S, f"o desfazer do pad parou quem chamou: {levou * 1000:.0f} ms"
+    assert mesa.vivos_ao_nascer[-1] == 3, (
+        f"o nó novo nasceu com {mesa.vivos_ao_nascer[-1]} na mesa: o jogo o põe na quinta vaga"
+    )
+    assert mesa.vivos() == 4
+    assert all(p.is_active() for p in outros)
+    assert mesa.kernel.recusas == []
