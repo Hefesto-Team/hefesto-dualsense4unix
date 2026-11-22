@@ -6920,6 +6920,7 @@ _APOSENTADOS_AVISADOS: set[str] = set()
 CAMPOS_DE_SUBIDA = frozenset({
     "poll_hz", "ipc_enabled", "udp_enabled", "udp_host", "udp_port", "dsu_enabled", "dsu_port",
     "autoswitch_enabled", "metrics_enabled", "metrics_port", "plugins_enabled",
+    "mic_button_toggles_system",
 })
 
 
@@ -6983,7 +6984,6 @@ def config_do_reload_conferida(overrides: dict[str, Any]) -> dict[str, Any]:
     confere: dict[str, Callable[[str, Any], Any]] = {
         "mouse_emulation_enabled": _o_booleano,
         "keyboard_emulation_enabled": _o_booleano,
-        "mic_button_toggles_system": _o_booleano,
         "mouse_speed": _o_inteiro_entre(_um.MOUSE_SPEED_MIN, _um.MOUSE_SPEED_MAX),
         "mouse_scroll_speed": _o_inteiro_entre(_um.SCROLL_SPEED_MIN, _um.SCROLL_SPEED_MAX),
         "ps_button_action": _um_de(get_args(get_type_hints(DaemonConfig)["ps_button_action"])),

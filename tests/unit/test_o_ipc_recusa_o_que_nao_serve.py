@@ -107,6 +107,7 @@ async def test_o_reload_recusa_o_valor_que_mataria_o_laco_e_a_config_fica_igual(
         ("udp_port", 7000, "reiniciar"),
         ("dsu_enabled", True, "reiniciar"),
         ("metrics_enabled", True, "reiniciar"),
+        ("mic_button_toggles_system", False, "reiniciar"),
         ("rumble_active", [5, 5], "não se muda"),
         ("gamepad_emulation_enabled", True, "não se muda"),
         ("mouse_speed", True, "inteiro"),
