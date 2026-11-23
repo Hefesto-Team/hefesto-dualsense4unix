@@ -28,12 +28,12 @@ from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
     atualizar,
     commit_novo,
-    commit_remoto,
     gravar_registro,
     instalar,
     ler_registro,
     ligar,
     manifesto_instalado,
+    perguntar_ao_remoto,
 )
 from hefesto_dualsense4unix.mods.manifesto import alcances_do_sim, pedidos_do_sim
 from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
@@ -266,7 +266,7 @@ def test_a_tag_oficial_que_deixa_de_conferir_com_a_chave_fica_esperando(
 
     novo = _publicar(remoto, "0.2.0")
     assinar(outra)
-    assert commit_remoto(f"file://{remoto}", "v1") == novo
+    assert perguntar_ao_remoto(f"file://{remoto}", "v1").commit == novo
     feito = atualizar("exemplo", lugares=lar, chaves=(chave_do_time,), sozinha=True)
     assert not feito.trocou
     entrada = ler_registro(lar.registro)["exemplo"]
@@ -316,7 +316,7 @@ def test_sem_rede_a_extensao_viva_fica_e_o_supervisor_segue(
     _instalar_ligada(lar, remoto, intervalo_da_atualizacao_s=0.1)
     shutil.rmtree(remoto)
     entrada = ler_registro(lar.registro)["exemplo"]
-    assert commit_remoto(entrada.endereco, entrada.ref) is None
+    assert perguntar_ao_remoto(entrada.endereco, entrada.ref).commit is None
     with pytest.raises(InstalacaoRecusadaError, match="não respondeu"):
         commit_novo(entrada)
 
@@ -377,7 +377,7 @@ def test_o_git_que_nao_roda_e_recusa_com_o_motivo(
 
     monkeypatch.setattr(instalador.subprocess, "run", sem_git)
     with pytest.raises(InstalacaoRecusadaError, match="não respondeu: git"):
-        commit_remoto(f"file://{remoto}", None)
+        perguntar_ao_remoto(f"file://{remoto}", None)
     with pytest.raises(InstalacaoRecusadaError, match="não respondeu"):
         commit_novo(ler_registro(lar.registro)["exemplo"])
 

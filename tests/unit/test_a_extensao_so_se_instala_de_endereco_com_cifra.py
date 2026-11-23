@@ -21,10 +21,10 @@ from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
     atualizar,
     commit_novo,
-    commit_remoto,
     gravar_registro,
     instalar,
     ler_registro,
+    perguntar_ao_remoto,
 )
 from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
 
@@ -103,13 +103,13 @@ def test_a_instalada_sem_cifra_nao_pergunta_ao_git_e_diz_o_motivo(
     assert entrada.motivo_da_espera == FRASE_SEM_CIFRA and entrada.ligada
 
 
-def test_o_atualizar_e_o_commit_remoto_recusam_sem_cifra(lar: Lugares,
-                                                         chamadas: list[list[str]]) -> None:
+def test_o_atualizar_e_a_pergunta_ao_remoto_recusam_sem_cifra(lar: Lugares,
+                                                               chamadas: list[list[str]]) -> None:
     _sem_cifra(lar)
     with pytest.raises(InstalacaoRecusadaError, match="precisa ser https ou ssh"):
         atualizar("exemplo", lugares=lar)
     with pytest.raises(InstalacaoRecusadaError, match="precisa ser https ou ssh"):
-        commit_remoto("git://exemplo.org/dono/extensao", None)
+        perguntar_ao_remoto("git://exemplo.org/dono/extensao", None)
     assert chamadas == []
 
 

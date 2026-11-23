@@ -29,7 +29,6 @@ from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
     SemRespostaDoGitError,
     commit_novo,
-    commit_remoto,
     ler_registro,
     perguntar_ao_remoto,
 )
@@ -149,7 +148,7 @@ def test_o_remoto_devolve_o_motivo_junto(lar: Lugares, remoto: Path) -> None:
     sem_ref = perguntar_ao_remoto(f"file://{remoto}", "v9")
     assert sem_ref.commit is None and sem_ref.respondeu
     assert sem_ref.motivo == "a referência «v9» não existe"
-    assert commit_remoto(f"file://{remoto}", "v9") is None
+    assert perguntar_ao_remoto(f"file://{remoto}", "v9").commit is None
     shutil.rmtree(remoto)
     sumiu = perguntar_ao_remoto(f"file://{remoto}", None)
     assert sumiu.commit is None and not sumiu.respondeu

@@ -594,12 +594,6 @@ def perguntar_ao_remoto(endereco: str, ref: str | None) -> RespostaDoRemoto:
     return RespostaDoRemoto(None, True, f"a referência «{ref}» não existe")
 
 
-def commit_remoto(endereco: str, ref: str | None) -> str | None:
-    """O commit que o ``ref`` aponta no endereço, ou ``None`` sem resposta ou sem a referência;
-    o porquê está em :func:`perguntar_ao_remoto`."""
-    return perguntar_ao_remoto(endereco, ref).commit
-
-
 def origem_da_tag(pasta: Path, ref: str | None, chaves: Sequence[str]) -> Origem:
     """«oficial» só com tag assinada por uma das ``chaves``, apontando para o HEAD."""
     if not ref or not chaves:
@@ -1464,7 +1458,6 @@ __all__ = [
     "bases_do_pacote",
     "chaves_da_lista",
     "commit_novo",
-    "commit_remoto",
     "conferir_a_cifra",
     "conferir_remocao",
     "desligar",
