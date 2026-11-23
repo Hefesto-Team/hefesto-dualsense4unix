@@ -1,4 +1,8 @@
-"""O perfil do Minecraft Dungeons II passa ao Modo imersão uma vez, com cópia antes."""
+"""O perfil do Minecraft Dungeons II passa ao Modo imersão uma vez, com cópia antes.
+
+O identificador do jogo não mora no pacote: vem da chave ``jogo.chave`` da receita estudada
+``minecraft-dungeons-ii.json`` que a extensão imersao instalada leva.
+"""
 from __future__ import annotations
 
 import json
@@ -10,7 +14,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-CRITERIO_DO_JOGO = "steam_app_1912410"
+EXTENSAO = "imersao"
+RECEITA_DO_JOGO = ("receitas", "estudadas", "minecraft-dungeons-ii.json")
 MODO_DA_EXTENSAO = "extensao:imersao"  # (noqa-acento)
 SECOES = ("triggers", "leds", "rumble")
 SUFIXO_DA_COPIA = ".antes-do-modo-imersao"
@@ -18,11 +23,32 @@ MARCA = ".o_jogo_passou_ao_modo_da_extensao"
 ORIGEM = "migracao-ao-modo-da-extensao"
 
 
-def _nomeia_o_jogo(dados: dict[str, Any]) -> bool:
+def criterio_do_jogo() -> str | None:
+    """A chave ``steam_app_<n>`` da receita do jogo na extensão instalada, sem caixa.
+
+    ``None`` com a receita ausente, ilegível ou sem chave válida, e uma linha no diário.
+    """
+    from hefesto_dualsense4unix.mods.manifesto import CHAVE_DE_JOGO
+    from hefesto_dualsense4unix.utils.xdg_paths import mods_codigo_dir
+
+    receita = mods_codigo_dir().joinpath(EXTENSAO, *RECEITA_DO_JOGO)
+    try:
+        dados = json.loads(receita.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.info("jogo_sem_receita_da_extensao", receita=receita.name, err=str(exc)[:200])
+        return None
+    jogo = dados.get("jogo") if isinstance(dados, dict) else None
+    chave = jogo.get("chave") if isinstance(jogo, dict) else None
+    if not isinstance(chave, str) or not CHAVE_DE_JOGO.match(chave):
+        logger.warning("jogo_sem_chave_na_receita", receita=receita.name)
+        return None
+    return chave.casefold()
+
+
+def _nomeia_o_jogo(dados: dict[str, Any], alvo: str) -> bool:
     """O critério do perfil nomeia o jogo, sem caixa; o nome do arquivo não conta."""
     from hefesto_dualsense4unix.profiles import loader
 
-    alvo = CRITERIO_DO_JOGO.casefold()
     return any(c.casefold() == alvo for c in loader._classes_do_match(dados))
 
 
@@ -73,8 +99,8 @@ def passar_uma_vez() -> dict[str, list[str]] | None:
     entrada de `controllers` com `modo` próprio e valores fixos guardados ficam. Antes de
     gravar, o arquivo inteiro vai byte a byte a `<arquivo>.antes-do-modo-imersao`. A marca na
     configuração nasce ao fim da primeira passada, ache ou não o perfil; a falha ao copiar ou
-    gravar não a grava. Não carimba o `modificado_em` nem liga a extensão. Devolve
-    `{perfil: seções}`; ``None`` quando a marca já existia.
+    gravar, ou a receita do jogo ausente na extensão, não a grava. Não carimba o
+    `modificado_em` nem liga a extensão. Devolve `{perfil: seções}`; ``None`` com a marca.
     """
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir, profiles_dir
@@ -82,13 +108,16 @@ def passar_uma_vez() -> dict[str, list[str]] | None:
     marca = config_dir(ensure=True) / MARCA
     if marca.exists():
         return None
+    alvo = criterio_do_jogo()
+    if alvo is None:
+        return {}
     passou: dict[str, list[str]] = {}
     falhou = False
     for caminho in sorted(profiles_dir(ensure=True).glob("*.json")):
         dados = loader._dados_crus_do_perfil(caminho)
         if dados is None or loader._e_copia_de_fabrica(caminho, dados):
             continue
-        if not _nomeia_o_jogo(dados):
+        if not _nomeia_o_jogo(dados, alvo):
             continue
         gesto = loader.gesto_de_agora.set(None)
         try:
@@ -112,11 +141,13 @@ def passar_uma_vez() -> dict[str, list[str]] | None:
 
 
 __all__ = [
-    "CRITERIO_DO_JOGO",
+    "EXTENSAO",
     "MARCA",
     "MODO_DA_EXTENSAO",
     "ORIGEM",
+    "RECEITA_DO_JOGO",
     "SECOES",
     "SUFIXO_DA_COPIA",
+    "criterio_do_jogo",
     "passar_uma_vez",
 ]

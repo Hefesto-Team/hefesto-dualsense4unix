@@ -1,5 +1,8 @@
 """O perfil do Dungeons II passa ao Modo imersão uma vez, com cópia antes
-(O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ-01)."""
+(O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ-01).
+
+O jogo vem da receita do jogo na extensão instalada; aqui, uma extensão de mentira cuja receita
+traz um jogo da faixa fictícia."""
 from __future__ import annotations
 
 import hashlib
@@ -14,7 +17,7 @@ from hefesto_dualsense4unix.profiles import o_jogo_que_passa_ao_modo_da_extensao
 from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, Profile, perfil_no_modo
-from hefesto_dualsense4unix.utils.xdg_paths import config_dir, profiles_dir
+from hefesto_dualsense4unix.utils.xdg_paths import config_dir, mods_codigo_dir, profiles_dir
 
 CABO_1 = "aa:bb:cc:00:00:01"
 CABO_2 = "aa:bb:cc:00:00:02"
@@ -24,13 +27,29 @@ MODIFICADO = "2026-11-02T20:59:04"
 GATILHO = {"mode": "Rigid", "params": [5, 200]}
 IMERSAO = passo.MODO_DA_EXTENSAO
 OUTRA = "extensao:outra"  # (noqa-acento)
+JOGO = "steam_app_9912410"
+
+
+def _receita() -> Path:
+    return mods_codigo_dir().joinpath(passo.EXTENSAO, *passo.RECEITA_DO_JOGO)
+
+
+def _escreve_a_receita(caminho: Path, dado: Any) -> None:
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    texto = dado if isinstance(dado, str) else json.dumps(dado)
+    caminho.write_text(texto, encoding="utf-8")
+
+
+@pytest.fixture(autouse=True)
+def _a_extensao_com_a_receita_do_jogo() -> None:
+    _escreve_a_receita(_receita(), {"formato": 1, "jogo": {"chave": JOGO}})
 
 
 def _dungeons(nome: str = "Minecraft Dungeons II", **trocas: Any) -> Profile:
     dados: dict[str, Any] = {
         "name": nome,
         "priority": 80,
-        "match": {"type": "criteria", "window_class": ["steam_app_1912410"]},
+        "match": {"type": "criteria", "window_class": [JOGO]},
         "triggers": {"left": GATILHO, "right": GATILHO, "modo": "personalizado"},
         "leds": {"lightbar": [10, 20, 200], "modo": "personalizado"},
         "rumble": {"policy": "max", "modo": "personalizado"},
@@ -136,8 +155,9 @@ def test_outro_perfil_em_personalizado_sem_o_criterio_fica() -> None:
 
 def test_o_alvo_e_o_criterio_e_nao_o_nome_do_arquivo() -> None:
     """Quem renomeou o perfil continua com o jogo achado, e o critério vale sem caixa."""
+    com_caixa = JOGO.replace("steam_app", "Steam_App")
     caminho = _grava(_dungeons(
-        "Meu Dungeons", match={"type": "criteria", "window_class": ["Steam_App_1912410"]}))
+        "Meu Dungeons", match={"type": "criteria", "window_class": [com_caixa]}))
     assert passo.passar_uma_vez() == {caminho.stem: ["triggers", "leds", "rumble"]}
 
 
@@ -327,3 +347,51 @@ def test_cada_controle_tem_o_personalizado_desligada_e_cala_o_efeito_fixo_viva()
         assert dele["triggers"]["left"]["mode"] == "Off", uniq
         assert dele["triggers"]["right"]["mode"] == "Off", uniq
         assert (dele.get("leds") or {}).get("lightbar") is None, uniq
+
+
+@pytest.mark.parametrize("dado", [
+    None,
+    "{ isto não é json",
+    [1, 2],
+    {"formato": 1},
+    {"jogo": {"chave": "umu-9912410"}},
+], ids=["ausente", "ilegível", "lista", "sem-jogo", "chave-errada"])
+def test_sem_a_receita_do_jogo_nada_passa_e_a_marca_espera(dado: Any) -> None:
+    """MORDE: receita ausente, ilegível ou sem chave; com a receita, o arranque seguinte passa."""
+    if dado is None:
+        _receita().unlink()
+    else:
+        _escreve_a_receita(_receita(), dado)
+    caminho = _grava(_dungeons())
+    antes = _md5(caminho)
+    assert passo.criterio_do_jogo() is None
+    assert passo.passar_uma_vez() == {}
+    assert _md5(caminho) == antes
+    assert not _marca().exists()
+    _escreve_a_receita(_receita(), {"jogo": {"chave": JOGO}})
+    assert passo.passar_uma_vez() == {caminho.stem: ["triggers", "leds", "rumble"]}
+    assert _marca().exists()
+
+
+def test_a_receita_de_outro_jogo_ao_lado_nao_passa_o_perfil_dele() -> None:
+    """Só a receita deste jogo conta: o perfil do jogo de outra receita estudada fica."""
+    outra = _receita().with_name("outro-jogo-ficticio.json")
+    _escreve_a_receita(outra, {"jogo": {"chave": "steam_app_9900001"}})
+    deste = _grava(_dungeons())
+    do_outro = _grava(_dungeons(
+        "Jogo Fictício Dois", match={"type": "criteria", "window_class": ["steam_app_9900001"]}))
+    antes = _md5(do_outro)
+    assert passo.passar_uma_vez() == {deste.stem: ["triggers", "leds", "rumble"]}
+    assert _md5(do_outro) == antes
+    assert not do_outro.with_name(do_outro.name + passo.SUFIXO_DA_COPIA).exists()
+
+
+def test_quem_ja_tem_a_marca_da_passada_nao_passa_de_novo() -> None:
+    """A marca de uma passada já feita segura a passada nova, com a receita presente."""
+    _marca().parent.mkdir(parents=True, exist_ok=True)
+    _marca().write_text("passada feita\n", encoding="utf-8")
+    caminho = _grava(_dungeons())
+    antes = _md5(caminho)
+    assert passo.passar_uma_vez() is None
+    assert _md5(caminho) == antes
+    assert not caminho.with_name(caminho.name + passo.SUFIXO_DA_COPIA).exists()
