@@ -259,14 +259,14 @@
       "data": "2026-11-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1317162,
+      "piso": 1317570,
       "por_item": {
         "docs": 107987,
         "scripts": 116811,
-        "src": 332200,
-        "tests": 760164
+        "src": 332241,
+        "tests": 760531
       },
-      "razao": "tamanho: +736 linhas (1316426 -> 1317162), pagas por Origem: D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO; registrado no fecho, topo 7005946f5e92",
+      "razao": "tamanho: +408 linhas (1317162 -> 1317570), pagas por Origem: D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO; registrado no fecho, topo aeac403b3aab",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2457,10 +2457,16 @@
           "de": 1316426,
           "para": 1317162,
           "razao": "tamanho: +736 linhas (1316426 -> 1317162), pagas por Origem: D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO; registrado no fecho, topo 7005946f5e92"
+        },
+        {
+          "data": "2026-11-23",
+          "de": 1317162,
+          "para": 1317570,
+          "razao": "tamanho: +408 linhas (1317162 -> 1317570), pagas por Origem: D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO; registrado no fecho, topo aeac403b3aab"
         }
       ],
       "unidade": "linhas",
-      "universo": 3676
+      "universo": 3677
     }
   }
 }
