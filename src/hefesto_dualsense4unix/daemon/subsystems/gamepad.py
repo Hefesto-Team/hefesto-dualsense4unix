@@ -843,9 +843,17 @@ def apply_game_player_leds(
     *,
     target_uniq: str | None = None,
 ) -> None:
-    """Oferece ao físico os player-LEDs que o JOGO acendeu no vpad (REPLICA-03)."""
+    """Oferece ao físico os player-LEDs que o JOGO acendeu no vpad (REPLICA-03).
+
+    O desenho sem lâmpada nenhuma não é número: vai ao diário e não chega a controle nenhum,
+    nem retido, e cada um segue com o número que mostra
+    (D-2311-O-ZERO-DO-JOGO-NAO-APAGA-O-NUMERO).
+    """
     if target_uniq is not None:
         _o_numero_do_jogo(daemon, bits, target_uniq)
+    if not any(bits):
+        logger.debug("game_player_leds_sem_numero_descartado", target=target_uniq)
+        return
     fn: Any = getattr(daemon.controller, "set_game_output_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_player_leds_sem_alvo_descartado", target=target_uniq)
@@ -3428,7 +3436,9 @@ def _e_um_dualsense_aberto(daemon: Any, target_uniq: str) -> bool:
 def _o_numero_do_jogo_no_controle_de_fora(daemon: Any, bits: Any, target_uniq: str) -> None:
     """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO: fora da autoridade do Hefesto (o mesmo portão do
     backend), as luzes de jogador do controle de fora mostram o número que o jogo acendeu no pad
-    virtual dele, e o retrato de antes volta no fim da sessão. O DualSense recebe pelo backend."""
+    virtual dele, e o retrato de antes volta no fim da sessão. O DualSense recebe pelo backend.
+    O desenho sem lâmpada não é número e não apaga o que o controle mostra
+    (D-2311-O-ZERO-DO-JOGO-NAO-APAGA-O-NUMERO)."""
     try:
         if getattr(daemon, "display_authority", "unknown") == "daemon":
             return
@@ -3442,7 +3452,7 @@ def _o_numero_do_jogo_no_controle_de_fora(daemon: Any, bits: Any, target_uniq: s
 
         numero = numero_do_desenho(bits)
         luzes = _luzes_de_fora(daemon)
-        if numero is None:
+        if not numero:
             return
         luz = luzes.get(target_uniq)
         if luz is None:
