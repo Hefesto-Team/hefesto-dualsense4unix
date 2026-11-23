@@ -259,14 +259,14 @@
       "data": "2026-11-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1317543,
+      "piso": 1317595,
       "por_item": {
         "docs": 107987,
         "scripts": 116811,
         "src": 332205,
-        "tests": 760540
+        "tests": 760592
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +52 linhas (1317543 -> 1317595), pagas por Origem: D-1911-O-ESTADO-SE-GRAVA-INTEIRO; registrado no fecho, topo d9c3e2b79673",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2463,6 +2463,12 @@
           "de": 1317162,
           "para": 1317570,
           "razao": "tamanho: +408 linhas (1317162 -> 1317570), pagas por Origem: D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO; registrado no fecho, topo aeac403b3aab"
+        },
+        {
+          "data": "2026-11-23",
+          "de": 1317543,
+          "para": 1317595,
+          "razao": "tamanho: +52 linhas (1317543 -> 1317595), pagas por Origem: D-1911-O-ESTADO-SE-GRAVA-INTEIRO; registrado no fecho, topo d9c3e2b79673"
         }
       ],
       "unidade": "linhas",
