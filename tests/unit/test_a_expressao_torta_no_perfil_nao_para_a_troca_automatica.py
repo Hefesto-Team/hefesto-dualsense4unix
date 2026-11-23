@@ -94,8 +94,8 @@ def test_o_comando_recusa_a_expressao_torta_e_nao_cria_arquivo(pasta_de_mentira:
 def test_o_schema_recusa_a_expressao_torta_para_todo_chamador() -> None:
     with pytest.raises(ValidationError):
         MatchCriteria(window_title_regex=EXPRESSAO_TORTA)
-    com_lixo = MatchCriteria(window_title_regex=r"(?<!\w)1912410(?!\w)")
-    assert com_lixo.matches({"wm_name": "Minecraft Dungeons II 1912410"})
+    com_lixo = MatchCriteria(window_title_regex=r"(?<!\w)9912410(?!\w)")
+    assert com_lixo.matches({"wm_name": "Minecraft Dungeons II 9912410"})
 
 
 def test_a_expressao_boa_segue_casando_sem_caixa() -> None:

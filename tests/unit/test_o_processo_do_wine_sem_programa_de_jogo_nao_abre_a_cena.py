@@ -19,9 +19,9 @@ from hefesto_dualsense4unix.integrations import quem_segura_o_pad as qsp
 from hefesto_dualsense4unix.integrations.quem_o_jogo_le import por_que_conta
 
 MEU_PID = 4242
-AVALIADOR = "/x/reaper SteamLaunch AppId=2424420 Install=1 -- /x/proton waitforexitandrun /x/s.exe"
-REAPER_DO_JOGO = "/x/reaper SteamLaunch AppId=2424420 -- /x/proton waitforexitandrun /x/jogo.exe"
-PREFIXO = {"STEAM_COMPAT_DATA_PATH": "/home/u/.steam/compatdata/2424420"}
+AVALIADOR = "/x/reaper SteamLaunch AppId=9924420 Install=1 -- /x/proton waitforexitandrun /x/s.exe"
+REAPER_DO_JOGO = "/x/reaper SteamLaunch AppId=9924420 -- /x/proton waitforexitandrun /x/jogo.exe"
+PREFIXO = {"STEAM_COMPAT_DATA_PATH": "/home/u/.steam/compatdata/9924420"}
 MOTIVO_DO_AVALIADOR = "o avaliador do script de instalação da Steam"
 FRASE = "o Wine do avaliador da Steam não é jogo"
 

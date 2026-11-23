@@ -31,7 +31,7 @@ ARQUIVOS_SHELL = (
     *sorted((RAIZ / "scripts" / "lib").glob("*.sh")),
 )
 
-APPID = "1912410"
+APPID = "9912410"
 CONTA = "1000"
 BASE_DO_STEAMID64 = 76561197960265728
 TAB = "\t"

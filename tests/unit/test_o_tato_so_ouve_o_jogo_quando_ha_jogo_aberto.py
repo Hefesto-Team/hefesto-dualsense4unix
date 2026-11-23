@@ -92,9 +92,9 @@ def test_o_navegador_em_foco_nao_liga_o_ouvido() -> None:
 
 
 def test_a_janela_do_jogo_da_steam_liga_o_ouvido_com_o_tato_pedindo_o_som() -> None:
-    mesa = _Mesa("steam_app_1599660")
+    mesa = _Mesa("steam_app_9915996")
     assert mesa.passo.ouvido_quer()
-    assert mesa.passo.jogo_por == "janela:steam_app_1599660"
+    assert mesa.passo.jogo_por == "janela:steam_app_9915996"
 
 
 def test_o_jogo_local_do_catalogo_com_a_janela_de_pe_liga_o_ouvido(
@@ -110,7 +110,7 @@ def test_o_jogo_local_do_catalogo_com_a_janela_de_pe_liga_o_ouvido(
 
 
 def test_o_appid_em_cena_liga_o_ouvido() -> None:
-    mesa = _Mesa("steam", appid=1599660)
+    mesa = _Mesa("steam", appid=9915996)
     assert mesa.passo.ouvido_quer()
     assert mesa.passo.jogo_por == "appid"
 
@@ -125,7 +125,7 @@ def test_a_autoridade_game_liga_o_ouvido_e_o_aviso_de_surdez_diz_o_porque() -> N
 
 
 def test_o_jogo_que_fecha_desliga_o_ouvido_no_passo_seguinte() -> None:
-    mesa = _Mesa("steam_app_1599660")
+    mesa = _Mesa("steam_app_9915996")
     assert mesa.passo.ouvido_quer()
     mesa.daemon.store.window_detect_current_class = "steam"
     mesa.passo(mesa.relogio.agora + 1)

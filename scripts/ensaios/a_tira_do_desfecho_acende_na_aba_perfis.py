@@ -164,7 +164,7 @@ def main() -> int:
     lido: list[dict[str, object]] = []
     passos = [
         ("selecionar o alvo", "selecionar", None),
-        ("editor.jogo ← 1599660", "editor.jogo", "1599660"),
+        ("editor.jogo ← 9915996", "editor.jogo", "9915996"),
         ("perfis.renomear ← Ensaio Renomeado", "perfis.renomear", "Ensaio Renomeado"),
         ("remover (1º clique: arma)", "remover", None),
         ("remover (2º clique: apaga)", "remover", None),
@@ -227,7 +227,7 @@ def main() -> int:
 
     print(f"a pasta de perfis do ensaio: {CASA}/config/hefesto-dualsense4unix")
     print(f"{'passo':34s} {'no ato':7s} {'assent':7s} tira (assentada)")
-    cobrados = {"editor.jogo ← 1599660", "perfis.renomear ← Ensaio Renomeado",
+    cobrados = {"editor.jogo ← 9915996", "perfis.renomear ← Ensaio Renomeado",
                 "remover (2º clique: apaga)"}
     mudos: list[str] = []
     tarde: list[str] = []

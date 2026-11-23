@@ -45,7 +45,7 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Prof
 from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
-APPID = 1912410
+APPID = 9912410
 JOGO = "Mad King Redemption"
 ESCOLHA = "Azahar"
 ULTIMO = "Avatar Legends"

@@ -32,7 +32,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon import launch_env as le
 
-APPID = 2424420
+APPID = 9924420
 MAX_FISICOS = 4
 
 
