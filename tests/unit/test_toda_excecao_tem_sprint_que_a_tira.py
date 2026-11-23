@@ -253,6 +253,9 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/test_nenhuma_pasta_vazia_no_repositorio.py::EXCECOES": (
         "a casca de pasta que precisa existir vazia, com o motivo; nasce vazia e fica vazia "
         "enquanto nenhuma precisar"),
+    "tests/unit/test_os_avulsos_do_vigia_rodam_sem_as_bibliotecas.py::ACEITOS": (
+        "os dois códigos de saída que o avulso dá quando roda inteiro (0, feito; 3, adiado porque "
+        "a Steam ou o jogo estão abertos): é o contrato que a régua cobra, não um caso isento"),
     "tests/unit/test_um_arquivo_de_teste_novo_nasce_rapido.py::EXCECOES": (
         "o arquivo de teste novo que precisa de espera acima do teto, com o porquê; nasce vazia e "
         "fica vazia enquanto nenhum precisar"),
