@@ -327,8 +327,8 @@ def escritores_crus_alheios(
 ) -> dict[str, list[int]]:
     """Os nós de :func:`holders_de_hidraw_de_qualquer_um` TIRANDO os processos do produto.
 
-    Do produto (:func:`processo_do_produto`): o serviço, o pai dele, quem descende dele e quem
-    roda um programa do produto. Nó que só o produto segura não vira chave.
+    Do produto (:func:`processo_do_produto`): o serviço, o pai dele, as extensões que ele abriu e
+    quem roda um programa do produto. Nó que só o produto segura não vira chave.
     """
     eu = os.getpid() if meu_pid is None else int(meu_pid)
     try:
@@ -380,6 +380,15 @@ def _descende_do_servico(pid: int, servico: int) -> bool:
         if atual == servico:
             return True
     return False
+
+
+_MARCA_DA_EXTENSAO = b"HEFESTO_MOD_ID="
+
+
+def _e_extensao(pid: int) -> bool:
+    """O ambiente tem o ``HEFESTO_MOD_ID`` que o supervisor dá a toda extensão; a Steam e o jogo
+    que o serviço abre pelo ``fora_do_servico`` não o têm."""
+    return any(v.startswith(_MARCA_DA_EXTENSAO) for v in _ler_do_proc(pid, "environ").split(b"\0"))
 
 
 def _argv_de(pid: int) -> list[str]:
@@ -456,11 +465,12 @@ def _modulo_do_produto(nome: str) -> bool:
 def processo_do_produto(pid: int, *, servico: int | None = None) -> bool:
     """O processo ``pid`` é do produto, provado pelo ``/proc`` e nunca pelo nome.
 
-    Do produto: descende do serviço (o que ele abriu, como as extensões), ou é um
-    Python cujo programa mora numa :func:`raizes_do_produto` (a janela, as ferramentas) ou é um
-    módulo do pacote que este processo acha no próprio pacote (a bandeja, o ``-m``).
+    Do produto: uma extensão que o serviço abriu (descende dele e tem o ambiente da extensão;
+    a Steam ou o jogo que o serviço abre sem unidade própria descende dele e segue de fora), ou
+    um Python cujo programa mora numa :func:`raizes_do_produto` (a janela, as ferramentas) ou é
+    um módulo do pacote que este processo acha no próprio pacote (a bandeja, o ``-m``).
     """
-    if servico is not None and _descende_do_servico(pid, servico):
+    if servico is not None and _descende_do_servico(pid, servico) and _e_extensao(pid):
         return True
     if not _e_python(pid):
         return False

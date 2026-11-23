@@ -9,7 +9,8 @@ nunca pelo nome. O `/proc` dos casos de nó é de mentira (os nós `hidraw` de v
 controle); o caso da ascendência lê o `/proc` de verdade de um filho deste processo.
 
 MORDIDA: `escritores_crus_alheios` de volta a tirar só `{eu, pai}` reprova a janela, a bandeja e a
-extensão; md5 igual na volta.
+extensão; a ascendência sem o ambiente da extensão reprova a Steam filha do serviço; md5 igual na
+volta.
 """
 from __future__ import annotations
 
@@ -30,15 +31,19 @@ RAIZ = Path(ec.__file__).resolve().parents[3]
 JANELA = str(RAIZ / "scripts" / "abrir_interface.py")
 
 
-def _processo(exe: str, argv: list[str], pai: int, cwd: str = "/") -> dict[str, object]:
-    return {"exe": exe, "argv": argv, "pai": pai, "cwd": cwd}
+def _processo(exe: str, argv: list[str], pai: int, cwd: str = "/",
+             env: tuple[str, ...] = ("PATH=/usr/bin",)) -> dict[str, object]:
+    return {"exe": exe, "argv": argv, "pai": pai, "cwd": cwd, "env": env}
+
+
+EXTENSAO = ("PATH=/usr/bin", "HEFESTO_MOD_ID=toque")
 
 
 PRODUTO = {
     4100: _processo(PYTHON, ["python3", JANELA], SESSAO),
     4101: _processo(PYTHON, ["python3", "-m", "hefesto_dualsense4unix.cli.app", "tray"], SESSAO),
-    4102: _processo("/usr/bin/node", ["node", "motor.js"], SERVICO),
-    4103: _processo("/usr/bin/bash", ["bash", "-c", "x"], 4102),
+    4102: _processo("/usr/bin/node", ["node", "motor.js"], SERVICO, env=EXTENSAO),
+    4103: _processo("/usr/bin/bash", ["bash", "-c", "x"], 4102, env=EXTENSAO),
     4104: _processo(PYTHON, ["python3", "scripts/abrir_interface.py"], SESSAO, cwd=str(RAIZ)),
 }
 
@@ -51,6 +56,8 @@ DE_FORA = {
     6004: _processo("/opt/x/hefesto-dualsense4unix", ["hefesto-dualsense4unix", "daemon"], SESSAO),
     6005: _processo(PYTHON, ["python3", "scripts/abrir_interface.py"], SESSAO, cwd="/tmp/imita"),
     6006: _processo(PYTHON, ["python3", "-c", "import hefesto_dualsense4unix"], SESSAO),
+    6007: _processo("/home/u/.steam/ubuntu12_64/steam", ["steam"], SERVICO),
+    6008: _processo("/usr/bin/wine64", ["jogo.exe"], 6007),
 }
 
 
@@ -73,6 +80,9 @@ def _proc_de_mentira(
         argv = p["argv"]
         assert isinstance(argv, list)
         (d / "cmdline").write_bytes(b"\0".join(a.encode() for a in argv) + b"\0")
+        env = p["env"]
+        assert isinstance(env, tuple)
+        (d / "environ").write_bytes(b"\0".join(a.encode() for a in env) + b"\0")
         (d / "stat").write_text(f"{pid} (x y) S {p['pai']} 1 1 0", encoding="utf-8")
     listdir_real = os.listdir
     readlink_real = os.readlink
@@ -126,7 +136,8 @@ def test_o_produto_com_o_no_aberto_nao_e_escritor_de_fora(
 def test_o_programa_de_fora_segue_acusado_em_todo_no(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, quantos: int, de_fora: int
 ) -> None:
-    """Inclusive o de fora com nome, pasta ou módulo parecidos com os do produto."""
+    """Inclusive o de fora com nome, pasta ou módulo parecidos com os do produto, e a Steam e o
+    jogo que o serviço abriu sem unidade própria (`fora_do_servico` pelo `Popen`)."""
     nos = _mesa(quantos)
     processos = {SERVICO: _processo(PYTHON, ["python", "/x/hefesto"], PAI_DO_SERVICO),
                  **PRODUTO, de_fora: DE_FORA[de_fora]}
@@ -150,11 +161,17 @@ def test_o_programa_que_o_proprio_servico_roda_e_do_produto(
 
 
 def test_a_ascendencia_se_le_no_proc_de_verdade() -> None:
-    """O filho deste processo é do «serviço» que é este processo; de outro serviço, não."""
-    filho = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    """A extensão filha deste processo é do «serviço» que é este processo; de outro serviço não,
+    e o filho sem o ambiente da extensão também não."""
+    dormir = [sys.executable, "-c", "import time; time.sleep(30)"]
+    extensao = subprocess.Popen(dormir, env={**os.environ, "HEFESTO_MOD_ID": "toque"})
+    sem_marca = subprocess.Popen(dormir, env={k: v for k, v in os.environ.items()
+                                              if not k.startswith("HEFESTO_MOD_")})
     try:
-        assert ec.processo_do_produto(filho.pid, servico=os.getpid()) is True
-        assert ec.processo_do_produto(filho.pid, servico=filho.pid + 999_999) is False
+        assert ec.processo_do_produto(extensao.pid, servico=os.getpid()) is True
+        assert ec.processo_do_produto(extensao.pid, servico=extensao.pid + 999_999) is False
+        assert ec.processo_do_produto(sem_marca.pid, servico=os.getpid()) is False
     finally:
-        filho.kill()
-        filho.wait(5)
+        for filho in (extensao, sem_marca):
+            filho.kill()
+            filho.wait(5)
