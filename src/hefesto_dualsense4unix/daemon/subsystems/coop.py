@@ -437,7 +437,7 @@ class CoopManager:
         for identity in [
             mac for mac, p in self._players.items() if p.cedido_ao_primario
         ]:
-            if not self._players[identity].no_p1:
+            if not getattr(self._players[identity], "no_p1", False):
                 _soltar_o_pad(self._players[identity].vpad)
             self._isolar("cedido", identity, functools.partial(self._teardown_player, identity))
 

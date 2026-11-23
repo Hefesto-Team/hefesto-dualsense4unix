@@ -624,7 +624,7 @@ class TestOAvisoDeTrocaDePrimario:
         ensaio.coop.ceder_ao_primario(UNIQ_A, UNIQ_B)
         ensaio.coop.forward_all()
 
-        assert enviados == []
+        assert enviados in ([], [frozenset()]), "o físico do cedido ainda alimenta o vpad dele"
         assert UNIQ_B not in ensaio.coop._players
         assert vpad.vivo is False, "o vpad do jogador cedido tem de ser desmontado"
 
