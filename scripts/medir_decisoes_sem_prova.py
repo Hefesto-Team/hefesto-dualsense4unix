@@ -305,6 +305,13 @@ COLISOES_DECLARADAS = {
         "do caminho `/lib/modules/<versão>/build` (a do kernel), e «módulo», «kernel» e «install» "
         "não estão no vocabulário de produto (21/11/2026)."
     ),
+    "D-2211-A-PAGINA-DE-INSTALACAO-LISTA-CADA-ESCRITA-DE-ROOT": (
+        "É de PRODUTO: a decisão diz o que a página de instalação lista de cada escrita de root do "
+        "instalador, e `test_a_pagina_de_instalacao_diz_o_que_o_install_faz_hoje.py::test_todo_"
+        "destino_de_root_do_install_tem_linha_na_pagina` mede a página contra o dry-run. A triagem "
+        "a chama de processo pela palavra «caducos» (o registro dos fatos trocados da página), e "
+        "«instalador» e «página» não estão no vocabulário de produto (23/11/2026)."
+    ),
 }
 
 
