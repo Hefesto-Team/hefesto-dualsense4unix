@@ -341,9 +341,9 @@ class TestForaDeOrdemSeRecriaNaHora:
         cartas[P2], cartas[P4] = 4, 2
         mgr.sync()
 
-        assert nascimentos == [P2, P3, P4, P4, P2]
+        assert nascimentos == [P2, P3, P4, P4, P3, P2]
         assert vpad_do_p1 == []
-        assert sorted(mgr._mesa_do_jogo.items()) == sorted(
+        assert list(mgr._mesa_do_jogo.items()) == sorted(
             {0: "<p1>", 1: P4, 2: P3, 3: P2}.items()
         )
 
@@ -440,13 +440,13 @@ class TestAOrdemNaoAtropelaOLaco:
         antes = dict(mgr._mesa_do_jogo)
         cartas[P2], cartas[P4] = 4, 2
         mgr.sync()
-        assert nascimentos == [P2, P3, P4, P4, P2]
+        assert nascimentos == [P2, P3, P4, P4, P3, P2]
 
         mgr._mesa_do_jogo = antes
         mgr.sync()
         mgr.sync()
 
-        assert nascimentos == [P2, P3, P4, P4, P2]
+        assert nascimentos == [P2, P3, P4, P4, P3, P2]
 
     def test_a_ordem_que_falha_nao_derruba_o_laco(
         self, nascimentos: list[str], monkeypatch: pytest.MonkeyPatch

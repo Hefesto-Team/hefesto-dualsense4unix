@@ -9,7 +9,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from itertools import combinations, pairwise
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -3569,33 +3569,7 @@ def planejar_a_ordem(
         return [], False
     if melhor[0] and not compacta:
         melhor = _a_faixa(mesa, cartas, nascer, fixos, melhor)
-    return _o_menor_grupo_que_basta(mesa, cartas, nascer, fixos, melhor, compacta=compacta)
-
-
-def _o_menor_grupo_que_basta(
-    mesa: Mapping[int, str],
-    cartas: Mapping[str, int],
-    nascer: Sequence[str],
-    fixos: frozenset[str],
-    melhor: tuple[int, list[str], bool],
-    *,
-    compacta: bool,
-) -> tuple[list[str], bool]:
-    """Dentro do plano, o menor grupo que deixa a mesa tão certa quanto ele: quem não precisa
-    renascer fica de pé, e o jogo perde menos controles."""
-    fora, recriar, inteira = melhor
-    for tamanho in range(len(recriar)):
-        for grupo in combinations(recriar, tamanho):
-            depois = _a_mesa_depois(mesa, list(grupo), nascer, cartas, compacta=compacta)
-            if not _em_ordem([cartas[c] for c in depois.values() if c not in fixos]):
-                continue
-            if _fora_do_boneco(depois, cartas) > fora:
-                continue
-            todos = _em_ordem([cartas[c] for c in depois.values()])
-            if inteira and not todos:
-                continue
-            return list(grupo), todos
-    return recriar, inteira
+    return melhor[1], melhor[2]
 
 
 __all__ = [

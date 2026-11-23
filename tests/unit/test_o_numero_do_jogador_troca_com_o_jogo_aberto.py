@@ -254,7 +254,7 @@ def test_o_numero_do_jogo_nao_desfaz_o_pedido_e_cada_pad_renasce_uma_vez(
         gerente.sync(force=True)
 
     assert registro.numeros == {P1: 1, P2: 3, P3: 2, P4: 4}
-    assert nascimentos[3:] == [P3, P2], "cada pad envolvido renasce uma vez, o 2 primeiro"
+    assert nascimentos[3:] == [P3, P2, P4], "o sufixo renasce uma vez, na ordem das cartas"
     assert [gerente._mesa_do_jogo[i] for i in (1, 2, 3)] == [P3, P2, P4]
 
 
