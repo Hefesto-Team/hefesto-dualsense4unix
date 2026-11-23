@@ -1534,22 +1534,13 @@ class IpcHandlersMixin:
     async def _handle_identity_number_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07).
+        """Atribui o NÚMERO EXIBIDO de UM controle: o alvo troca de lugar com quem tem o número.
 
-        Fica em ``identity.`` porque escreve o mesmo estado do ``identity.renumber`` (a fila dos
-        dois registros, mesma hierarquia de locks); é ``number`` e não ``player`` porque "jogador" é
-        o número do co-op (``app/actions/base.py``).
-
-        Params:
-            uniq: MAC normalizado do controle (o ``uniq`` do ``state_full``).
-            number: número desejado, 1..N entre os PRESENTES.
-
-        Retorno ``{"ok": True, "number": N, "changed": {key: lugar}}`` (``changed`` só traz quem
-        MUDOU de lugar, R-15) ou ``{"ok": False, "reason": ...}``. NUM-01: escreve a fila, nunca um
-        "número absoluto": atribuir o 2 é PERMUTAR lugares de presentes (``_set_number_locked``); os
-        lugares dos ausentes ficam intocados. Mesmos gate de jogo aberto, teto de lock,
-        ``asyncio.to_thread`` e re-checagem de autoridade dentro dos locks do ``identity.renumber``
-        (NUMA-03, HANG-01).
+        Params: ``uniq`` (MAC normalizado) e ``number`` (1..N entre os presentes). Retorno
+        ``{"ok": True, "number": N, "changed": {key: lugar}}`` ou ``{"ok": False, "reason": ...}``
+        (``controle_ausente``, ``numero_fora_da_mesa``, ``lock_timeout``). Vale com o jogo aberto
+        (D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO): o co-op guarda o pedido
+        antes da escrita, e o número que o jogo escreveu nas lâmpadas não o desfaz.
         """
         uniq_raw = params.get("uniq")
         if not isinstance(uniq_raw, str) or not uniq_raw.strip():
@@ -1561,14 +1552,6 @@ class IpcHandlersMixin:
             )
         alvo = _norm_uniq(uniq_raw) or uniq_raw.strip()
 
-        authority = (
-            getattr(self.daemon, "display_authority", "unknown")
-            if self.daemon is not None
-            else "unknown"
-        )
-        if authority == "game":
-            return {"ok": False, "reason": "sessao_de_jogo_aberta"}
-
         identity_registry = (
             getattr(self.daemon, "identity_registry", None)
             if self.daemon is not None
@@ -1579,14 +1562,12 @@ class IpcHandlersMixin:
             if self.daemon is not None
             else None
         )
-        daemon = self.daemon
+        coop = self._o_co_op_do_pedido_da_tela()
+        marca = coop.o_numero_pedido_pela_tela((alvo,)) if coop is not None else None
 
-        def _authority_now() -> str:
-            return (
-                getattr(daemon, "display_authority", "unknown")
-                if daemon is not None
-                else "unknown"
-            )
+        def _desfazer_a_marca() -> None:
+            if coop is not None and marca is not None:
+                coop.esquecer_o_pedido_da_tela(marca)
 
         try:
             changed = await asyncio.wait_for(
@@ -1596,23 +1577,22 @@ class IpcHandlersMixin:
                     external_registry,
                     alvo,
                     numero,
-                    authority_check=_authority_now,
                 ),
                 timeout=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
             )
         except asyncio.TimeoutError:
+            _desfazer_a_marca()
             logger.warning(
                 "identity_number_set_lock_timeout",
                 timeout_sec=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
             )
             return {"ok": False, "reason": "lock_timeout"}
-        except _RenumberAuthorityChangedError:
-            logger.info("identity_number_set_abortado_por_jogo")
-            return {"ok": False, "reason": "sessao_de_jogo_aberta"}
         except _NumeroAlvoAusenteError:
+            _desfazer_a_marca()
             logger.info("identity_number_set_alvo_ausente", uniq=alvo)
             return {"ok": False, "reason": "controle_ausente"}
         except _NumeroForaDaMesaError as exc:
+            _desfazer_a_marca()
             logger.info(
                 "identity_number_set_numero_fora_da_mesa",
                 uniq=alvo,
@@ -1626,9 +1606,20 @@ class IpcHandlersMixin:
             }
 
         if changed:
+            if coop is not None:
+                coop.o_numero_pedido_pela_tela(tuple(changed))
             self._despachar_repintura("identity.number.set")
+        else:
+            _desfazer_a_marca()
 
         return {"ok": True, "number": numero, "changed": changed}
+
+    def _o_co_op_do_pedido_da_tela(self) -> Any:
+        """O ``CoopManager`` que guarda o pedido de número da tela, ou ``None`` (dublês)."""
+        from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
+
+        coop = getattr(self.daemon, "_coop_manager", None) if self.daemon is not None else None
+        return coop if isinstance(coop, CoopManager) else None
 
     @staticmethod
     def _set_number_locked(

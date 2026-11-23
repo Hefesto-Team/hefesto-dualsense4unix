@@ -9,7 +9,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from itertools import pairwise
+from itertools import combinations, pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -188,6 +188,7 @@ class CoopManager:
         self._pronto_desde: dict[str, float] = {}
         self._mesa_do_jogo: dict[int, str] = {}
         self._recusas_do_numero: dict[str, tuple[Any, ...]] = {}
+        self._pedidos_da_tela: frozenset[str] = frozenset()
         self._nascido_em: dict[str, int] = {}
         self._nascimentos = 0
         self._vpad_do_p1_visto: Any = None
@@ -662,7 +663,10 @@ class CoopManager:
         """
         marcas = getattr(self._daemon, "_numero_que_o_jogo_escreveu", None)
         self._esquecer_as_recusas(marcas)
-        if not self._no_fio_do_laco() or not self._jogo_com_a_autoridade():
+        if not self._jogo_com_a_autoridade():
+            self._pedidos_da_tela = frozenset()
+            return
+        if not self._no_fio_do_laco():
             return
         registro = getattr(self._daemon, "identity_registry", None)
         numero_de = getattr(registro, "slot_for", None)
@@ -709,6 +713,14 @@ class CoopManager:
             return False
         dono = next((c for c in self._players if c != alvo and numero(c) == jogo), None)
         ocupante = self._mesa_do_jogo.get(jogo - 1)
+        pedidos = self._pedidos_da_tela
+        if _so_hex(alvo) in pedidos or (dono is not None and _so_hex(dono) in pedidos):
+            if self._a_recusa_e_nova(alvo, (jogo, atual, "pedido_da_tela")):
+                logger.info(
+                    "o_numero_do_jogo_nao_trocou",
+                    alvo=_rotulo(alvo), jogo=jogo, hefesto=atual, motivo="pedido_da_tela",
+                )
+            return False
         if dono is None or ocupante == _CHAVE_DO_P1 or self._players[alvo].vpad is None:
             motivo = "o_p1" if ocupante == _CHAVE_DO_P1 else "sem_par_no_coop"
             if self._a_recusa_e_nova(alvo, (jogo, atual, motivo)):
@@ -742,6 +754,21 @@ class CoopManager:
         logger.info("o_numero_do_jogo_adotado", alvo=_rotulo(alvo), jogo=jogo, hefesto=atual,
                     trocou_com=_rotulo(dono))
         return True
+
+    def o_numero_pedido_pela_tela(self, chaves: Iterable[str]) -> frozenset[str]:
+        """O número pedido pela tela vence o que o jogo escreveu nas lâmpadas até o jogo fechar.
+
+        D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO. Devolve as chaves que
+        entraram agora, para quem pediu desfazer só as suas (`esquecer_o_pedido_da_tela`).
+        """
+        novas = frozenset(h for h in (_so_hex(str(c)) for c in chaves) if h)
+        novas = novas - self._pedidos_da_tela
+        self._pedidos_da_tela = self._pedidos_da_tela | novas
+        return novas
+
+    def esquecer_o_pedido_da_tela(self, chaves: Iterable[str]) -> None:
+        """O pedido recusado não segura o número do jogo."""
+        self._pedidos_da_tela = self._pedidos_da_tela - frozenset(chaves)
 
     def _a_recusa_e_nova(self, alvo: str, recusa: tuple[Any, ...]) -> bool:
         """A recusa do número do jogo difere da última dita deste controle? Guarda-a."""
@@ -2624,6 +2651,7 @@ class CoopManager:
                 jogador.motion_reader.stop()
             jogador.motion_reader = None
         self._zerar_rumble_do_jogador(chave)
+        _soltar_o_pad(jogador.vpad)
         with contextlib.suppress(Exception):
             _parar_fora_do_tique(jogador.vpad)
         jogador.vpad = None
@@ -3541,7 +3569,33 @@ def planejar_a_ordem(
         return [], False
     if melhor[0] and not compacta:
         melhor = _a_faixa(mesa, cartas, nascer, fixos, melhor)
-    return melhor[1], melhor[2]
+    return _o_menor_grupo_que_basta(mesa, cartas, nascer, fixos, melhor, compacta=compacta)
+
+
+def _o_menor_grupo_que_basta(
+    mesa: Mapping[int, str],
+    cartas: Mapping[str, int],
+    nascer: Sequence[str],
+    fixos: frozenset[str],
+    melhor: tuple[int, list[str], bool],
+    *,
+    compacta: bool,
+) -> tuple[list[str], bool]:
+    """Dentro do plano, o menor grupo que deixa a mesa tão certa quanto ele: quem não precisa
+    renascer fica de pé, e o jogo perde menos controles."""
+    fora, recriar, inteira = melhor
+    for tamanho in range(len(recriar)):
+        for grupo in combinations(recriar, tamanho):
+            depois = _a_mesa_depois(mesa, list(grupo), nascer, cartas, compacta=compacta)
+            if not _em_ordem([cartas[c] for c in depois.values() if c not in fixos]):
+                continue
+            if _fora_do_boneco(depois, cartas) > fora:
+                continue
+            todos = _em_ordem([cartas[c] for c in depois.values()])
+            if inteira and not todos:
+                continue
+            return list(grupo), todos
+    return recriar, inteira
 
 
 __all__ = [

@@ -250,18 +250,18 @@ class TestRecusasVisiveis:
     """Toda recusa é explícita e nenhuma escreve nada (PLAYER-01)."""
 
     @pytest.mark.asyncio
-    async def test_recusa_com_jogo_aberto(self, config_isolado: Path) -> None:
+    async def test_com_jogo_aberto_o_pedido_vale(self, config_isolado: Path) -> None:
+        """D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO revoga a recusa."""
         ds = ControllerIdentityRegistry()
         ds.sync_connected([UNIQ_A, UNIQ_B])
-        antes = ds.snapshot()
 
         server = _servidor(config_isolado, ds, None, authority="game")
         resultado = await server._handle_identity_number_set(
             {"uniq": UNIQ_B, "number": 1}
         )
 
-        assert resultado == {"ok": False, "reason": "sessao_de_jogo_aberta"}
-        assert ds.snapshot() == antes
+        assert resultado["ok"] is True
+        assert ds.snapshot()[UNIQ_B] < ds.snapshot()[UNIQ_A]
 
     @pytest.mark.asyncio
     async def test_recusa_controle_ausente(self, config_isolado: Path) -> None:
