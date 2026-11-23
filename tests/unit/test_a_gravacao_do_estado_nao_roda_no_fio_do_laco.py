@@ -29,6 +29,7 @@ CABO_1 = "aa:bb:cc:00:00:01"
 RADIO_2 = "AA:BB:CC:00:00:02"
 CABO_3 = "aa:bb:cc:00:00:03"
 RADIO_4 = "AA:BB:CC:00:00:04"
+EXTERNO_4 = "aa:bb:cc:00:00:44"
 
 
 class Disco:
@@ -81,6 +82,11 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> Iterator[Disco]:
 def _fila(pasta: Path) -> dict[str, int]:
     dados = json.loads((pasta / "controllers.json").read_text(encoding="utf-8"))
     return {e["addr"]: e["rank"] for e in dados[id_mod.ORDER_FIELD]}
+
+
+def _tipos_e_lugares(pasta: Path) -> list[tuple[str, int]]:
+    dados = json.loads((pasta / "controllers.json").read_text(encoding="utf-8"))
+    return sorted((e["kind"], e["rank"]) for e in dados[id_mod.ORDER_FIELD])
 
 
 def _gravar(alvo: Path, texto: str) -> Future[None] | None:
@@ -252,6 +258,52 @@ def test_a_gravacao_do_tique_na_fila_nao_volta_por_cima_do_gesto(
         porta.set()
     assert ei.esperar_a_fila(5.0)
     assert _fila(config) == trocado, "a fila do tique voltou por cima do gesto"
+
+
+def test_o_externo_que_grava_com_o_tique_na_fila_fica_na_fila_final(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import external_identity as ext_mod
+
+    monkeypatch.setattr(ext_mod, "_session_anchor", lambda: "boot-teste")
+    porta, chegou = threading.Event(), threading.Event()
+    real = os.replace
+
+    def outro_alvo_lento(origem: Any, destino: Any) -> None:
+        if str(destino).endswith("outro.json"):
+            chegou.set()
+            porta.wait(5.0)
+        real(origem, destino)
+
+    monkeypatch.setattr(os, "replace", outro_alvo_lento)
+    registro = id_mod.ControllerIdentityRegistry()
+    registro.load()
+    externos = ext_mod.ExternalIdentityRegistry()
+    externos.load()
+
+    def tique_dos_externos() -> None:
+        externos.slot_for(EXTERNO_4, reserve=3)
+        externos.sync_connected([EXTERNO_4])
+
+    async def laco() -> list[tuple[str, int]]:
+        _gravar(config / "outro.json", "x")
+        await asyncio.to_thread(chegou.wait, 5.0)
+        registro.sync_connected([CABO_1, RADIO_2, CABO_3])
+        await asyncio.to_thread(tique_dos_externos)
+        return _tipos_e_lugares(config)
+
+    try:
+        no_meio = asyncio.run(laco())
+    finally:
+        porta.set()
+    assert no_meio == [(id_mod.KIND_EXTERNAL, 4)], "o tique dos DualSense não estava na fila"
+    assert ei.esperar_a_fila(5.0)
+    assert _tipos_e_lugares(config) == [
+        (id_mod.KIND_DUALSENSE, 1),
+        (id_mod.KIND_DUALSENSE, 2),
+        (id_mod.KIND_DUALSENSE, 3),
+        (id_mod.KIND_EXTERNAL, 4),
+    ], "a gravação do tique na fila apagou o externo gravado no meio"
 
 
 def test_o_gesto_explicito_de_renumerar_responde_depois_de_gravar(config: Path) -> None:
