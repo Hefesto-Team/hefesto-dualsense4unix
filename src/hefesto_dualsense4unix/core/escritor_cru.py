@@ -415,8 +415,7 @@ def raizes_do_produto(servico: int | None = None) -> tuple[str, ...]:
 
     pacote = Path(__file__).resolve().parent.parent
     raizes = {str(pacote), str(pacote.parent.parent / "scripts")}
-    with contextlib.suppress(Exception):
-        raizes.add(str(data_dir().resolve() / "scripts"))
+    raizes.add(str(data_dir().resolve() / "scripts"))
     if servico is not None:
         argv = _argv_de(servico)
         programa = _o_programa(argv) if argv else None
