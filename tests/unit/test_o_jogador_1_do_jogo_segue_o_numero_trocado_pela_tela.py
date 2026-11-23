@@ -44,6 +44,7 @@ from tests.unit.test_o_numero_do_jogador_troca_com_o_jogo_aberto import _a_repin
 
 MASCARAS = ("dualsense", "xbox", "nintendo")
 NEUTRO = {"lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
+VIAS = {**TRANSPORTES, "mista-ao-contrario": ("bt", "usb", "bt", "usb")}
 
 
 class _HandleComMotor(_FakeHandle):
@@ -109,7 +110,7 @@ def _montar(
     """A mesa na ordem P1..Pn; com ``chegam_com_o_jogo``, do P2 em diante sentam com o jogo."""
     monkeypatch.setattr(ensaio_mod, "_FakeHandle", _HandleComMotor)
     mesa = _Mesa(monkeypatch, mascara, jogo)
-    vias = TRANSPORTES[transporte]
+    vias = VIAS[transporte]
     primeiros = 1 if chegam_com_o_jogo else quantos
     for uniq, via in zip(UNIQS[:primeiros], vias, strict=False):
         mesa.mesa.sentar(uniq, transporte=via)
@@ -158,7 +159,7 @@ PEDIDOS_COM_O_P1 = [p for q in (2, 3, 4) for p in _pedidos_com_o_p1(q)]
 
 @pytest.mark.usefixtures("config_isolado")
 @pytest.mark.parametrize("mascara", MASCARAS)
-@pytest.mark.parametrize("transporte", list(TRANSPORTES))
+@pytest.mark.parametrize("transporte", list(VIAS))
 @pytest.mark.parametrize("chegam_com_o_jogo", [False, True], ids=["antes", "com-o-jogo"])
 @pytest.mark.parametrize(("quantos", "quem", "numero"), PEDIDOS_COM_O_P1)
 def test_a_troca_com_o_p1_leva_o_jogador_1_do_jogo_na_hora(
@@ -180,6 +181,9 @@ def test_a_troca_com_o_p1_leva_o_jogador_1_do_jogo_na_hora(
 
     assert resposta["ok"] is True, resposta
     assert mesa.inst.primary_uniq == novo_1, "o primário espera o tique: o LED diz 1 e o jogo não"
+    assert mesa.inst.get_transport() == mesa.mesa.transporte_de(novo_1), (
+        "o primário novo escreve pela via do antigo"
+    )
     for _ in range(3):
         mesa.tique()
     assert mesa.inst.primary_uniq == novo_1
@@ -331,3 +335,33 @@ def test_o_primario_antigo_sai_e_volta_e_a_mesa_nao_desfaz_o_pedido(
     assert mesa.a_tela() == {P2: 1, P1: 2, P3: 3}
     assert mesa.o_jogo_ve()[1] == P2
     mesa.o_jogo_segue_a_tela()
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("jogo", [True, False], ids=["jogo-aberto", "jogo-fechado"])
+@pytest.mark.parametrize("transporte", list(VIAS))
+@pytest.mark.parametrize(("quantos", "quem", "numero"), [(2, 1, 1), (3, 0, 3), (4, 3, 1)])
+def test_fora_do_co_op_o_pedido_tambem_move_o_jogador_1(
+    monkeypatch: pytest.MonkeyPatch, config_isolado: Path, quantos: int, quem: int,  # noqa: F811
+    numero: int, transporte: str, jogo: bool,
+) -> None:
+    """Com o co-op desligado o pad do P1 é o único, e o pedido o entrega na hora a quem tem o 1."""
+    mesa = ensaio_mod.MesaDoJogo(monkeypatch, relogio=(r := Relogio()), tempo=r, jogo=jogo,
+                                 coop=False)
+    for uniq, via in zip(UNIQS[:quantos], VIAS[transporte], strict=False):
+        mesa.mesa.sentar(uniq, transporte=via)
+    for _ in range(3):
+        mesa.tique()
+    assert mesa.dono_do_vpad_do_p1() == P1
+    alvo = UNIQS[quem]
+    novo_1 = alvo if numero == 1 else UNIQS[numero - 1]
+
+    resposta = _a_tela_pede(mesa, config_isolado, alvo, numero)  # type: ignore[arg-type]
+
+    assert resposta["ok"] is True, resposta
+    assert mesa.inst.primary_uniq == novo_1, "fora do co-op o pedido espera o tique"
+    assert mesa.inst.get_transport() == mesa.mesa.transporte_de(novo_1)
+    for _ in range(3):
+        mesa.tique()
+    assert mesa.a_tela()[novo_1] == 1
+    assert mesa.dono_do_vpad_do_p1() == novo_1
