@@ -1525,6 +1525,20 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "cabo lidos do diário do USB (régua: "
         "`tests/unit/test_o_reset_do_cabo_se_registra_por_porta.py`). Nenhuma tela lê a contagem."
     ),
+    "integrations/audio_control.py::esperar_os_avisos": (
+        "23/11/2026 — instrumento de teste: o docstring diz «Todo fio de aviso terminou dentro de "
+        "``teto_s``?», e quem pergunta é a fixture que separa um caso do outro "
+        "(`tests/conftest.py:2138` (`esperar_os_avisos`)) e a régua do volume do microfone. O "
+        "produto não espera esses fios: cada um nasce com `daemon=True`, morre com o serviço e "
+        "se aposenta sozinho quando a geração do aviso muda."
+    ),
+    "integrations/audio_control.py::esquecer_os_volumes_dos_controles": (
+        "23/11/2026 — instrumento de teste: o docstring diz «a régua começa limpa», e o único "
+        "chamador fora da régua é a fixture de `tests/conftest.py:2137` "
+        "(`esquecer_os_volumes_dos_controles`). No produto o volume guardado por controle tem de "
+        "atravessar a queda e a volta do canal; esquecê-lo é exatamente o defeito que a cura de "
+        "37b02e221 fechou."
+    ),
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
