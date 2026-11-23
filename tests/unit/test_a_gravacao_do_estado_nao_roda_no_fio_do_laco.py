@@ -83,6 +83,12 @@ def _fila(pasta: Path) -> dict[str, int]:
     return {e["addr"]: e["rank"] for e in dados[id_mod.ORDER_FIELD]}
 
 
+def _gravar(alvo: Path, texto: str) -> Future[None] | None:
+    return ei.gravar_sem_parar_o_laco(
+        os.fspath(alvo), lambda: ei.escrever_inteiro(alvo, texto)
+    )
+
+
 def _tique(registro: id_mod.ControllerIdentityRegistry, uniqs: list[str]) -> float:
     antes = time.perf_counter()
     registro.sync_connected(uniqs)
@@ -190,40 +196,30 @@ def test_duas_gravacoes_do_mesmo_alvo_na_fila_viram_a_ultima(
 ) -> None:
     alvo = tmp_path / "alvo.json"
 
-    async def laco() -> list[bytes | None]:
-        ei.escrever_inteiro_sem_parar_o_laco(alvo, "um")
+    async def laco() -> None:
+        _gravar(alvo, "um")
         await asyncio.to_thread(disco.chegou.wait, 5.0)
-        ei.escrever_inteiro_sem_parar_o_laco(alvo, "dois")
-        ei.escrever_inteiro_sem_parar_o_laco(alvo, "três")
-        return [ei.ler_o_que_esta_na_fila(alvo)]
+        _gravar(alvo, "dois")
+        _gravar(alvo, "três")
 
-    (lido,) = asyncio.run(laco())
-    assert lido == "três".encode()
+    asyncio.run(laco())
     disco.abrir()
     assert ei.esperar_a_fila(5.0)
     assert alvo.read_bytes() == "três".encode()
     assert disco.trocas == 2
-    assert ei.ler_o_que_esta_na_fila(alvo) is None
 
 
 def test_a_parada_espera_a_fila_esvaziar(tmp_path: Path, disco: Disco) -> None:
     alvo = tmp_path / "alvo.json"
 
     async def laco() -> None:
-        ei.escrever_inteiro_sem_parar_o_laco(alvo, "x")
+        _gravar(alvo, "x")
 
     asyncio.run(laco())
     assert ei.esperar_a_fila(0.05) is False
     disco.abrir()
     assert ei.esperar_a_fila(5.0) is True
     assert alvo.read_bytes() == b"x"
-
-
-def test_fora_do_laco_o_escrever_sem_parar_grava_e_levanta_na_hora(tmp_path: Path) -> None:
-    alvo = tmp_path / "alvo.json"
-    assert ei.escrever_inteiro_sem_parar_o_laco(alvo, "inteiro") is None
-    assert alvo.read_bytes() == b"inteiro"
-    assert ei.ler_o_que_esta_na_fila(alvo) is None
 
 
 def test_a_gravacao_do_tique_na_fila_nao_volta_por_cima_do_gesto(
@@ -243,7 +239,7 @@ def test_a_gravacao_do_tique_na_fila_nao_volta_por_cima_do_gesto(
     registro.load()
 
     async def laco() -> dict[str, int]:
-        ei.escrever_inteiro_sem_parar_o_laco(config / "outro.json", "x")
+        _gravar(config / "outro.json", "x")
         await asyncio.to_thread(chegou.wait, 5.0)
         registro.sync_connected([CABO_1, RADIO_2])
         trocado = {chave: 3 - lugar for chave, lugar in registro.snapshot().items()}

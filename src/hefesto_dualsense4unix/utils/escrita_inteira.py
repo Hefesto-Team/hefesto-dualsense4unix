@@ -50,7 +50,6 @@ def no_fio_do_laco() -> bool:
 @dataclass
 class _Pedido:
     trabalho: Callable[[], None]
-    dados: bytes | None
     futuros: list[Future[None]] = field(default_factory=list)
 
 
@@ -63,16 +62,14 @@ class _Gravador:
         self._em_curso: dict[str, _Pedido] = {}
         self._fio: threading.Thread | None = None
 
-    def agendar(
-        self, chave: str, trabalho: Callable[[], None], dados: bytes | None = None
-    ) -> Future[None]:
+    def agendar(self, chave: str, trabalho: Callable[[], None]) -> Future[None]:
         futuro: Future[None] = Future()
         with self._trava:
             pedido = self._fila.get(chave)
             if pedido is None:
-                pedido = self._fila[chave] = _Pedido(trabalho, dados)
+                pedido = self._fila[chave] = _Pedido(trabalho)
             else:
-                pedido.trabalho, pedido.dados = trabalho, dados
+                pedido.trabalho = trabalho
             pedido.futuros.append(futuro)
             if self._fio is None or not self._fio.is_alive():
                 self._fio = threading.Thread(
@@ -106,11 +103,6 @@ class _Gravador:
                 else:
                     futuro.set_exception(erro)
 
-    def lido(self, chave: str) -> bytes | None:
-        with self._trava:
-            pedido = self._fila.get(chave) or self._em_curso.get(chave)
-            return pedido.dados if pedido is not None else None
-
     def esperar(self, prazo_s: float) -> bool:
         fim = time.monotonic() + prazo_s
         with self._trava:
@@ -139,27 +131,6 @@ def gravar_sem_parar_o_laco(
         trabalho()
         return None
     return _GRAVADOR.agendar(chave, trabalho)
-
-
-def escrever_inteiro_sem_parar_o_laco(alvo: Path | str, dados: bytes | str) -> Future[None] | None:
-    """O :func:`escrever_inteiro` por :func:`gravar_sem_parar_o_laco`, com a fila do ``alvo``.
-
-    Quem lê o ``alvo`` enquanto o gravador não terminou lê o que está na fila
-    (:func:`ler_o_que_esta_na_fila`).
-    """
-    caminho = Path(alvo)
-    bruto = dados.encode("utf-8") if isinstance(dados, str) else dados
-    if not no_fio_do_laco():
-        escrever_inteiro(caminho, bruto)
-        return None
-    return _GRAVADOR.agendar(
-        os.fspath(caminho), lambda: escrever_inteiro(caminho, bruto), dados=bruto
-    )
-
-
-def ler_o_que_esta_na_fila(alvo: Path | str) -> bytes | None:
-    """Os bytes que o gravador ainda vai gravar em ``alvo``; ``None`` sem gravação pendente."""
-    return _GRAVADOR.lido(os.fspath(Path(alvo)))
 
 
 def esperar_a_fila(prazo_s: float = 10.0) -> bool:
