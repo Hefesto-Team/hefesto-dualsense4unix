@@ -325,19 +325,159 @@ def escritores_crus_alheios(
     *,
     meu_pid: int | None = None,
 ) -> dict[str, list[int]]:
-    """Os nós de :func:`holders_de_hidraw_de_qualquer_um` TIRANDO nós mesmos."""
+    """Os nós de :func:`holders_de_hidraw_de_qualquer_um` TIRANDO os processos do produto.
+
+    Do produto (:func:`processo_do_produto`): o serviço, o pai dele, quem descende dele e quem
+    roda um programa do produto. Nó que só o produto segura não vira chave.
+    """
     eu = os.getpid() if meu_pid is None else int(meu_pid)
     try:
         pai = os.getppid()
     except OSError:  # pragma: no cover
         pai = -1
-    nossos = {eu, pai}
     bruto = holders_de_hidraw_de_qualquer_um(nos)
+    vistos: dict[int, bool] = {eu: True, pai: True}
+
+    def do_produto(pid: int) -> bool:
+        if pid not in vistos:
+            vistos[pid] = processo_do_produto(pid, servico=eu)
+        return vistos[pid]
+
     return {
         no: alheios
         for no, pids in bruto.items()
-        if (alheios := [p for p in pids if p not in nossos])
+        if (alheios := [p for p in pids if not do_produto(p)])
     }
+
+
+_FUNDO_DA_ASCENDENCIA = 16
+
+_PACOTE = "hefesto_dualsense4unix"
+
+
+def _ler_do_proc(pid: int, nome: str) -> bytes:
+    """O arquivo ``/proc/<pid>/<nome>``, ou vazio quando não se lê."""
+    try:
+        with open(f"/proc/{int(pid)}/{nome}", "rb") as fh:
+            return fh.read()
+    except (OSError, ValueError):
+        return b""
+
+
+def _pai_de(pid: int) -> int | None:
+    """O ``ppid`` de ``/proc/<pid>/stat`` (o campo depois do estado, após o ``comm``)."""
+    bruto = _ler_do_proc(pid, "stat").decode("utf-8", "replace")
+    campos = bruto[bruto.rfind(")") + 1:].split()
+    return int(campos[1]) if len(campos) > 1 and campos[1].isdigit() else None
+
+
+def _descende_do_servico(pid: int, servico: int) -> bool:
+    atual: int | None = pid
+    for _ in range(_FUNDO_DA_ASCENDENCIA):
+        atual = _pai_de(atual) if atual is not None else None
+        if atual is None or atual <= 1:
+            return False
+        if atual == servico:
+            return True
+    return False
+
+
+def _argv_de(pid: int) -> list[str]:
+    return [a.decode("utf-8", "replace") for a in _ler_do_proc(pid, "cmdline").split(b"\0") if a]
+
+
+def _o_programa(argv: list[str]) -> tuple[str, str] | None:
+    """``("-m", nome)`` ou ``("arquivo", caminho)`` que o Python de ``argv`` roda."""
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "-m":
+            return ("-m", argv[i + 1]) if i + 1 < len(argv) else None
+        if arg.startswith("-m") and len(arg) > 2:
+            return ("-m", arg[2:])
+        if arg in ("-c", "-"):
+            return None
+        if arg in ("-X", "-W"):
+            i += 2
+            continue
+        if not arg.startswith("-"):
+            return ("arquivo", arg)
+        i += 1
+    return None
+
+
+def raizes_do_produto(servico: int | None = None) -> tuple[str, ...]:
+    """As pastas cujo programa é do produto: o pacote, os ``scripts`` ao lado dele e na pasta
+    de dados, e o programa que o próprio serviço roda."""
+    from pathlib import Path
+
+    from hefesto_dualsense4unix.utils.xdg_paths import data_dir
+
+    pacote = Path(__file__).resolve().parent.parent
+    raizes = {str(pacote), str(pacote.parent.parent / "scripts")}
+    with contextlib.suppress(Exception):
+        raizes.add(str(data_dir().resolve() / "scripts"))
+    if servico is not None:
+        argv = _argv_de(servico)
+        programa = _o_programa(argv) if argv else None
+        if programa is not None and programa[0] == "arquivo":
+            raizes.add(os.path.realpath(programa[1]))
+    return tuple(sorted(raizes))
+
+
+def _dentro(caminho: str, raizes: Iterable[str]) -> bool:
+    for raiz in raizes:
+        with contextlib.suppress(ValueError):
+            if os.path.commonpath([caminho, raiz]) == raiz:
+                return True
+    return False
+
+
+def _e_python(pid: int) -> bool:
+    try:
+        exe = os.readlink(f"/proc/{int(pid)}/exe")
+    except (OSError, ValueError):
+        return False
+    nome = os.path.basename(exe.removesuffix(" (deleted)"))
+    return nome == "python" or (nome.startswith("python") and nome[6:].replace(".", "").isdigit())
+
+
+def _modulo_do_produto(nome: str) -> bool:
+    """O ``-m nome`` é um módulo que existe neste pacote (sem importar nada)."""
+    partes = nome.split(".")
+    if partes[0] != _PACOTE or not all(p.isidentifier() for p in partes):
+        return False
+    from pathlib import Path
+
+    base = Path(__file__).resolve().parent.parent.joinpath(*partes[1:])
+    return base.with_suffix(".py").is_file() if len(partes) > 1 and not base.is_dir() else (
+        (base / "__init__.py").is_file() or (base / "__main__.py").is_file())
+
+
+def processo_do_produto(pid: int, *, servico: int | None = None) -> bool:
+    """O processo ``pid`` é do produto, provado pelo ``/proc`` e nunca pelo nome.
+
+    Do produto: descende do serviço (o que ele abriu, como as extensões), ou é um
+    Python cujo programa mora numa :func:`raizes_do_produto` (a janela, as ferramentas) ou é um
+    módulo do pacote que este processo acha no próprio pacote (a bandeja, o ``-m``).
+    """
+    if servico is not None and _descende_do_servico(pid, servico):
+        return True
+    if not _e_python(pid):
+        return False
+    argv = _argv_de(pid)
+    programa = _o_programa(argv) if argv else None
+    if programa is None:
+        return False
+    tipo, alvo = programa
+    if tipo == "-m":
+        return _modulo_do_produto(alvo)
+    if not os.path.isabs(alvo):
+        try:
+            alvo = os.path.join(os.readlink(f"/proc/{int(pid)}/cwd"), alvo)
+        except (OSError, ValueError):
+            return False
+    return _dentro(os.path.realpath(alvo), raizes_do_produto(servico))
 
 
 @dataclass(frozen=True)
