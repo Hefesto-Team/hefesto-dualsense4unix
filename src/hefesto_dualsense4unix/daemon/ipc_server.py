@@ -281,7 +281,7 @@ class IpcServer(IpcHandlersMixin):
                 if response is not None:
                     writer.write(response + b"\n")
                     await writer.drain()
-        except TimeoutError:
+        except (TimeoutError, asyncio.TimeoutError):
             self.store.bump("ipc.conexoes_ociosas")
             logger.debug("ipc_cliente_ocioso_solto", prazo_s=_TETO_DE_OCIOSIDADE_S)
         except (ConnectionError, asyncio.IncompleteReadError) as exc:
