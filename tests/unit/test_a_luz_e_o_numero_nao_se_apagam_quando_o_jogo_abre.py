@@ -394,3 +394,58 @@ def test_o_controle_de_fora_nao_apaga_com_o_zero_do_jogo(
     gamepad.apply_game_player_leds(daemon, NENHUMA, target_uniq=MACS[2])
 
     assert acesos == [2]
+
+
+def _a_autoridade_cruza_a_borda(mesa: _Mesa, para: str) -> None:
+    """A troca de autoridade como o tique do sinal a faz: o valor muda e a borda roda."""
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import GameSignal
+
+    anterior = mesa.sinal.valor
+    mesa.autoridade(para)
+    GameSignal().na_borda(mesa.daemon, anterior, para)
+
+
+@pytest.mark.parametrize("vias", [(("cabo", "radio")), (("radio", "cabo"))])
+def test_a_barra_preta_do_jogo_que_saiu_nao_vence_no_jogo_seguinte(
+    registro: Any, vias: tuple[str, str]
+) -> None:
+    """D-0410-PERFIL-ATE-O-JOGO-PROVAR: a saída do jogo zera a camada dele.
+
+    O diário de 22 e 23/11: o jogo pintou a barra (o verde de 22/11, 21h42), escreveu a barra
+    preta calado (o campo já estava na camada) com a autoridade dele, saiu às 02h58m55s, e o
+    jogo seguinte ganhou a autoridade às 04h01m57s: o preto guardado venceu. P1 e P2, cabo e
+    rádio nas duas ordens. MORDIDA: tirar o `saida("end_game_sessions_on_exit")` de
+    `GameSignal.na_borda` e a barra sai `(0, 0, 0)` na volta da autoridade.
+    """
+    mesa = _Mesa(registro, (1, 2), {1: vias[0], 2: vias[1]})
+    mesa.lancar(_perfil_do_diario((1, 2)))
+    _a_autoridade_cruza_a_borda(mesa, "game")
+    for n in (1, 2):
+        mesa.ctl.set_game_output_for(MACS[n], led=(0, 64, 0))
+        mesa.ctl.set_game_output_for(MACS[n], led=(0, 0, 0))
+        mesa.o_jogo_acende(NENHUMA, n)
+        assert mesa.resolvido(n).led == (0, 0, 0), n
+
+    _a_autoridade_cruza_a_borda(mesa, "daemon")
+    _a_autoridade_cruza_a_borda(mesa, "game")
+    mesa.lancar(_perfil_do_diario((1, 2)))
+
+    for n in (1, 2):
+        assert _o_que_o_controle_mostra(mesa, n) == (CORES[n], mesa.numero(n)), n
+        assert mesa.nos[n].cores[-1] == CORES[n], n
+        assert UNIQS[n] not in mesa.ctl._game_output_by_uniq, n
+        assert UNIQS[n] not in mesa.ctl._jogo_provou_a_luz, n
+    mesa.ctl.set_game_output_for(MACS[1], led=(0, 0, 0))
+    assert mesa.resolvido(1).led == CORES[1]
+
+
+def test_o_jogo_aberto_segue_mandando_na_barra_que_pintou(registro: Any) -> None:
+    """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO: sem a saída do jogo, a cor dele segue valendo."""
+    mesa = _Mesa(registro)
+    mesa.lancar(_perfil_do_diario())
+    _a_autoridade_cruza_a_borda(mesa, "game")
+    mesa.ctl.set_game_output_for(MACS[1], led=(0, 0, 64))
+    mesa.lancar(_perfil_do_diario())
+
+    assert mesa.resolvido().led == (0, 0, 64)
+    assert UNIQS[1] in mesa.ctl._jogo_provou_a_luz

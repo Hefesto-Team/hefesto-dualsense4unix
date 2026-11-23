@@ -326,6 +326,7 @@ class GameSignal:
 
         _sem_derrubar_o_tique("cor", cor)
         if novo == "daemon":
+            saida("end_game_sessions_on_exit")
             saida("defend_display")
         elif anterior == "daemon":
             saida("replay_retained_game_outputs")

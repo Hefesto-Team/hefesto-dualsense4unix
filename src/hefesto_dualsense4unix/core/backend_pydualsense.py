@@ -5297,6 +5297,28 @@ class PyDualSenseController(IController):
             "autoridade": self._autoridade_de_exibicao(),
         }
 
+    def end_game_sessions_on_exit(self) -> list[str]:
+        """O jogo saiu (a autoridade voltou ao Hefesto): encerra a saída dele em todo controle.
+
+        D-0410-PERFIL-ATE-O-JOGO-PROVAR: a saída do jogo zera a camada dele (barra, número e
+        gatilhos) e a prova da luz e do gatilho, em todo controle, de P1 a P4. A sessão do pad
+        virtual não serve de fim: o cliente da Steam a mantém aberta depois do jogo. Devolve os
+        controles encerrados.
+        """
+        with self._io_lock:
+            alvos = sorted(
+                set(self._game_output_by_uniq)
+                | set(self._game_triggers_by_uniq)
+                | self._jogo_provou_a_luz
+                | self._jogo_provou_o_gatilho
+            )
+        for alvo in alvos:
+            with contextlib.suppress(Exception):
+                self.end_game_session_for(alvo)
+        if alvos:
+            logger.info("game_session_encerrada_na_saida_do_jogo", quantos=len(alvos))
+        return alvos
+
     def end_game_session_for(self, uniq: str) -> bool:
         """Fim da sessão de jogo do controle `uniq`: devolve perfil/paleta/co-op."""
         alvo = self._key_to_uniq(uniq)
