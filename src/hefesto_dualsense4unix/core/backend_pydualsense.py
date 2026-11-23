@@ -3034,7 +3034,8 @@ class PyDualSenseController(IController):
         de inserção (O-MODO-XBOX-NAO-E-QUEDA-02). Exceção (COOP-QUE-NAO-DESMONTA-01 / E2a): quem era
         o primário e voltou dentro de `PRIMARIO_RESERVA_SEC` RETOMA o posto, pelo MESMO caminho da
         promoção (refaz `_detect_transport` e o `retarget`). O AVISO sai daqui, antes do `retarget`
-        (E1).
+        (E1). O deposto que segue na mesa sai com o motor parado: o pad do P1 não fala mais com
+        ele, e o zero do jogo iria ao primário novo.
         """
         prev = self._primary_key
         retomada = self._posto_reservado_de_volta()
@@ -3049,6 +3050,8 @@ class PyDualSenseController(IController):
         self._avisar_troca_de_primario(
             self._key_to_uniq(prev) if prev else None, self.primary_uniq
         )
+        if prev is not None and prev in self._handles:
+            self.force_rumble_stop(prev)
         self._transport = self._detect_transport(self._handles[self._primary_key])
         self._evdev.retarget(self.primary_uniq)
         self._evdev.refresh_device()
@@ -6271,6 +6274,26 @@ class PyDualSenseController(IController):
     def seguir_a_carta(self) -> bool:
         """O posto de P1 segue a carta 1 sem esperar hotplug. Devolve se ele andou."""
         with self._io_lock:
+            antes = self._primary_key
+            self._recompute_primary()
+            return self._primary_key != antes
+
+    def seguir_o_numero_pedido(self, uniqs: Iterable[str]) -> bool:
+        """O pedido de número da tela reelege o primário na hora, pela regra do tique.
+
+        D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO: quem a tela pediu deixa de
+        contar como quem voltou com o jogo segurando o boneco 1 (`_quem_voltou_com_o_jogo_locked`),
+        e o `_recompute_primary` elege a carta menor como no `seguir_a_carta`. Devolve se o posto
+        andou.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        pedidos = {u for u in (norm_mac(str(c)) for c in uniqs) if u}
+        with self._io_lock:
+            chaves = frozenset(k for k in self._handles if self._key_to_uniq(k) in pedidos)
+            self._voltou_com_o_jogo = self._voltou_com_o_jogo - chaves
+            if self._carta_menor_esperando in chaves:
+                self._carta_menor_esperando = None
             antes = self._primary_key
             self._recompute_primary()
             return self._primary_key != antes

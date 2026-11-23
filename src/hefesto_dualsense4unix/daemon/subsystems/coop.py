@@ -430,10 +430,15 @@ class CoopManager:
             apply_game_rumble(self._daemon, 0, 0, target_uniq=identity, vpad=player.vpad)
 
     def _recolher_os_cedidos(self) -> None:
-        """Desmonta, no poll loop, os jogadores que cederam o controle ao P1."""
+        """Desmonta, no poll loop, os jogadores que cederam o controle ao P1.
+
+        O pad do cedido sai sem nada apertado: a leitura dele já é do pad do P1.
+        """
         for identity in [
             mac for mac, p in self._players.items() if p.cedido_ao_primario
         ]:
+            if not self._players[identity].no_p1:
+                _soltar_o_pad(self._players[identity].vpad)
             self._isolar("cedido", identity, functools.partial(self._teardown_player, identity))
 
     def _isolar(self, passo: str, identity: str, fn: Callable[[], Any]) -> None:
@@ -759,12 +764,25 @@ class CoopManager:
         """O número pedido pela tela vence o que o jogo escreveu nas lâmpadas até o jogo fechar.
 
         D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO. Devolve as chaves que
-        entraram agora, para quem pediu desfazer só as suas (`esquecer_o_pedido_da_tela`).
+        entraram agora, para quem pediu desfazer só as suas (`esquecer_o_pedido_da_tela`). O posto
+        do P1 segue o pedido na hora (`seguir_o_numero_pedido` do backend).
         """
-        novas = frozenset(h for h in (_so_hex(str(c)) for c in chaves) if h)
-        novas = novas - self._pedidos_da_tela
+        pedidas = frozenset(h for h in (_so_hex(str(c)) for c in chaves) if h)
+        novas = pedidas - self._pedidos_da_tela
         self._pedidos_da_tela = self._pedidos_da_tela | novas
+        self._o_posto_segue_o_pedido(pedidas)
         return novas
+
+    def _o_posto_segue_o_pedido(self, chaves: frozenset[str]) -> None:
+        """O primário se reelege pela carta que a tela pediu, sem esperar o tique. Nunca levanta."""
+        seguir = getattr(getattr(self._daemon, "controller", None), "seguir_o_numero_pedido", None)
+        if not chaves or not callable(seguir):
+            return
+        self._garantir_aviso_de_primario()
+        try:
+            seguir(chaves)
+        except Exception as exc:
+            logger.warning("o_posto_nao_seguiu_o_pedido", err=str(exc))
 
     def esquecer_o_pedido_da_tela(self, chaves: Iterable[str]) -> None:
         """O pedido recusado não segura o número do jogo."""
