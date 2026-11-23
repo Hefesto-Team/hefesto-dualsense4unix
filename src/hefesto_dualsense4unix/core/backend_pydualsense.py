@@ -5313,8 +5313,10 @@ class PyDualSenseController(IController):
                 | self._jogo_provou_o_gatilho
             )
         for alvo in alvos:
-            with contextlib.suppress(Exception):
+            try:
                 self.end_game_session_for(alvo)
+            except Exception as exc:
+                logger.warning("game_session_nao_encerrou_na_saida", uniq=alvo, err=str(exc))
         if alvos:
             logger.info("game_session_encerrada_na_saida_do_jogo", quantos=len(alvos))
         return alvos
