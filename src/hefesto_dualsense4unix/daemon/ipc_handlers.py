@@ -1540,7 +1540,8 @@ class IpcHandlersMixin:
         ``{"ok": True, "number": N, "changed": {key: lugar}}`` ou ``{"ok": False, "reason": ...}``
         (``controle_ausente``, ``numero_fora_da_mesa``, ``lock_timeout``). Vale com o jogo aberto
         (D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO): o co-op guarda o pedido
-        antes da escrita, e o número que o jogo escreveu nas lâmpadas não o desfaz.
+        antes da escrita, e o número que o jogo escreveu nas lâmpadas não o desfaz. Todo pedido
+        aceito repinta, inclusive o do número que o controle já tem (``changed`` vazio).
         """
         uniq_raw = params.get("uniq")
         if not isinstance(uniq_raw, str) or not uniq_raw.strip():
@@ -1604,13 +1605,16 @@ class IpcHandlersMixin:
                 "reason": "numero_fora_da_mesa",
                 "max": exc.maximo,
             }
+        except BaseException:
+            _desfazer_a_marca()
+            raise
 
         if changed:
             if coop is not None:
                 coop.o_numero_pedido_pela_tela(tuple(changed))
-            self._despachar_repintura("identity.number.set")
         else:
             _desfazer_a_marca()
+        self._despachar_repintura("identity.number.set")
 
         return {"ok": True, "number": numero, "changed": changed}
 

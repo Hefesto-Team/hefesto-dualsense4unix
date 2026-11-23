@@ -199,18 +199,23 @@ class TestONumeroAcendeALampada:
         )
 
     @pytest.mark.asyncio
-    async def test_no_op_nao_repinta_nada(self, config_isolado: Path) -> None:
-        """Pedir o número que o controle JÁ tem não paga varredura nenhuma."""
+    async def test_o_numero_que_ja_tem_repinta_o_controle(self, config_isolado: Path) -> None:
+        """Pedir o número que o controle JÁ tem não muda a fila e repinta as lâmpadas.
+
+        D-2311-O-NUMERO-DO-JOGADOR-TROCA-PELA-TELA-COM-O-JOGO-ABERTO (23/11/2026): com a barra e
+        os LEDs apagados, o clique no 1 de quem já é o 1 tem de acender.
+        """
         server, coop, diario = _mesa_de_dois(config_isolado)
 
         resultado = await server._handle_identity_number_set(
             {"uniq": UNIQ_A, "number": 1}
         )
+        await _esperar_repintura(server)
 
         assert resultado["ok"] is True
         assert resultado["changed"] == {}
-        assert coop.chamadas == []
-        assert diario == []
+        assert coop.chamadas == [True]
+        assert diario == ["coop.sync", "reassert", "external_tick"]
 
     @pytest.mark.asyncio
     async def test_recusa_nao_repinta(self, config_isolado: Path) -> None:

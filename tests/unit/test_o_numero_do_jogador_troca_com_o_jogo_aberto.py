@@ -11,11 +11,13 @@ STEAM-NO-FISICO-01 e o registro de número de `test_o_numero_do_jogo_vira_o_do_h
 máscara do vpad seguindo a pedida.
 
 MORDIDAS: a recusa `sessao_de_jogo_aberta` de volta ao handler reprova os casos do serviço; sem
-o pedido guardado no co-op, o número do jogo desfaz a troca no `sync` seguinte; sem o quadro
-neutro em `_derrubar_para_renascer`, o pad que sai leva o botão apertado.
+o pedido guardado no co-op, o número do jogo desfaz a troca no `sync` seguinte; o handler sem a
+marca do pedido reprova o caminho inteiro; sem o quadro neutro em `_derrubar_para_renascer`, o
+pad que sai leva o botão apertado.
 """
 from __future__ import annotations
 
+import asyncio
 import itertools
 from dataclasses import dataclass
 from pathlib import Path
@@ -299,6 +301,62 @@ def test_o_pedido_recusado_nao_segura_o_numero_do_jogo(
     _, gerente = _o_co_op(registro, "dualsense")
     marca = gerente.o_numero_pedido_pela_tela(("aa:bb:cc:00:00:02",))
     gerente.esquecer_o_pedido_da_tela(marca)
+
+    assert gerente._pedidos_da_tela == frozenset()
+
+
+def _o_servico_do_co_op(tmp: Path, daemon: Any) -> IpcServer:
+    """O `IpcServer` real sobre o daemon do ensaio do co-op: o handler fala com o co-op real."""
+    fc = FakeController(transport="usb")
+    fc.connect()
+    store = StateStore()
+    return IpcServer(controller=fc, store=store,
+                     profile_manager=ProfileManager(controller=fc, store=store),
+                     socket_path=tmp / "c.sock", daemon=daemon)
+
+
+async def _a_repintura_termina(server: IpcServer) -> None:
+    for _ in range(50):
+        em_voo = set(getattr(server, "_repinturas_em_voo", set()))
+        if not em_voo:
+            return
+        await asyncio.gather(*em_voo, return_exceptions=True)
+    raise AssertionError("a repintura despachada nunca terminou")
+
+
+@pytest.mark.parametrize("mascara", MASCARAS)
+@pytest.mark.asyncio
+async def test_o_pedido_pelo_handler_vence_o_numero_do_jogo(
+    config_isolado: Path, mascara: str, nascimentos: list[str],  # noqa: F811
+    registro: _Registro, mascara_que_nasce: dict[str, list[Any]],  # noqa: F811
+) -> None:
+    """O caminho inteiro do pedido: o handler real guarda o pedido no co-op real."""
+    daemon, gerente = _o_co_op(registro, mascara)
+    server = _o_servico_do_co_op(config_isolado, daemon)
+
+    resposta = await server._handle_identity_number_set({"uniq": P2, "number": 3})
+    await _a_repintura_termina(server)
+    for _ in range(3):
+        gerente.sync(force=True)
+
+    assert resposta["ok"] is True, resposta
+    assert registro.numeros == {P1: 1, P2: 3, P3: 2, P4: 4}
+
+
+@pytest.mark.asyncio
+async def test_o_pedido_que_quebra_no_meio_nao_segura_o_numero_do_jogo(
+    config_isolado: Path, nascimentos: list[str], registro: _Registro,  # noqa: F811
+    mascara_que_nasce: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon, gerente = _o_co_op(registro, "dualsense")
+    server = _o_servico_do_co_op(config_isolado, daemon)
+
+    def _quebra(*_a: Any, **_k: Any) -> dict[str, int]:
+        raise OSError("o disco recusou")
+
+    monkeypatch.setattr(IpcHandlersMixin, "_set_number_locked", staticmethod(_quebra))
+    with pytest.raises(OSError):
+        await server._handle_identity_number_set({"uniq": P2, "number": 3})
 
     assert gerente._pedidos_da_tela == frozenset()
 
