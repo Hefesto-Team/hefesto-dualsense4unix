@@ -86,7 +86,7 @@ async def test_a_limpeza_roda_mesmo_se_a_espera_estourar(tmp_path: Path) -> None
             pass
 
         async def wait_closed(self) -> None:
-            await asyncio.sleep(3600)
+            await asyncio.Event().wait()
 
     real = servidor._server
     assert real is not None
