@@ -97,6 +97,27 @@ def test_localconfig_sem_a_raiz_quebra(tmp_path):
     assert tag == "[ OK ]"
 
 
+def test_os_jogos_de_fora_que_nao_abrem_quebram_o_contrato_da_steam(tmp_path):
+    steam = [c for c in cf.CONTRATOS if c.id == "steam-localconfig"]
+    assert "cfg:shortcuts.vdf" in steam[0].cobre
+    for conta in ("1", "2"):
+        pasta = tmp_path / f"home/.steam/steam/userdata/{conta}/config"
+        pasta.mkdir(parents=True)
+        (pasta / "localconfig.vdf").write_text('"UserLocalConfigStore"\n{\n}\n', encoding="utf-8")
+    de_fora = tmp_path / "home/.steam/steam/userdata/2/config/shortcuts.vdf"
+    ((tag, _),) = cf.linhas_do_doctor(_amb(tmp_path, {}), steam)
+    assert tag == "[ OK ]"
+    de_fora.write_bytes(b"\x00shortcuts\x00\x08\x08")
+    ((tag, _),) = cf.linhas_do_doctor(_amb(tmp_path, {}), steam)
+    assert tag == "[ OK ]"
+    de_fora.write_bytes(b"\x00shortcuts\x00\x00")
+    ((tag, msg),) = cf.linhas_do_doctor(_amb(tmp_path, {}), steam)
+    assert tag == "[WARN]" and "steam-localconfig" in msg and "shortcuts.vdf" in msg
+    de_fora.write_bytes(b"texto que a Steam nunca escreveria")
+    ((tag, msg),) = cf.linhas_do_doctor(_amb(tmp_path, {}), steam)
+    assert tag == "[WARN]" and "shortcuts.vdf" in msg
+
+
 def test_proton_sem_executavel_quebra(tmp_path):
     pasta = tmp_path / "home/.steam/steam/compatibilitytools.d/GE-Proton11-8"
     pasta.mkdir(parents=True)

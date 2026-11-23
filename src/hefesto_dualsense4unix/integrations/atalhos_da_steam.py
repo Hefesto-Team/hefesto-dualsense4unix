@@ -155,6 +155,19 @@ def atalhos_do_arquivo(arquivo: Path) -> list[AtalhoDeFora]:
         return []
 
 
+def os_que_nao_abrem(raiz: Path) -> list[str]:
+    """O motivo de cada arquivo de jogos de fora sob ``raiz`` que não se lê inteiro."""
+    motivos: list[str] = []
+    for arquivo in sorted((raiz / "userdata").glob(f"*/config/{NOME_DO_ARQUIVO}")):
+        try:
+            atalhos_do_bruto(arquivo.read_bytes())
+        except OSError as erro:
+            motivos.append(str(erro.strerror))
+        except ValueError as erro:
+            motivos.append(str(erro))
+    return motivos
+
+
 def com_as_opcoes(bruto: bytes, appid: str, opcoes: str) -> bytes:
     """O arquivo com as opções de lançamento de UMA entrada trocadas; o resto passa igual.
 

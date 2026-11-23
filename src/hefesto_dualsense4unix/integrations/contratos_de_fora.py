@@ -246,6 +246,8 @@ def _opcoes_desfeitas(amb: Ambiente, confs: list[Path]) -> list[str]:
 
 
 def _sonda_steam(amb: Ambiente) -> Resultado:
+    from hefesto_dualsense4unix.integrations import atalhos_da_steam
+
     raizes = _raizes_da_steam(amb)
     if not raizes:
         return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
@@ -253,6 +255,7 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
     abriu = False
     perderam: list[str] = []
     opcoes: list[str] = []
+    de_fora: list[str] = []
     for raiz in raizes:
         confs = sorted((raiz / "userdata").glob("*/config/localconfig.vdf"))
         opcoes += _opcoes_desfeitas(amb, confs) if confs else []
@@ -265,8 +268,15 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
             if '"UserLocalConfigStore"' in texto[:4096]:
                 abriu = True
                 perderam += _perderam_o_wrapper(amb, conf)
-    if abriu and (perderam or opcoes):
+        de_fora += atalhos_da_steam.os_que_nao_abrem(raiz)
+    if abriu and (perderam or opcoes or de_fora):
         partes = []
+        if de_fora:
+            partes.append(
+                f"{len(de_fora)} {atalhos_da_steam.NOME_DO_ARQUIVO} dos jogos de fora não abre(m) "
+                "inteiro(s): os jogos de fora deixam de ser achados e de receber o atalho "
+                f"({'; '.join(de_fora[:3])})"
+            )
         if perderam:
             mostrados = ", ".join(sorted(set(perderam))[:5])
             partes.append(
@@ -768,7 +778,7 @@ CONTRATOS: tuple[Contrato, ...] = (
             "python3 -m hefesto_dualsense4unix.integrations.opcoes_por_jogo --conferir"
         ),
         sonda=_sonda_steam,
-        cobre=("cfg:localconfig.vdf", "cfg:loginusers.vdf"),
+        cobre=("cfg:localconfig.vdf", "cfg:loginusers.vdf", "cfg:shortcuts.vdf"),
     ),
     Contrato(
         id="proton-de-terceiros",
