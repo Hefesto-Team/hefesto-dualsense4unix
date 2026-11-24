@@ -17,9 +17,10 @@ O instrumento é o do uso: o ``SensorHub`` de verdade, ligado ao daemon pelas ME
 que ``_garantir_sensor_hub`` do IPC faz (``_ha_jogo_para_o_toque`` e a pergunta do toque,
 ambas do handler de verdade), com leitores de touchpad de mentira que guardam o estado do
 grab. A máscara é única para todos os controles
-(``D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES``). O mouse e o teclado não são máscara: com
-eles o controle virtual não existe e a máscara cai no padrão, que não é a DualSense; a régua
-tem o modo e o sinal de emulação ligado, que o hub não lê.
+(``D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES``). A Navegação (mouse e teclado) não tem
+controle virtual, mas a máscara da sessão segue guardada (``DaemonConfig.gamepad_flavor`` nasce
+``dualsense``): a régua a monta como o daemon a deixa, com o pad virtual desligado e a máscara
+guardada DualSense, Xbox ou Nintendo, e o dedo, sem vpad aonde ir, é o cursor do sistema.
 
 AS MORDIDAS (24/11/2026, cada uma devolvida com o md5 conferido):
 
@@ -28,7 +29,11 @@ AS MORDIDAS (24/11/2026, cada uma devolvida com o md5 conferido):
   DualSense, a mesa misturada e a rota que para;
 - a pergunta devolvendo sempre ``True`` reprova também
   :func:`test_a_janela_do_cliente_da_steam_solta_o_no`;
-- a pergunta devolvendo sempre ``False`` reprova a linha da DualSense.
+- a pergunta devolvendo sempre ``False`` reprova a linha da DualSense;
+- a pergunta sem olhar o pad virtual desligado da Navegação reprova as linhas de mouse e teclado
+  com a máscara DualSense guardada;
+- a demanda 4 do hub segurando o Ligado com jogo aberto sem perguntar ao daemon reprova as
+  linhas fora da DualSense.
 """
 from __future__ import annotations
 
@@ -107,14 +112,15 @@ class _Daemon(IpcHandlersMixin):
     store: Any
     daemon: Any
 
-    def __init__(self, modo: str) -> None:
-        flavor = modo if modo in ("dualsense", "xbox", "nintendo") else "xbox"
+    def __init__(self, modo: str, guardada: str = "dualsense") -> None:
+        navegacao = modo == "mouse_e_teclado"
         self.store = SimpleNamespace(window_detect_current_class="steam_app_1")
         self.daemon = SimpleNamespace(
             display_authority="game",
             config=SimpleNamespace(
-                gamepad_flavor=flavor,
-                mouse_emulation_enabled=modo == "mouse_e_teclado",
+                gamepad_flavor=guardada if navegacao else modo,
+                gamepad_emulation_enabled=not navegacao,
+                mouse_emulation_enabled=navegacao,
             ),
             is_native_mode=lambda: False,
         )
@@ -135,7 +141,9 @@ class _Daemon(IpcHandlersMixin):
 class _Mesa:
     """O hub real ligado ao handler real: o que o daemon monta no primeiro uso."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch, modo: str) -> None:
+    def __init__(
+        self, monkeypatch: pytest.MonkeyPatch, modo: str, guardada: str = "dualsense"
+    ) -> None:
         self.relogio = _Relogio()
         self.presentes = set(_UNIQS)
         self.criados: list[tuple[str, _LeitorDoToque]] = []
@@ -160,7 +168,7 @@ class _Mesa:
                 )
 
         monkeypatch.setattr(sensor_hub_mod, "SensorHub", _HubDaMesa)
-        self.daemon = _Daemon(modo)
+        self.daemon = _Daemon(modo, guardada)
         self.hub = self.daemon._garantir_sensor_hub()
         self.hub._watch = SimpleNamespace(poll=self._poll)
         for uniq in _UNIQS:
@@ -207,8 +215,8 @@ class _Mesa:
 
 @pytest.fixture
 def montar(monkeypatch: pytest.MonkeyPatch) -> Any:
-    def _montar(modo: str) -> _Mesa:
-        return _Mesa(monkeypatch, modo)
+    def _montar(modo: str, guardada: str = "dualsense") -> _Mesa:
+        return _Mesa(monkeypatch, modo, guardada)
 
     return _montar
 
@@ -414,3 +422,29 @@ def test_a_pergunta_do_daemon_responde_pela_mascara_e_pela_janela(
         assert perguntar(uniq) is _com_toque_proprio(modo)
     mesa.daemon.focar_a_steam()
     assert all(perguntar(u) is False for u in _UNIQS), "a janela da Steam tomou o toque"
+
+
+@pytest.mark.parametrize("guardada", ("dualsense", "xbox", "nintendo"))
+@pytest.mark.parametrize(("uniq", "transporte"), _PECAS, ids=_IDS_DE_PECA)
+def test_na_navegacao_com_jogo_o_ligado_e_o_cursor_qualquer_que_seja_a_mascara_guardada(
+    montar: Any, guardada: str, uniq: str, transporte: str
+) -> None:
+    """Sem controle virtual, o dedo não tem jogo aonde ir: a máscara guardada não segura o nó."""
+    mesa = montar("mouse_e_teclado", guardada)
+    mesa.conferir()
+    assert mesa.leitor(uniq).grabs == [], (
+        f"Navegação ({transporte}, máscara guardada {guardada}): o Ligado ficou mudo com o jogo"
+    )
+    assert mesa.segurados() == set()
+    REGISTRO.definir_touchpad(uniq, ligado=False)
+    mesa.conferir()
+    assert mesa.segurados() == {uniq}, "o Desligado deixou de valer na Navegação"
+
+
+def test_o_modo_nativo_segue_a_mascara_guardada(montar: Any) -> None:
+    """O Modo Nativo também desliga o pad virtual, e fica como estava: fora desta régua."""
+    mesa = montar("mouse_e_teclado", "dualsense")
+    mesa.daemon.daemon.is_native_mode = lambda: True
+    mesa.daemon.daemon.config.mouse_emulation_enabled = False
+    mesa.conferir()
+    assert mesa.segurados() == set(_UNIQS)
