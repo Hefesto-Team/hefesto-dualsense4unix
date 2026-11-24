@@ -32,7 +32,10 @@ AS MORDIDAS (24/11/2026, cada uma devolvida com o md5 conferido):
 - ``_a_lampada_alcancou_a_mesa`` devolvendo sempre ``True`` reprova a
   sequência do diário, as matrizes de quem fica e a espera do controle novo;
 - o teto da espera arrancado (``False`` até a lâmpada alcançar) reprova
-  :func:`test_a_espera_tem_teto`.
+  :func:`test_a_espera_tem_teto`;
+- a espera que não recomeça quando um lugar guardado entra no meio da espera reprova
+  :func:`test_a_espera_vencida_de_uma_saida_nao_vale_para_a_seguinte`: a segunda
+  saída herda a espera vencida da primeira e o virtual renasce duas vezes.
 """
 from __future__ import annotations
 
@@ -301,3 +304,36 @@ def test_a_espera_tem_teto(monkeypatch: pytest.MonkeyPatch) -> None:
     depois = [r for r in diario if r["event"] == "coop_nome_do_virtual_renasce"]
     assert antes_do_teto == [], "o nome renasceu com a lâmpada ainda atrasada"
     assert depois, "a espera não tem teto: a lâmpada nunca solta e o nome nunca renasce"
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("transporte", ["usb", "mista"])
+def test_a_espera_vencida_de_uma_saida_nao_vale_para_a_seguinte(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    """A lâmpada atrasa e outro sai antes de a lâmpada alcançar a mesa: a espera recomeça.
+
+    O P1 sai e o lugar dele vence com a lâmpada ainda no número velho; o P2 sai no
+    tique seguinte e guarda o lugar. Trinta segundos depois o lugar do P2 vence com a
+    lâmpada de novo atrás: a espera que começou na primeira vez não conta para esta.
+    """
+    relogio = {"t": 5000.0}
+    monkeypatch.setattr(time, "monotonic", lambda: relogio["t"])
+    mesa = MesaComOGatilho(monkeypatch, transporte=transporte)
+
+    def volta() -> None:
+        relogio["t"] += 1.0
+        mesa.volta()
+
+    with structlog.testing.capture_logs() as diario:
+        mesa.ensaio.mesa.levantar(FILA_DO_USUARIO[0])
+        for _ in range(int(PRAZO) + 10):
+            volta()
+            if any(r["event"] == "lugar_guardado_venceu" for r in diario):
+                break
+        assert any(r["event"] == "lugar_guardado_venceu" for r in diario)
+        mesa.ensaio.mesa.levantar(FILA_DO_USUARIO[1])
+        for _ in range(APOS_O_PRAZO):
+            volta()
+    assert [r["event"] for r in diario].count("lugar_guardado_venceu") == 2
+    _confere_uma_vez_so(mesa, diario, (FILA_DO_USUARIO[2], FILA_DO_USUARIO[3]))

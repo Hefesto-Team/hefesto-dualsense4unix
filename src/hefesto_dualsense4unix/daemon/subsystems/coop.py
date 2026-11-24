@@ -3059,6 +3059,17 @@ class CoopManager:
         return velhos
 
     def _a_mesa_esta_assentada(self) -> bool:
+        """Nenhum lugar guardado, todo controle com o virtual dele e a lâmpada na mesa.
+
+        A espera da lâmpada só conta enquanto o resto da mesa está assentado: um
+        lugar guardado no meio da espera zera o relógio para a saída seguinte.
+        """
+        if not self._sem_lugar_guardado_e_com_os_virtuais():
+            self._lampada_atrasada_desde = None
+            return False
+        return self._a_lampada_alcancou_a_mesa()
+
+    def _sem_lugar_guardado_e_com_os_virtuais(self) -> bool:
         """Nenhum lugar guardado, e todo controle da mesa com o virtual dele."""
         registro = getattr(self._daemon, "identity_registry", None)
         guardados = getattr(registro, "guardados", None)
@@ -3081,9 +3092,7 @@ class CoopManager:
             and self._primary_identity() is not None
         ):
             com_virtual += 1
-        if com_virtual < na_mesa:
-            return False
-        return self._a_lampada_alcancou_a_mesa()
+        return com_virtual >= na_mesa
 
     _lampada_atrasada_desde: float | None = None
 
