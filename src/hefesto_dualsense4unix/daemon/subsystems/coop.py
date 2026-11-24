@@ -3081,7 +3081,50 @@ class CoopManager:
             and self._primary_identity() is not None
         ):
             com_virtual += 1
-        return com_virtual >= na_mesa
+        if com_virtual < na_mesa:
+            return False
+        return self._a_lampada_alcancou_a_mesa()
+
+    _lampada_atrasada_desde: float | None = None
+
+    def _a_lampada_alcancou_a_mesa(self) -> bool:
+        """Todo controle da mesa acende o número que a mesa já lhe dá, ou a espera estourou.
+
+        A carta que o co-op lê é a da lâmpada, que só avança quando o gatilho da
+        cor solta a tabela (1,5 s depois da última mudança). Com o último lugar
+        guardado vencido e a lâmpada ainda no número velho, o nome do virtual
+        renascia com o número intermediário e, soltas as lâmpadas, de novo com o
+        final (23/11/2026, 01h19: duas recriações em 2 s). Enquanto a lâmpada
+        atrasa, a carta de quem ficou não muda; o teto da espera é o prazo do
+        lugar guardado, e quem ENTRA nunca passa por aqui.
+        """
+        defasados = [
+            identity
+            for identity in self._identidades_da_mesa_do_jogo()
+            if (lampada := self._numero_da_carta(identity)) is not None
+            and (mesa := self._assento_guardado(identity)) is not None
+            and lampada != mesa
+        ]
+        if not defasados:
+            self._lampada_atrasada_desde = None
+            return True
+        from hefesto_dualsense4unix.daemon.subsystems.identity import (
+            prazo_do_lugar_guardado,
+        )
+
+        agora = time.monotonic()
+        if self._lampada_atrasada_desde is None:
+            self._lampada_atrasada_desde = agora
+        return agora - self._lampada_atrasada_desde >= prazo_do_lugar_guardado()
+
+    def _identidades_da_mesa_do_jogo(self) -> list[str]:
+        """Quem tem lugar na mesa do jogo, pela identidade do aparelho (o P1 é o primário)."""
+        identidades: list[str] = []
+        for chave in self._mesa_do_jogo.values():
+            identidade = self._primary_identity() if chave == _CHAVE_DO_P1 else chave
+            if identidade is not None and not identidade.startswith("path:"):
+                identidades.append(identidade)
+        return identidades
 
     def _com_os_nomes_velhos(self, recriar: list[str], cartas: Mapping[str, int]) -> list[str]:
         """`recriar` mais quem tem o nome velho, na ordem do jogo. Só com o jogo SOLTO."""
