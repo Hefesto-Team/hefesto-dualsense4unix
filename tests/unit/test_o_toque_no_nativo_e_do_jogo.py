@@ -88,6 +88,7 @@ def _agarres(mesa: base._Mesa) -> int:
 def test_no_nativo_o_ligado_com_jogo_agarra_em_toda_mascara_guardada(
     montar: Any, guardada: str, emulacao: bool, uniq: str, transporte: str
 ) -> None:
+    """D-2411-NO-NATIVO-COM-JOGO-O-TOQUE-E-DO-JOGO: o nó fica seguro em toda máscara guardada."""
     mesa = montar(guardada, emulacao)
     mesa.conferir()
     assert mesa.leitor(uniq).grab_state == "held", (
