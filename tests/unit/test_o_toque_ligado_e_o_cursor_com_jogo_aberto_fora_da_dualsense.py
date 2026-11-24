@@ -429,7 +429,10 @@ def test_a_pergunta_do_daemon_responde_pela_mascara_e_pela_janela(
 def test_na_navegacao_com_jogo_o_ligado_e_o_cursor_qualquer_que_seja_a_mascara_guardada(
     montar: Any, guardada: str, uniq: str, transporte: str
 ) -> None:
-    """Sem controle virtual, o dedo não tem jogo aonde ir: a máscara guardada não segura o nó."""
+    """Sem controle virtual, o dedo não tem jogo aonde ir: a máscara guardada não segura o nó.
+
+    D-2411-NA-NAVEGACAO-COM-JOGO-O-TOQUE-LIGADO-E-O-CURSOR.
+    """
     mesa = montar("mouse_e_teclado", guardada)
     mesa.conferir()
     assert mesa.leitor(uniq).grabs == [], (
