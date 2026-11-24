@@ -2844,7 +2844,7 @@ class IpcHandlersMixin:
             hub = SensorHub()
             hub.perguntar_ao_daemon(
                 ha_jogo=self._ha_jogo_para_o_toque,
-                toque_fica_com_o_jogo=self._o_toque_fica_com_o_jogo,
+                toque_proprio_do_jogo=self._jogo_tem_toque_proprio,
             )
             self._sensor_hub = hub
         return hub
@@ -2855,17 +2855,17 @@ class IpcHandlersMixin:
 
         return bool(self.daemon is not None and ha_jogo(self.daemon))
 
-    def _o_toque_fica_com_o_jogo(self, uniq: str) -> bool:
-        """Com jogo aberto, o nó do touchpad de `uniq` fica seguro, em toda máscara.
+    def _jogo_tem_toque_proprio(self, uniq: str) -> bool:
+        """O jogo em foco recebe o toque desta peça pelo vpad: a máscara da peça é a DualSense.
 
-        O dedo nunca chega ao sistema como ponteiro por omissão
-        (D-2411-COM-JOGO-ABERTO-O-TOQUE-LIGADO-NUNCA-E-O-CURSOR-DO-SISTEMA): a rota do perfil
-        emite o cursor ou os botões, a máscara DualSense leva o dedo ao jogo pelo vpad e as
-        outras ficam mudas. Só a janela do cliente da Steam fica de fora, onde o cursor é do
-        sistema. `uniq` fica na assinatura porque o hub pergunta por peça.
+        A ficha do jogo (``ficha_declarada``) ainda não chega ao daemon; enquanto isso vale a
+        máscara. Perfil em cursor/zonas e cliente DSU têm demanda própria no hub.
         """
-        del uniq
-        return not _na_steam(self)
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+
+        cfg = getattr(self.daemon, "config", None)
+        da_sessao = str(getattr(cfg, "gamepad_flavor", "dualsense"))
+        return str(mascara_efetiva(uniq, da_sessao)) == "dualsense" and not _na_steam(self)
 
     def _inputs_passivos(
         self, entry: dict[str, Any], uniq: str | None, com_leitor_coop: set[str]
@@ -6886,8 +6886,8 @@ def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
 def _na_steam(handlers: Any) -> bool:
     """A janela em foco é o cliente da Steam: conta como jogo, mas o toque fica no cursor.
 
-    O ``ha_jogo`` vê a Steam como jogo; com o Ligado, o hub agarraria o touchpad na Steam em
-    toda máscara, e o cursor pararia na loja e na biblioteca.
+    O ``ha_jogo`` vê a Steam como jogo; com a máscara DualSense e o Ligado, o hub agarraria o
+    touchpad na Steam, e o cursor pararia na loja e na biblioteca.
     """
     from hefesto_dualsense4unix.profiles.steam_app import e_janela_do_cliente_steam
 

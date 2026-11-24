@@ -131,17 +131,17 @@ class SensorHub:
         relogio: Callable[[], float] | None = None,
         auto_manutencao: bool = True,
         ha_jogo: Callable[[], bool] | None = None,
-        toque_fica_com_o_jogo: Callable[[str], bool] | None = None,
+        toque_proprio_do_jogo: Callable[[str], bool] | None = None,
         familia_do_no: Callable[[Any], str | None] | None = None,
     ) -> None:
         """As fábricas e os descobridores são injetáveis para teste.
 
-        ``ha_jogo`` diz se há jogo aberto; ``toque_fica_com_o_jogo(uniq)`` diz se o toque desta
-        peça fica com o jogo em foco (falso na janela do cliente da Steam). Sem eles, não há jogo.
+        ``ha_jogo`` diz se há jogo aberto; ``toque_proprio_do_jogo(uniq)`` diz se o jogo em foco
+        tem configuração própria de toque para esta peça. Sem eles, não há jogo.
         """
         self._relogio = relogio or time.monotonic
         self._ha_jogo = ha_jogo
-        self._toque_fica_com_o_jogo = toque_fica_com_o_jogo
+        self._toque_proprio_do_jogo = toque_proprio_do_jogo
         self._universo_do_toque: set[str] | None = None
         self._auto_manutencao = auto_manutencao
         self._motion_factory = motion_factory or self._motion_reader_real
@@ -451,11 +451,11 @@ class SensorHub:
         self,
         *,
         ha_jogo: Callable[[], bool] | None,
-        toque_fica_com_o_jogo: Callable[[str], bool] | None,
+        toque_proprio_do_jogo: Callable[[str], bool] | None,
     ) -> None:
         """Liga o hub às duas perguntas que só o daemon sabe responder (ver ``__init__``)."""
         self._ha_jogo = ha_jogo
-        self._toque_fica_com_o_jogo = toque_fica_com_o_jogo
+        self._toque_proprio_do_jogo = toque_proprio_do_jogo
 
     def vigiar(self) -> None:
         """Sobe a manutenção sem esperar pedido: o touchpad Desligado vale com a tela fechada."""
@@ -564,7 +564,7 @@ class SensorHub:
 
         jogo = REGISTRO.jogo_aberto()
         interesse = bool(REGISTRO.touchpad_desligados()) or (
-            jogo and callable(self._toque_fica_com_o_jogo)
+            jogo and callable(self._toque_proprio_do_jogo)
         )
         if not interesse:
             self._universo_do_toque = None
@@ -895,8 +895,7 @@ class SensorHub:
         1. o toque roteado (cursor ou zonas), renovado a cada tique;
         2. o dedo que o servidor DSU segura para o emulador;
         3. o Desligado desta peça, com jogo aberto;
-        4. o Ligado com jogo aberto, em toda máscara: o dedo vai ao jogo pelo vpad ou fica mudo,
-           e nunca é o cursor do sistema.
+        4. o Ligado com jogo aberto cuja configuração própria de toque recebe o dedo pelo vpad.
         """
         from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
 
@@ -904,9 +903,9 @@ class SensorHub:
         dsu = uniq in segurados and agora - segurados[uniq] <= self._DEDO_SEGURADO_TTL_S
         calado = REGISTRO.toque_calado(uniq)
         ao_jogo = False
-        if jogo and REGISTRO.touchpad_ligado(uniq) and callable(self._toque_fica_com_o_jogo):
+        if jogo and REGISTRO.touchpad_ligado(uniq) and callable(self._toque_proprio_do_jogo):
             try:
-                ao_jogo = bool(self._toque_fica_com_o_jogo(uniq))
+                ao_jogo = bool(self._toque_proprio_do_jogo(uniq))
             except Exception as exc:
                 logger.debug("sensor_hub_toque_proprio_falhou", identity=uniq, err=str(exc))
         return roteado or dsu or calado or ao_jogo
