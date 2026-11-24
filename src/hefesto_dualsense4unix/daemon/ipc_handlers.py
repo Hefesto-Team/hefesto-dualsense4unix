@@ -2856,8 +2856,8 @@ class IpcHandlersMixin:
         return bool(self.daemon is not None and ha_jogo(self.daemon))
 
     def _jogo_tem_toque_proprio(self, uniq: str) -> bool:
-        """O toque é do jogo: no Nativo sempre (D-2411-NO-NATIVO-COM-JOGO-O-TOQUE-E-DO-JOGO),
-        fora dele só no vpad de máscara DualSense."""
+        """O toque é do jogo fora da janela do cliente da Steam: no Nativo em toda máscara
+        guardada (D-2411-NO-NATIVO-COM-JOGO-O-TOQUE-E-DO-JOGO), fora dele só no vpad DualSense."""
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
 
         if bool(getattr(self.daemon, "is_native_mode", bool)()):

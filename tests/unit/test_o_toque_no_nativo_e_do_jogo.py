@@ -25,7 +25,10 @@ AS MORDIDAS (24/11/2026, cada uma devolvida com o md5 conferido):
   :func:`test_a_janela_do_cliente_da_steam_solta_o_no_no_nativo`;
 - a pergunta devolvendo sempre ``False`` no Nativo reprova toda linha com nó segurado;
 - um leitor cujo agarre não pega (o laço que agarra a cada tique) estoura a contagem em
-  :func:`test_o_instrumento_ve_a_rajada`.
+  :func:`test_o_instrumento_ve_a_rajada`;
+- o hub agarrando a cada tique o nó que já está seguro (``_reconciliar_grabs_do_toque`` sem o
+  ``continue`` do ``held``) reprova :func:`test_o_agarre_e_um_por_mudanca_de_estado`, a troca de
+  máscara guardada e as linhas de agarre único.
 """
 from __future__ import annotations
 
@@ -221,6 +224,34 @@ def test_a_pergunta_do_daemon_no_nativo_nao_consulta_a_mascara(
     assert all(perguntar(u) is True for u in _UNIQS)
     mesa.daemon.focar_a_steam()
     assert all(perguntar(u) is False for u in _UNIQS), "a janela da Steam tomou o toque"
+
+
+def test_trocar_a_mascara_guardada_ou_sair_do_nativo_e_um_gesto_por_mudanca(montar: Any) -> None:
+    """Com jogo aberto, a máscara guardada que muda no Nativo não mexe no nó; sair e voltar ao
+    Nativo com a máscara Xbox solta e agarra uma vez cada."""
+    mesa = montar("xbox")
+    mesa.conferir()
+    config = mesa.daemon.daemon.config
+    for guardada in ("dualsense", "nintendo", "xbox", "dualsense", "xbox"):
+        config.gamepad_flavor = guardada
+        mesa.conferir()
+        mesa.conferir()
+        assert mesa.segurados() == set(_UNIQS), f"a máscara guardada {guardada} soltou o nó"
+    assert all(leitor.grabs == [True] for _u, leitor in mesa.criados), (
+        "trocar a máscara guardada no Nativo mexeu no nó"
+    )
+
+    mesa.daemon.daemon.is_native_mode = lambda: False
+    config.gamepad_emulation_enabled = True
+    mesa.conferir()
+    mesa.conferir()
+    assert mesa.segurados() == set(), "fora do Nativo a máscara Xbox é o cursor"
+    mesa.daemon.daemon.is_native_mode = lambda: True
+    config.gamepad_emulation_enabled = False
+    mesa.conferir()
+    mesa.conferir()
+    assert mesa.segurados() == set(_UNIQS)
+    assert all(leitor.grabs == [True, False, True] for _u, leitor in mesa.criados)
 
 
 def test_o_instrumento_ve_a_rajada(montar: Any) -> None:
