@@ -256,17 +256,17 @@
       "universo": 440
     },
     "tamanho": {
-      "data": "2026-11-23",
+      "data": "2026-11-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1317704,
+      "piso": 1318409,
       "por_item": {
-        "docs": 107987,
+        "docs": 107989,
         "scripts": 116818,
-        "src": 332236,
-        "tests": 760663
+        "src": 332289,
+        "tests": 761313
       },
-      "razao": "tamanho: +109 linhas (1317595 -> 1317704), pagas por Origem: D-1911-O-ESTADO-SE-GRAVA-INTEIRO, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-2311-O-ZERO-DO-JOGO-NAO-APAGA-O-NUMERO; registrado no fecho, topo 98347d4753fd",
+      "razao": "tamanho: +705 linhas (1317704 -> 1318409), pagas por Origem: D-1510-O-JOGO-COM-TOQUE-PROPRIO-E-A-MASCARA-DUALSENSE, D-2909-A-NUMERACAO-SE-CONFERE-NA-FATIA; registrado no fecho, topo f385ef5e92df",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2475,10 +2475,16 @@
           "de": 1317595,
           "para": 1317704,
           "razao": "tamanho: +109 linhas (1317595 -> 1317704), pagas por Origem: D-1911-O-ESTADO-SE-GRAVA-INTEIRO, D-2211-O-PERFIL-DO-DUNGEONS-II-PASSA-AO-MODO-IMERSAO-UMA-VEZ, D-2311-O-ZERO-DO-JOGO-NAO-APAGA-O-NUMERO; registrado no fecho, topo 98347d4753fd"
+        },
+        {
+          "data": "2026-11-24",
+          "de": 1317704,
+          "para": 1318409,
+          "razao": "tamanho: +705 linhas (1317704 -> 1318409), pagas por Origem: D-1510-O-JOGO-COM-TOQUE-PROPRIO-E-A-MASCARA-DUALSENSE, D-2909-A-NUMERACAO-SE-CONFERE-NA-FATIA; registrado no fecho, topo f385ef5e92df"
         }
       ],
       "unidade": "linhas",
-      "universo": 3677
+      "universo": 3679
     }
   }
 }
