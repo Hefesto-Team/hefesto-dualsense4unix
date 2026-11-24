@@ -2856,16 +2856,16 @@ class IpcHandlersMixin:
         return bool(self.daemon is not None and ha_jogo(self.daemon))
 
     def _jogo_tem_toque_proprio(self, uniq: str) -> bool:
-        """O jogo em foco recebe o toque desta peça pelo vpad: máscara DualSense e o vpad de pé.
-
-        Vale a máscara até a ficha chegar ao daemon; na Navegação (sem vpad, fora do Nativo), não.
-        """
+        """O toque é do jogo: no Nativo sempre (D-2411-NO-NATIVO-COM-JOGO-O-TOQUE-E-DO-JOGO),
+        fora dele só no vpad de máscara DualSense."""
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
 
+        if bool(getattr(self.daemon, "is_native_mode", bool)()):
+            return not _na_steam(self)
         cfg = getattr(self.daemon, "config", None)
         da_sessao = str(getattr(cfg, "gamepad_flavor", "dualsense"))
-        pad = bool(getattr(cfg, "gamepad_emulation_enabled", True) or self.daemon.is_native_mode())
-        return str(mascara_efetiva(uniq, da_sessao)) == "dualsense" and pad and not _na_steam(self)
+        pad = bool(getattr(cfg, "gamepad_emulation_enabled", True)) and not _na_steam(self)
+        return str(mascara_efetiva(uniq, da_sessao)) == "dualsense" and pad
 
     def _inputs_passivos(
         self, entry: dict[str, Any], uniq: str | None, com_leitor_coop: set[str]

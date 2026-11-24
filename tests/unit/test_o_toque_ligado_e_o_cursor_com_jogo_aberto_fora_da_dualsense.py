@@ -13,6 +13,10 @@ com jogo aberto (``D-1510-O-TOUCHPAD-E-POR-CONTROLE``), e a rota de cursor ou zo
 máscara) foi recusada na validação de 24/11/2026 e caducou: este arquivo a segura fora do
 código, para ninguém a «curar» de novo.
 
+O Modo Nativo não se mede aqui: o jogo lê o controle de verdade e o toque é dele, seja qual for
+a máscara guardada (``D-2411-NO-NATIVO-COM-JOGO-O-TOQUE-E-DO-JOGO``, em
+``test_o_toque_no_nativo_e_do_jogo``).
+
 O instrumento é o do uso: o ``SensorHub`` de verdade, ligado ao daemon pelas MESMAS perguntas
 que ``_garantir_sensor_hub`` do IPC faz (``_ha_jogo_para_o_toque`` e a pergunta do toque,
 ambas do handler de verdade), com leitores de touchpad de mentira que guardam o estado do
@@ -443,11 +447,3 @@ def test_na_navegacao_com_jogo_o_ligado_e_o_cursor_qualquer_que_seja_a_mascara_g
     mesa.conferir()
     assert mesa.segurados() == {uniq}, "o Desligado deixou de valer na Navegação"
 
-
-def test_o_modo_nativo_segue_a_mascara_guardada(montar: Any) -> None:
-    """O Modo Nativo também desliga o pad virtual, e fica como estava: fora desta régua."""
-    mesa = montar("mouse_e_teclado", "dualsense")
-    mesa.daemon.daemon.is_native_mode = lambda: True
-    mesa.daemon.daemon.config.mouse_emulation_enabled = False
-    mesa.conferir()
-    assert mesa.segurados() == set(_UNIQS)
