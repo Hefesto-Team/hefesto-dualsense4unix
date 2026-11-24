@@ -6886,8 +6886,8 @@ def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
 def _na_steam(handlers: Any) -> bool:
     """A janela em foco é o cliente da Steam: conta como jogo, mas o toque fica no cursor.
 
-    O ``ha_jogo`` vê a Steam como jogo; com a máscara DualSense e o Ligado, o hub agarraria o
-    touchpad na Steam, e o cursor pararia na loja e na biblioteca.
+    O ``ha_jogo`` vê a Steam como jogo; com o Ligado, o hub agarraria o touchpad na Steam em
+    toda máscara, e o cursor pararia na loja e na biblioteca.
     """
     from hefesto_dualsense4unix.profiles.steam_app import e_janela_do_cliente_steam
 
