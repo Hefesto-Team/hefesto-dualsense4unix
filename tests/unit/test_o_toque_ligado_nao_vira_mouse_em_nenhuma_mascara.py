@@ -202,7 +202,10 @@ def montar(monkeypatch: pytest.MonkeyPatch) -> Any:
 def test_com_jogo_e_ligado_o_no_fica_seguro(
     montar: Any, mascara: str, uniq: str, transporte: str
 ) -> None:
-    """Cada máscara, cada peça (cabo e rádio): jogo aberto e Ligado seguram o nó da peça."""
+    """D-2411-COM-JOGO-ABERTO-O-TOQUE-LIGADO-NUNCA-E-O-CURSOR-DO-SISTEMA: o nó fica seguro.
+
+    Cada máscara, cada peça (cabo e rádio): jogo aberto e Ligado seguram o nó da peça.
+    """
     mesa = montar(mascara)
     mesa.conferir()
     assert mesa.leitor(uniq).grab_state == "held", (

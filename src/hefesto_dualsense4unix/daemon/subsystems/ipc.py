@@ -31,7 +31,7 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
 def _o_hub_vigia_desde_o_arranque(servidor: Any) -> None:
     """O hub de sensores vigia desde o arranque, com a interface fechada.
 
-    Sem ele, o touchpad Desligado do perfil e o grab do jogo com máscara DualSense esperariam
+    Sem ele, o touchpad Desligado do perfil e o grab do jogo, em toda máscara, esperariam
     alguém abrir a tela ou rotear o giro: ninguém chamaria o ``reconciliar`` que vê o jogo.
     O modo FAKE (testes, CI) não abre os nós de verdade.
     """

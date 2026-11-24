@@ -155,10 +155,10 @@ def _confere_uma_vez_so(
 def test_a_sequencia_do_diario_nao_recria_duas_vezes(
     monkeypatch: pytest.MonkeyPatch, modo: str
 ) -> None:
-    """Quatro no cabo, saem o 4, o 2 e o 1 em seis segundos, fica o 3 (diário de 23/11, 01h18).
+    """D-2411-A-CARTA-DE-QUEM-FICOU-ESPERA-A-LAMPADA: a sequência do diário de 23/11, 01h18.
 
-    Na base esta ordem renascia o virtual de quem ficou duas vezes: «Hefesto P2» e,
-    2 s depois, «Hefesto P1».
+    Quatro no cabo, saem o 4, o 2 e o 1 em seis segundos, fica o 3. Na base esta ordem
+    renascia o virtual de quem ficou duas vezes: «Hefesto P2» e, 2 s depois, «Hefesto P1».
     """
     mesa = MesaComOGatilho(monkeypatch, transporte="usb", modo=modo)
     roxo = FILA_DO_USUARIO[2]
