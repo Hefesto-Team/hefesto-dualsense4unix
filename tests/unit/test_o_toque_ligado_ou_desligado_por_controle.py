@@ -52,11 +52,11 @@ class _Relogio:
 
 
 class _Cena:
-    """O que o hub pergunta ao daemon: há jogo aberto, e o jogo tem toque próprio?"""
+    """O que o hub pergunta ao daemon: há jogo aberto, e o toque fica com o jogo em foco?"""
 
     def __init__(self) -> None:
         self.jogo = False
-        self.com_toque_proprio: set[str] = set()
+        self.na_steam = False
 
 
 class _LeitorDoToque:
@@ -101,7 +101,7 @@ def _hub(
         relogio=relogio,
         auto_manutencao=False,
         ha_jogo=lambda: cena.jogo,
-        toque_proprio_do_jogo=lambda uniq: uniq in cena.com_toque_proprio,
+        toque_fica_com_o_jogo=lambda uniq: not cena.na_steam,
     )
     hub._watch = SimpleNamespace(poll=lambda: False)
     for uniq in leitores:
@@ -127,8 +127,10 @@ class TestODesligadoCalaNoJogo:
             assert saida[contato] & TOQUE_INATIVO, "o vpad ainda recebe o dedo"
         assert saida[FAIXA_GIROSCOPIO] == _JANELA[FAIXA_GIROSCOPIO], "o Desligado mexeu no giro"
         outros = [u for u, _ in _PECAS if u != uniq]
-        assert all(leitores[u].grabs == [] for u in outros), "o Desligado vazou para outra peça"
-        assert REGISTRO.filtrar(outros[0], _JANELA) is _JANELA
+        assert all(leitores[u].grab_state == "held" for u in outros), "o jogo soltou um Ligado"
+        assert all(REGISTRO.filtrar(u, _JANELA) is _JANELA for u in outros), (
+            "o Desligado vazou para outra peça"
+        )
 
     def test_desligado_sem_jogo_deixa_o_cursor_com_o_sistema(self) -> None:
         cena, relogio = _Cena(), _Relogio()
@@ -159,7 +161,7 @@ class TestODesligadoCalaNoJogo:
         assert leitores[_P1].grab_state == "off"
         assert REGISTRO.filtrar(_P1, _JANELA) is _JANELA
 
-    def test_religar_solta_o_no_com_o_jogo_aberto(self) -> None:
+    def test_religar_devolve_o_dedo_ao_jogo_e_o_no_segue_seguro(self) -> None:
         cena, relogio = _Cena(), _Relogio()
         hub, leitores = _hub(cena, relogio)
         REGISTRO.definir_touchpad(_P1, ligado=False)
@@ -167,39 +169,41 @@ class TestODesligadoCalaNoJogo:
         hub.reconciliar()
         REGISTRO.definir_touchpad(_P1, ligado=True)
         hub.reconciliar()
+        assert leitores[_P1].grab_state == "held", "religar devolveu o nó ao cursor do sistema"
+        assert REGISTRO.filtrar(_P1, _JANELA) is _JANELA, "religar não devolveu o dedo ao jogo"
+        cena.na_steam = True
+        hub.reconciliar()
         assert leitores[_P1].grab_state == "off"
 
 
 class TestOLigadoSegueOJogo:
+    """Fora de jogo o Ligado é o cursor do sistema; com jogo, o nó é do jogo (a régua por máscara
+    mora em ``test_o_toque_ligado_nao_vira_mouse_em_nenhuma_mascara``)."""
+
     @pytest.mark.parametrize(("uniq", "transporte"), _PECAS)
-    def test_ligado_sem_toque_proprio_nao_agarra(self, uniq: str, transporte: str) -> None:
+    def test_ligado_sem_jogo_aberto_nao_agarra(self, uniq: str, transporte: str) -> None:
         cena, relogio = _Cena(), _Relogio()
         hub, leitores = _hub(cena, relogio)
-        cena.jogo = True
         hub.reconciliar()
         assert leitores[uniq].grabs == [], f"o nó ({transporte}) foi tomado do sistema"
         assert REGISTRO.filtrar(uniq, _JANELA) is _JANELA
 
     @pytest.mark.parametrize(("uniq", "transporte"), _PECAS)
-    def test_ligado_com_mascara_dualsense_agarra_e_nao_zera(
-        self, uniq: str, transporte: str
-    ) -> None:
+    def test_ligado_com_jogo_agarra_e_nao_zera(self, uniq: str, transporte: str) -> None:
         cena, relogio = _Cena(), _Relogio()
         hub, leitores = _hub(cena, relogio)
         cena.jogo = True
-        cena.com_toque_proprio = {uniq}
         hub.reconciliar()
         assert leitores[uniq].grab_state == "held", f"o toque ({transporte}) não foi ao jogo"
         assert REGISTRO.filtrar(uniq, _JANELA) is _JANELA, "o dedo foi zerado antes do jogo"
-        outros = [u for u, _ in _PECAS if u != uniq]
-        assert all(leitores[u].grabs == [] for u in outros)
 
-    def test_toque_proprio_sem_jogo_aberto_nao_agarra(self) -> None:
+    def test_ligado_na_janela_da_steam_nao_agarra(self) -> None:
         cena, relogio = _Cena(), _Relogio()
         hub, leitores = _hub(cena, relogio)
-        cena.com_toque_proprio = {_P1}
+        cena.jogo = True
+        cena.na_steam = True
         hub.reconciliar()
-        assert leitores[_P1].grabs == []
+        assert all(leitor.grabs == [] for leitor in leitores.values())
 
     def test_a_pergunta_do_jogo_que_quebra_nao_derruba_o_hub(self) -> None:
         cena, relogio = _Cena(), _Relogio()
@@ -219,6 +223,7 @@ class TestAUniaoDasDemandas:
         cena, relogio = _Cena(), _Relogio()
         hub, leitores = _hub(cena, relogio)
         cena.jogo = True
+        cena.na_steam = True
         REGISTRO.definir_touchpad(_P2, ligado=False)
         hub.segurar_o_dedo(_P1)
         hub.reconciliar()
@@ -268,6 +273,7 @@ class TestAUniaoDasDemandas:
         cena, relogio = _Cena(), _Relogio()
         hub, leitores = _hub(cena, relogio)
         cena.jogo = True
+        cena.na_steam = True
         REGISTRO.definir_touchpad(_P1, ligado=False)
         hub.reconciliar()
         relogio.agora += 60.0
@@ -333,7 +339,7 @@ class TestOHubVigiaSemATela:
         finally:
             hub.stop_all()
 
-    def test_o_hub_do_ipc_pergunta_ao_daemon_pelo_jogo_e_pela_mascara(self) -> None:
+    def test_o_hub_do_ipc_pergunta_ao_daemon_pelo_jogo_e_pela_janela(self) -> None:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
         class _H(IpcHandlersMixin):
@@ -350,13 +356,13 @@ class TestOHubVigiaSemATela:
         hub = h._garantir_sensor_hub()
         try:
             assert hub._ha_jogo is not None and hub._ha_jogo() is True, "o hub não sabe do jogo"
-            perguntar = hub._toque_proprio_do_jogo
+            perguntar = hub._toque_fica_com_o_jogo
             assert perguntar is not None and perguntar(_P1) is True
             h.store.window_detect_current_class = "steam"
             assert perguntar(_P1) is False, "a janela da Steam tomou o cursor do touchpad"
             h.store.window_detect_current_class = "steam_app_1"
             h.daemon.config.gamepad_flavor = "xbox"
-            assert perguntar(_P1) is False, "a máscara Xbox recebeu o toque pelo vpad"
+            assert perguntar(_P1) is True, "com a máscara Xbox o toque virou o mouse do sistema"
             h.daemon.display_authority = "desktop"
             assert hub._ha_jogo() is False
         finally:
