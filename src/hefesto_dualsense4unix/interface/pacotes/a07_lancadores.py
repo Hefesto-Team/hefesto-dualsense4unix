@@ -1276,6 +1276,7 @@ class _Mexida:
         self.pintura.esquecer()
         self.aviso_da_memoria = ()
         self.vivas = None
+        self.opcoes_vistas: tuple[int, int] | None = None
         self.controle_vivo = None
         self.clima = []
         self.vereditos = {}
@@ -1769,6 +1770,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     nota = _MEXIDA.nota_do_css = item.nota_do_css
     notas = {**_notas_do_tema(manifesto, mod_id), **_MEXIDA.recusa_do_importar}
     vivas = _MEXIDA.vivas = _o_que_muda_a_janela(manifesto, estado)
+    _MEXIDA.opcoes_vistas = _as_opcoes_no_disco(mod_id)
     presentes, jogo, memoria, _lidos = vivas
     valores = {**valores, **{x.id: memoria for x in manifesto.opcoes if x.tipo == "memoria"}}
     aparecem = opcoes.aparecem(manifesto, valores, presentes)
@@ -1998,7 +2000,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     if opcao.tipo in ("ligado", "css"):
         if evento == "change":
             return None
-        valor: Any = not bool(_valor_na_janela(item, opcao))
+        valor: Any = _o_pedido_da_chave(o, item, opcao)
     elif opcao.tipo == "jogos":
         if evento == "click":
             return None
@@ -2029,6 +2031,27 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         raise
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
+
+
+def _o_pedido_da_chave(o: dict[str, Any], item: _Instalada, opcao: Any) -> bool:
+    """O valor que o clique na chave pede: o que a chave trazia escrito (``data-ligado``, o
+    contrário do que a tela mostrava); sem ele, o contrário do guardado."""
+    pedido = str(o.get("ligado") or "")
+    if pedido in ("0", "1"):
+        return pedido == "1"
+    return not bool(_valor_na_janela(item, opcao))
+
+
+def _as_opcoes_no_disco(mod_id: str) -> tuple[int, int] | None:
+    """A marca do ``opcoes.json`` da extensão (hora e tamanho), ``None`` sem arquivo: o que diz
+    se alguém gravou por fora desde a última pintura da janela."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    alvo = opcoes.caminho(mod_id, _lugares())
+    if not alvo.is_file():
+        return None
+    visto = alvo.stat()
+    return visto.st_mtime_ns, visto.st_size
 
 
 def _a_extensao_volta_ao_guardado(item: _Instalada, opcao_id: str, p: Any) -> None:
@@ -2997,7 +3020,8 @@ def _redesenhar_se_mudou(instaladas: Sequence[_Instalada]) -> None:
     item = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
     if item is None or item.manifesto is None:
         return
-    if _o_que_muda_a_janela(item.manifesto, _AGORA.agora()) != _MEXIDA.vivas:
+    if (_o_que_muda_a_janela(item.manifesto, _AGORA.agora()) != _MEXIDA.vivas
+            or _as_opcoes_no_disco(_MEXIDA.mod) != _MEXIDA.opcoes_vistas):
         with contextlib.suppress(RuntimeError):
             _montar_a_janela_da_extensao(_MEXIDA.mod, item)
 

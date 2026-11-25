@@ -473,6 +473,13 @@ def _chave_da_memoria(o: OpcaoDaJanela) -> str:
             f'<span class="pino"></span><span class="txt">{texto}</span></span>')
 
 
+def pedido_da_chave(ligada: bool) -> str:
+    """O que o clique na chave pede, escrito na própria chave (``data-ligado``): o contrário do
+    que a tela mostra. Quem grava obedece ao pedido, e não ao contrário do que está no disco: a
+    opção que mudou por fora com a janela aberta não vira ao avesso do que se lê."""
+    return f' data-ligado="{"0" if ligada else "1"}"'
+
+
 def _controle_da_opcao(o: OpcaoDaJanela) -> str:
     alvo = f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}"'
     if o.tipo == "memoria":
@@ -483,7 +490,8 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
         return f'<select class="ext-sel" {alvo} aria-label="{_a(o.rotulo)}">{itens}</select>'
     if o.tipo in ("ligado", "css"):
         classe, texto = ("nj-tog ligado", "Ligado") if o.valor else ("nj-tog", "Desligado")
-        chave = (f'<span class="{classe}" {alvo}><span class="pino"></span>'
+        chave = (f'<span class="{classe}" {alvo}{pedido_da_chave(bool(o.valor))}>'
+                 f'<span class="pino"></span>'
                  f'<span class="txt">{texto}</span></span>')
         if o.tipo == "ligado":
             return chave
@@ -776,7 +784,7 @@ def _bolinha_da_aba(n: int | str, chave: OpcaoDaJanela | None) -> str:
             f'<i class="mj-bolinha{" on" if ligada else ""}" role="switch" '
             f'aria-checked="{str(ligada).lower()}" aria-label="{_a(chave.rotulo)}" '
             f'data-dica="{_a(chave.rotulo)}: {estado}" data-gesto="guardar-opcao-da-modificacao" '
-            f'data-v="{_a(chave.mod)}:{_a(chave.id)}"></i></span>')
+            f'data-v="{_a(chave.mod)}:{_a(chave.id)}"{pedido_da_chave(ligada)}></i></span>')
 
 
 def _linhas_da_aba(n: int | str, itens: Sequence[OpcaoDaJanela], chave: OpcaoDaJanela | None,
@@ -934,7 +942,8 @@ def _fileira_de_chaves(nome: str, itens: Sequence[OpcaoDaJanela]) -> str:
     chaves = "".join(
         f'<span class="mj-fc{" on" if o.valor else ""}" id="{PEDACO}op-{_a(o.id)}"'
         f'{_dica_da_linha(o)} role="switch" aria-checked="{"true" if o.valor else "false"}" '
-        f'tabindex="0" data-gesto="{GESTO_DA_OPCAO}" data-v="{_a(o.mod)}:{_a(o.id)}">'
+        f'tabindex="0" data-gesto="{GESTO_DA_OPCAO}" data-v="{_a(o.mod)}:{_a(o.id)}"'
+        f'{pedido_da_chave(bool(o.valor))}>'
         f'{_e(o.rotulo)}'
         + (f'<span class="mj-trilha" id="{PEDACO}trilha-{_a(o.id)}" aria-hidden="true">'
            f"{trilha_html(())}</span>" if o.canal else "")
@@ -1203,7 +1212,7 @@ def _conexao_html(c: Mapping[str, Any], liga: Liga | None = None) -> str:
     marcada = "true" if liga.ligada else "false"
     linha = (f'<div class="cx-linha cx-liga{" marcada" if liga.ligada else ""}"{dica} '
              f'role="switch" aria-checked="{marcada}" data-gesto="{GESTO_DA_OPCAO}" '
-             f'data-v="{_a(liga.mod)}:{_a(liga.liga)}">{conteudo}'
+             f'data-v="{_a(liga.mod)}:{_a(liga.liga)}"{pedido_da_chave(liga.ligada)}>{conteudo}'
              f'{"" if fechavel else estado_html(estado)}</div>')
     if not fechavel:
         return linha + _escolhas_da_conexao_html(c, liga)
