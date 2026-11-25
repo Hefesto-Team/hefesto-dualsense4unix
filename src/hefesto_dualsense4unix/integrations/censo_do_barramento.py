@@ -116,6 +116,14 @@ from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 GRAU_LIDO = "lido"
 GRAU_DESCONHECIDO = "desconhecido"
 
+_ENCAIXE_SOLDADO = "hardwired"
+_REMOVIVEL_FIXO = "fixed"
+_RAIZ_USB_REAL = "/sys/bus/usb/devices"
+_ENTRADAS_DO_KERNEL = "/proc/bus/input/devices"
+_BARRAMENTO_USB = "0003"
+_BARRAMENTO_DA_ENTRADA = re.compile(r"Bus=([0-9a-fA-F]+)")
+_LETRAS = (*range(16, 26), *range(30, 39), *range(44, 51))
+
 ESPECIE_DESCONHECIDA = "Não identificado"
 ESPECIE_CAMERA = "Câmera"
 _ESPECIES_QUE_NAO_USAM_A_VELOCIDADE = frozenset({ESPECIE_CAMERA})
@@ -249,6 +257,16 @@ class Aparelho:
     container_id: str = ""
     portas: int = 0
     pares: tuple[tuple[int, str, int], ...] = ()
+    encaixe: str = ""
+    removivel: str = ""
+
+    @property
+    def soldado(self) -> bool:
+        """O kernel diz que a porta é soldada (``hardwired``) ou o aparelho é fixo (``fixed``).
+
+        Campo ilegível ou ``unknown`` não é soldado: a porta de um hub externo nunca diz o encaixe.
+        """
+        return self.encaixe == _ENCAIXE_SOLDADO or self.removivel == _REMOVIVEL_FIXO
 
 
 @dataclass(frozen=True)
@@ -268,6 +286,7 @@ class Censo:
 
     aparelhos: tuple[Aparelho, ...] = ()
     barramentos: tuple[Barramento, ...] = ()
+    teclados_fora_do_usb: int = 0
 
     def conectados(self) -> tuple[Aparelho, ...]:
         """Tudo menos os hubs-raiz — o que uma pessoa chamaria de aparelho."""
@@ -283,22 +302,27 @@ class Censo:
 
 def ler_o_barramento(
     *,
-    raiz_usb: str = "/sys/bus/usb/devices",
+    raiz_usb: str = _RAIZ_USB_REAL,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
     real: Callable[[str], str] = os.path.realpath,
     ler_bytes: Callable[[str], bytes] | None = None,
     base: Callable[[str, str], str | None] | None = None,
+    entradas_do_kernel: Callable[[], str] | None = None,
 ) -> Censo:
     """Uma varredura de ``/sys``, e o barramento inteiro sai da varredura.
 
     ``ler_bytes`` lê o ``bos_descriptors`` (binário); ``base`` é a base do sistema,
-    ``(syspath, propriedade) -> valor`` (a libudev por padrão).
+    ``(syspath, propriedade) -> valor`` (a libudev por padrão); ``entradas_do_kernel`` devolve a
+    lista de entradas do kernel, que só a varredura do ``/sys`` de verdade lê sozinha.
     """
     leitor = ler_texto if ler is None else ler
     leitor_de_bytes = _ler_bytes if ler_bytes is None else ler_bytes
     da_base = _da_libudev if base is None else base
     memoria = _MEMORIA if ler is None and ler_bytes is None else _MemoriaDaTrava()
+    if entradas_do_kernel is None:
+        real_de_verdade = ler is None and raiz_usb == _RAIZ_USB_REAL
+        entradas_do_kernel = _entradas_do_kernel_real if real_de_verdade else _sem_entradas
     try:
         nomes = sorted(listar(raiz_usb))
     except OSError:
@@ -327,7 +351,11 @@ def ler_o_barramento(
             key=_ordem,
         )
     )
-    return Censo(aparelhos=aparelhos, barramentos=_barramentos(aparelhos))
+    return Censo(
+        aparelhos=aparelhos,
+        barramentos=_barramentos(aparelhos),
+        teclados_fora_do_usb=_teclados_fora_do_usb(entradas_do_kernel()),
+    )
 
 
 @dataclass(frozen=True)
@@ -580,6 +608,8 @@ def _ler_um(
             "physical_location/panel",
             "power/control",
             "port/over_current_count",
+            "port/connect_type",
+            "removable",
             "version",
             "devnum",
             "maxchild",
@@ -779,6 +809,8 @@ def _montar(
         container_id=container_id,
         portas=_inteiro(campos["maxchild"]),
         pares=bruto.pares,
+        encaixe=campos["port/connect_type"],
+        removivel=campos["removable"],
         e_hub=bruto.classe == CLASSE_HUB,
         e_raiz=e_raiz,
         atras_de_hub=_atras_de_hub(pai),
@@ -912,6 +944,38 @@ def _listar_sem_erro(listar: Callable[[str], list[str]], pasta: str) -> list[str
         return list(listar(pasta))
     except (OSError, KeyError):
         return []
+
+
+def _entradas_do_kernel_real() -> str:
+    return ler_texto(_ENTRADAS_DO_KERNEL)
+
+
+def _sem_entradas() -> str:
+    return ""
+
+
+def _teclados_fora_do_usb(texto: str) -> int:
+    """Quantos teclados de verdade o kernel tem em barramento que não é USB (i8042, I2C, Bluetooth).
+
+    Um teclado é a entrada que tem as 26 letras; o dispositivo virtual (``/devices/virtual/``) é
+    emulação e não conta, e o USB já está no censo pelo ``/sys``.
+    """
+    total = 0
+    for bloco in texto.split("\n\n"):
+        barramento = sysfs = teclas = ""
+        for linha in bloco.splitlines():
+            if linha.startswith("I:"):
+                achado = _BARRAMENTO_DA_ENTRADA.search(linha)
+                barramento = achado.group(1).lower() if achado else ""
+            elif linha.startswith("S: Sysfs="):
+                sysfs = linha[len("S: Sysfs="):].strip()
+            elif linha.startswith("B: KEY="):
+                teclas = linha[len("B: KEY="):].strip()
+        if not barramento or barramento == _BARRAMENTO_USB or "/virtual/" in sysfs:
+            continue
+        if all(_tem_a_tecla(teclas, bit) for bit in _LETRAS):
+            total += 1
+    return total
 
 
 def _tem_a_tecla(mapa: str, bit: int) -> bool:

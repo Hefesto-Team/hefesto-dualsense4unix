@@ -265,8 +265,8 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
     ]
     if not pares:
         return None
-    alvo, _acusador = pares[0]
-    livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
+    alvo, _acusador = next((par for par in pares if not par[0].soldado), pares[0])
+    livres = _livres_para(leitura, alvo)
     destino = _destino_declarado(leitura, livres)
     nome = _nome_do_aparelho(leitura, alvo)
     return Ordem(
@@ -295,8 +295,7 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
             fonte="docs/protocol/por-que-usb3-atrapalha-24ghz.md",
         ),
         ganho_esperado=Linha(
-            texto=NAO_MEDI if livres else f"{NAO_MEDI} {SEM_DESTINO}",
-            selo=DERIVADO_DA_CONTA,
+            texto=_ganho_nao_medido(alvo, livres), selo=DERIVADO_DA_CONTA,
         ),
         alvo=_identidade_de(leitura, alvo),
         arranjo=_assinatura(pares),
@@ -356,8 +355,8 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
     if not atras:
         return None
     total = len(_bluetooth_do_censo(leitura.censo))
-    alvo = atras[0]
-    livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
+    alvo = _o_que_a_mao_alcanca(atras)
+    livres = _livres_para(leitura, alvo)
     destino = _destino_declarado(leitura, livres)
     velocidade = _velocidade_do_hub(leitura.censo, alvo)
     return Ordem(
@@ -389,8 +388,7 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
             selo=MEDIDO_AQUI,
         ),
         ganho_esperado=Linha(
-            texto=NAO_MEDI if livres else f"{NAO_MEDI} {SEM_DESTINO}",
-            selo=DERIVADO_DA_CONTA,
+            texto=_ganho_nao_medido(alvo, livres), selo=DERIVADO_DA_CONTA,
         ),
         alvo=_identidade_de(leitura, alvo),
         arranjo=_assinatura_de_caminhos(
@@ -401,16 +399,22 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
 
 
 def teclado_so_no_hub(leitura: Leitura) -> Ordem | None:
-    """R4 — o único teclado da casa depende do hub."""
+    """R4 — o único teclado da casa depende do hub.
+
+    Cala se há teclado em outro barramento de entrada (``Censo.teclados_fora_do_usb``) ou se o
+    teclado USB é soldado: nos dois o computador já traz o teclado, e não há o que mover.
+    """
     teclados = [
         aparelho
         for aparelho in leitura.censo.conectados()
         if _classe_de(aparelho) == _CLASSE_TECLADO
     ]
-    if not teclados or any(not teclado.atras_de_hub for teclado in teclados):
+    if leitura.censo.teclados_fora_do_usb:
+        return None
+    if not teclados or any(not t.atras_de_hub or t.soldado for t in teclados):
         return None
     alvo = teclados[0]
-    livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
+    livres = _livres_para(leitura, alvo)
     destino = _destino_declarado(leitura, livres)
     return Ordem(
         chave=R4_TECLADO_SO_NO_HUB,
@@ -504,8 +508,8 @@ def entrada_reclamou_de_corrente(leitura: Leitura) -> Ordem | None:
     ]
     if not reclamaram:
         return None
-    alvo = reclamaram[0]
-    livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
+    alvo = _o_que_a_mao_alcanca(reclamaram)
+    livres = _livres_para(leitura, alvo)
     destino = _destino_declarado(leitura, livres)
     return Ordem(
         chave=R6_ENTRADA_RECLAMOU_DE_CORRENTE,
@@ -528,8 +532,7 @@ def entrada_reclamou_de_corrente(leitura: Leitura) -> Ordem | None:
             selo=DERIVADO_DA_CONTA,
         ),
         ganho_esperado=Linha(
-            texto=NAO_MEDI if livres else f"{NAO_MEDI} {SEM_DESTINO}",
-            selo=DERIVADO_DA_CONTA,
+            texto=_ganho_nao_medido(alvo, livres), selo=DERIVADO_DA_CONTA,
         ),
         alvo=_identidade_de(leitura, alvo),
         arranjo=_assinatura_de_caminhos(
@@ -764,6 +767,25 @@ def _furos_livres(leitura: Leitura) -> tuple[Furo, ...]:
         for furo in furos(leitura.entradas)
         if furo.vazio and furo.tipo_de_encaixe == ENCAIXE_DE_GENTE
     )
+
+
+def _o_que_a_mao_alcanca(aparelhos: Sequence[Aparelho]) -> Aparelho:
+    """O primeiro aparelho que uma pessoa pode tirar do lugar; se todos são soldados, o primeiro."""
+    return next((a for a in aparelhos if not a.soldado), aparelhos[0])
+
+
+def _livres_para(leitura: Leitura, alvo: Aparelho) -> tuple[Furo, ...]:
+    """Para onde o alvo pode ir: nada, se a porta dele é soldada."""
+    if alvo.soldado:
+        return ()
+    return _livres_fora_da_controladora(leitura, alvo.controlador_pci)
+
+
+def _ganho_nao_medido(alvo: Aparelho, livres: Sequence[Furo]) -> str:
+    """A linha do ganho: «sem destino» só se o alvo podia ir e não há para onde."""
+    if livres or alvo.soldado:
+        return NAO_MEDI
+    return f"{NAO_MEDI} {SEM_DESTINO}"
 
 
 def _livres_fora_da_controladora(
