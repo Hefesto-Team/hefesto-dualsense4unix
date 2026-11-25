@@ -112,8 +112,9 @@ _JS_DO_NOME_COM_MARCA = r"""
 """
 
 
-def _no_webkit(pagina: str, tmp_path: Any) -> dict[str, Any]:
-    """Abre a página no WebKit do produto (Xvfb da suíte) e roda o gesto do nome com marca."""
+def _no_webkit(pagina: str, tmp_path: Any, js: str | None = None) -> dict[str, Any]:
+    """Abre a página no WebKit do produto (Xvfb da suíte) e roda o roteiro `js` (o do nome com
+    marca, se nenhum), que devolve um JSON."""
     import json
     import os
 
@@ -150,9 +151,10 @@ def _no_webkit(pagina: str, tmp_path: Any) -> dict[str, Any]:
     def carregou(v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
             so_texto = _corpo_de(pagina, "function soTexto(") + "}"
-            js = (_JS_DO_NOME_COM_MARCA.replace("SO_TEXTO", so_texto)
-                  .replace("SUJO", json.dumps(_SUJO)).replace("NOME", json.dumps(_NOME_COM_MARCA)))
-            v.evaluate_javascript(js, -1, None, None, None, leu)
+            roteiro = js or (_JS_DO_NOME_COM_MARCA.replace("SO_TEXTO", so_texto)
+                             .replace("SUJO", json.dumps(_SUJO))
+                             .replace("NOME", json.dumps(_NOME_COM_MARCA)))
+            v.evaluate_javascript(roteiro, -1, None, None, None, leu)
 
     view.connect("load-changed", carregou)
     view.load_uri(copia.as_uri())

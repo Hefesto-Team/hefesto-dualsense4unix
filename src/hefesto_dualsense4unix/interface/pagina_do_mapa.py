@@ -125,9 +125,11 @@ CENSO_DE_EXEMPLO: dict[str, Any] = {
                      "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9,
                                "esticada": True,
                                "cabo": "extensor de 1 m, declarado por você"}}]},
+        {"nome": "Sem Lugar", "titulo": "Sem Lugar", "forma": "coluna", "regiao": "pc",
+         "semLugar": True, "portas": [{"n": "16", "usb": 3, "onde": "pc"}]},
     ],
     "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4",
-             "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
+             "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4", "16": "1-4"},
     "leituras": {
         "antes": {"rotulo": "20h15 — antes de você mexer",
                   "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4",
@@ -5672,6 +5674,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DO_PORTE,
     *EDICOES_DO_MAPA_SEM_LEITURA,
     *EDICOES_DA_LETRA_DA_CASA,
+    *EDICOES_DO_PAINEL_DA_ENTRADA,
 )
 
 
@@ -6295,6 +6298,90 @@ EDICOES_DA_LETRA_DA_CASA: tuple[Edicao, ...] = (
         depois=("    --font-corpo: 'Space Grotesk', system-ui, sans-serif;\n"
                 "    --font-dado:  'JetBrains Mono', ui-monospace, monospace;\n"),
         porque=f"{_DA_SPRINT_DA_LETRA}: o corpo e o dado começam pela letra da casa.",
+    ),
+)
+
+EDICOES_DO_PAINEL_DA_ENTRADA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '    return h + (chave ? \'<div class="campo"><span>Extens'
+            'or</span>\' + chave + "</div>" : "");\n'
+            '  }\n'
+            '  function peDoPainel(n, quem) {\n'
+        ),
+        depois=(
+            '    var estilo = \' style="padding-left:10px"\';\n'
+            '    if (semLugar(p) && (!doProduto() || podeGravar(n))) '
+            'h += \'<label class="campo"><span>Lugar</span><span class'
+            '="sel"><select class="lugar-da-entrada"\'\n'
+            '      + \' data-gesto="entrada-lugar" data-entrada="\' + n'
+            ' + \'" aria-label="Lugar da entrada"\'\n'
+            '      + \' title="Diga onde fica esta entrada para entrar'
+            ' nas sugestões"\' + estilo + \'>\'\n'
+            '      + \'<option value="" selected>Sem lugar</option>\'\n'
+            '      + LUGARES_DA_ENTRADA.map(function (nome) {\n'
+            "          return '<option>' + emAtributo(nome) + '</opti"
+            "on>';\n"
+            '        }).join("")\n'
+            "      + '</select></span></label>';\n"
+            '    var outras = [];\n'
+            '    FACES.forEach(function (f) {\n'
+            '      f.portas.forEach(function (q) { if (q.n !== n && p'
+            'odeMover(n, q.n)) outras.push(q.n); });\n'
+            '    });\n'
+            '    var mover = !outras.length ? "" : \'<label class="cam'
+            'po"><span>Mover</span><span class="sel"><select class="m'
+            'over-para"\'\n'
+            '      + \' data-gesto="entrada-trocar" data-entrada="\' + '
+            'n + \'" aria-label="Mover para outra entrada"\'\n'
+            '      + \' title="Troca o que está nesta entrada com o qu'
+            'e está na escolhida"\' + estilo + \'>\'\n'
+            '      + \'<option value="" selected>Mover para…</option>\''
+            '\n'
+            '      + outras.map(function (m) {\n'
+            '          var ali = aloc'
+            'ac'
+            'ao[m] ? acha(aloc'
+            'ac'
+            'ao[m]) : nu'
+            'll;\n'
+            '          return \'<option value="\' + m + \'">\'\n'
+            '            + emAtributo([rotuloDe(m), faceDe(m), ali ? '
+            'ali.tipo : "Vazia"].join(" · ")) + \'</option>\';\n'
+            '        }).join("")\n'
+            "      + '</select></span></label>';\n"
+            '    return h + (chave ? \'<div class="campo"><span>Extens'
+            'or</span>\' + chave + "</div>" : "") + mover;\n'
+            '  }\n'
+            '  function peDoPainel(n, quem) {\n'
+        ),
+        porque=(
+            '25/11/2026, O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO-01 (desen'
+            'ho A): a coluna Entrada ganha o «Lugar», só numa entrada sem lugar, e o '
+            '«Mover», que troca duas entradas sem arrasto; as duas são `select` nativ'
+            'os, com teclado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  document.addEventListener("change", function (ev) {\n'
+            '    var sel = ev.target.closest && ev.target.closest("#e'
+            'dita select.tipo-do-aparelho");\n'
+        ),
+        depois=(
+            '  document.addEventListener("change", function (ev) {\n'
+            '    var mv = ev.target.closest && ev.target.closest("#ed'
+            'ita select.mover-para");\n'
+            '    if (mv && !doProduto()) { if (mv.value) moverPara(St'
+            'ring(editando), mv.value); return; }\n'
+            '    var sel = ev.target.closest && ev.target.closest("#e'
+            'dita select.tipo-do-aparelho");\n'
+        ),
+        porque=(
+            '25/11/2026, O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO-01: no ex'
+            'emplo o «Mover» troca pelo mesmo `moverPara` do arrasto; no produto quem'
+            ' grava é o gesto `entrada-trocar`.'
+        ),
     ),
 )
 

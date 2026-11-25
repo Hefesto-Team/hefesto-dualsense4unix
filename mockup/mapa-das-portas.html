@@ -621,9 +621,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     "faces": [
       {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 3, "onde": "pc", "par": "2"}, {"n": "2", "usb": 3, "onde": "pc", "par": "1"}]},
       {"nome": "Traseira", "forma": "grade-tras", "regiao": "pc", "donaDaFaixaPc": true, "portas": [{"n": "3", "usb": 3, "onde": "pc", "par": "4"}, {"n": "4", "usb": 3, "onde": "pc", "par": "3"}, {"n": "5", "usb": 3, "onde": "pc", "par": "6"}, {"n": "6", "usb": 3, "onde": "pc", "par": "5"}, {"n": "7", "usb": 2, "onde": "pc", "par": "8"}, {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
-      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "Extensor de 1 m"}}]}
+      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "Extensor de 1 m"}}]},
+      {"nome": "Sem Lugar", "titulo": "Sem Lugar", "forma": "coluna", "regiao": "pc", "semLugar": true, "portas": [{"n": "16", "usb": 3, "onde": "pc"}]}
     ],
-    "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
+    "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4", "16": "1-4"},
     "leituras": {"antes": {"rotulo": "20h15 — antes de você mexer", "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4", "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4"}}, "agora": {"rotulo": "22h50 — depois dos seus movimentos", "caminho": {"teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1", "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2"}}},
     "controles": [
       {"nome": "Jogador 1", "mic": true, "onde": "bt-a"},
@@ -1489,7 +1490,30 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             + ' aria-label="USB ' + o[1] + '">' + o[1] + "</button>";
         }).join("") + "</div></div>";
     var chave = chaveDoExtensor(n);
-    return h + (chave ? '<div class="campo"><span>Extensor</span>' + chave + "</div>" : "");
+    var estilo = ' style="padding-left:10px"';
+    if (semLugar(p) && (!doProduto() || podeGravar(n))) h += '<label class="campo"><span>Lugar</span><span class="sel"><select class="lugar-da-entrada"'
+      + ' data-gesto="entrada-lugar" data-entrada="' + n + '" aria-label="Lugar da entrada"'
+      + ' title="Diga onde fica esta entrada para entrar nas sugestões"' + estilo + '>'
+      + '<option value="" selected>Sem lugar</option>'
+      + LUGARES_DA_ENTRADA.map(function (nome) {
+          return '<option>' + emAtributo(nome) + '</option>';
+        }).join("")
+      + '</select></span></label>';
+    var outras = [];
+    FACES.forEach(function (f) {
+      f.portas.forEach(function (q) { if (q.n !== n && podeMover(n, q.n)) outras.push(q.n); });
+    });
+    var mover = !outras.length ? "" : '<label class="campo"><span>Mover</span><span class="sel"><select class="mover-para"'
+      + ' data-gesto="entrada-trocar" data-entrada="' + n + '" aria-label="Mover para outra entrada"'
+      + ' title="Troca o que está nesta entrada com o que está na escolhida"' + estilo + '>'
+      + '<option value="" selected>Mover para…</option>'
+      + outras.map(function (m) {
+          var ali = alocacao[m] ? acha(alocacao[m]) : null;
+          return '<option value="' + m + '">'
+            + emAtributo([rotuloDe(m), faceDe(m), ali ? ali.tipo : "Vazia"].join(" · ")) + '</option>';
+        }).join("")
+      + '</select></span></label>';
+    return h + (chave ? '<div class="campo"><span>Extensor</span>' + chave + "</div>" : "") + mover;
   }
   function peDoPainel(n, quem) {
     if (!quem) return "";
@@ -1650,6 +1674,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (ev.key === "Escape" && (editando || editandoAp)) { editando = null; editandoAp = null; segurando = null; pintar(); }
   });
   document.addEventListener("change", function (ev) {
+    var mv = ev.target.closest && ev.target.closest("#edita select.mover-para");
+    if (mv && !doProduto()) { if (mv.value) moverPara(String(editando), mv.value); return; }
     var sel = ev.target.closest && ev.target.closest("#edita select.tipo-do-aparelho");
     if (sel && !sel.hasAttribute("data-gesto")) {
       var ap2 = editandoAp ? acha(editandoAp) : aparelhoDaEntrada(editando);
