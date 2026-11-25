@@ -146,6 +146,54 @@ def test_o_gesto_na_propria_linha_do_programa_grava_nada(mapa: Any) -> None:
     assert loader.load_profile(JOGO).button_actions == {"cross": acoes.TOKEN_NADA}
 
 
+def test_o_gesto_na_chave_da_navegacao_tambem_regrava_nada(mapa: Any) -> None:
+    """D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA: a chave do perfil que vale grava como a 06."""
+    from hefesto_dualsense4unix.profiles import loader
+
+    _grava(OUTRO, button_actions={"cross": acoes.TOKEN_PROGRAMA, "options": "KEY_A"})
+    ctx = _ctx()
+    assert mapa._linhas(ctx, set())["val-cross"] == NADA
+    mapa.mapa_botao(ctx, {"b": "triangle"}, None)
+    mapa.mapa_escolher(ctx, {"v": f"{a13.ACAO}:KEY_B"}, None)
+
+    mapa.mapa_guardar(ctx, {}, MagicMock())
+
+    guardado = loader.load_profile(OUTRO).button_actions
+    assert guardado == {"cross": acoes.TOKEN_NADA, "options": "KEY_A", "triangle": "KEY_B"}
+
+
+def _ctx_de_dois(escolhido: str) -> Any:
+    mesa = [{"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "nome": "Cosmic Red", "via": "USB",
+             "jogador": 1, "cor": "cosmic-red"},
+            {"pref": "p2", "uniq": "aa:bb:cc:00:00:02", "nome": "White", "via": "BT",
+             "jogador": 2, "cor": "white"}]
+    conectados = [{"uniq": m["uniq"], "inputs": {"buttons": []}} for m in mesa]
+    return Contexto(state={"active_profile": OUTRO}, mesa=mesa, conectados=conectados,
+                    escolhido=escolhido)
+
+
+@pytest.mark.parametrize("escolhido", ["p1", "p2"])
+def test_com_um_controle_escolhido_entre_dois_a_linha_e_o_gesto_dizem_nada(
+        mapa: Any, escolhido: str) -> None:
+    """D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA: o cabo e o rádio, com o «Vale para» aceso."""
+    from hefesto_dualsense4unix.profiles import loader
+
+    _grava(JOGO, button_actions={"cross": acoes.TOKEN_PROGRAMA, "dpad_up": acoes.TOKEN_PROGRAMA})
+    ctx = _ctx_de_dois(escolhido)
+    _abre_o_jogo(mapa, ctx)
+    assert mapa._peca_do_vale_para(ctx)
+    linhas = mapa._linhas(ctx, set())
+    assert (linhas["val-cross"], linhas["val-dpad_up"]) == (NADA, NADA)
+    mapa.mapa_botao(ctx, {"b": "triangle"}, None)
+    mapa.mapa_escolher(ctx, {"v": f"{a13.ACAO}:KEY_A"}, None)
+
+    mapa.mapa_guardar(ctx, {}, MagicMock())
+
+    guardado = loader.load_profile(JOGO).button_actions
+    assert guardado == {"cross": acoes.TOKEN_NADA, "dpad_up": acoes.TOKEN_NADA,
+                        "triangle": "KEY_A"}
+
+
 def test_o_molde_com_o_programa_tambem_diz_nada(
         mapa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA: toda chave lê o cru pela mesma regra."""
