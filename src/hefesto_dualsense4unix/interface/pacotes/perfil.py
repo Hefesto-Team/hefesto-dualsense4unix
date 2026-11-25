@@ -50,14 +50,10 @@ import sys
 import time
 from typing import Any
 
-RAIZ = pathlib.Path(__file__).resolve().parents[4]
-
 
 def _com_o_src() -> Any:
-    """Põe o `src/` DESTA árvore no caminho, e devolve o `loader`."""
-    src = str(RAIZ / "src")
-    if src not in sys.path:
-        sys.path.insert(0, src)
+    """O `loader` de perfis, importado na primeira vez que a aba precisa. O nome vem do tempo em
+    que a função punha o `src/` da árvore no caminho; as abas vizinhas ainda o chamam assim."""
     from hefesto_dualsense4unix.profiles import loader
 
     return loader
@@ -66,7 +62,6 @@ def _com_o_src() -> Any:
 def pasta() -> pathlib.Path | None:
     """A pasta de perfis DESTA variante, perguntada a quem é dono da pasta."""
     try:
-        _com_o_src()
         from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
         return profiles_dir()
@@ -111,7 +106,6 @@ def nome_do_ativo(state: Any = None) -> str:
     if do_daemon:
         return do_daemon
     try:
-        _com_o_src()
         from hefesto_dualsense4unix.app.actions.profiles_actions import (
             perfil_que_esta_valendo,
         )
@@ -189,7 +183,6 @@ def ativo_que_vale(nome: str | None) -> dict[str, Any]:
     if not cru:
         return _o_computador_sem_perfil()
     try:
-        _com_o_src()
         from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
         from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -214,7 +207,6 @@ _VISTA_LIDA: dict[str, tuple[Any, dict[str, Any]]] = {}
 def _o_computador_sem_perfil() -> dict[str, Any]:
     """As escolhas do computador como perfil cru, ou `{}` se ele não declarou nada ou não abre."""
     try:
-        _com_o_src()
         from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
         computador = opc.o_computador()
@@ -249,7 +241,6 @@ def _carimbo(p: pathlib.Path | None) -> tuple[int, int] | None:
 
 def _assinatura_da_pasta(onde: pathlib.Path) -> tuple[Any, ...]:
     """O carimbo da pasta e o da subpasta dos Estilos: nasce, some, renomeia."""
-    _com_o_src()
     from hefesto_dualsense4unix.profiles.loader import ESTILOS_DE_JOGO_DIR_NAME
 
     return (_carimbo(onde), _carimbo(onde / ESTILOS_DE_JOGO_DIR_NAME))
@@ -311,7 +302,6 @@ def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
 def _chave_da_lembranca(onde: pathlib.Path, nome: str) -> tuple[str, str]:
     """`(pasta, slug)`: «Navegação» e «Navegacao» são o mesmo perfil (R-10)."""
     try:
-        _com_o_src()
         from hefesto_dualsense4unix.profiles.slug import slugify
 
         return (str(onde), slugify(nome))
@@ -440,7 +430,6 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
 
 def reaplicar(nome: str, ctx: Any, p: Any, *, era: str = "") -> None:
     """Manda o daemon reaplicar o perfil ``nome`` se ele for o ATIVO, e avisa o lançamento."""
-    _com_o_src()
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         perfil_que_esta_valendo,
     )

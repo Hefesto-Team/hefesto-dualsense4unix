@@ -43,15 +43,9 @@ que existe.
 """
 from __future__ import annotations
 
-import pathlib
-import sys
 from typing import Any
 
-RAIZ = pathlib.Path(__file__).resolve().parents[4]
-if str(RAIZ / "src") not in sys.path:
-    sys.path.insert(0, str(RAIZ / "src"))
-
-from hefesto_dualsense4unix.app import ipc_bridge as _b  # noqa: E402
+from hefesto_dualsense4unix.app import ipc_bridge as _b
 
 led_set = _b.led_set
 led_set_detalhado = _b.led_set_detalhado

@@ -30,10 +30,11 @@ NADA AQUI ESCREVE. O único método de IPC que este módulo conhece é
 from __future__ import annotations
 
 import csv
+import io
 import json
-import pathlib
 import socket
 import threading
+from collections.abc import Iterator, MutableMapping
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import numero_do_controle
@@ -48,8 +49,10 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     nome_do_aparelho,
 )
 from hefesto_dualsense4unix.utils import xdg_paths
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import ler_arquivo_do_repo
 
-RAIZ = str(pathlib.Path(__file__).resolve().parents[3])
+logger = get_logger(__name__)
 
 
 def socket_do_daemon() -> str:
@@ -101,20 +104,51 @@ def estado_do_daemon(*, timeout: float = 2.0) -> dict[str, Any]:
 
 
 def _carregar_mapa() -> dict[str, tuple[str, str]]:
-    """`{chave: (cabo_aciona, radio_aciona)}` do DualSense."""
+    """`{chave: (cabo_aciona, radio_aciona)}` do DualSense; vazio, com aviso no diário, se a
+    instalação não trouxe o `mapa-controles.csv`."""
     fora: dict[str, tuple[str, str]] = {}
-    with open(f"{RAIZ}/docs/data/mapa-controles.csv", encoding="utf-8") as arq:
-        for linha in csv.DictReader(arq):
-            if (linha.get("controle") or "").strip().lower() != "dualsense":
-                continue
-            fora[(linha.get("chave") or "").strip()] = (
-                (linha.get("cabo_aciona") or "").strip(),
-                (linha.get("radio_aciona") or "").strip(),
-            )
+    texto = ler_arquivo_do_repo("docs/data/mapa-controles.csv")
+    if texto is None:
+        logger.warning("mapa_de_canais_ausente", arquivo="docs/data/mapa-controles.csv")
+        return fora
+    for linha in csv.DictReader(io.StringIO(texto)):
+        if (linha.get("controle") or "").strip().lower() != "dualsense":
+            continue
+        fora[(linha.get("chave") or "").strip()] = (
+            (linha.get("cabo_aciona") or "").strip(),
+            (linha.get("radio_aciona") or "").strip(),
+        )
     return fora
 
 
-MAPA = _carregar_mapa()
+class _MapaDeCanais(MutableMapping[str, tuple[str, str]]):
+    """O mapa de canais, lido do disco na primeira consulta e nunca no import do módulo."""
+
+    def __init__(self) -> None:
+        self._lidos: dict[str, tuple[str, str]] | None = None
+
+    def _dados(self) -> dict[str, tuple[str, str]]:
+        if self._lidos is None:
+            self._lidos = _carregar_mapa()
+        return self._lidos
+
+    def __getitem__(self, chave: str) -> tuple[str, str]:
+        return self._dados()[chave]
+
+    def __setitem__(self, chave: str, valor: tuple[str, str]) -> None:
+        self._dados()[chave] = valor
+
+    def __delitem__(self, chave: str) -> None:
+        del self._dados()[chave]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._dados())
+
+    def __len__(self) -> int:
+        return len(self._dados())
+
+
+MAPA = _MapaDeCanais()
 
 
 def aciona(chave: str, transporte: str) -> str:

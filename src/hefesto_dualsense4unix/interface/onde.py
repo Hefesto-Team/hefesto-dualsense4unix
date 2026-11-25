@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Onde mora cada página: o MOCKUP e o PUBLICADO. Dono único das duas pastas."""
+"""Onde mora cada página: o MOCKUP e o PUBLICADO. Dono único das duas pastas.
+
+`RAIZ` é a árvore do repositório, que só as ferramentas do mockup usam (o mockup e o
+`docs/usage`). O que a janela instalada lê em tempo de execução vem de `utils.repo_files`,
+que acha o arquivo em toda forma de instalação.
+"""
 from __future__ import annotations
 
 import os

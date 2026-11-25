@@ -84,6 +84,25 @@ def encontrar_arquivo_do_repo(
     return None
 
 
+def ler_arquivo_do_repo(relpath: str, bases: Sequence[Path] | None = None) -> str | None:
+    """O texto de um arquivo do repo em UTF-8, ou ``None`` quando nenhuma base o tem."""
+    achado = encontrar_arquivo_do_repo(relpath, bases)
+    return achado.read_text(encoding="utf-8") if achado is not None else None
+
+
+PASTAS_DOS_GLIFOS = ("assets/glyphs", "glyphs")
+
+
+def encontrar_glifo(arquivo: str, bases: Sequence[Path] | None = None) -> Path | None:
+    """O SVG de um glifo (``cross_active.svg``): ``assets/glyphs`` no clone e no wheel, ``glyphs``
+    no Flatpak, no AppImage e no ``install.sh``."""
+    for pasta in PASTAS_DOS_GLIFOS:
+        achado = encontrar_arquivo_do_repo(f"{pasta}/{arquivo}", bases)
+        if achado is not None:
+            return achado
+    return None
+
+
 FRASE_DE_ATUALIZAR: dict[bool, str] = {
     True: "rode ./install.sh para atualizar o Hefesto",
     False: "atualize o Hefesto pelo mesmo caminho por onde você o instalou",
@@ -142,10 +161,13 @@ __all__ = [
     "FRASE_DE_ATUALIZAR",
     "GESTO_DE_SUBIR",
     "NOME_NO_SHARE",
+    "PASTAS_DOS_GLIFOS",
     "bases_de_instalacao",
     "como_atualizar_esta_instalacao",
     "encontrar_arquivo_do_repo",
+    "encontrar_glifo",
     "esta_instalacao_e_um_checkout",
     "forma_da_instalacao",
     "gesto_de_subir_a_versao_nova",
+    "ler_arquivo_do_repo",
 ]

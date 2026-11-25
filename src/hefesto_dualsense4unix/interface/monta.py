@@ -1,19 +1,12 @@
 """Monta uma aba a partir do esqueleto VALIDADO da Jogar + o miolo dado."""
-import csv, html, pathlib, re, sys
+import csv, functools, html, pathlib, re
 from collections.abc import Sequence
 from typing import Any
 
 import onde
+from hefesto_dualsense4unix.utils.repo_files import encontrar_glifo, ler_arquivo_do_repo
 
 R = pathlib.Path(__file__).resolve().parent
-
-RAIZ_DO_REPO = pathlib.Path(__file__).resolve().parents[3]
-
-
-def _do_repo(relativo: str) -> str:
-    """O conteúdo de um arquivo de `docs/`, ou vazio quando não há repositório."""
-    alvo = RAIZ_DO_REPO / relativo
-    return alvo.read_text(encoding="utf-8") if alvo.exists() else ""
 _F = pathlib.Path(__file__).resolve().parent
 TOPO = (_F / "topo.html").read_text()
 FIM  = (_F / "fim.html").read_text()
@@ -66,7 +59,6 @@ def as_abas_do_produto() -> list[str]:
     """As páginas que o produto abre, em ordem de nome: as de `ABAS`, e nunca o que a pasta tem."""
     return sorted(f"{a}.html" for _, a in ABAS)
 
-sys.path.insert(0, str(RAIZ_DO_REPO / "src"))
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
 )
@@ -81,27 +73,26 @@ PADRAO_JOGADOR = {
     for n in range(1, 9)
 }
 
-GLIFOS = RAIZ_DO_REPO / "assets/glyphs"
+DADOS_DO_REPO = onde.RAIZ / "docs/data"
 
-DADOS_DO_REPO = RAIZ_DO_REPO / "docs/data"
 
+@functools.cache
 def _nomes_das_pecas() -> dict[str, str]:
-    linhas = [x for x in _do_repo("docs/data/pecas-do-dualsense.csv").splitlines()
+    """Os nomes das peças do `pecas-do-dualsense.csv`, lidos na primeira consulta."""
+    linhas = [x for x in (ler_arquivo_do_repo("docs/data/pecas-do-dualsense.csv") or "").splitlines()
               if not x.startswith("#")]
     return {p["glifo"]: p["nome"] for p in csv.DictReader(linhas) if p["glifo"] != "-"}
 
 
-NOME_DA_PECA = _nomes_das_pecas()
-
-
 def nome_do_glifo(nome: str) -> str:
     """Como a peça se chama na tela, e RECUSA o glifo que o CSV não conhece."""
-    if nome not in NOME_DA_PECA:
+    nomes = _nomes_das_pecas()
+    if nome not in nomes:
         raise SystemExit(
             f"ERRO em glifo({nome!r}): a peça não tem linha em "
             f"docs/data/pecas-do-dualsense.csv — o nome em português da peça não se "
             f"inventa aqui, escreva a linha lá")
-    return NOME_DA_PECA[nome]
+    return nomes[nome]
 
 MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 
@@ -663,7 +654,9 @@ def _degrau_do_transporte(c: dict[str, object]) -> str:
 def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:
     """Os mesmos SVGs de glifo que a aba Status usa — 27 peças, com versão acesa."""
     titulo = nome_do_glifo(nome)
-    arq = GLIFOS / f"{nome}{'_active' if ativo else ''}.svg"
+    arq = encontrar_glifo(f"{nome}{'_active' if ativo else ''}.svg")
+    if arq is None:
+        raise SystemExit(f"ERRO em glifo({nome!r}): a instalação não trouxe o SVG do glifo")
     x = arq.read_text()
     x = re.sub(r'<\?xml[^>]*\?>\s*', '', x)
     x = re.sub(r'<!--.*?-->', '', x, flags=re.S)

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, TextIO
 
 from hefesto_dualsense4unix.utils.identidade import Identidade
 from hefesto_dualsense4unix.utils.marca_do_parar import marca_do_parar
+from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
 from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
 
 if TYPE_CHECKING:
@@ -36,9 +37,7 @@ CANDIDATOS_DO_PILOTO = (
     "hefesto_dualsense4unix.interface.hefesto_vivo",
     "hefesto_dualsense4unix.interface.controles_vivos",
 )
-CANDIDATOS_DO_ICONE = (
-    RAIZ / "assets" / "appimage" / "Hefesto-Dualsense4Unix.png",
-)
+ICONE_DO_REPO = "assets/appimage/Hefesto-Dualsense4Unix.png"
 
 
 def achar_o_piloto() -> str | None:
@@ -50,8 +49,8 @@ def achar_o_piloto() -> str | None:
 
 
 def achar_o_icone() -> Path | None:
-    """O primeiro PNG de logo de dev que existir, ou `None`."""
-    return next((c for c in CANDIDATOS_DO_ICONE if c.is_file()), None)
+    """O PNG da logo que esta instalação trouxe, ou `None`."""
+    return encontrar_arquivo_do_repo(ICONE_DO_REPO)
 
 
 def vestir_a_identidade(casa: Identidade) -> list[str]:

@@ -3,30 +3,35 @@
 """O MAPA DO CONTROLE — a fonte da verdade das peças, funcional."""
 import csv, math, pathlib, re, sys
 
-import sys as _sys, pathlib as _pathlib
-_sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
-from onde import RAIZ as R
-
-DADOS_DO_REPO = R / "docs/data"
-CSV = DADOS_DO_REPO / "pecas-do-dualsense.csv"
-CSV_CORES = DADOS_DO_REPO / "cores-do-dualsense.csv"
-
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-sys.path.insert(0, str(R / "src"))
 import onde  # noqa: E402
 import caixa_da_janela  # noqa: E402
-GLIFOS = R / "assets/glyphs"
-SVG = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
+from hefesto_dualsense4unix.utils.repo_files import (  # noqa: E402
+    encontrar_glifo,
+    ler_arquivo_do_repo,
+)
+
+SVG = pathlib.Path(__file__).resolve().parent / "ds_limpo.svg"
 SAIDA = onde.pagina("mapa-do-controle.html")
 
+
+def _do_repo(relativo):
+    """O texto de um arquivo de `docs/data` desta instalação; a falta é erro de quem consulta."""
+    texto = ler_arquivo_do_repo(relativo)
+    if texto is None:
+        raise FileNotFoundError(f"a instalação não trouxe {relativo}")
+    return texto
+
+
 def le_csv():
-    linhas = [l for l in CSV.read_text().splitlines() if l and not l.startswith("#")]
+    linhas = [l for l in _do_repo("docs/data/pecas-do-dualsense.csv").splitlines()
+              if l and not l.startswith("#")]
     return list(csv.DictReader(linhas))
 
 
 def glifo(nome, tam=30, ativo=False):
-    arq = GLIFOS / f"{nome}{'_active' if ativo else ''}.svg"
-    if not arq.exists():
+    arq = encontrar_glifo(f"{nome}{'_active' if ativo else ''}.svg")
+    if arq is None:
         return ""
     x = arq.read_text()
     x = re.sub(r"<\?xml[^>]*\?>\s*", "", x)
@@ -515,7 +520,7 @@ def controle(pecas):
 
 def cores_do_csv():
     """Os 28 modelos do `cores-do-dualsense.csv`, agrupados por modelo."""
-    linhas = [x for x in CSV_CORES.read_text().splitlines()
+    linhas = [x for x in _do_repo("docs/data/cores-do-dualsense.csv").splitlines()
               if x and not x.startswith("#")]
     fora = {}
     for c in csv.DictReader(linhas):
