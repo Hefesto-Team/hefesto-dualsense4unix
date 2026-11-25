@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1320771,
+      "piso": 1321284,
       "por_item": {
-        "docs": 107999,
+        "docs": 108001,
         "scripts": 116862,
-        "src": 332640,
-        "tests": 763270
+        "src": 332703,
+        "tests": 763718
       },
-      "razao": "tamanho: +1501 linhas (1319270 -> 1320771), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo c50546ce59bc",
+      "razao": "tamanho: +513 linhas (1320771 -> 1321284), pagas por Origem: D-1911-TODA-ACAO-DO-BOTAO-TEM-QUEM-A-FACA, D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo 5a2674f9410b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2511,10 +2511,16 @@
           "de": 1319270,
           "para": 1320771,
           "razao": "tamanho: +1501 linhas (1319270 -> 1320771), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo c50546ce59bc"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1320771,
+          "para": 1321284,
+          "razao": "tamanho: +513 linhas (1320771 -> 1321284), pagas por Origem: D-1911-TODA-ACAO-DO-BOTAO-TEM-QUEM-A-FACA, D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo 5a2674f9410b"
         }
       ],
       "unidade": "linhas",
-      "universo": 3687
+      "universo": 3689
     }
   }
 }
