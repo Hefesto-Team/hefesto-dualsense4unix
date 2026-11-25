@@ -2235,11 +2235,27 @@ def veredito_html(veredito: Veredito | None) -> str:
             f'data-dica="{_a(veredito.frase)}" role="status">{_e(veredito.frase)}</span>')
 
 
+class BarraDaJanela(NamedTuple):
+    """A barra de cada aparelho gerido, na linha do nome dele no cartão: a faixa, os degraus que o
+    número conta e ``vez``, que sobe a cada soltar, para a barra se repintar com o valor que vale."""
+
+    id: str
+    rotulo: str
+    minimo: float
+    maximo: float
+    passo: float = 1
+    degraus: int = 0
+    dica: str = ""
+    vez: int = 0
+
+
 class AparelhosDaJanela(NamedTuple):
-    """As ações de cada aparelho gerido e a aba em que a lista mora (sem a aba, a coluna «Agora»)."""
+    """As ações de cada aparelho gerido e a aba em que a lista mora (sem a aba, a coluna «Agora»),
+    e a barra de cada um, quando o manifesto a declara."""
 
     acoes: tuple[AcaoDaJanela, ...]
     grupo: str = ""
+    barra: BarraDaJanela | None = None
 
 
 class LivreAoVivo(NamedTuple):
@@ -2272,6 +2288,8 @@ ICONE_QUE_CONFIRMA = "esquecer"
 ROTULO_DE_CONFIRMAR = "Confirmar"
 GESTO_DO_LIVRE = "mover-o-livre-da-modificacao"
 GESTO_DA_OPCAO_VIVA = "arrastar-a-opcao-da-modificacao"
+GESTO_DA_BARRA_VIVA = "arrastar-a-barra-do-aparelho"
+GESTO_DE_SOLTAR_A_BARRA = "soltar-a-barra-do-aparelho"
 GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
 GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
 GESTO_DE_ESQUECER_A_FORMA = "esquecer-a-forma-do-livre"
@@ -2452,6 +2470,32 @@ def _botoes_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
                    for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
 
 
+def _barra_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
+    """A barra do aparelho na linha do nome, com o rótulo e o número (``16/20``): o valor é o que
+    a extensão publica no ``barra`` dele. Arrastar vale na hora (:data:`GESTO_DA_BARRA_VIVA`) e
+    soltar grava (:data:`GESTO_DE_SOLTAR_A_BARRA`). Vazio sem a barra no manifesto ou sem o valor
+    no aparelho; com a chave da extensão desligada, à vista e parada."""
+    b = g.aparelhos.barra
+    valor = ap.get("barra")
+    if b is None or isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return ""
+    v = min(b.maximo, max(b.minimo, float(valor)))
+    numero = numero_do_deslizante(f"{v:g}", "", "", b.degraus, b.minimo, b.maximo)
+    if g.desligada:
+        gesto = 'disabled aria-disabled="true"'
+    else:
+        gesto = (f'data-gesto="{GESTO_DE_SOLTAR_A_BARRA}" '
+                 f'data-v="{_a(valor_da_acao(g.mod, b.id, str(ap["id"])))}" '
+                 f'data-hef-vivo="{GESTO_DA_BARRA_VIVA}" data-vez="{b.vez}" '
+                 f'oninput="{_NUMERO_AO_ARRASTAR}"')
+    dica = f' data-dica="{_a(b.dica)}"' if b.dica else ""
+    return (f'<span class="mj-ap-barra"{dica}><span class="mj-ap-barra-rot">{_e(b.rotulo)}</span>'
+            f'<span class="ext-desl"><input type="range" min="{b.minimo:g}" max="{b.maximo:g}" '
+            f'step="{b.passo:g}" value="{v:g}" {gesto} aria-label="{_a(b.rotulo)}">'
+            f'<b data-unidade="" data-zero=""{_degraus_do_numero(b.degraus)}>{_e(numero)}</b>'
+            "</span></span>")
+
+
 def _por_cento(bateria: Any) -> str:
     if isinstance(bateria, bool) or not isinstance(bateria, int):
         return ""
@@ -2481,9 +2525,10 @@ def _controles_no_cartao(g: Gestao, ap: Mapping[str, Any]) -> str:
 
 
 def aparelhos_geridos_html(g: Gestao) -> str:
-    """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha, a chave, a força de
-    agora, os controles do aparelho (com ``g.controles``) e um botão por ação. O aparelho
-    desligado pela chave fica apagado e segue com as ações; o fora do alcance só esquece."""
+    """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha, a barra do aparelho
+    (:func:`_barra_do_aparelho`), a chave, a força de agora, os controles do aparelho (com
+    ``g.controles``) e um botão por ação. O aparelho desligado pela chave fica apagado e segue com
+    as ações; o fora do alcance só esquece."""
     cartoes = []
     for ap in _aparelhos_geridos(g.estado):
         como = como_esta(ap)
@@ -2492,7 +2537,7 @@ def aparelhos_geridos_html(g: Gestao) -> str:
             f'{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="mj-ap-nome">{_e(ap.get("nome") or ap["id"])}</span>'
             f'{bateria_html(ap.get("bateria"))}{_por_cento(ap.get("bateria"))}'
-            f'{_chave_do_aparelho(g, ap)}</div>'
+            f'{_barra_do_aparelho(g, ap)}{_chave_do_aparelho(g, ap)}</div>'
             f'<div class="mj-ap-meio">{como.vivo}</div>'
             f'{_controles_no_cartao(g, ap)}'
             f'<div class="mj-ap-pe">{_botoes_do_aparelho(g, ap)}</div></div>')
@@ -2977,7 +3022,7 @@ APARELHOS_DO_DESENHO = AparelhosDaJanela((
     AcaoDaJanela(ACAO_DE_LIGAR, "Ligar", icone="ligar"),
     AcaoDaJanela("testar", "Testar", icone="testar"),
     AcaoDaJanela("esquecer", "Esquecer", icone="esquecer"),
-), "Aparelhos")
+), "Aparelhos", BarraDaJanela("teto", "Teto", 0, 100, 1, 20, "A força mais alta deste aparelho"))
 FORMAS_GRAVADAS_DO_DESENHO = {
     "Meu 1": ((0.2, 0.4), (0.6, 0.4), (1.0, 0.6), (0.4, 0.4)),
     "Meu 2": ((0.8, 0.2), (0.0, 0.2), (0.8, 0.2), (0.0, 0.2)),
@@ -2993,18 +3038,18 @@ CONTROLES_DO_DESENHO = "Luz e vibração"
 ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
     **ESTADO_DO_DESENHO,
     "aparelhos": [
-        {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "bateria": 80,
+        {"id": "ap-1", "nome": "Aparelho 1", "barra": 80, "estado": "ligado", "ligado": True, "bateria": 80,
          "forca": 0.7, "controles": [
              {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa", "icone": "lampada"},
              {"id": "cor", "tipo": "paleta", "valor": "magenta",
               "opcoes": [{"id": i, "cor": c, "rotulo": r}  # (noqa-acento)
                          for i, c, r in CORES_DO_DESENHO]}]},
-        {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "bateria": 45,
+        {"id": "ap-2", "nome": "Aparelho 2", "barra": 50, "estado": "ligado", "ligado": True, "bateria": 45,
          "forca": 0.3, "controles": [{"id": "luz", "tipo": "chave", "valor": False,
                                       "dica": "Acesa", "icone": "lampada"}]},
-        {"id": "ap-3", "nome": "Aparelho 3", "estado": "ligado", "ligado": True, "bateria": 62,
+        {"id": "ap-3", "nome": "Aparelho 3", "barra": 100, "estado": "ligado", "ligado": True, "bateria": 62,
          "forca": 0.5},
-        {"id": "ap-4", "nome": "Aparelho 4", "estado": "ligado", "ligado": False, "bateria": 18,
+        {"id": "ap-4", "nome": "Aparelho 4", "barra": 50, "estado": "ligado", "ligado": False, "bateria": 18,
          "forca": 0.0},
     ],
 }

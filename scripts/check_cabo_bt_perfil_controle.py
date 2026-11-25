@@ -279,6 +279,10 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                                     "serviço da extensão, não de um controle",
     "arrastar-a-opcao-da-modificacao": "o arrastar de um deslizante da extensão, no compasso de "
                                        "1/20 s — é do serviço da extensão, não de um controle",
+    "arrastar-a-barra-do-aparelho": "o arrastar da barra de um aparelho da extensão, no compasso "
+                                    "de 1/20 s — é do serviço da extensão, não de um controle",
+    "soltar-a-barra-do-aparelho": "o soltar da barra de um aparelho vai à extensão, que grava — "
+                                  "é do serviço da extensão, não de um controle",
     "soltar-o-livre-da-modificacao": "o soltar do controle livre zera o que a extensão toca — é "
                                      "do serviço da extensão",
     "mensagem-da-pagina-da-modificacao": "a mensagem da página própria vai só àquela extensão "

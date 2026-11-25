@@ -164,6 +164,12 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "arrastar-a-opcao-da-modificacao"):
         "ato: o arrastar de um deslizante vai à extensão (`mods.opcao`, 20 por segundo) "
         "e a extensão aplica na hora; quem grava é o soltar, no `guardar-opcao-da-modificacao`",
+    ("07-lancadores.html", "arrastar-a-barra-do-aparelho"):
+        "ato: o arrastar da barra de um aparelho vai só àquela extensão (`mods.acao` com o alvo e "
+        "`soltou` falso, 20 por segundo), e a extensão aplica na hora; nada se grava no Hefesto",
+    ("07-lancadores.html", "soltar-a-barra-do-aparelho"):
+        "ato: o soltar da barra de um aparelho vai à extensão (`mods.acao` com `soltou`), e quem "
+        "grava o valor é a extensão, no próprio arquivo; nenhuma escolha guardada muda no Hefesto",
     ("07-lancadores.html", "soltar-o-livre-da-modificacao"):
         "ato: o soltar da barra do controle livre vai à extensão com o valor final; nada fica "
         "guardado",

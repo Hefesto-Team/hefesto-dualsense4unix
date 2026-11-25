@@ -6658,8 +6658,10 @@ class IpcHandlersMixin:
 
         Sem ``alvo``, a ação é uma das declaradas para a janela; com ele (o ``id``
         de um aparelho), uma das ``aparelhos_acoes``, e ``valor`` (verdadeiro ou falso) é a chave
-        ``ligar``; ou um dos ``controles`` do aparelho (``_conferir_a_acao``). ``{enviada}`` é falso
-        sem a extensão na porta; a ação com ``responde`` volta ``{enviada, respondeu, resposta}``.
+        ``ligar``; ou um dos ``controles`` do aparelho (``_conferir_a_acao``); ou a ``barra``
+        dos aparelhos, com ``valor`` na faixa declarada e ``soltou`` (``_barra_do_aparelho``).
+        ``{enviada}`` é falso sem a extensão na porta; a ação com ``responde`` volta
+        ``{enviada, respondeu, resposta}``.
         """
         mod = self._mod_do_pedido(params)
         acao = params.get("acao")  # (noqa-acento)
@@ -6668,13 +6670,16 @@ class IpcHandlersMixin:
             raise ValueError("o pedido não diz qual ação")
         if alvo is not None and (not isinstance(alvo, str) or not 1 <= len(alvo) <= 40):
             raise ValueError("o alvo é o id de um aparelho, de 1 a 40 letras")
-        if valor is not None and not isinstance(valor, (bool, str)):
-            raise ValueError("o valor da ação é verdadeiro, falso ou o id de uma opção")
         achado = await self._manifesto_da_janela(mod)
         if achado is None:
             return {"enviada": False}
         manifesto, porta = achado
         geridos = manifesto.aparelhos_acoes
+        if alvo is not None and geridos is not None and geridos.barra is not None \
+                and acao == geridos.barra.id:
+            return _barra_do_aparelho(manifesto, porta, mod, alvo, valor, params.get("soltou"))
+        if valor is not None and not isinstance(valor, (bool, str)):
+            raise ValueError("o valor da ação é verdadeiro, falso ou o id de uma opção")
         declaradas = (geridos.acoes if geridos else []) if alvo is not None else manifesto.acoes
         conhecida = any(a.id == acao for a in declaradas)
         _conferir_a_acao(manifesto, porta, mod, alvo, acao, valor, conhecida)
@@ -6755,6 +6760,18 @@ class IpcHandlersMixin:
         except RecusaError as recusa:
             return {"enviada": False, "respondeu": False, "resposta": None,
                     "recusa": recusa.frase}
+
+
+def _barra_do_aparelho(manifesto: Any, porta: Any, mod: str, alvo: str, valor: Any,
+                       soltou: Any) -> dict[str, Any]:
+    """A barra do aparelho ``alvo``: o ``valor`` na faixa que o manifesto declara e o ``soltou``
+    (verdadeiro grava; falso é o arrastar, no compasso da porta)."""
+    barra = manifesto.aparelhos_acoes.barra
+    if not barra.valor_na_faixa(valor):
+        raise ValueError(f"o valor de «{barra.id}» vai de {barra.minimo:g} a {barra.maximo:g}")
+    if not isinstance(soltou, bool):
+        raise ValueError("o soltou da barra é verdadeiro ou falso")
+    return {"enviada": bool(porta.barra(mod, barra.id, alvo, float(valor), soltou=soltou))}
 
 
 def _conferir_a_acao(manifesto: Any, porta: Any, mod: str, alvo: str | None, acao: str,

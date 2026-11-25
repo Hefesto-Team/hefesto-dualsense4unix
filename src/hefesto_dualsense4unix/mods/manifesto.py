@@ -10,6 +10,7 @@ Toda recusa sai como :class:`ManifestoRecusadoError`, com UMA frase para a tela.
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -571,17 +572,53 @@ class Acao(BaseModel):
         return valor
 
 
+class BarraDoAparelho(BaseModel):
+    """A barra de cada aparelho gerido, na linha do nome dele no cartão: o valor é do aparelho e
+    vem no ``barra`` dele em ``acessorios.estado``. Arrastar e soltar chegam à extensão como a
+    ``extensao.acao`` de ``id``, com ``alvo``, ``valor`` (número da faixa) e ``soltou``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    rotulo: str = Field(min_length=1, max_length=20)
+    minimo: float
+    maximo: float
+    passo: float = Field(gt=0)
+    degraus: int | None = Field(default=None, ge=1, le=1000)
+    dica: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @field_validator("id")
+    @classmethod
+    def _chave(cls, valor: str) -> str:
+        if not _CHAVE_DE_LANCADOR.match(valor):
+            raise ValueError("id da barra do aparelho fora da forma de chave")
+        return valor
+
+    @model_validator(mode="after")
+    def _faixa_em_ordem(self) -> BarraDoAparelho:
+        if not self.minimo < self.maximo:
+            raise ValueError(f"a barra {self.id} dos aparelhos tem a faixa fora de ordem")
+        return self
+
+    def valor_na_faixa(self, valor: Any) -> bool:
+        """O ``valor`` é um número dentro da faixa da barra."""
+        return (not isinstance(valor, bool) and isinstance(valor, (int, float))
+                and math.isfinite(valor) and self.minimo <= valor <= self.maximo)
+
+
 class AcoesDosAparelhos(BaseModel):
     """Os aparelhos que a extensão devolve em ``acessorios.estado``, com uma ação por botão.
 
     A ação ``ligar`` é a chave do cartão (o ``ligado`` do aparelho); as outras são botões. Com
-    ``grupo``, a lista mora naquela aba da janela; sem ele, na coluna «Agora».
+    ``grupo``, a lista mora naquela aba da janela; sem ele, na coluna «Agora». A ``barra`` é a
+    de cada aparelho, no cartão dele: pede o ``grupo``.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
     acoes: list[Acao] = Field(min_length=1, max_length=ACOES_DO_APARELHO)
+    barra: BarraDoAparelho | None = None
 
     @model_validator(mode="after")
     def _sem_grupo_na_acao(self) -> AcoesDosAparelhos:
@@ -592,7 +629,16 @@ class AcoesDosAparelhos(BaseModel):
             raise ValueError("a ação do aparelho aparece com o aparelho e não declara pedida")
         if len({a.id for a in self.acoes}) != len(self.acoes):
             raise ValueError("ação repetida nos aparelhos")
+        if self.barra is not None and self.grupo is None:
+            raise ValueError("a barra dos aparelhos mora no cartão e pede o grupo")
+        if self.barra is not None and any(a.id == self.barra.id for a in self.acoes):
+            raise ValueError(f"a barra dos aparelhos repete o id da ação {self.barra.id}")
         return self
+
+    @property
+    def ids(self) -> tuple[str, ...]:
+        """Os ids das ações e o da barra: nenhum controle de aparelho os repete."""
+        return (*(a.id for a in self.acoes), *((self.barra.id,) if self.barra else ()))
 
 
 class ControlesDosAparelhos(BaseModel):
@@ -1240,6 +1286,7 @@ __all__ = [
     "Acao",  # (noqa-acento)
     "AcoesDosAparelhos",
     "AparelhoDeclarado",
+    "BarraDoAparelho",
     "Manifesto",
     "ManifestoRecusadoError",
     "ModoDeAba",

@@ -788,7 +788,8 @@ def _aparelho(bruto: Any, ids_das_acoes: frozenset[str] = frozenset()) -> dict[s
     """``{nome, tipo, estado, bateria, forca}``; o texto solto (o formato antigo) é só o nome.
 
     ``id`` (até 40 letras, o que a ação do aparelho leva como ``alvo``), ``ligado`` (a chave do
-    cartão) e ``controles`` (os que só este aparelho tem) só saem quando a extensão os manda.
+    cartão), ``barra`` (o valor da barra do cartão, um número) e ``controles`` (os que só este
+    aparelho tem) só saem quando a extensão os manda.
     ``ids_das_acoes`` são os das ações dos aparelhos, que nenhum controle repete.
     """
     if isinstance(bruto, str):
@@ -815,6 +816,10 @@ def _aparelho(bruto: Any, ids_das_acoes: frozenset[str] = frozenset()) -> dict[s
         if not isinstance(bruto["ligado"], bool):
             raise _recusa_do_estado("o ligado de um aparelho é verdadeiro ou falso.")
         saida["ligado"] = bruto["ligado"]
+    if bruto.get("barra") is not None:
+        if "id" not in saida or not _numero(bruto["barra"]):
+            raise _recusa_do_estado("a barra de um aparelho é um número, no aparelho com id.")
+        saida["barra"] = float(bruto["barra"])
     if bruto.get("controles") is not None:
         saida["controles"] = _controles_do_aparelho(bruto["controles"], "id" in saida,
                                                     ids_das_acoes)
@@ -1251,6 +1256,7 @@ class Porta:
         self._series: dict[str, int] = {}
         self._livres: dict[tuple[str, str], _Compasso] = {}
         self._opcoes_vivas: dict[tuple[str, str], _Compasso] = {}
+        self._barras: dict[tuple[str, str], _Compasso] = {}
         self._movimento_enviado: dict[str | None, tuple[_Movimento | None, float, Any, Any]] = {}
         self._vivas_de_antes: frozenset[str] = frozenset()
         self._mensagens: dict[str, deque[float]] = {}
@@ -2320,6 +2326,31 @@ class Porta:
         if valor is not None:
             dados["valor"] = valor
         return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)
+
+    def barra(self, mod_id: str, barra_id: str, alvo: str, valor: float, *,
+              soltou: bool) -> bool:
+        """A barra de um aparelho: ``extensao.acao`` com o ``alvo``, o ``valor`` e o ``soltou``,
+        só para ``mod_id``. O arrastar vai no compasso do ``livre`` (o valor mais novo a cada
+        ``1 / LIVRE_POR_SEGUNDO`` s); o soltar sai na hora, cancela o que esperava e leva o valor
+        final, que a extensão grava. ``False`` sem a extensão na porta."""
+        if not self._conexoes_de(mod_id):
+            return False
+        numero: int | float = int(valor) if float(valor).is_integer() else float(valor)
+        dados: dict[str, Any] = {"mod": mod_id, "acao": barra_id, "alvo": alvo,  # (noqa-acento)
+                                 "valor": numero, "soltou": soltou}
+        chave = (mod_id, f"{barra_id}:{alvo}")
+        if soltou:
+            compasso = self._barras.pop(chave, None)
+            if compasso is not None:
+                compasso.cancelar()
+            return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)
+        compasso = self._barras.setdefault(chave, _Compasso())
+        compasso.pendente = dados
+        if compasso.relogio is None:
+            compasso.relogio = asyncio.get_running_loop().call_later(
+                1.0 / LIVRE_POR_SEGUNDO, self._fim_do_compasso, chave, self._barras,
+                EVENTO_DA_ACAO)
+        return True
 
     async def acao_com_resposta(self, mod_id: str, acao: str, *, alvo: str | None = None,
                                 valor: bool | str | None = None) -> dict[str, Any]:

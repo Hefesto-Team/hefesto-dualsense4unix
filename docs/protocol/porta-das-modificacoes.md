@@ -732,7 +732,14 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com
   `grupo`, a lista mora naquela aba, um cartão por aparelho; sem ele, na coluna «Agora», uma linha por aparelho,
   e então o `agora` tem de listar `aparelhos`, senão o manifesto é recusado. O aparelho sem `id` aparece como
-  antes, sem chave nem botão.
+  antes, sem chave nem botão. Desde 25/11/2026, `aparelhos_acoes` aceita a `barra`, com `id`, `rotulo`, `minimo`,
+  `maximo`, `passo`, `degraus` e `dica` (os dois últimos opcionais), uma barra por aparelho (o `id` é chave e não repete o de uma ação; o `rotulo` tem até
+  20 letras; a faixa em ordem; o `passo` acima de zero; os `degraus`, de 1 a 1000, dão o número ao lado, como
+  `16/20`). A barra mora no cartão, na linha do nome, entre a bateria e a chave, e pede o `grupo` (sem ele, recusa o
+  manifesto). O valor de cada aparelho vem no `barra` dele no `acessorios.estado` (um número, só no aparelho com
+  `id`; outra coisa recusa o estado), e o aparelho sem ele não ganha a barra. Arrastar e soltar chegam como
+  `extensao.acao` (abaixo); a janela mostra o valor pedido até o estado seguinte, e então o que a extensão
+  publicou. Entra na mesma `api` 2; o Hefesto de antes recusa o manifesto pelo campo.
 - **o tipo `livre`** de `opcoes[]`, um só por manifesto: o controle ao vivo, uma faixa fixa no pé da janela,
   com o rastro dos últimos 10 s. Arrastar manda `extensao.livre`; «Gravar» guarda o arrastar como uma forma
   `[[força, segundos], …]` (até 16 passos, 160 s); o valor da opção são as formas gravadas, `{nome: passos}`,
@@ -773,7 +780,9 @@ A extensão recebe estes como eventos (`{"method": "evento", "params": {"topico"
   janela) e `valor` vem só na chave `ligar` (`true` liga) e nos `controles` do aparelho: a `acao` é o `id` do
   controle, e o `valor`, o pedido (a chave, `true` ou `false`; a paleta e a escolha, o `id` da opção). Na ação
   com `responde: true`, os `dados` levam também o `id` da vez, e a extensão responde por
-  `extensao.resposta {para: id, dados}`, em até 1 s e uma vez só, como na página;
+  `extensao.resposta {para: id, dados}`, em até 1 s e uma vez só, como na página. Na `barra` dos aparelhos, a
+  `acao` é o `id` da barra, o `valor` é o número da faixa e `soltou` diz se é o soltar (grava) ou o arrastar (vale
+  na hora, sem gravar); o arrastar sai no compasso de 20 por segundo, e o soltar sai na hora, por último;
 - `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou, modo?}`: no máximo 20 por segundo. O primeiro
   arrastar abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora,
   fora do compasso, e leva o valor final. `modo` vem só no `livre` com `modos`, e diz o que fazer ao soltar;
@@ -781,7 +790,8 @@ A extensão recebe estes como eventos (`{"method": "evento", "params": {"topico"
   dele, no mesmo compasso de 20 por segundo. Não grava: o soltar grava no `opcoes.json`, e a extensão aplica o
   valor ao vivo até ler o arquivo de novo.
 
-A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?}` (volta `{enviada}`) e
+A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?, soltou?}` (volta `{enviada}`; `soltou` só
+na `barra`, com o `valor` dentro da faixa declarada) e
 `mods.livre {mod, id, valor, soltou, modo?}` (volta `{enviado}`; `modo` só no `livre` com `modos`, e sem ele
 vale `"soltar"`) e `mods.opcao {mod, id, valor}` (volta `{enviado}`); os três voltam falso quando a extensão não está
 conectada, e a janela recusa dizendo que a extensão não está rodando. O serviço recusa (`-32003`, com a frase) a ação

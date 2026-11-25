@@ -154,6 +154,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import logging
+import math
 import pathlib
 import re
 import sys
@@ -2977,9 +2978,9 @@ def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
     """O ``acessorios.estado`` que a janela desenha: com a coluna «Agora», com aparelhos ou com
     os controles deles, com a chave «Memória», com uma opção que aparece com ``@presente`` ou com
     uma ação ``pedida``."""
-    return (_AGORA.agora() if _MEXIDA.agora or manifesto.aparelhos_acoes
-            or manifesto.aparelhos_controles or _muda_com_o_estado(manifesto)
-            or any(a.pedida for a in manifesto.acoes) else None)
+    precisa = (_MEXIDA.agora or manifesto.aparelhos_acoes or manifesto.aparelhos_controles
+               or _muda_com_o_estado(manifesto) or any(a.pedida for a in manifesto.acoes))
+    return _BARRAS.no_estado(_MEXIDA.mod, _AGORA.agora()) if precisa else None
 
 
 def _muda_com_o_estado(manifesto: Any) -> bool:
@@ -3089,8 +3090,11 @@ def _aparelhos_da_janela(manifesto: Any) -> exp.AparelhosDaJanela | None:
     geridos = manifesto.aparelhos_acoes
     if geridos is None:
         return None
+    b = geridos.barra
+    barra = (exp.BarraDaJanela(b.id, b.rotulo, b.minimo, b.maximo, b.passo, b.degraus or 0,
+                               b.dica or "", _BARRAS.vez) if b is not None else None)
     return exp.AparelhosDaJanela(tuple(_acao_da_janela(a) for a in geridos.acoes),
-                                 geridos.grupo or "")
+                                 geridos.grupo or "", barra)
 
 
 def _pecas_da_janela(manifesto: Any, mod_id: str) -> dict[str, Any]:
@@ -3128,7 +3132,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     manifesto = item.manifesto if item else None
     if item is None or manifesto is None:
         return carga
-    mod_id, estado, blocos = _MEXIDA.mod, _AGORA.agora(), carga["blocos"]
+    mod_id, blocos = _MEXIDA.mod, carga["blocos"]
+    estado = _BARRAS.no_estado(mod_id, _AGORA.agora())
     aparelhos = _aparelhos_da_janela(manifesto)
     em_curso = _VIVA.esperando(mod_id, estado)
     armada = _armada_de(mod_id)
@@ -3137,7 +3142,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
                          bool(aba_cc) and aba_cc == aparelhos.grupo)
               if aparelhos else None)
     if gestao and gestao.aparelhos.grupo:
-        blocos["#mod-aparelhos"] = exp.aparelhos_geridos_html(gestao)
+        if not _BARRAS.sob_o_dedo(mod_id):
+            blocos["#mod-aparelhos"] = exp.aparelhos_geridos_html(gestao)
     elif gestao and _MEXIDA.agora:
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
@@ -3536,12 +3542,137 @@ def arrastar_a_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any],
     O serviço segura em 20 por segundo; o que chega fora de ordem cai aqui."""
     _MEXIDA.armada = ()
     mod_id, opcao_id = _partes_do_clique(o, exp.GESTO_DA_OPCAO_VIVA, 2)
-    try:
-        valor = float(str(o.get("valor")))
-    except ValueError:
+    valor = _valor_do_deslizante(o)
+    if valor is None:
         return {}
     _OPCOES_VIVAS.enviar(mod_id, opcao_id, valor, _numero(o.get("carimbo")), p)
     return {}
+
+
+BARRA_SOB_O_DEDO_S = 1.5
+
+
+class _Barras:
+    """A barra de cada aparelho entre o arrastar e o estado novo da extensão.
+
+    O arrastar segue a ordem do carimbo do evento, como o dos deslizantes; enquanto ele dura (até
+    ``BARRA_SOB_O_DEDO_S`` depois do último), o tique não repinta a lista dos aparelhos, e a barra
+    sob o dedo nunca é trocada. O soltar guarda o valor pedido até a extensão devolver um estado
+    novo (ou até ``TETO_DO_EM_CURSO_S``): a barra não volta ao valor de antes no meio do caminho.
+    ``vez`` sobe a cada soltar, e a barra se repinta com o que a extensão publica, mesmo quando
+    ele é o de antes (o soltar que não chegou)."""
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._ultimo: dict[tuple[str, str, str], float] = {}
+        self._mexida: dict[str, float] = {}
+        self._pedidos: dict[tuple[str, str, str], tuple[float, int, float]] = {}
+        self.vez = 0
+
+    def arrastar(self, mod: str, barra: str, alvo: str, valor: float, carimbo: float,
+                 ponte: Any) -> tuple[bool, str | None, Any] | None:
+        with self._trava:
+            chave = (mod, barra, alvo)
+            if carimbo <= self._ultimo.get(chave, float("-inf")):
+                return None
+            self._ultimo[chave] = carimbo
+            self._mexida[mod] = time.monotonic()
+            return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
+                METODO_DA_ACAO, mod=mod, acao=barra, alvo=alvo, valor=_inteiro_ou(valor),
+                soltou=False)
+
+    def soltar(self, mod: str, barra: str, alvo: str, valor: float, carimbo: float, serie: int,
+               ponte: Any) -> tuple[bool, str | None, Any]:
+        with self._trava:
+            chave = (mod, barra, alvo)
+            self._ultimo[chave] = max(self._ultimo.get(chave, float("-inf")), carimbo)
+            self._mexida.pop(mod, None)
+            self.vez += 1
+            resposta = ponte.chamar_com_o_corpo(
+                METODO_DA_ACAO, mod=mod, acao=barra, alvo=alvo, valor=_inteiro_ou(valor),
+                soltou=True)
+            ok, _motivo, corpo = resposta
+            if ok and isinstance(corpo, dict) and corpo.get("enviada") is True:
+                self._pedidos[chave] = (valor, serie, time.monotonic())
+            return resposta  # type: ignore[no-any-return]
+
+    def sob_o_dedo(self, mod: str) -> bool:
+        with self._trava:
+            return time.monotonic() - self._mexida.get(mod, float("-inf")) < BARRA_SOB_O_DEDO_S
+
+    def no_estado(self, mod: str, estado: dict[str, Any] | None) -> dict[str, Any] | None:
+        """O ``estado`` com o valor pedido em cada barra que espera a extensão; o pedido sai
+        quando o estado é novo (o ``serie`` passou o do soltar) ou no teto."""
+        serie = estado.get("serie") if isinstance(estado, dict) else None
+        with self._trava:
+            agora = time.monotonic()
+            self._pedidos = {
+                k: (v, s, t) for k, (v, s, t) in self._pedidos.items()
+                if agora - t < TETO_DO_EM_CURSO_S and not (isinstance(serie, int) and serie > s)}
+            pedidos = {a: v for (m, _b, a), (v, _s, _t) in self._pedidos.items() if m == mod}
+        if not pedidos or not isinstance(estado, dict):
+            return estado
+        aparelhos = [
+            {**ap, "barra": pedidos[ap["id"]]}
+            if isinstance(ap, dict) and ap.get("id") in pedidos else ap
+            for ap in estado.get("aparelhos") or []]
+        return {**estado, "aparelhos": aparelhos}
+
+
+def _inteiro_ou(valor: float) -> int | float:
+    return int(valor) if float(valor).is_integer() else valor
+
+
+_BARRAS = _Barras()
+
+
+def _valor_do_deslizante(o: dict[str, Any]) -> float | None:
+    """O ``valor`` de um deslizante da janela (o das opções e a barra de cada aparelho), ou
+    ``None`` quando não é um número finito."""
+    try:
+        valor = float(str(o.get("valor")))
+    except ValueError:
+        valor = math.nan
+    return valor if math.isfinite(valor) else None
+
+
+@gesto("07-lancadores.html", exp.GESTO_DA_BARRA_VIVA)
+def arrastar_a_barra_do_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O arrastar da barra de um aparelho, um gesto VIVO (a cada ``input``): a extensão aplica o
+    valor na hora naquele aparelho, e nada se grava; grava o soltar
+    (``soltar-a-barra-do-aparelho``). ``data-v`` é ``mod:barra:alvo``."""
+    _MEXIDA.armada = ()
+    mod_id, barra_id, alvo = _partes_do_clique(o, exp.GESTO_DA_BARRA_VIVA, 3)
+    valor = _valor_do_deslizante(o)
+    if valor is None or not (barra_id and alvo):
+        return {}
+    _BARRAS.arrastar(mod_id, barra_id, alvo, valor, _numero(o.get("carimbo")), p)
+    return {}
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_SOLTAR_A_BARRA)
+def soltar_a_barra_do_aparelho(ctx: Contexto, o: dict[str, Any],
+                               p: Any) -> dict[str, Any] | None:
+    """O soltar da barra de um aparelho (o ``change``): a extensão grava o valor daquele
+    aparelho, e a barra mostra o que a extensão publica no estado seguinte."""
+    if str(o.get("evento") or "") != "change":
+        return None
+    _MEXIDA.armada = ()
+    mod_id, barra_id, alvo = _partes_do_clique(o, exp.GESTO_DE_SOLTAR_A_BARRA, 3)
+    valor = _valor_do_deslizante(o)
+    if valor is None or not (barra_id and alvo):
+        raise RuntimeError("A barra não disse o valor. Nada foi enviado.")
+    antes = _AGORA.ler(mod_id, p) if _MEXIDA.mod == mod_id else None
+    serie = antes.get("serie") if isinstance(antes, dict) else None
+    ok, motivo, corpo = _BARRAS.soltar(mod_id, barra_id, alvo, valor,
+                                       _numero(o.get("carimbo")),
+                                       serie if isinstance(serie, int) else 0, p)
+    _AGORA.esquecer()
+    if not ok:
+        raise RuntimeError(motivo or "O serviço não respondeu. Nada foi enviado.")
+    if not (isinstance(corpo, dict) and corpo.get("enviada") is True):
+        raise RuntimeError(_nao_esta_rodando(mod_id))
+    return _a_pintura_agora(ctx)
 
 
 METODO_DA_MENSAGEM = "mods.mensagem"
@@ -3598,6 +3729,7 @@ def _tamanho_da_pagina(dados: Any) -> int:
 
 METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE, METODO_DA_OPCAO, METODO_DA_MENSAGEM}
 SEM_ECO = (*SEM_ECO, exp.GESTO_DA_ACAO, exp.GESTO_DO_LIVRE, exp.GESTO_DE_SOLTAR,
-           exp.GESTO_DA_OPCAO_VIVA, exp.GESTO_DA_PAGINA,
+           exp.GESTO_DA_OPCAO_VIVA, exp.GESTO_DA_BARRA_VIVA, exp.GESTO_DE_SOLTAR_A_BARRA,
+           exp.GESTO_DA_PAGINA,
            exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA, exp.GESTO_DO_MODO,
            exp.GESTO_DO_CANCELAR)

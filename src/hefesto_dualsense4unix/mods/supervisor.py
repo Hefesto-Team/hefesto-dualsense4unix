@@ -223,9 +223,9 @@ def _comandos_do_lancador(manifesto: Manifesto) -> tuple[str, ...]:
 
 
 def _acoes_dos_aparelhos(manifesto: Manifesto) -> tuple[str, ...]:
-    """Os ids das ``aparelhos_acoes``: a porta recusa o controle de aparelho que repete um deles."""
+    """Os ids das ``aparelhos_acoes`` e da ``barra``: o controle de aparelho não repete um deles."""
     geridos = manifesto.aparelhos_acoes
-    return tuple(a.id for a in geridos.acoes) if geridos else ()
+    return geridos.ids if geridos else ()
 
 
 def _subir_o_oom_score(alvo: int) -> None:
