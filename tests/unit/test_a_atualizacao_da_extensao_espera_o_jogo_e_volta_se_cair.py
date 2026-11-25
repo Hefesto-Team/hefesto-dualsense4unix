@@ -6,8 +6,9 @@ um dublê injetado no supervisor).
 
 MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
 
-- a pergunta do jogo tirada do ``_talvez_atualizar`` reprova
-  ``test_com_jogo_aberto_a_atualizacao_sozinha_espera_e_sem_jogo_abre``;
+- a pergunta do jogo tirada do ``atualizar_sozinha`` reprova
+  ``test_com_jogo_aberto_a_atualizacao_sozinha_espera_e_sem_jogo_abre``; feita também para a
+  extensão sem processo vivo, reprova ``test_so_a_extensao_com_processo_espera_o_jogo``;
 - a volta tirada do ``_cuidar`` reprova
   ``test_a_versao_nova_que_cai_ao_abrir_volta_para_a_anterior``;
 - a prova tirada do ``dar_por_provada`` reprova
@@ -64,12 +65,13 @@ def test_com_jogo_aberto_a_atualizacao_sozinha_espera_e_sem_jogo_abre(
             await _ate(lambda: _rodando(sup))
             _publicar(remoto, "0.2.0")
             sup._talvez_atualizar()
-            assert sup._atualizando is None, "a atualização abriu com jogo aberto"
+            assert sup._atualizando is not None
+            assert await sup._atualizando is False, "a atualização trocou com jogo aberto"
             assert ler_registro(lar.registro)["exemplo"].versao == "0.1.0"
             com_jogo[0] = False
             sup._talvez_atualizar()
             assert sup._atualizando is not None, "sem jogo, a atualização não abriu"
-            await sup._atualizando
+            assert await sup._atualizando is True
             assert ler_registro(lar.registro)["exemplo"].versao == "0.2.0"
         finally:
             await sup.parar()
@@ -85,9 +87,11 @@ def test_so_a_extensao_com_processo_espera_o_jogo(lar: Lugares, remoto: Path) ->
     async def corrida() -> None:
         await sup.reconciliar()
         try:
+            _publicar(remoto, "0.2.0")
             sup._talvez_atualizar()
-            assert sup._atualizando is not None, "a extensão sem processo esperou o jogo"
-            await sup._atualizando
+            assert sup._atualizando is not None
+            assert await sup._atualizando is True, "a extensão sem processo esperou o jogo"
+            assert ler_registro(lar.registro)["exemplo"].versao == "0.2.0"
         finally:
             await sup.parar()
 

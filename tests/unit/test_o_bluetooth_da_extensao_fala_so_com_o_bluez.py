@@ -13,7 +13,9 @@ MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
   ``test_o_filtro_do_bluez_nao_traz_o_que_desliga_ou_esquece`` e
   ``test_de_dentro_da_caixa_so_o_bluez_responde``;
 - o proxy tirado do ``_abrir`` reprova ``test_de_dentro_da_caixa_so_o_bluez_responde``;
-- a recusa tirada do ``_comecar`` reprova ``test_sem_o_proxy_a_extensao_com_bluetooth_recusa``.
+- a recusa tirada do ``_comecar`` reprova ``test_sem_o_proxy_a_extensao_com_bluetooth_recusa``;
+- o ``_soltar_o_proxy`` tirado da falha de abertura do ``_cuidar`` reprova
+  ``test_a_abertura_que_falha_depois_do_proxy_o_solta``.
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ import asyncio
 import json
 import os
 import shutil
+import sys
 import textwrap
 from pathlib import Path
 
@@ -171,6 +174,48 @@ def test_de_dentro_da_caixa_so_o_bluez_responde(
     assert "StartDiscovery" in metodos
     with pytest.raises(ProcessLookupError):
         os.kill(proxies[0], 0)
+
+
+_PROXY_DE_MENTIRA = textwrap.dedent('''\
+    #!{python}
+    import os, sys, time
+    fd = int(next(a for a in sys.argv if a.startswith("--fd="))[5:])
+    open({pid!r}, "w").write(str(os.getpid()))
+    os.write(fd, b"x")
+    time.sleep(600)
+''')
+
+
+def test_a_abertura_que_falha_depois_do_proxy_o_solta(curto: Path, lar: Lugares) -> None:
+    """D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ: a caixa que não abre leva o proxy."""
+    pasta = curto / "fonte-exemplo"
+    pasta.mkdir()
+    corpo = _manifesto(permissoes=["bluetooth"])  # (noqa-acento)
+    (pasta / "hefesto-mod.json").write_text(json.dumps(corpo), encoding="utf-8")
+    (pasta / "mod.py").write_text("import time\ntime.sleep(60)\n", encoding="utf-8")
+    instalar(str(pasta), lugares=lar)
+    _ligar_vendo("exemplo", lar)
+    marca = curto / "pid-do-proxy"
+    proxy = curto / "proxy-de-mentira"
+    proxy.write_text(_PROXY_DE_MENTIRA.format(python=sys.executable, pid=str(marca)),
+                     encoding="utf-8")
+    proxy.chmod(0o700)
+    sup_ = _supervisor(lar, bwrap=shutil.which("bwrap") or "/usr/bin/bwrap",
+                       proxy_dbus=str(proxy), systemd_run=str(curto / "sem-systemd-run"))
+
+    async def corrida() -> None:
+        await sup_.iniciar()
+        try:
+            await _ate(lambda: (e := sup_.estado_de("exemplo")) is not None
+                       and e.estado == "parou")
+            assert marca.exists(), "o proxy nem abriu: a falha veio antes dele"
+            assert sup_._vigiadas["exemplo"].proxy is None, "o proxy ficou aberto"
+            with pytest.raises(ProcessLookupError):
+                os.kill(int(marca.read_text()), 0)
+        finally:
+            await sup_.parar()
+
+    asyncio.run(corrida())
 
 
 def test_sem_o_proxy_a_extensao_com_bluetooth_recusa(curto: Path, lar: Lugares) -> None:

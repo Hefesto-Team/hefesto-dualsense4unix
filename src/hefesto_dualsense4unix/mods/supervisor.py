@@ -122,8 +122,7 @@ ESPERA_DA_VIGIA_S = 1.0
 
 FALTA_O_BWRAP = "Falta o bwrap: a extensão não abre sem a caixa."
 
-FALTA_O_PROXY_DO_BLUETOOTH = (
-    "Falta o xdg-dbus-proxy: a extensão com Bluetooth não abre sem o filtro do barramento.")
+FALTA_O_PROXY_DO_BLUETOOTH = "Falta o xdg-dbus-proxy: a extensão com Bluetooth não abre sem ele."
 
 SOQUETE_DO_SISTEMA_NA_CAIXA = "/run/dbus/system_bus_socket"
 
@@ -1805,9 +1804,7 @@ class Supervisor:
         """Abre a conferência da primeira extensão do git cujo intervalo passou.
 
         Uma por vez, numa tarefa à parte: o ``atualizar`` desliga a extensão viva e espera
-        a vigia pará-la, e a vigia é esta volta, que não pode esperar por ele. A extensão com
-        processo não se atualiza com jogo aberto: a pergunta é feita uma vez por volta e, com
-        jogo, a conferência da extensão volta na espera de depois de uma falha.
+        a vigia pará-la, e a vigia é esta volta, que não pode esperar por ele.
         """
         if self._atualizando is not None and not self._atualizando.done():
             return
@@ -1815,18 +1812,11 @@ class Supervisor:
         agora = time.monotonic()
         for mod_id in [m for m in self._proxima_conferencia if m not in registro]:
             self._proxima_conferencia.pop(mod_id, None)
-        com_jogo: bool | None = None
         for entrada in registro.values():
             if entrada.origem == "local" or not entrada.atualiza_sozinha:
                 continue
             if agora < self._proxima_conferencia.get(entrada.id, agora):
                 continue
-            if entrada.id in self._vigiadas:
-                if com_jogo is None:
-                    com_jogo = self._jogo_aberto()
-                if com_jogo:
-                    self._proxima_conferencia[entrada.id] = agora + self._espera_curta(entrada)
-                    continue
             self._atualizando = asyncio.create_task(
                 self.atualizar_sozinha(entrada), name="mods-atualizar-sozinha"
             )
@@ -1842,7 +1832,9 @@ class Supervisor:
 
         Devolve ``True`` quando o código trocou. Sem rede, sem novidade ou com a versão nova
         esperando o «Atualizar» (permissão nova, tag que deixou de ser a oficial), a extensão
-        fica na versão de agora, viva como estava.
+        fica na versão de agora, viva como estava. A extensão com processo vivo não troca com
+        jogo aberto (a pergunta roda fora do laço, só quando há commit novo): a conferência volta
+        na espera de depois de uma falha.
         """
         intervalo = max(float(entrada.intervalo_da_atualizacao_s), self.piso_da_atualizacao_s)
         espera = self._espera_curta(entrada)
@@ -1850,6 +1842,10 @@ class Supervisor:
         try:
             novo = await asyncio.to_thread(commit_novo, entrada, lugares=self.lugares)
             if novo is None:
+                return False
+            if entrada.id in self._vigiadas and await asyncio.to_thread(self._jogo_aberto):
+                logger.info("mods_atualizacao_espera_o_jogo", mod=entrada.id)
+                self._proxima_conferencia[entrada.id] = time.monotonic() + espera
                 return False
             feito = await asyncio.to_thread(
                 atualizar, entrada.id, lugares=self.lugares, chaves=self.chaves, sozinha=True
@@ -1983,6 +1979,7 @@ class Supervisor:
             try:
                 processo = await self._abrir(vigiada, manifesto, diario)
             except (OSError, ValueError) as exc:
+                await self._soltar_o_proxy(vigiada)
                 self._marcar(mod_id, EstadoDaModificacao(
                     "parou", caixa=caixa, motivo=f"Não abriu: {exc}", quedas=quedas))
                 return
