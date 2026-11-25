@@ -396,13 +396,18 @@ def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str], *,
     """Uma linha ``[gesto]`` com os caminhos que o gesto vai tocar, antes de tocá-los.
 
     O canário da suíte lê o diário do lar de verdade e reconhece por essa linha a escrita de
-    quem usa. Sem ``tocados``, os caminhos são o código e os dados de cada id e o registro; com
-    ele, só os que o gesto toca. A volta passa do teto para o ``.1``; o diário que não abre nunca
-    barra o gesto.
+    quem usa. Sem ``tocados``, os caminhos são o código e os dados de cada id e o registro, mais
+    a guarda da versão de antes quando o gesto é atualizar ou a guarda já existe; com ele, só os
+    que o gesto toca. A volta passa do teto para o ``.1``; o diário que não abre nunca barra o
+    gesto.
     """
     if tocados is None:
-        caminhos = [str(p) for mod_id in ids for p in (
-            lg.codigo / mod_id, lg.dados / mod_id, lg.pasta_do_diario(mod_id))]
+        caminhos = []
+        for mod_id in ids:
+            guarda = _guarda_do_codigo(lg.codigo / mod_id)
+            caminhos += [str(p) for p in (
+                lg.codigo / mod_id, *([guarda] if verbo == "atualizar" or guarda.exists() else []),
+                lg.dados / mod_id, lg.pasta_do_diario(mod_id))]
         caminhos.append(str(lg.registro))
     else:
         caminhos = [str(p) for p in tocados]
