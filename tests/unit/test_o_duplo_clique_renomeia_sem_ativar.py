@@ -9,10 +9,12 @@ disco de um lar de mentira, «Pragmata» valendo. Duplo clique em «Sackboy»:
    o piloto adia a reescrita do `<tbody>` que tem campo de texto em edição, e o campo fica com o
    foco e o texto;
 3. digitar e Enter manda o `perfis.renomear` com o valor, e a lista traz o nome novo;
-4. o clique simples no nome continua ativando, passado o intervalo.
+4. o clique simples no nome continua ativando, passado o intervalo do duplo clique DO SISTEMA
+   (`gtk-double-click-time`, o que o WebKit usa para contar o segundo clique), e não antes.
 
 MORDIDAS: tirar o `campo_em_edicao` do laço de `blocos` do `hefesto_vivo.py` reprova o 2; tirar o
-ouvinte de `click` em captura do roteiro de `aba10.py` reprova o 1.
+ouvinte de `click` em captura do roteiro de `aba10.py` reprova o 1; a espera fixa de 400 ms no
+lugar do intervalo do sistema reprova o 4.
 """
 from __future__ import annotations
 
@@ -30,12 +32,14 @@ exigir_gi_real("o duplo clique da aba Perfis")
 
 from tests.unit.janela_aberta_comum import (
     _correr,
+    _gtk,
     publicar_as_de_hoje,
 )
 
 PAGINA = "10-perfis.html"
 LISTA = 'tbody[data-hef="perfis.lista"]'
-INTERVALO_S = 0.4
+DUPLO_CLIQUE_DO_SISTEMA_MS = 1000
+AINDA_NO_INTERVALO_S = 0.7
 ESPERA_S = 2.0
 
 DISPARA_O_DUPLO_CLIQUE = """
@@ -178,7 +182,7 @@ def corrida(publicado_de_hoje: pathlib.Path,
             piloto.ponte.rodar(o_clique_no_nome("Sackboy remasterizado"))
             return True
         if "clicou" not in marcos:
-            if agora - marcos["renomeou"] < INTERVALO_S / 2:
+            if agora - marcos["renomeou"] < AINDA_NO_INTERVALO_S:
                 marcos["antes_do_intervalo"] = [g.get("gesto") for g in piloto.gestos]
                 return True
             if agora - marcos["renomeou"] < ESPERA_S:
@@ -187,14 +191,20 @@ def corrida(publicado_de_hoje: pathlib.Path,
             marcos["clicou"] = agora
         return False
 
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setenv("XDG_CONFIG_HOME", str(raiz))
-        _perfis_no_disco()
-        fora = _correr(publicado_de_hoje, PAGINA, 1, roteiro,
-                       teto_s=90.0, tempo_real=True)
-        from hefesto_dualsense4unix.profiles import loader
+    ajustes = _gtk().Settings.get_default()
+    do_sistema = ajustes.get_property("gtk-double-click-time")
+    ajustes.set_property("gtk-double-click-time", DUPLO_CLIQUE_DO_SISTEMA_MS)
+    try:
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setenv("XDG_CONFIG_HOME", str(raiz))
+            _perfis_no_disco()
+            fora = _correr(publicado_de_hoje, PAGINA, 1, roteiro,
+                           teto_s=90.0, tempo_real=True)
+            from hefesto_dualsense4unix.profiles import loader
 
-        no_disco = sorted(p.name for p in loader.load_all_profiles())
+            no_disco = sorted(p.name for p in loader.load_all_profiles())
+    finally:
+        ajustes.set_property("gtk-double-click-time", do_sistema)
     return SimpleNamespace(marcos=marcos, fora=fora, no_disco=no_disco)
 
 
@@ -233,6 +243,6 @@ def test_o_clique_simples_no_nome_continua_ativando_passado_o_intervalo(
     m = corrida.marcos
     assert "depois_do_intervalo" in m, "o roteiro nunca chegou ao clique simples"
     assert "selecionar" not in m["antes_do_intervalo"], (
-        "o clique no nome ativou antes do intervalo do duplo clique")
+        "o clique no nome ativou antes do intervalo do duplo clique do sistema")
     assert "selecionar" in m["depois_do_intervalo"], (
         f"o clique simples no nome deixou de ativar: {m['depois_do_intervalo']}")

@@ -87,6 +87,17 @@ SELETOR_DO_DONO: str
 
 CHAVES_QUE_O_VIVO_RECUSA = ("blocos", "fita", "recado", "recados")
 
+
+def _o_duplo_clique_do_sistema() -> str:
+    """O JavaScript que dá à página o intervalo do duplo clique do sistema, em ms.
+
+    É o `gtk-double-click-time` que o WebKit usa para contar o segundo clique: a aba que espera o
+    duplo clique antes de agir (o nome na aba Perfis) espera o mesmo tempo que quem usa ajustou.
+    """
+    ajustes = Gtk.Settings.get_default()
+    ms = int(ajustes.get_property("gtk-double-click-time")) if ajustes is not None else 0
+    return f"(window.__hef = window.__hef || {{}}).duploCliqueMs = {ms};"
+
 BOOTSTRAP = r"""
 (function(){
   window.__hef = window.__hef || {};
@@ -2290,6 +2301,7 @@ class Piloto:
                 self._leu_virgem(pagina, valor, erro)
 
             self.ponte.perguntar(LER_CAMPOS, retratou)
+        self.ponte.rodar(_o_duplo_clique_do_sistema())
         self.ponte.perguntar(BOOTSTRAP, self._instalado)
 
     def _dica_instalada(self, valor: Any, erro: Any) -> None:

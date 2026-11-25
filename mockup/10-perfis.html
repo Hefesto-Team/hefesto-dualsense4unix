@@ -492,7 +492,7 @@
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
   .tab td .renome{width:100%;box-sizing:border-box;height:22px;font:inherit;padding:0 6px;
                   border:1px solid var(--purple);border-radius:5px;background:var(--app-bg);color:var(--fg)}
-  .tab td .renome.recusado{border-color:var(--orange)}
+  .tab td .renome.recusado{border-color:var(--orange);outline:1px solid var(--orange)}
   .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
@@ -706,7 +706,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Um perfil guarda tudo que você ajustou nas abas">Perfis</span>
       </div>
-      <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"><span data-hef="perfis.desfecho"></span></div>
+      <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe" role="alert"><span data-hef="perfis.desfecho"></span></div>
       <div class="quadro-corpo">
         <div class="perfis">
 
@@ -1180,6 +1180,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     }, false);
 
     var INTERVALO_DO_DUPLO_CLIQUE = 400;
+    function intervalo_do_duplo_clique(){
+      var ms = window.__hef && window.__hef.duploCliqueMs;
+      return ms > 0 ? ms : INTERVALO_DO_DUPLO_CLIQUE;
+    }
     var esperando = null, liberado = false;
     function celula_do_nome(alvo){
       return alvo && alvo.closest ? alvo.closest('td[data-hef="perfis.linha.nome"]') : null;
@@ -1211,7 +1215,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       esperando = setTimeout(function(){
         esperando = null;
         clicar_na_linha(era);
-      }, INTERVALO_DO_DUPLO_CLIQUE);
+      }, intervalo_do_duplo_clique());
     }, true);
 
     document.addEventListener('dblclick', function(ev){
@@ -1255,15 +1259,21 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           if(td.contains(campo) && campo.dataset.enviado !== '1') td.textContent = guarda.textContent;
         }, 0);
       });
+      var pendente = false;
       var olho = new MutationObserver(function(){
         if(!td.contains(campo)){ olho.disconnect(); return; }
-        if(campo.classList.contains('hef-recusou')){
-          if(campo.classList.contains('recusado')) return;
+        var classes = campo.classList;
+        if(classes.contains('hef-em-voo')){ pendente = true; return; }
+        if(!pendente) return;
+        if(classes.contains('hef-recusou')){
+          pendente = false;
           delete campo.dataset.enviado;
-          campo.classList.add('recusado');
+          classes.add('recusado');
+          campo.setAttribute('aria-invalid', 'true');
           campo.focus();
           campo.select();
-        } else if(campo.classList.contains('hef-deu-certo')){
+        } else if(classes.contains('hef-deu-certo')){
+          pendente = false;
           olho.disconnect();
           setTimeout(function(){ if(td.contains(campo)) td.textContent = guarda.textContent; }, 800);
         }

@@ -9,7 +9,8 @@ laranja e a faixa diz o motivo; corrigido o nome, o perfil é renomeado.
 
 MORDIDAS: tirar a pergunta do esquema do `perfis_renomear` reprova o primeiro e o da tela; voltar o
 `model_copy` reprova o segundo (o perfil gravado não relê); tirar o observador do campo do
-`ROTEIRO` de `aba10.py` reprova o da tela.
+`ROTEIRO` de `aba10.py` reprova o da tela; o observador que só reage à primeira recusa reprova o
+da segunda.
 """
 from __future__ import annotations
 
@@ -77,6 +78,7 @@ LE_A_TELA = """
     real: document.querySelector('@LISTA@').dataset.hefReal === '1',
     aberto: !!c, foco: !!c && document.activeElement === c, valor: c ? c.value : '',
     recusado: !!c && c.classList.contains('recusado'),
+    invalido: !!c && c.getAttribute('aria-invalid') === 'true',
     borda_laranja: !!c && getComputedStyle(c).borderTopColor === laranja,
     faixa: faixa.textContent.trim(), faixa_acesa: faixa.classList.contains('on'),
     faixa_laranja: getComputedStyle(faixa).color === laranja,
@@ -211,6 +213,11 @@ def corrida(tmp_path_factory: pytest.TempPathFactory) -> SimpleNamespace:
             return True
         if agora - marcos["ruim"] < ESPERA_S or not le(piloto, "recusado"):
             return True
+        if "ruim_de_novo" not in marcos:
+            digita(piloto, "Meu..jogo", "ruim_de_novo")
+            return True
+        if agora - marcos["ruim_de_novo"] < ESPERA_S or not le(piloto, "recusado_de_novo"):
+            return True
         if "bom" not in marcos:
             if "rolou" not in marcos:
                 marcos["rolou"] = agora
@@ -241,10 +248,17 @@ def test_o_campo_fica_aberto_com_a_borda_laranja_e_a_faixa_diz_o_motivo(
     assert "corrigido" in m, "o roteiro nunca chegou à correção"
     tela = m["recusado"]
     assert tela["aberto"] and tela["foco"] and tela["valor"] == "Jogo 1/2", tela
-    assert tela["recusado"] and tela["borda_laranja"], tela
+    assert tela["recusado"] and tela["borda_laranja"] and tela["invalido"], tela
     assert tela["faixa"] == schema.FRASE_DO_NOME_COM_BARRA, tela
     assert tela["faixa_acesa"] and tela["faixa_laranja"], tela
     assert "Sackboy" in tela["nomes"], "o perfil saiu da lista"
+
+
+def test_a_segunda_recusa_devolve_o_foco_ao_campo(corrida: SimpleNamespace) -> None:
+    """D-1911-O-NOME-QUE-NAO-SERVE-SE-RECUSA-ANTES-DE-RENOMEAR: cada recusa devolve o foco."""
+    tela = corrida.marcos["lido"]["recusado_de_novo"]
+    assert tela["aberto"] and tela["foco"] and tela["valor"] == "Meu..jogo", tela
+    assert tela["recusado"] and tela["invalido"], tela
 
 
 def test_corrigido_o_nome_o_perfil_e_renomeado_e_a_faixa_se_apaga(
