@@ -256,17 +256,17 @@
       "universo": 440
     },
     "tamanho": {
-      "data": "2026-11-24",
+      "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1318877,
+      "piso": 1319270,
       "por_item": {
-        "docs": 107993,
+        "docs": 107995,
         "scripts": 116818,
-        "src": 332299,
-        "tests": 761767
+        "src": 332393,
+        "tests": 762064
       },
-      "razao": "tamanho: +53 linhas (1318824 -> 1318877), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo c95a4c47c3a4",
+      "razao": "tamanho: +393 linhas (1318877 -> 1319270), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU; registrado no fecho, topo 01ffab78ecf7",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2499,10 +2499,16 @@
           "de": 1318824,
           "para": 1318877,
           "razao": "tamanho: +53 linhas (1318824 -> 1318877), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo c95a4c47c3a4"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1318877,
+          "para": 1319270,
+          "razao": "tamanho: +393 linhas (1318877 -> 1319270), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU; registrado no fecho, topo 01ffab78ecf7"
         }
       ],
       "unidade": "linhas",
-      "universo": 3681
+      "universo": 3682
     }
   }
 }
