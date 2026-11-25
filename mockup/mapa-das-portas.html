@@ -1109,7 +1109,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     var onde = (reg === "hub")
       ? "pende do hub, então ele <b>está no hub</b>"
       : "não pende do hub, então ele <b>está direto no gabinete</b>";
-    return abre + "O caminho <code>" + m.agora + "</code> " + onde
+    return abre + "O caminho <code>" + emAtributo(m.agora) + "</code> " + onde
          + ". Falta marcar a entrada: clique nele e depois na entrada certa.</span></li>";
   }
 
@@ -1240,7 +1240,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       } else if (j) { estado = j.v; if (j.v !== "fora") { vered = j.txt; porque = j.porque; } }
     }
 
-    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + " vazia";
+    var titulo = emAtributo(ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + " vazia");
     h += '<div class="soquete" data-soquete="' + porta.n + '"><span class="num">' + porta.n + "</span>"
       + '<button class="plug' + (porta.usb === 3 ? " v3" : "") + '" data-porta="' + porta.n + '"'
       + (estado ? ' data-v="' + estado + '"' : "") + problema
@@ -1254,17 +1254,17 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       h += '<button class="ap-btn nome" data-ap-abre="' + porta.n + '"'
         + ((doProduto() ? GRAVA.indexOf(String(porta.n)) !== -1 : true) ? ' draggable="true"' : "")
         + ' style="color:' + ap.cor + '" title="Abrir o painel de ' + emAtributo(rotuloDoAparelho(ap))
-        + '">' + emAtributo(rotuloDoAparelho(ap)) + '</button><span class="caminho">' + (caminhoDe(ap.id) || "—") + "</span>";
+        + '">' + emAtributo(rotuloDoAparelho(ap)) + '</button><span class="caminho">' + emAtributo(caminhoDe(ap.id) || "—") + "</span>";
       if (vered) h += '<span class="veredito ' + estado + '">' + vered + "</span>";
       if (porque) h += '<span class="porque">' + frase1(porque) + "</span>";
     } else if (vered) {
-      h += '<span class="veredito ' + estado + '">' + vered + '</span><span class="porque">' + frase1(porque) + "</span>";
+      h += '<span class="veredito ' + estado + '">' + vered + '</span><span class="porque">' + emAtributo(frase1(porque)) + "</span>";
     } else {
       h += '<span class="vazio">Vazia</span>';
     }
     if ((DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") || HUB_LIDO[porta.n]) h += '<span class="decl">Hub</span>';
     h += "</span></div>";
-    if (porta.filho) h += '<div class="filho"><div class="cabo">↳ ' + porta.filho.cabo + "</div>" + soqueteHTML(porta.filho, ctx) + "</div>";
+    if (porta.filho) h += '<div class="filho"><div class="cabo">↳ ' + emAtributo(porta.filho.cabo) + "</div>" + soqueteHTML(porta.filho, ctx) + "</div>";
     return h;
   }
 
@@ -1894,14 +1894,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           + '<ol class="receita">'
           + mudou.map(function (m) {
               var reconhecido = !!m.entradaAgora;
-              return "<li><div><h4>" + m.ap.tipo + " · " + m.ap.nome
+              return "<li><div><h4>" + emAtributo(m.ap.tipo + " · " + m.ap.nome)
                 + (reconhecido ? "" : "  ·  em entrada não declarada") + "</h4><ul>"
                 + '<li><span class="selo medido">medido</span><span>'
-                + (m.antes ? "Estava em <code>" + m.antes + "</code>"
-                    + (m.entradaAntes ? " (entrada <b>" + m.entradaAntes + "</b>)" : "")
+                + (m.antes ? "Estava em <code>" + emAtributo(m.antes) + "</code>"
+                    + (m.entradaAntes ? " (entrada <b>" + emAtributo(m.entradaAntes) + "</b>)" : "")
                     + ", agora está em " : "Agora está em ")
-                + "<code>" + m.agora + "</code>"
-                + (reconhecido ? " (entrada <b>" + m.entradaAgora + "</b>)" : "") + ".</span></li>"
+                + "<code>" + emAtributo(m.agora) + "</code>"
+                + (reconhecido ? " (entrada <b>" + emAtributo(m.entradaAgora) + "</b>)" : "") + ".</span></li>"
                 + linhaDoAchado(m, reconhecido)
                 + "</ul></div></li>";
             }).join("")
@@ -1960,13 +1960,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               return '<button class="chip pend" data-ap="' + x.ap.id + '"' + ' data-dica="Clique e marque a entrada onde ele está"'
                 + (segurando === x.ap.id ? ' data-segurando="1"' : "") + ">"
                 + '<i class="marca" style="background:' + x.ap.cor + '"></i>'
-                + '<span class="txt"><b>' + x.ap.tipo + "</b><span>" + x.caminho + "</span></span></button>";
+                + '<span class="txt"><b>' + emAtributo(x.ap.tipo) + "</b><span>" + emAtributo(x.caminho) + "</span></span></button>";
             }).join("")
           + "</div>"
           + "</div>";
       }
       return '<div><div class="face-cab"><h3>' + emAtributo(f.titulo || f.nome) + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
-        + (f.diverge ? '<p class="diverge">' + f.diverge + "</p>" : "")
+        + (f.diverge ? '<p class="diverge">' + emAtributo(f.diverge) + "</p>" : "")
         + '<div class="rolar"><div class="chapa ' + f.forma + '">' + f.portas.map(function (p) { return soqueteHTML(p, ctx); }).join("") + "</div></div>"
         + (f.leitura && modo !== "ideal"
             ? '<p class="leitura-da-maquina">' + f.leitura.map(emAtributo).join(" · ") + "</p>" : "")

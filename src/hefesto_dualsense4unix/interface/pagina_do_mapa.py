@@ -5675,6 +5675,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DO_MAPA_SEM_LEITURA,
     *EDICOES_DA_LETRA_DA_CASA,
     *EDICOES_DO_PAINEL_DA_ENTRADA,
+    *EDICOES_DO_NOME_DO_APARELHO,
 )
 
 
@@ -6381,6 +6382,150 @@ EDICOES_DO_PAINEL_DA_ENTRADA: tuple[Edicao, ...] = (
             '25/11/2026, O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO-01: no ex'
             'emplo o «Mover» troca pelo mesmo `moverPara` do arrasto; no produto quem'
             ' grava é o gesto `entrada-trocar`.'
+        ),
+    ),
+)
+
+EDICOES_DO_NOME_DO_APARELHO: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '    var titulo = ap ? ap.tipo + " — " + ap.nome : rotulo'
+            'De(porta.n) + " vazia";\n'
+        ),
+        depois=(
+            '    var titulo = emAtributo(ap ? ap.tipo + " — " + ap.no'
+            'me : rotuloDe(porta.n) + " vazia");\n'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): o título do soquete, com o nome do aparelho, vai escapado ao `a'
+            'ria-label` e ao `title`.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '\'</span><span class="porque">\' + frase1(porque) + "</spa'
+            'n>";\n'
+        ),
+        depois=(
+            '\'</span><span class="porque">\' + emAtributo(frase1(porqu'
+            'e)) + "</span>";\n'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): o porquê da entrada vazia vai escapado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '<span class="caminho">\' + (caminhoDe(ap.id) || "—") + "<'
+            '/span>";'
+        ),
+        depois=(
+            '<span class="caminho">\' + emAtributo(caminhoDe(ap.id) ||'
+            ' "—") + "</span>";'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): o caminho lido vai escapado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '<div class="cabo">↳ \' + porta.filho.cabo + "</div>"'
+        ),
+        depois=(
+            '<div class="cabo">↳ \' + emAtributo(porta.filho.cabo) + "'
+            '</div>"'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): o cabo declarado vai escapado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            'return "<li><div><h4>" + m.ap.tipo + " · " + m.ap.nome\n'
+        ),
+        depois=(
+            'return "<li><div><h4>" + emAtributo(m.ap.tipo + " · " + '
+            'm.ap.nome)\n'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): a lista do reexame escreve o tipo e o nome do aparelho escapado'
+            's.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '                + (m.antes ? "Estava em <code>" + m.ante'
+            's + "</code>"\n'
+            '                    + (m.entradaAntes ? " (entrada <b>" '
+            '+ m.entradaAntes + "</b>)" : "")\n'
+            '                    + ", agora está em " : "Agora está e'
+            'm ")\n'
+            '                + "<code>" + m.agora + "</code>"\n'
+            '                + (reconhecido ? " (entrada <b>" + m.ent'
+            'radaAgora + "</b>)" : "") + ".</span></li>"'
+        ),
+        depois=(
+            '                + (m.antes ? "Estava em <code>" + emAtri'
+            'buto(m.antes) + "</code>"\n'
+            '                    + (m.entradaAntes ? " (entrada <b>" '
+            '+ emAtributo(m.entradaAntes) + "</b>)" : "")\n'
+            '                    + ", agora está em " : "Agora está e'
+            'm ")\n'
+            '                + "<code>" + emAtributo(m.agora) + "</co'
+            'de>"\n'
+            '                + (reconhecido ? " (entrada <b>" + emAtr'
+            'ibuto(m.entradaAgora) + "</b>)" : "") + ".</span></li>"'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): os caminhos e as entradas do reexame vão escapados.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    return abre + "O caminho <code>" + m.agora + "</code'
+            '> " + onde'
+        ),
+        depois=(
+            '    return abre + "O caminho <code>" + emAtributo(m.agor'
+            'a) + "</code> " + onde'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): o caminho do achado vai escapado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '\'<span class="txt"><b>\' + x.ap.tipo + "</b><span>" + x.c'
+            'aminho + "</span></span></button>";'
+        ),
+        depois=(
+            '\'<span class="txt"><b>\' + emAtributo(x.ap.tipo) + "</b><'
+            'span>" + emAtributo(x.caminho) + "</span></span></button'
+            '>";'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): a faixa dos pendentes escreve o tipo e o caminho escapados.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '\'<p class="diverge">\' + f.diverge + "</p>"'
+        ),
+        depois=(
+            '\'<p class="diverge">\' + emAtributo(f.diverge) + "</p>"'
+        ),
+        porque=(
+            '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
+            'enho A): a frase de divergência da face traz o nome dado à entrada: vai '
+            'escapada.'
         ),
     ),
 )

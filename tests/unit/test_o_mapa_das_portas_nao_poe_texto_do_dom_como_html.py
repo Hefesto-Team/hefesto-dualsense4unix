@@ -189,3 +189,88 @@ def test_no_webkit_o_nome_com_marca_vira_texto_no_titulo_e_a_dica_e_so_texto(
     assert lido["dicas"], "«Sugestões» sem nenhuma troca: a dica não foi medida"
     for dica in lido["dicas"]:
         assert "<" not in dica and not re.search(r"&(?:amp|lt|gt|quot|#39|nbsp);", dica), dica
+
+
+_MAL = 'x" onfocus="y <b>X</b>'
+_JS_DO_NOME_COM_ASPA = r"""
+(function(){
+  const MAL = MAL_NO_JS, dado = CENSO_NO_JS, r = {};
+  dado.aparelhos.forEach(a => { a.nome = MAL; a.tipo = MAL; });
+  dado.faces[0].diverge = MAL;
+  dado.faces[2].portas[6].filho.cabo = MAL;
+  dado.declarado = { "5": { nome: MAL } };
+  dado.mapa["9"] = MAL;
+  dado.leituras.antes.caminho["bt-a"] = MAL;
+  dado.leituras.agora.caminho["bt-a"] = MAL;
+  dado.leituras.agora.caminho["wifi"] = MAL + "2";
+  const estrago = () => ({
+    vivos: document.querySelectorAll('[onfocus]').length,
+    marcas: Array.from(document.querySelectorAll('b')).filter(b => b.textContent === 'X').length,
+  });
+  const so = (seletor, texto) => {
+    const e = document.querySelector(seletor);
+    return !!e && e.textContent === texto && e.children.length === 0;
+  };
+  window.hefestoArranjo(dado, false);
+  document.querySelector('.modo[data-modo="mesa"]').click();
+  r.mapa = estrago();
+  const plug = document.querySelector('.plug[data-porta="9"]');
+  r.titulo = plug.getAttribute('aria-label') === MAL + ' — ' + MAL;
+  r.caminho = so('[data-soquete="9"] .caminho', MAL);
+  r.cabo = so('.filho .cabo', '↳ ' + MAL);
+  r.diverge = so('p.diverge', MAL);
+  r.pendente = so('.chip.pend .txt b', MAL);
+  document.querySelector('.modo[data-modo="mao"]').click();
+  document.querySelector('[data-mao="bt"]').click();
+  r.porque = so('[data-soquete="10"] .porque', 'Colada no ' + MAL + ', na Entrada 9');
+  r.naMao = estrago();
+  window.hefestoArranjo(dado, true);
+  const ver = document.querySelector('#aviso-ver');
+  if (ver) ver.click();
+  r.reexame = estrago();
+  const h4 = document.querySelector('.aviso-detalhe .receita h4');
+  r.lista = !!h4 && h4.textContent.indexOf(MAL + ' · ' + MAL) === 0
+    && h4.querySelector('b') === null;
+  const trechos = Array.from(document.querySelectorAll('.aviso-detalhe .receita code'));
+  r.trechos = trechos.length > 0 && trechos.every(c => c.children.length === 0);
+  r.achado = trechos.some(c => c.textContent === MAL + '2');
+  return JSON.stringify(r);
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def com_o_nome_com_aspa(pagina: str, tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+    import json
+
+    roteiro = (_JS_DO_NOME_COM_ASPA.replace("MAL_NO_JS", json.dumps(_MAL))
+               .replace("CENSO_NO_JS", json.dumps(gerador.CENSO_DE_EXEMPLO)))
+    lido = _no_webkit(pagina, tmp_path_factory.mktemp("nome"), roteiro)
+    assert "erro" not in lido, lido
+    return lido
+
+
+def test_o_nome_com_aspa_e_sinais_aparece_inteiro_no_soquete_na_faixa_e_na_divergencia(
+    com_o_nome_com_aspa: dict[str, Any],
+) -> None:
+    """D-2511-O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS: o nome do iProduct é texto.
+
+    Um aparelho de nome `x" onfocus="y <b>` na entrada mapeada, no caminho lido, no cabo, na
+    faixa dos pendentes, no porquê da vizinha e na divergência da face aparece inteiro, sem
+    fechar o atributo nem abrir tag.
+    """
+    lido = com_o_nome_com_aspa
+    assert lido["mapa"] == {"vivos": 0, "marcas": 0}, lido
+    assert lido["naMao"] == {"vivos": 0, "marcas": 0}, lido
+    for chave in ("titulo", "caminho", "cabo", "diverge", "pendente", "porque"):
+        assert lido[chave], f"«{chave}» não traz o texto inteiro: {lido}"
+
+
+def test_o_nome_com_aspa_e_sinais_aparece_inteiro_na_lista_do_reexame(
+    com_o_nome_com_aspa: dict[str, Any],
+) -> None:
+    """D-2511-O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS: o reexame também."""
+    lido = com_o_nome_com_aspa
+    assert lido["reexame"] == {"vivos": 0, "marcas": 0}, lido
+    for chave in ("lista", "trechos", "achado"):
+        assert lido[chave], f"«{chave}» não traz o texto inteiro: {lido}"
