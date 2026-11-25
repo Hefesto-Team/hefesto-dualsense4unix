@@ -87,3 +87,72 @@ def test_duas_entradas_trocam_pelo_mover_sem_nenhum_arrasto(lido: dict[str, Any]
     assert lido["rotulosDiferem"], "as duas entradas têm o mesmo aparelho: a troca não foi medida"
     assert lido["trocou"], "o «Mover para…» não trocou as duas entradas"
     assert lido["arrastou"] == 0
+
+
+_JS_DO_PRODUTO = r"""
+(function(){
+  const dado = CENSO_NO_JS, r = {}, enviados = [];
+  dado.declarado = { "1": {}, "16": {} };
+  window.hefestoArranjo(dado, false);
+  document.addEventListener('change', ev => {
+    const a = ev.target.closest('[data-gesto]');
+    if (a) enviados.push({ gesto: a.dataset.gesto, entrada: a.dataset.entrada, valor: a.value });
+  }, true);
+  const abre = n => {
+    for (let i = 0; i < 2 && !document.querySelector('#edita [data-entrada="' + n + '"]'); i++) {
+      document.querySelector('.plug[data-porta="' + n + '"]').click();
+    }
+  };
+  const sel = (n, classe) =>
+    document.querySelector('#edita select.' + classe + '[data-entrada="' + n + '"]');
+  const rotulo = n =>
+    document.querySelector('.plug[data-porta="' + n + '"]').getAttribute('aria-label');
+
+  abre('16');
+  const lugar = sel('16', 'lugar-da-entrada');
+  r.lugar = !!lugar;
+  if (lugar) {
+    lugar.selectedIndex = 1;
+    lugar.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  abre('1');
+  const mover = sel('1', 'mover-para');
+  r.valores = mover ? Array.from(mover.options).map(o => o.value) : null;
+  const antes = rotulo('1');
+  if (mover) {
+    mover.value = '16';
+    mover.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  r.ficouAte = rotulo('1') === antes;
+  abre('5');
+  r.foraLugar = !!sel('5', 'lugar-da-entrada');
+  r.foraMover = !!sel('5', 'mover-para');
+  r.enviados = enviados;
+  return JSON.stringify(r);
+})()
+"""
+
+
+def test_no_produto_os_dois_mandam_o_gesto_ao_dono_e_so_onde_ele_grava(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    """D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO: no produto, quem grava é o dono.
+
+    Com o arranjo desta máquina, o «Lugar» da entrada sem lugar e o «Mover para…» mandam o gesto
+    com a entrada e o valor que o dono grava, a página não troca nada sozinha, e a entrada que o
+    dono não grava não ganha nenhum dos dois.
+    """
+    import json
+
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import LUGARES_DA_PORTA
+
+    roteiro = _JS_DO_PRODUTO.replace("CENSO_NO_JS", json.dumps(gerador.CENSO_DE_EXEMPLO))
+    lido = _no_webkit(str(gerador.pagina()), tmp_path_factory.mktemp("produto"), roteiro)
+    assert "erro" not in lido, lido
+    assert lido["lugar"] and lido["valores"] == ["", "16"], lido
+    assert lido["enviados"] == [
+        {"gesto": "entrada-lugar", "entrada": "16", "valor": LUGARES_DA_PORTA[0]},
+        {"gesto": "entrada-trocar", "entrada": "1", "valor": "16"},
+    ], lido
+    assert lido["ficouAte"], "a página trocou as entradas sem o dono gravar"
+    assert not lido["foraLugar"] and not lido["foraMover"], lido
