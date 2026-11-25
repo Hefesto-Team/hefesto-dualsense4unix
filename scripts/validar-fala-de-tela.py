@@ -12,12 +12,9 @@ from pathlib import Path
 from types import ModuleType
 
 RAIZ = Path(__file__).resolve().parent.parent
-APP_RELATIVO = "src/hefesto_dualsense4unix/app"
-INTERFACE_RELATIVO = "src/hefesto_dualsense4unix/interface"
-FALA_DO_MAPA_RELATIVO = f"{APP_RELATIVO}/fala_do_mapa.py"
+FALA_DO_MAPA_RELATIVO = "src/hefesto_dualsense4unix/app/fala_do_mapa.py"
 MAPA_RELATIVO = "docs/data/mapa-controles.csv"
-
-RAIZES_DE_TELA: tuple[str, ...] = (APP_RELATIVO, INTERFACE_RELATIVO)
+TELA_RELATIVO = "src/hefesto_dualsense4unix/interface"
 
 NUMEROS_RELATIVO = "src/hefesto_dualsense4unix/integrations/radio_da_mesa.py"
 
@@ -198,10 +195,9 @@ def valida_numeros(
     return problemas
 
 
-PISO_DA_REGUA: dict[str, int] = {"raizes": 2, "numeros": 3}
+PISO_DA_REGUA: dict[str, int] = {"numeros": 3}
 
 _O_QUE_O_PISO_MEDE: dict[str, str] = {
-    "raizes": "raiz(es) de tela varrida(s) (`RAIZES_DE_TELA`)",
     "numeros": "número(s) medido(s) que a tela mostra (`NUMEROS_MEDIDOS_NO_MAPA`)",
 }
 
@@ -210,9 +206,8 @@ def e_a_arvore_do_produto(raiz: Path) -> tuple[bool, str]:
     """`(é o produto?, por que não)` — o piso vale para o produto, e só."""
     if not (raiz / MAPA_RELATIVO).is_file():
         return False, f"não há {MAPA_RELATIVO} nesta árvore"
-    faltando = [relativo for relativo in RAIZES_DE_TELA if not (raiz / relativo).is_dir()]
-    if faltando:
-        return False, "não há a(s) raiz(es) de tela " + ", ".join(faltando)
+    if not (raiz / TELA_RELATIVO).is_dir():
+        return False, f"não há a tela ({TELA_RELATIVO}) nesta árvore"
     return True, ""
 
 
@@ -246,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     numeros = descobre_numeros(raiz)
     problemas = valida_numeros(numeros, _le_celulas_do_mapa(raiz), fala_do_mapa.formata_pt_br)
 
-    medido = {"raizes": len(RAIZES_DE_TELA), "numeros": len(numeros)}
+    medido = {"numeros": len(numeros)}
     e_o_produto, por_que_nao = e_a_arvore_do_produto(raiz)
     encolheu = valida_piso_da_regua(medido, PISO_DA_REGUA) if e_o_produto else []
 
@@ -272,8 +267,7 @@ def main(argv: list[str] | None = None) -> int:
 
     piso = ", ".join(f"{nome}≥{valor}" for nome, valor in sorted(PISO_DA_REGUA.items()))
     print(
-        f"OK: {len(numeros)} número(s) de tela de acordo com {MAPA_RELATIVO}, varrendo "
-        f"{len(RAIZES_DE_TELA)} raiz(es) de tela ({', '.join(RAIZES_DE_TELA)}). Piso: {piso}."
+        f"OK: {len(numeros)} número(s) de tela de acordo com {MAPA_RELATIVO}. Piso: {piso}."
     )
     return 0
 

@@ -224,7 +224,6 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 0,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_PAR_ACEITO": 0,
     "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 2,
-    "tests/unit/test_toda_fala_declarada_chega_a_tela.py::_FALA_SEM_TELA_HOJE": 0,
     "tests/unit/test_todo_campo_do_caderno_tem_consumidor.py::ISENTOS": 0,
     "tests/unit/test_todo_deslizante_aplica_ao_soltar.py::EXCECOES": 1,
     "tests/unit/test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula.py::PENDENTES": 0,
@@ -310,10 +309,6 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/test_a_aba05_publica_os_hexes_do_mapa.py::FORA_DO_DESENHO": _DADO_DE_TESTE,
     "tests/unit/test_a_aba_10_perfis_fecha_as_linhas.py::FORMAS_FORA_DO_DICIONARIO": (
         "o vocabulário das formas que `from_simple_choice` escreve fora do dicionário"),
-    "tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py::PISO_ATE_HOJE": (
-        "o piso que só sobe, e não uma folga"),
-    "tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py::RAIZES_ATE_HOJE": (
-        "as raízes de tela de hoje, um conjunto que só cresce"),
     "tests/unit/test_a_frase_banida_nao_chega_a_tela.py::ISENTOS_INTEIROS": (
         "o dono da lista de frases banidas: os trechos são o dado"),
     "tests/unit/test_a_porta_que_a_casa_construiu_01.py::EXCECOES": (
@@ -321,8 +316,6 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/test_a_trava_do_jogo_aberto_tem_um_dono.py::ISENTOS": (
         "quem lê o sinal do jogo para o plano, e não para recriar o pad: cada linha diz por quê"),
     "tests/unit/test_aba02_a_borda_veste_o_controle_do_mapa.py::FORA_DO_DESENHO": _DADO_DE_TESTE,
-    "tests/unit/test_abas_promovidas_so_crescem_p09.py::ABAS_PROMOVIDAS_ATE_HOJE": (
-        "o conjunto de abas promovidas, que só cresce"),
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::GUARDAS_ACEITAS": (
         "o vocabulário das duas guardas de GTK real"),
     "tests/unit/test_install_garante_deps_em_qualquer_familia.py::VAZIOS_ACEITOS": (

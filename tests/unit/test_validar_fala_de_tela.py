@@ -19,7 +19,7 @@ _UM_DOS_TRES = (
 
 
 def monta_produto(tmp_path: Path, *, radio: str | None = None) -> Path:
-    """O produto com os arquivos REAIS que o portão lê, e as duas raízes de tela."""
+    """O produto com a pasta da tela e os três arquivos REAIS que o portão lê."""
     pacote = tmp_path / "src" / "hefesto_dualsense4unix"
     for pasta in ("app", "interface", "integrations"):
         (pacote / pasta).mkdir(parents=True)
@@ -47,7 +47,7 @@ def test_o_produto_passa_e_diz_o_que_mediu(tmp_path: Path) -> None:
     ultima = processo.stdout.strip().splitlines()[-1]
     assert ultima.startswith("OK: 3 número(s) de tela"), ultima
     assert "QUASE NÃO MEDIU" not in processo.stdout, processo.stdout
-    assert "Piso: numeros≥3, raizes≥2." in ultima, ultima
+    assert ultima.endswith("Piso: numeros≥3."), ultima
 
 
 def test_apagar_um_numero_de_tela_reprova_pelo_piso(tmp_path: Path) -> None:
@@ -68,3 +68,33 @@ def test_o_registro_nao_tem_dependencia_pesada() -> None:
     fonte = FALA_DO_MAPA_REAL.read_text(encoding="utf-8")
     for termo in ("import gi", "from gi", "Gtk", "gi.repository"):
         assert termo not in fonte, f"{termo!r} em fala_do_mapa.py — dependência pesada"
+
+
+def test_o_piso_so_conta_o_que_a_regua_le(tmp_path: Path) -> None:
+    """D-2511-A-REGUA-DA-FALA-DE-TELA-SO-MEDE-O-QUE-A-TELA-MOSTRA — o piso é só dos números.
+
+    Uma chave do piso que conta uma constante do próprio roteiro (as raízes de tela, que nada
+    varre desde que a `Fala` saiu) daria verde sobre régua nenhuma.
+    """
+    processo = rodar(monta_produto(tmp_path))
+    assert processo.returncode == 0, processo.stdout
+    assert "raiz" not in processo.stdout, processo.stdout
+
+
+def test_arvore_sem_a_tela_nao_e_o_produto(tmp_path: Path) -> None:
+    """O piso vale para o produto, e a árvore sem a pasta da tela diz que não o aplicou."""
+    raiz = monta_produto(tmp_path)
+    (raiz / "src" / "hefesto_dualsense4unix" / "interface").rmdir()
+    processo = rodar(raiz)
+    assert processo.returncode == 0, processo.stdout
+    assert "PISO NÃO APLICADO" in processo.stdout, processo.stdout
+
+
+def test_o_produto_de_verdade_aplica_o_piso() -> None:
+    """Na árvore real o piso vale: o portão nunca fica verde com o piso desligado."""
+    processo = subprocess.run(
+        [sys.executable, str(SCRIPT), "--all"], cwd=RAIZ_REAL,
+        capture_output=True, text=True, check=False,
+    )
+    assert processo.returncode == 0, processo.stdout + processo.stderr
+    assert "PISO NÃO APLICADO" not in processo.stdout, processo.stdout
