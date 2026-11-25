@@ -363,6 +363,7 @@ def _um_daemon_para_parar() -> SimpleNamespace:
 
 
 def test_a_parada_com_anotacao_recente_escreve_quem_pediu() -> None:
+    """D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO."""
     pedido.anotar("restart", "bandeja", "reiniciar-do-menu")
     linha = _o_diario_da_parada(_um_daemon_para_parar(), "daemon_stop_requested")
     assert (linha["quem"], linha["motivo"], linha["verbo"]) == (

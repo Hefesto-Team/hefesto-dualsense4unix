@@ -88,6 +88,7 @@ def test_o_arquivo_valido_com_um_jogo_do_windows_e_um_nativo_e_ok(tmp_path: Path
 def test_o_arquivo_cortado_no_meio_de_uma_entrada_quebra_com_o_nome_do_arquivo(
     tmp_path: Path,
 ) -> None:
+    """D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM."""
     bruto = _validos()
     _conta(tmp_path, "7261234", bruto[: len(bruto) * 6 // 10])
     tag, msg = _linha(tmp_path)

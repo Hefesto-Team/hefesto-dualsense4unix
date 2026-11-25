@@ -92,6 +92,7 @@ def _linhas(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
 async def test_a_sequencia_do_diario_nao_escreve_linha_de_soltura(
     mesa: _Mesa, relogio: _Relogio
 ) -> None:
+    """D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO."""
     proximo = 0.0
     with capture_logs() as registros:
         while relogio.agora < DEZ_MINUTOS_S:

@@ -135,6 +135,7 @@ def _esperar_a_fila() -> None:
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_o_tique_que_lembra_o_jogo_nao_espera_o_disco(disco: DiscoLento) -> None:
+    """D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO."""
     manager, store = _ensaio(_os_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: None)
 
