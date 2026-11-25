@@ -431,7 +431,7 @@
   :root{--rot-p:86px}
 
   .desfecho{padding:0 14px;margin-top:0;height:0;line-height:15px;
-            font-size:11px;color:var(--green);
+            font-size:11px;color:var(--orange);
             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
             overflow:hidden;
             visibility:hidden}
@@ -478,6 +478,7 @@
 
   .barra-quatro{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px}
   .barra-quatro .btn{width:100%;height:36px;justify-content:center;font-size:12.5px}
+  .barra-quatro .btn.vermelho.pergunta{border-color:var(--red)}
   .barra-quatro .btn.verde,.barra-quatro .btn.verde:hover{background:var(--green);
       color:var(--app-bg);border-color:var(--green);font-weight:700}
   .barra-quatro .btn.verde.apagado,.barra-quatro .btn.verde.apagado:hover{background:transparent;
@@ -491,6 +492,7 @@
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
   .tab td .renome{width:100%;box-sizing:border-box;height:22px;font:inherit;padding:0 6px;
                   border:1px solid var(--purple);border-radius:5px;background:var(--app-bg);color:var(--fg)}
+  .tab td .renome.recusado{border-color:var(--orange);outline:1px solid var(--orange)}
   .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
@@ -704,7 +706,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Um perfil guarda tudo que você ajustou nas abas">Perfis</span>
       </div>
-      <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"><span data-hef="perfis.desfecho"></span></div>
+      <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe" role="alert"><span data-hef="perfis.desfecho"></span></div>
       <div class="quadro-corpo">
         <div class="perfis">
 
@@ -1150,7 +1152,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         <div class="barra-quatro-onde"><div class="barra-quatro">
           <button class="btn" data-hef-gesto="duplicar" data-dica="Copia o perfil, com «(cópia)» no nome">Duplicar</button>
           <button class="btn" data-hef-gesto="novo" data-dica="Perfil em branco; com jogo aberto, nasce para ele">Novo</button>
-          <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" data-dica="Apaga o perfil; pergunta antes">Remover</button>
+          <button class="btn vermelho" data-hef-gesto="remover" data-campo="perfis.remover-pergunta" data-hef-alvo="classe" data-hef-classe="pergunta" data-hef-razao="sim" title="Apaga o perfil; pergunta antes"><span data-hef="perfis.remover">Remover</span></button>
           <button class="btn verde" data-campo="perfis.ativar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-hef-razao="sim" data-hef-gesto="ativar" title="Passa a usar este perfil agora">Ativar</button>
         </div></div>
       </div>
@@ -1177,9 +1179,48 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       }
     }, false);
 
+    var INTERVALO_DO_DUPLO_CLIQUE = 400;
+    function intervalo_do_duplo_clique(){
+      var ms = window.__hef && window.__hef.duploCliqueMs;
+      return ms > 0 ? ms : INTERVALO_DO_DUPLO_CLIQUE;
+    }
+    var esperando = null, liberado = false;
+    function celula_do_nome(alvo){
+      return alvo && alvo.closest ? alvo.closest('td[data-hef="perfis.linha.nome"]') : null;
+    }
+    function cancelar_a_espera(){
+      if(esperando === null) return;
+      clearTimeout(esperando);
+      esperando = null;
+    }
+    function clicar_na_linha(era){
+      var linha = Array.prototype.find.call(
+        document.querySelectorAll('tr[data-hef-perfil]'),
+        function(tr){ return tr.dataset.hefPerfil === era; });
+      var td = linha ? celula_do_nome(linha.firstElementChild) : null;
+      if(!td) return;
+      liberado = true;
+      try { td.click(); } finally { liberado = false; }
+    }
+    document.addEventListener('click', function(ev){
+      if(liberado) return;
+      var td = celula_do_nome(ev.target);
+      if(!td || td.querySelector('input')) return;
+      var tr = td.closest('tr[data-hef-perfil]');
+      if(!tr) return;
+      ev.stopImmediatePropagation();
+      cancelar_a_espera();
+      if(ev.detail >= 2) return;
+      var era = tr.dataset.hefPerfil;
+      esperando = setTimeout(function(){
+        esperando = null;
+        clicar_na_linha(era);
+      }, intervalo_do_duplo_clique());
+    }, true);
+
     document.addEventListener('dblclick', function(ev){
-      var nome = ev.target.closest ? ev.target.closest('td[data-hef="perfis.linha.nome"]') : null;
-      if(nome){ renomear(nome); return; }
+      var nome = celula_do_nome(ev.target);
+      if(nome){ cancelar_a_espera(); renomear(nome); return; }
       var th = ev.target.closest ? ev.target.closest('th[data-coluna]') : null;
       if(!th) return;
       var seta = th.querySelector('.ordena[data-hef-gesto]');
@@ -1201,6 +1242,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       campo.setAttribute('aria-label', 'Novo nome do perfil');
       campo.dataset.hefGesto = 'perfis.renomear';
       campo.dataset.hefPerfil = era;
+      campo.dataset.dica = 'Enter grava; Esc devolve o nome';
       td.textContent = '';
       td.appendChild(guarda);
       td.appendChild(campo);
@@ -1211,9 +1253,32 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         if(e.key === 'Enter'){ e.preventDefault(); campo.blur(); }
         else if(e.key === 'Escape'){ e.preventDefault(); campo.value = era; campo.blur(); }
       });
+      campo.addEventListener('change', function(){ campo.dataset.enviado = '1'; });
       campo.addEventListener('blur', function(){
-        setTimeout(function(){ if(td.contains(campo)) td.textContent = guarda.textContent; }, 0);
+        setTimeout(function(){
+          if(td.contains(campo) && campo.dataset.enviado !== '1') td.textContent = guarda.textContent;
+        }, 0);
       });
+      var pendente = false;
+      var olho = new MutationObserver(function(){
+        if(!td.contains(campo)){ olho.disconnect(); return; }
+        var classes = campo.classList;
+        if(classes.contains('hef-em-voo')){ pendente = true; return; }
+        if(!pendente) return;
+        if(classes.contains('hef-recusou')){
+          pendente = false;
+          delete campo.dataset.enviado;
+          classes.add('recusado');
+          campo.setAttribute('aria-invalid', 'true');
+          campo.focus();
+          campo.select();
+        } else if(classes.contains('hef-deu-certo')){
+          pendente = false;
+          olho.disconnect();
+          setTimeout(function(){ if(td.contains(campo)) td.textContent = guarda.textContent; }, 800);
+        }
+      });
+      olho.observe(campo, {attributes: true, attributeFilter: ['class']});
     }
 
     var voo = null;
