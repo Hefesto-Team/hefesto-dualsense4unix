@@ -426,6 +426,9 @@ class FluxoDoJogo:
     A identidade é o ``serial`` (o ``object.serial``) e o ``ident`` (o ``object.id``,
     o id do grafo). O ``nome`` é o que o ``pactl`` entregou, e o do jogo com ™, ® ou
     acento chega vazio (``nome_perdido``): ele serve ao diário, nunca à conferência.
+    O ``destino`` é a saída a que o fluxo vai (o nome, ou ``#<alvo>`` quando o servidor não
+    a lista) e o ``estado_do_destino`` é o que o servidor diz dessa saída: servem ao diário da
+    religada (D-2511-A-RELIGADA-DO-OUVIDO-DIZ-PARA-ONDE-O-SOM-DO-JOGO-VAI).
     """
 
     indice: int
@@ -436,6 +439,8 @@ class FluxoDoJogo:
     nome_perdido: bool = False
     pausado: bool = False
     fluxos: int = field(default=1, compare=False)
+    destino: str = field(default="", compare=False)
+    estado_do_destino: str = field(default="", compare=False)
 
 
 MOTIVO_SEM_FLUXO = "sem_fluxo"
@@ -473,17 +478,20 @@ def procurar_o_fluxo_do_jogo(
     pids: Iterable[int],
     destinos: Mapping[str, str] | None = None,
     padrao: str | None = None,
+    estados: Mapping[str, str] | None = None,
 ) -> FluxoDoJogo | SemFluxo:
     """O fluxo de SOM tocado por um processo de jogo, ou por que não há.
 
     ``destinos`` dá o nome do nó de cada ``alvo``: o fluxo que vai a um endpoint da háptica
     (:func:`e_endpoint_da_haptica`) é a vibração do jogo, e fica fora. Entre os que sobram, o
-    não pausado vem antes, e depois o que vai à saída padrão pedida.
+    não pausado vem antes, e depois o que vai à saída padrão pedida. ``estados`` dá o estado
+    de cada ``alvo``, que segue no fluxo achado junto com o nome do destino.
     """
     dos_jogos = set(pids)
     if not dos_jogos:
         return SemFluxo(MOTIVO_SEM_FLUXO)
     destinos = destinos or {}
+    estados = estados or {}
     do_jogo = 0
     candidatos: list[tuple[tuple[bool, bool], FluxoDoJogo]] = []
     for fluxo in fluxos:
@@ -493,7 +501,8 @@ def procurar_o_fluxo_do_jogo(
         if pid is None or pid not in dos_jogos or nome.startswith("hefesto"):
             continue
         do_jogo += 1
-        destino = destinos.get(str(getattr(fluxo, "alvo", "")), "")
+        alvo = str(getattr(fluxo, "alvo", ""))
+        destino = destinos.get(alvo, "")
         if e_endpoint_da_haptica(destino):
             continue
         perdidos: frozenset[str] = getattr(fluxo, "perdidos", frozenset()) or frozenset()
@@ -508,6 +517,8 @@ def procurar_o_fluxo_do_jogo(
                 ident=_inteiro_da_propriedade(propriedades, "object.id"),
                 nome_perdido="node.name" in perdidos,
                 pausado=pausado,
+                destino=destino or (f"#{alvo}" if alvo else ""),
+                estado_do_destino=estados.get(alvo, ""),
             ),
         ))
     if not candidatos:
@@ -775,6 +786,7 @@ class OuvidoDoJogo:
         logger.info(
             "tato_ouvido_religado", motivo=motivo, religadas=self.contadores["religadas"],
             recuo_s=recuo, fluxo=fluxo.nome, serial=fluxo.serial,
+            destino=fluxo.destino, estado_do_destino=fluxo.estado_do_destino,
         )
 
     def _imprimir(self) -> bool:
@@ -937,7 +949,8 @@ def achar_o_fluxo_do_jogo() -> FluxoDoJogo | SemFluxo | None:
         return None
     padrao = (rodar_pactl(["pactl", "get-default-sink"]) or "").strip() or None
     return procurar_o_fluxo_do_jogo(
-        fluxos, pids_de_jogo(), {str(no.indice): no.nome for no in nos}, padrao)
+        fluxos, pids_de_jogo(), {str(no.indice): no.nome for no in nos}, padrao,
+        {str(no.indice): no.estado for no in nos})
 
 
 def fontes_capturadas_pelo_jogo() -> frozenset[str] | None:

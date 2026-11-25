@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from array import array
 from collections.abc import Callable
+from dataclasses import replace
 from itertools import pairwise
 from types import SimpleNamespace
 from typing import Any
@@ -229,6 +230,52 @@ def test_link_de_pe_fluxo_tocando_e_gravador_mudo_se_refaz(
     assert mesa.gravacoes == 2 and mesa.religadas == 1
     assert [x["motivo"] for x in linhas if x["event"] == "tato_ouvido_religado"] == [
         tj.MOTIVO_SEM_PCM]
+
+
+def test_a_religada_por_falta_de_pcm_diz_para_onde_o_som_do_jogo_vai(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-2511-A-RELIGADA-DO-OUVIDO-DIZ-PARA-ONDE-O-SOM-DO-JOGO-VAI.
+
+    MORDIDA: tire o destino e o estado da linha `tato_ouvido_religado`, e a linha chega sem eles.
+    """
+    mesa = _Mesa(monkeypatch)
+    mesa.fluxo = replace(
+        _fluxo(), destino="hefesto_som_APARELHOFORJADO", estado_do_destino="SUSPENDED")
+    mesa.volta()
+    mesa.pcm()
+    with structlog.testing.capture_logs() as linhas:
+        mesa.volta(tj.PRAZO_DO_SILENCIO_S + 0.1)
+    religada = [x for x in linhas if x["event"] == "tato_ouvido_religado"]
+    assert [(x["motivo"], x["destino"], x["estado_do_destino"]) for x in religada] == [
+        (tj.MOTIVO_SEM_PCM, "hefesto_som_APARELHOFORJADO", "SUSPENDED")]
+
+
+@pytest.mark.parametrize(
+    ("destinos", "estados", "esperado"),
+    [
+        ({"5": "alsa_output.caixas"}, {"5": "RUNNING"}, ("alsa_output.caixas", "RUNNING")),
+        ({"5": "hefesto_som_APARELHOFORJADO"}, {"5": "SUSPENDED"},
+         ("hefesto_som_APARELHOFORJADO", "SUSPENDED")),
+        ({}, {}, ("#5", "")),
+    ],
+    ids=["saida-tocando", "rota-do-controle-suspensa", "alvo-que-o-servidor-nao-lista"],
+)
+def test_o_fluxo_achado_leva_o_destino_e_o_estado_dele(
+    destinos: dict[str, str], estados: dict[str, str], esperado: tuple[str, str],
+) -> None:
+    """O nome do destino e o estado saem do que o servidor diz; o alvo sem nome vira `#<alvo>`.
+
+    MORDIDA: deixe de passar os estados ao fluxo achado, e o estado chega vazio.
+    """
+    fluxo = SimpleNamespace(
+        indice=1, alvo="5", corked=False,
+        propriedades={"application.process.id": "7", "object.serial": "1", "node.name": "jogo"})
+
+    achado = tj.procurar_o_fluxo_do_jogo([fluxo], {7}, destinos, None, estados)
+
+    assert isinstance(achado, tj.FluxoDoJogo)
+    assert (achado.destino, achado.estado_do_destino) == esperado
 
 
 def test_fluxo_novo_do_jogo_troca_o_alvo_quando_o_velho_cala(
