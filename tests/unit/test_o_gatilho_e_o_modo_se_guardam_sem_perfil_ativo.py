@@ -211,7 +211,46 @@ def test_o_perfil_do_jogo_sobrepoe_o_que_o_computador_guardou(a03) -> None:
     vale = perfil_que_vale(jogo, _computador())
 
     assert vale.controles_modo == PERSONALIZADO
-    assert vale.triggers.modo == AUTOMATICO
+    assert vale.triggers.modo is None, "o efeito que o jogo escreveu já escolhe o modo"
     seus = vale.controllers[CHAVES[0]].triggers
     assert "left" not in seus.model_fields_set, "o gatilho que o jogo escolheu para todos vence"
     assert seus.right.mode == "Rigid", "o lado que o jogo não escolheu vem do computador"
+
+
+@pytest.mark.parametrize("nome,gatilhos,controles,vale_o_do_computador", [
+    ("jogo", {"left": {"mode": "Galloping", "params": [0, 9, 7, 7, 10]}}, None, False),
+    ("jogo", None, {CHAVES[1]: {"triggers": {"right": {"mode": "Rigid", "params": [5, 200]}}}},
+     False),
+    ("jogo", {"left": {"mode": "Off", "params": []}}, None, True),
+    ("jogo", None, None, True),
+    ("Freestyle", {"left": {"mode": "Galloping", "params": [0, 9, 7, 7, 10]}}, None, True),
+])
+def test_o_efeito_escrito_no_jogo_nao_cala_pelo_modo_do_computador(
+        nome: str, gatilhos: Any, controles: Any, vale_o_do_computador: bool, a03) -> None:
+    """D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO: o efeito escrito no jogo vence o modo do PC."""
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import perfil_que_vale
+    from hefesto_dualsense4unix.profiles.schema import (
+        Profile,
+        decidir_o_modo_dos_gatilhos,
+        perfil_no_modo,
+    )
+
+    _gesto("03-gatilhos.html", "modo-dos-gatilhos")(_ctx(), {"modo": AUTOMATICO}, Ponte())
+    cru: dict[str, Any] = {"name": nome, "match": {"type": "any"}}
+    if gatilhos is not None:
+        cru["triggers"] = gatilhos
+    if controles is not None:
+        cru["controllers"] = controles
+    vale = perfil_que_vale(Profile.model_validate(cru), _computador())
+    no_aparelho = perfil_no_modo(vale)
+
+    if vale_o_do_computador:
+        assert vale.triggers.modo == AUTOMATICO
+        assert no_aparelho.triggers.left.mode == "Off"
+        return
+    assert vale.triggers.modo is None
+    assert decidir_o_modo_dos_gatilhos(vale.triggers.modo, False) == PERSONALIZADO
+    if gatilhos is not None:
+        assert no_aparelho.triggers.left.mode == "Galloping"
+    else:
+        assert no_aparelho.controllers[CHAVES[1]].triggers.right.mode == "Rigid"

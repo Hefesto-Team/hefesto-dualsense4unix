@@ -7,6 +7,7 @@ from contextvars import ContextVar
 from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.profiles.schema import (
+    MODO_SEM_EFEITO_DO_GATILHO,
     ControllerMicOverride,
     ControllerRumbleOverride,
     ControllerSensoresOverride,
@@ -255,6 +256,20 @@ def computador_vazio(computador: Any) -> bool:
         exclude_unset=True, exclude_none=True)
 
 
+def _o_jogo_escolheu_o_efeito_do_gatilho(perfil: Profile) -> bool:
+    """O jogo escreveu um efeito de gatilho além do «—»: sem ``modo`` escrito, é Personalizado.
+
+    É a regra do modo (``decidir_o_modo_dos_gatilhos``) lida no perfil do jogo: o efeito escrito
+    já escolhe o modo, e o modo do computador não o cala. O Freestyle não sobrepõe nada.
+    """
+    if e_o_freestyle(perfil.name):
+        return False
+    gatilhos = [perfil.triggers] if "triggers" in perfil.model_fields_set else []
+    gatilhos += [c.triggers for c in (perfil.controllers or {}).values() if c.triggers is not None]
+    return any(getattr(g, lado).mode != MODO_SEM_EFEITO_DO_GATILHO
+               for g in gatilhos for lado in ("left", "right") if lado in g.model_fields_set)
+
+
 def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
     """O perfil com o computador por baixo, na precedência do cabeçalho."""
     if computador_vazio(computador):
@@ -270,7 +285,9 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
             continue
         if secao == "mouse" and perfil.mouse is None:
             continue
-        escolhas = escolhas_globais_do_jogo(perfil, secao)
+        escolhas = set(escolhas_globais_do_jogo(perfil, secao))
+        if secao == "triggers" and _o_jogo_escolheu_o_efeito_do_gatilho(perfil):
+            escolhas.add("modo")
         atual = dict(cru.get(secao) or {})
         for campo, valor in do_computador.items():
             if campo not in escolhas:
