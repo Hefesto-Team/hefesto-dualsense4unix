@@ -305,7 +305,8 @@ def _base(ctx: Contexto, chave: str) -> dict[str, tuple[str, str]]:
     base: dict[str, tuple[str, str]] = {}
     if chave.startswith(MOLDE):
         molde = _molde_da_chave(chave)
-        for motor, token in (molde.button_actions if molde else {}).items():
+        escolhas = acoes.sem_o_que_ninguem_faz(molde.button_actions if molde else None)
+        for motor, token in escolhas.items():
             base[motor] = (ACAO, token)
         return _por_botao(base)
     cru = _cru_da_chave(ctx, chave)
@@ -313,7 +314,7 @@ def _base(ctx: Contexto, chave: str) -> dict[str, tuple[str, str]]:
         tabela = acoes.tabela_efetiva(cru.get("button_actions") or None,
                                       cru.get("key_bindings") or None)
     else:
-        tabela = dict(cru.get("button_actions") or {})
+        tabela = acoes.sem_o_que_ninguem_faz(cru.get("button_actions"))
     por_motor = {m: (ACAO, str(t)) for m, t in tabela.items() if t}
     mac = _peca_do_vale_para(ctx)
     juntas = remap.juntar(cru.get("remapeamento") or {}, _troca_da_peca(cru, mac))
@@ -1129,7 +1130,7 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
     perfil já troca e que a pessoa solta aqui fica `botão: botão` (cancela só nesta peça), e a ação
     de mouse e de teclado segue do perfil, que é o único dono.
     """
-    acoes_do_perfil = dict(prof.button_actions or {})
+    acoes_do_perfil = acoes.sem_o_que_ninguem_faz(prof.button_actions)
     sequencias = _sequencias_do_perfil(prof, mac)
     antes_das_sequencias = dict(sequencias)
     do_perfil = dict(prof.remapeamento or {})
@@ -1270,14 +1271,22 @@ def _perfil_novo(ctx: Contexto, estado: dict[str, Any]) -> Any:
     return prof
 
 
-def _o_que_se_guarda(prof: Any) -> tuple[Any, ...]:
-    """O que esta tela escreve num perfil: ações, troca do perfil e troca de cada controle."""
+def _o_que_se_guarda(prof: Any, *, lido: bool = False) -> tuple[Any, ...]:
+    """O que esta tela escreve num perfil: ações, troca do perfil e troca de cada controle.
+
+    Com `lido`, as ações são as que a tela mostra (`acoes.sem_o_que_ninguem_faz`): sem gesto
+    nenhum, o perfil que guardava um programa sem quem o faça não conta como mudado por ser
+    regravado como nada, e o arquivo fica como estava.
+    """
+    guardadas = prof.button_actions
+    if lido:
+        guardadas = acoes.sem_o_que_ninguem_faz(guardadas) or None
     por_peca = {mac: dict(cfg.remapeamento or {})
                 for mac, cfg in (prof.controllers or {}).items() if cfg.remapeamento}
     sequencias = {mac: _sequencias_do_perfil(prof, mac)
                   for mac in (prof.controllers or {})
                   if _sequencias_do_perfil(prof, mac) != _sequencias_do_perfil(prof, None)}
-    return (prof.button_actions, prof.remapeamento, por_peca, _sequencias_do_perfil(prof, None),
+    return (guardadas, prof.remapeamento, por_peca, _sequencias_do_perfil(prof, None),
             sequencias)
 
 
@@ -1318,7 +1327,7 @@ def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         _largar_se_outro_controle(ctx)
         edicoes = dict(_estado()["edicoes"])
         novo = _aplicar_as_edicoes(prof, edicoes, fabrica, _peca_do_vale_para(ctx))
-        if _o_que_se_guarda(novo) == _o_que_se_guarda(prof):
+        if _o_que_se_guarda(novo) == _o_que_se_guarda(prof, lido=not edicoes):
             raise RuntimeError(f"não havia o que guardar: o perfil “{nome}” já faz isto.")
         perfil.gravar_e_reaplicar(_com_o_teclado_ligado(novo), ctx, p)
         estado["edicoes"] = {}
