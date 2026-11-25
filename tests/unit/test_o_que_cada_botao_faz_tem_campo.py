@@ -109,13 +109,13 @@ def test_o_que_ninguem_atende_sai_pela_terceira_sacola() -> None:
     """A tela oferece o que o produto ainda não faz — e isso não pode ser silêncio."""
     from hefesto_dualsense4unix.core.acoes_de_botao import (
         TOKEN_CURSOR,
-        TOKEN_PROGRAMA,
+        TOKEN_WASD,
         resolver,
     )
 
     do_mouse, do_teclado, sem_dono = resolver(
-        {"cross": TOKEN_PROGRAMA, "circle": TOKEN_CURSOR})
-    assert "cross" in sem_dono, "o comando sem atendente passou por atendido"
+        {"cross": TOKEN_WASD, "circle": TOKEN_CURSOR})
+    assert "cross" in sem_dono, "a ação de analógico num botão passou por atendida"
     assert "circle" in sem_dono, (
         "pedir MOVIMENTO DE CURSOR a um botão passou por atendido — um botão só "
         "sabe ir e voltar, e o produto não tem como dar-lhe um eixo")

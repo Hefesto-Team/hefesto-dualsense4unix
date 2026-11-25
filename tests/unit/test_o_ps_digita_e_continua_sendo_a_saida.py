@@ -200,11 +200,18 @@ def test_o_ps_nao_cai_na_terceira_sacola():
 
 
 def test_as_outras_vinte_e_uma_linhas_continuam_como_eram():
-    """`SEM_ATENDENTE` continua valendo para todo mundo menos o PS."""
-    _m, _t, sem_dono = acoes.resolver({"cross": acoes.TOKEN_PROGRAMA})
+    """O que ninguém atende continua indo à terceira sacola em todo mundo menos o PS.
+
+    O `__PROGRAMA__` gravado não é desse caso: vale `__NADA__`
+    (D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA).
+    """
+    _m, _t, sem_dono = acoes.resolver({"cross": acoes.TOKEN_WASD})
     assert "cross" in sem_dono, (
-        "o `__PROGRAMA__` escolhido para o X deixou de ir para a terceira sacola: "
+        "a ação de analógico escolhida para o X deixou de ir para a terceira sacola: "
         "a saída do PS vazou para os outros vinte e um.")
+    _m, _t, sem_dono = acoes.resolver({"cross": acoes.TOKEN_PROGRAMA})
+    assert "cross" not in sem_dono
+    assert "cross" in acoes.botoes_calados({"cross": acoes.TOKEN_PROGRAMA})
     _m, teclado, sem_dono = acoes.resolver({"l2": "KEY_ESC"})
     assert "l2" not in sem_dono
     assert teclado.get("l2") == ("KEY_ESC",)

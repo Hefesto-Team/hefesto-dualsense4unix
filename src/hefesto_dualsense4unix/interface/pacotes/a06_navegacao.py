@@ -1077,14 +1077,19 @@ def _avisar_se_sem_teclado_na_tela(ctx: Contexto, token: str) -> None:
 
 
 def _gravar_a_linha(ctx: Contexto, p: Any, botao: str, token: str) -> None:
-    """Grava no perfil o que a linha faz (só a diferença do de fábrica) e reaplica."""
+    """Grava no perfil o que a linha faz (só a diferença do de fábrica) e reaplica.
+
+    O que o perfil guardava sem quem o faça (`__PROGRAMA__`) é regravado como `__NADA__` junto, por
+    `acoes.sem_o_que_ninguem_faz`: o primeiro gesto da aba acerta o arquivo com o que a tela mostra
+    (D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA). Sem gesto o arquivo não é mexido.
+    """
     nome = perfil.nome_do_ativo(ctx.state).strip()
     de_fabrica = acoes.padrao()
     perfil._com_o_src()
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     def _com_a_linha(prof: Any) -> Any:
-        atuais = dict(prof.button_actions or {})
+        atuais = acoes.sem_o_que_ninguem_faz(prof.button_actions)
         if token == de_fabrica.get(botao):
             atuais.pop(botao, None)
         else:
@@ -1095,11 +1100,30 @@ def _gravar_a_linha(ctx: Contexto, p: Any, botao: str, token: str) -> None:
         return prof.model_copy(update={"button_actions": novo})
 
     try:
-        gravar_pelo_gesto("mouse", nome, _com_a_linha, origem="interface-nova")
+        onde, _ = gravar_pelo_gesto("mouse", nome, _com_a_linha, origem="interface-nova")
+        if nome and onde == "computador":
+            _acertar_o_arquivo_do_perfil(nome)
     except (OSError, ValueError) as erro:
         raise RuntimeError(
             f"não consegui guardar a linha {_nome_do_botao(botao)}: {erro}") from erro
     perfil.reaplicar(nome, ctx, p)
+
+
+def _acertar_o_arquivo_do_perfil(nome: str) -> None:
+    """O perfil que o gesto não regrava (o Freestyle, que o computador cobre) diz `__NADA__` também.
+
+    O gesto grava a diferença no `maquina.json` e deixa o arquivo do perfil como estava; o que ele
+    guardava sem quem o faça é regravado pelo mesmo `acoes.sem_o_que_ninguem_faz`, e só quando há
+    o que acertar (D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA).
+    """
+    from hefesto_dualsense4unix.profiles import loader
+
+    cru = loader.load_profile(nome)
+    guardado = dict(cru.button_actions or {})
+    lido = acoes.sem_o_que_ninguem_faz(guardado)
+    if guardado and lido != guardado:
+        loader.save_profile(
+            cru.model_copy(update={"button_actions": lido}), origem="interface-nova")
 
 
 def _a_linha_do_ps(ctx: Contexto, p: Any, rotulo: str) -> dict[str, Any] | None:

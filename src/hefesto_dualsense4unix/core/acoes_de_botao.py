@@ -325,8 +325,23 @@ def tabela_efetiva(
             ligacao = key_bindings.get(botao)
             tabela[botao] = "+".join(ligacao) if ligacao else TOKEN_NADA
     if escolhas:
-        tabela.update({b: a for b, a in escolhas.items() if b in tabela})
+        tabela.update(
+            {b: a for b, a in sem_o_que_ninguem_faz(escolhas).items() if b in tabela})
     return tabela
+
+
+def sem_o_que_ninguem_faz(escolhas: Mapping[str, str] | None) -> dict[str, str]:
+    """As `escolhas` do perfil com o que não tem quem o faça já lido como `__NADA__`.
+
+    D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA: «Escolher um programa…» saiu da lista, e o
+    perfil que o tinha gravado dizia «programa» ao arquivo, «— Nada —» à tela e o de fábrica a
+    seis botões. A :func:`tabela_efetiva` aplica esta regra; a linha da tela, os botões
+    calados e as sacolas do :func:`resolver` leem a tabela, e quem grava a aplica também.
+    O PS fica de fora: a escolha dele vai ao `ps_solo` (:func:`acao_do_ps`), onde sem
+    atendente é o degrau da máquina, a saída de emergência.
+    """
+    return {b: (TOKEN_NADA if b != BOTAO_PS and t in SEM_ATENDENTE else t)
+            for b, t in (escolhas or {}).items()}
 
 
 def botoes_calados(
@@ -353,9 +368,9 @@ def botoes_calados(
     sacolas, e devolver quatro viraria `ValueError: too many values to unpack`
     na aba que se abre hoje.
 
-    `__NADA__` E SÓ ELE. «Abrir a Steam» e «Sair do modo jogo» vão ao teclado
-    virtual como token (TODA-ACAO-OFERECIDA-AO-BOTAO-TEM-QUEM-A-FACA-01), e o
-    que não tem quem faça (:data:`SEM_ATENDENTE`) não se oferece na tela.
+    `__NADA__` E SÓ ELE, lido pela :func:`tabela_efetiva`: o que não tem quem o faça
+    (:data:`SEM_ATENDENTE`) vale `__NADA__` e cala o botão
+    (D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA).
     """
     tabela = tabela_efetiva(escolhas, key_bindings)
     return frozenset(b for b, token in tabela.items() if token == TOKEN_NADA)
@@ -396,9 +411,7 @@ def resolver(
             continue
         if token == TOKEN_NADA:
             continue
-        if token in SEM_ATENDENTE:
-            sem_dono.append(botao)
-        elif token.startswith("BTN_"):
+        if token.startswith("BTN_"):
             do_mouse[botao] = token
         elif token in LINHAS_DA_ACAO_DE_EIXO:
             sem_dono.append(botao)
@@ -500,6 +513,7 @@ __all__ = [
     "por_grupo",
     "resolver",
     "rotulo",
+    "sem_o_que_ninguem_faz",
     "tabela_efetiva",
     "teclas_dos_analogicos",
     "token_do_rotulo",
