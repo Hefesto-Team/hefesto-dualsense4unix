@@ -1651,6 +1651,16 @@ def _por_no_lugar(origem: Path, destino: Path) -> None:
     temporario.replace(destino)
 
 
+LICENCA_DA_GDK = "LICENCA-DA-ORIGEM.txt"
+
+
+def _gravar_a_licenca_da_gdk(pasta: Path) -> None:
+    """O aviso MIT da origem ao lado das DLL: a licença pede o texto em toda cópia."""
+    origem = RAIZ_DO_REPOSITORIO / "assets" / "gdk-runtime" / LICENCA_DA_GDK
+    if origem.is_file():
+        _por_no_lugar(origem, pasta / LICENCA_DA_GDK)
+
+
 def _instalar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     pino = _pino_da_gdk()
     cache = _cache() / "gdk"
@@ -1667,6 +1677,7 @@ def _instalar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
             guardadas.append(arquivo)
     for arquivo, _, _, destino in ARQUIVOS_DA_GDK:
         _por_no_lugar(cache / "nova" / arquivo, pasta.joinpath(*destino))
+    _gravar_a_licenca_da_gdk(pasta)
     (pasta / "versao.txt").write_text(pino.get("name", "") + "\n", encoding="utf-8")
     passo.fracao(1.0)
     return {"guardadas": guardadas}
@@ -1681,6 +1692,7 @@ def _reinstalar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> None:
             raise EtapaFalhouError(f"o {arquivo} baixado não é o do pino")
     for arquivo, _, _, destino in ARQUIVOS_DA_GDK:
         _por_no_lugar(cache / "nova" / arquivo, pasta.joinpath(*destino))
+    _gravar_a_licenca_da_gdk(pasta)
     passo.fracao(1.0)
 
 

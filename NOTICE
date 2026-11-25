@@ -94,6 +94,32 @@ da sessão. O arquivo aponta para cá na linha 2.
 
 ---
 
+assets/gdk-runtime/: a peça GDK e o GameInput do Hefesto
+---------------------------------------------------------
+
+Fontes em C que o mingw-w64 compila em quatro arquivos de Windows para o Wine:
+xgameruntime.dll, gameinput.dll e as duas sondas de prova, sonda-gdk.exe e
+sonda-gameinput.exe. A release os publica, e o install e o atualizador gravam
+as duas DLL em ~/.local/share/hefesto-dualsense4unix/wine/.
+
+  - assets/gdk-runtime/xgameruntime.c deriva do arquivo src/xgameruntime.c de
+    https://github.com/Kubas556/Dungeons2_linux_fix, revisão
+    817e9097c8c9be1fced97047fc9a1d2556b2f649 (06/10/2026), publicado sob a
+    licença MIT, Copyright (c) 2026 Kubas556. A xgameruntime.dll leva essa
+    origem;
+  - assets/gdk-runtime/gameinput.c é escrito do zero sobre a ABI pública do
+    GameInput, sob a licença MIT, Copyright (c) 2026 Hefesto-Team, como diz o
+    cabeçalho do fonte. É o fonte da gameinput.dll;
+  - sonda-gdk.c, sonda-gameinput.c, construir.sh e pino.txt são do próprio
+    Hefesto, GPL-3.0-or-later.
+
+A MIT pede o aviso de licença em toda cópia. O texto das duas notas MIT, sem
+tradução, está em assets/gdk-runtime/LICENCA-DA-ORIGEM.txt, e esse arquivo
+viaja junto das DLL: a release o publica ao lado das DLL, e o install e o
+atualizador o gravam em ~/.local/share/hefesto-dualsense4unix/wine/.
+
+---
+
 assets/dkms/: módulos de kernel derivados do Linux
 ---------------------------------------------------
 
@@ -180,18 +206,30 @@ licença e o próprio aviso. Licenças lidas dos metadados instalados:
 
   - obrigatórias: pydualsense (MIT), textual (MIT), typer (MIT), pydantic
     (MIT), evdev (BSD-3-Clause), structlog (MIT OR Apache-2.0), rich (MIT),
-    platformdirs (MIT), filelock (MIT), PyYAML (MIT);
+    platformdirs (MIT), filelock (MIT), PyYAML (MIT), numpy (BSD-3-Clause);
   - obrigatória, copyleft fraco: python-xlib (LGPL-2.0-or-later);
   - extra [emulation], copyleft forte: python-uinput (GPL-3.0-or-later);
   - extra [tray], copyleft fraco: PyGObject (LGPL-2.0-or-later);
   - extra [cosmic]: jeepney (MIT).
 
-O pacote Flatpak embute as dependências dentro de /app, inclusive
-python-uinput e python-xlib: o artefato .flatpak redistribui código LGPL e
-GPL-3.0 junto com o código GPL-3.0-or-later do Hefesto. As licenças permitem
-isso desde que os avisos sigam junto, e o pip instala cada pacote com o próprio
-dist-info e o texto da licença. As outras formas de distribuição não embutem
-dependência Python.
+Três formas de distribuição embutem dependência, cada uma com o próprio aviso:
+
+  - o .deb leva uma venv em /opt/hefesto-dualsense4unix/venv, montada com
+    ".[emulation,cosmic]": as dependências obrigatórias, com o numpy, mais
+    python-uinput (GPL-3.0-or-later) e jeepney (MIT);
+  - o AppImage leva uma venv montada com ".[emulation,cosmic,tray]", com o
+    PyGObject (LGPL-2.0-or-later), e o GTK 3 com as bibliotecas que o
+    linuxdeploy-plugin-gtk copia do sistema de build (GTK, GLib, Pango, Cairo e
+    GdkPixbuf, em geral LGPL-2.1-or-later, cada uma com a própria licença);
+  - o .flatpak embute as dependências dentro de /app, inclusive python-uinput e
+    python-xlib, mais três peças nativas compiladas no build: hidapi 0.14.0
+    (três licenças à escolha de quem redistribui: GPL-3.0, BSD e a original do
+    hidapi), wlrctl 0.2.2 (MIT) e wvkbd 0.14.3 (GPL-3.0).
+
+Esses artefatos redistribuem código LGPL e GPL-3.0 junto com o código
+GPL-3.0-or-later do Hefesto. As licenças permitem isso desde que os avisos
+sigam junto, e o pip instala cada pacote com o próprio dist-info e o texto da
+licença. O wheel e o sdist não embutem dependência.
 
 ---
 

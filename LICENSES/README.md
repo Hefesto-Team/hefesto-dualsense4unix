@@ -4,7 +4,7 @@ Este diretório existe por uma exigência escrita, não por capricho: a **GPL-2.
 seção 1**, obriga quem distribui o código-fonte a *"dar a qualquer outro
 destinatário do Programa uma cópia desta Licença junto com o Programa"*.
 
-O Hefesto distribui código-fonte de terceiros sob GPL-2.0 — os três módulos de
+O Hefesto distribui código-fonte de terceiros sob GPL-2.0 — os cinco módulos de
 kernel de `assets/dkms/` — em cinco dos seus alvos de empacotamento. Os avisos
 `SPDX-License-Identifier` estão preservados nos arquivos desde sempre, e isso é
 metade da exigência. **A cópia do texto era a metade que faltava**, e é o que
@@ -80,8 +80,13 @@ instala é o pip ou o gerenciador de pacotes da distribuição, e cada uma chega
 com o seu próprio `dist-info` e o seu próprio texto de licença. Estão
 **declaradas** no `NOTICE`, com a licença lida dos metadados instalados, mas os
 textos dessas licenças não moram aqui porque não somos nós que as redistribuímos — com uma
-exceção nomeada no `NOTICE`: o bundle Flatpak embute as dependências dentro de
-`/app`, e nesse caso é o pip que leva o texto de cada uma junto.
+exceção nomeada no `NOTICE`: o `.deb`, o AppImage e o Flatpak embutem as
+dependências (a venv de cada um, o GTK 3 no AppImage e três peças nativas no
+Flatpak), e nesse caso é o pip que leva o texto de cada pacote Python junto.
+
+Não é o aviso da peça GDK. As duas notas MIT de `assets/gdk-runtime/` moram em
+`assets/gdk-runtime/LICENCA-DA-ORIGEM.txt` e viajam junto das DLL: a release o publica ao lado
+dos arquivos, e o install e o atualizador o gravam na pasta `wine/` da instalação.
 
 ## Onde estes textos viajam
 

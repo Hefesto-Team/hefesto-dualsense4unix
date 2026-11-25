@@ -388,7 +388,8 @@ jobs:
   # apaga: ele espera o `guarda-ci` como todo job que entrega para fora.
   # A peça GDK (xgameruntime.dll), o GameInput da casa (gameinput.dll) e as duas sondas, do fonte em
   # assets/gdk-runtime/. O Ubuntu é o 24.04 fixo: o pino.txt grava o sha256 do binário, e só o mesmo compilador dá
-  # o mesmo binário. O `--conferir` reprova a release se o fonte mudou sem o pino acompanhar.
+  # o mesmo binário. O `--conferir` reprova a release se o fonte mudou sem o pino acompanhar. O texto da licença
+  # MIT da origem (LICENCA-DA-ORIGEM.txt) sobe ao lado das DLLs, e o `github-release` o exige.
   peca-gdk:
     name: A peça GDK, compilada e conferida com o pino
     runs-on: ubuntu-24.04
@@ -403,6 +404,8 @@ jobs:
           sudo apt-get install -y $(sed -n 's/^mingw=//p' assets/gdk-runtime/pino.txt)
       - name: Compilar, marcar como builtin do Wine e conferir com o pino
         run: bash assets/gdk-runtime/construir.sh dist/peca-gdk --conferir
+      - name: O aviso de licença da origem, ao lado das DLLs
+        run: cp assets/gdk-runtime/LICENCA-DA-ORIGEM.txt dist/peca-gdk/
       - name: Upload da peça GDK
         uses: actions/upload-artifact@v7
         with:
@@ -466,7 +469,7 @@ jobs:
           path: dist/tudo/
           merge-multiple: true
       - name: Conferir os arquivos com o SHA256SUMS
-        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak' 'xgameruntime.dll' 'sonda-gdk.exe' 'gameinput.dll' 'sonda-gameinput.exe'
+        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak' 'xgameruntime.dll' 'sonda-gdk.exe' 'gameinput.dll' 'sonda-gameinput.exe' 'LICENCA-DA-ORIGEM.txt'
       - name: Notas da release (a seção do CHANGELOG e como conferir)
         env:
           VERSION: ${{ needs.build.outputs.version }}

@@ -429,3 +429,107 @@ def test_notice_nao_confunde_a_licenca_do_codigo_com_a_das_curvas() -> None:
         f"o NOTICE não diz, na mesma frase, que o código segue {LICENCA_DO_HEFESTO} "
         "e as curvas saem em CC0-1.0"
     )
+
+
+def _nomes_das_dependencias() -> list[str]:
+    import tomllib
+
+    dados = tomllib.loads(_texto(REPO / "pyproject.toml"))
+    return [
+        re.match(r"[A-Za-z0-9_.-]+", item).group(0)  # type: ignore[union-attr]
+        for item in dados["project"]["dependencies"]
+    ]
+
+
+def _modulos_baixados_do_flatpak() -> list[str]:
+    import yaml
+
+    manifesto = yaml.safe_load(
+        _texto(REPO / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml")
+    )
+    return [
+        modulo["name"]
+        for modulo in manifesto["modules"]
+        if any("url" in fonte for fonte in modulo.get("sources") or [])
+    ]
+
+
+def test_o_notice_cita_toda_dependencia_e_todo_modulo_nativo_do_flatpak() -> None:
+    """D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA: todo pacote embutido tem o nome no NOTICE."""
+    nomes = _nomes_das_dependencias()
+    modulos = _modulos_baixados_do_flatpak()
+    assert len(nomes) >= 10 and len(modulos) >= 3, (nomes, modulos)
+    notice = _texto(NOTICE).lower()
+    faltam = [nome for nome in [*nomes, *modulos] if nome.lower() not in notice]
+    assert not faltam, f"o NOTICE não cita: {faltam}"
+
+
+_ARQUIVO_DE_LICENCA = re.compile(r"^(licen[cs]|copying|ofl-)", re.IGNORECASE)
+
+
+def _pastas_de_assets_com_licenca_de_terceiro() -> list[str]:
+    achadas = []
+    for pasta in sorted((REPO / "assets").iterdir()):
+        if not pasta.is_dir():
+            continue
+        arquivos = [arquivo for arquivo in pasta.rglob("*") if arquivo.is_file()]
+        if any(_ARQUIVO_DE_LICENCA.match(arquivo.name) for arquivo in arquivos) or any(
+            b"SPDX-License-Identifier" in arquivo.read_bytes() for arquivo in arquivos
+        ):
+            achadas.append(pasta.name)
+    return achadas
+
+
+def test_o_notice_cita_toda_pasta_de_assets_com_licenca_de_terceiro() -> None:
+    """D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA: pasta com licença própria entra no NOTICE."""
+    pastas = _pastas_de_assets_com_licenca_de_terceiro()
+    assert {"dkms", "fontes", "gdk-runtime"} <= set(pastas), pastas
+    notice = _texto(NOTICE)
+    faltam = [pasta for pasta in pastas if f"assets/{pasta}/" not in notice]
+    assert not faltam, f"o NOTICE não cita assets/{faltam}/"
+
+
+def test_a_licenca_da_peca_gdk_viaja_com_a_release_o_install_e_o_atualizador(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA: release, install e atualizador levam a MIT."""
+    licenca = REPO / "assets" / "gdk-runtime" / "LICENCA-DA-ORIGEM.txt"
+    assert "github.com/" in _texto(licenca) and "817e9097" in _texto(licenca)
+    release = _texto(REPO / ".github" / "workflows" / "release.yml")
+    peca = release.split("\n  peca-gdk:\n", 1)[1].split("\n  integridade:\n", 1)[0]
+    assert "LICENCA-DA-ORIGEM.txt dist/peca-gdk/" in peca
+    exigir = next(
+        linha for linha in release.splitlines() if "sums.py conferir dist/tudo --exigir" in linha
+    )
+    assert "'LICENCA-DA-ORIGEM.txt'" in exigir
+
+    install = _texto(REPO / "install.sh")
+    bloco = install.split('readonly PECA_GDK_PINO="${ROOT_DIR}/assets/gdk-runtime/pino.txt"', 1)[1]
+    bloco = bloco.split("scripts/install_profiles.sh", 1)[0]
+    assert 'install -Dm644 "${PECA_LICENCA_SRC}" "${PECA_LICENCA_TARGET}"' in bloco
+    destino = "${HOME}/.local/share/hefesto-dualsense4unix/wine/LICENCA-DA-ORIGEM.txt"
+    assert f'PECA_LICENCA_TARGET="{destino}"' in bloco
+
+    from hefesto_dualsense4unix.app.actions import atualizador as at
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    dados = {"xgameruntime.dll": b"MZ peca", "gameinput.dll": b"MZ gameinput"}
+    pino = {
+        "name": "peca-gdk-1",
+        "sha256": hashlib.sha256(dados["xgameruntime.dll"]).hexdigest(),
+        "gameinput_sha256": hashlib.sha256(dados["gameinput.dll"]).hexdigest(),
+    }
+    cache = tmp_path / "cache"
+    for arquivo, _c, _u, destino in pa.ARQUIVOS_DA_GDK:
+        (cache / "gdk" / "nova").mkdir(parents=True, exist_ok=True)
+        (cache / "gdk" / "nova" / arquivo).write_bytes(dados[arquivo])
+        assert destino
+    casa = tmp_path / "peca"
+    monkeypatch.setattr(pa, "_pino_da_gdk", lambda: pino)
+    monkeypatch.setattr(pa, "_pasta_da_gdk", lambda: casa)
+    monkeypatch.setattr(pa, "_cache", lambda: cache)
+    pa._instalar_a_gdk(at.Passo(), {})
+    assert (casa / "LICENCA-DA-ORIGEM.txt").read_bytes() == licenca.read_bytes()
+    (casa / "LICENCA-DA-ORIGEM.txt").unlink()
+    pa._reinstalar_a_gdk(at.Passo(), {})
+    assert (casa / "LICENCA-DA-ORIGEM.txt").read_bytes() == licenca.read_bytes()

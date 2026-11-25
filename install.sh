@@ -3208,6 +3208,8 @@ fi
 readonly PECA_GDK_PINO="${ROOT_DIR}/assets/gdk-runtime/pino.txt"
 readonly PECA_GDK_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/x86_64-windows/xgameruntime.dll"
 readonly PECA_GAMEINPUT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/nativa/gameinput.dll"
+readonly PECA_LICENCA_SRC="${ROOT_DIR}/assets/gdk-runtime/LICENCA-DA-ORIGEM.txt"
+readonly PECA_LICENCA_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/LICENCA-DA-ORIGEM.txt"
 _peca_gdk_pino() { sed -n "s/^$1=//p" "${PECA_GDK_PINO}" | head -n 1; }
 _peca_gdk_sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
 _peca_gdk_instalar() {
@@ -3245,10 +3247,13 @@ _peca_gdk_instalar() {
     rm -rf "${_peca_tmp}"
 }
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${PECA_GDK_PINO}" ]]; then
-    _faria "pôr a peça GDK em ${PECA_GDK_TARGET} e o GameInput em ${PECA_GAMEINPUT_TARGET} (baixados pelo pino ou compilados aqui, se o sha256 bater)"
+    _faria "pôr a peça GDK em ${PECA_GDK_TARGET} e o GameInput em ${PECA_GAMEINPUT_TARGET} (baixados pelo pino ou compilados aqui, se o sha256 bater), com o aviso de licença da origem em ${PECA_LICENCA_TARGET}"
 elif [[ -f "${PECA_GDK_PINO}" ]]; then
     _peca_gdk_instalar "a peça GDK" sha256 url xgameruntime.dll "${PECA_GDK_TARGET}"
     _peca_gdk_instalar "o GameInput do Hefesto" gameinput_sha256 gameinput_url gameinput.dll "${PECA_GAMEINPUT_TARGET}"
+    if [[ -f "${PECA_GDK_TARGET}" || -f "${PECA_GAMEINPUT_TARGET}" ]] && [[ -f "${PECA_LICENCA_SRC}" ]]; then
+        install -Dm644 "${PECA_LICENCA_SRC}" "${PECA_LICENCA_TARGET}"
+    fi
 else
     warn "assets/gdk-runtime/pino.txt ausente — a peça GDK não foi instalada"
 fi
