@@ -70,6 +70,7 @@ def _de_perfil(abertos: list[str], pasta: pathlib.Path) -> list[str]:
 
 def test_depois_do_primeiro_tique_nenhum_perfil_e_aberto(
         pasta_cheia: pathlib.Path, aberturas: list[str]) -> None:
+    """D-2511-O-MAPA-DO-CONTROLE-NAO-RELE-OS-PERFIS: perfil parado não se abre de novo."""
     ctx = _ctx()
     a13.pacote(ctx)
     assert len(_de_perfil(aberturas, pasta_cheia)) >= PERFIS

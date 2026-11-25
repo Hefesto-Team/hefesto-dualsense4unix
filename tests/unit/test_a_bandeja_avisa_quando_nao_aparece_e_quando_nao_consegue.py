@@ -53,7 +53,10 @@ def _sem_hospedeiro(mod: Any, monkeypatch: pytest.MonkeyPatch, desktop: str) -> 
 def test_no_gnome_sem_hospedeiro_o_aviso_manda_ligar_o_appindicator(
         gtk_de_mentira: Any, avisos: list[dict[str, Any]],
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA: voltar a sonda ao `if _desktop_is_cosmic()` zera o aviso do GNOME."""
+    """D-2511-A-BANDEJA-AVISA-QUANDO-NAO-APARECE: o aviso sai em toda sessão, com o que ligar.
+
+    MORDIDA: voltar a sonda ao `if _desktop_is_cosmic()` zera o aviso do GNOME.
+    """
     tray = _sem_hospedeiro(gtk_de_mentira, monkeypatch, "GNOME")
     tray._probe_watcher_with_retries(gtk_de_mentira._WATCHER_PROBE_RETRIES - 1)
     assert len(avisos) == 1

@@ -114,6 +114,7 @@ def _abrir(tmp_path: Path, sem: str | None, janela: bool) -> dict[str, str]:
 
 
 def test_o_pacote_com_o_share_do_wheel_abre_a_janela_sem_a_arvore(tmp_path: Path) -> None:
+    """D-2511-A-JANELA-ABRE-EM-QUALQUER-INSTALACAO: basta o pacote e o `share/` do wheel."""
     pytest.importorskip("gi")
     assert not (tmp_path / "docs").exists() and not (tmp_path / "assets").exists()
     visto = _abrir(tmp_path, None, janela=True)
