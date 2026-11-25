@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1322771,
+      "piso": 1322789,
       "por_item": {
         "docs": 108009,
         "scripts": 116862,
         "src": 333042,
-        "tests": 764858
+        "tests": 764876
       },
-      "razao": "tamanho: +245 linhas (1322526 -> 1322771), pagas por Origem: D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 822cbd653530",
+      "razao": "tamanho: +18 linhas (1322771 -> 1322789), pagas por Origem: D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 020c7daf03ab",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2559,6 +2559,12 @@
           "de": 1322526,
           "para": 1322771,
           "razao": "tamanho: +245 linhas (1322526 -> 1322771), pagas por Origem: D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 822cbd653530"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1322771,
+          "para": 1322789,
+          "razao": "tamanho: +18 linhas (1322771 -> 1322789), pagas por Origem: D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 020c7daf03ab"
         }
       ],
       "unidade": "linhas",
