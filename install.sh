@@ -3414,11 +3414,11 @@ anotar_o_pedido_ao_servico() {
     arquivo="${pasta}/pedido-ao-servico"
     motivo="${motivo//$'\t'/ }"
     {
-        mkdir -p "${pasta}" \
-            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" "${verbo}" "${quem}" "$$" "${motivo}" \
-                > "${arquivo}.$$.tmp" \
-            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
-    } 2>/dev/null || true
+        mkdir -p "${pasta}" || return 0
+        printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" "${verbo}" "${quem}" "$$" "${motivo}" \
+            > "${arquivo}.$$.tmp" || return 0
+        mv -f "${arquivo}.$$.tmp" "${arquivo}" || return 0
+    } 2>/dev/null
 }
 
 _devolver_o_daemon_ao_ar() {
