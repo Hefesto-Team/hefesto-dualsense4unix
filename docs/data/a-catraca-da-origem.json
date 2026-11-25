@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1322526,
+      "piso": 1322771,
       "por_item": {
-        "docs": 108008,
+        "docs": 108009,
         "scripts": 116862,
-        "src": 332996,
-        "tests": 764660
+        "src": 333042,
+        "tests": 764858
       },
-      "razao": "tamanho: +509 linhas (1322017 -> 1322526), pagas por Origem: D-2511-A-RELIGADA-DO-OUVIDO-DIZ-PARA-ONDE-O-SOM-DO-JOGO-VAI, D-2511-O-DIARIO-MEDE-O-BURACO-DA-ENTRADA-POR-CONTROLE, D-2511-O-TIQUE-LE-O-CONTROLE-NUM-FIO-SO-DELE; registrado no fecho, topo 563a61627067",
+      "razao": "tamanho: +245 linhas (1322526 -> 1322771), pagas por Origem: D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 822cbd653530",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2553,10 +2553,16 @@
           "de": 1322017,
           "para": 1322526,
           "razao": "tamanho: +509 linhas (1322017 -> 1322526), pagas por Origem: D-2511-A-RELIGADA-DO-OUVIDO-DIZ-PARA-ONDE-O-SOM-DO-JOGO-VAI, D-2511-O-DIARIO-MEDE-O-BURACO-DA-ENTRADA-POR-CONTROLE, D-2511-O-TIQUE-LE-O-CONTROLE-NUM-FIO-SO-DELE; registrado no fecho, topo 563a61627067"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1322526,
+          "para": 1322771,
+          "razao": "tamanho: +245 linhas (1322526 -> 1322771), pagas por Origem: D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 822cbd653530"
         }
       ],
       "unidade": "linhas",
-      "universo": 3693
+      "universo": 3694
     }
   }
 }
