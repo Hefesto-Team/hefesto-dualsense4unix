@@ -61,6 +61,57 @@ B: EV=19
 """
 
 
+_PROC_DEVICES_PAD_USB = """\
+I: Bus=0003 Vendor=054c Product=0ce6 Version=0111
+N: Name="Sony Interactive Entertainment DualSense Wireless Controller"
+P: Phys=usb-0000:00:14.0-2/input3
+S: Sysfs=/devices/pci0000:00/0000:00:14.0/usb1/1-2/1-2:1.3/0003:054C:0CE6.000A/input/input30
+U: Uniq=aa:bb:cc:dd:ee:01
+H: Handlers=event24 js0
+B: EV=1b
+
+I: Bus=0003 Vendor=054c Product=0ce6 Version=0111
+N: Name="Sony Interactive Entertainment DualSense Wireless Controller Motion Sensors"
+P: Phys=usb-0000:00:14.0-2/input3
+S: Sysfs=/devices/pci0000:00/0000:00:14.0/usb1/1-2/1-2:1.3/0003:054C:0CE6.000A/input/input32
+U: Uniq=aa:bb:cc:dd:ee:01
+H: Handlers=event26
+B: EV=19
+
+I: Bus=0005 Vendor=054c Product=0ce6 Version=0100
+N: Name="DualSense Wireless Controller Motion Sensors"
+P: Phys=aa:bb:cc:00:00:02
+S: Sysfs=/devices/virtual/misc/uhid/0005:054C:0CE6.000B/input/input33
+U: Uniq=aa:bb:cc:dd:ee:02
+H: Handlers=event30
+B: EV=19
+
+I: Bus=0003 Vendor=054c Product=0df2 Version=0111
+N: Name="Sony Interactive Entertainment DualSense Edge Wireless Controller"
+P: Phys=usb-vhci_hcd.0-1/input3
+S: Sysfs=/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.3/0003:054C:0DF2.0010/input/input60
+U: Uniq=02:fe:aa:00:00:01
+H: Handlers=event40 js2
+B: EV=1b
+
+I: Bus=0003 Vendor=054c Product=0df2 Version=0111
+N: Name="Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors"
+P: Phys=usb-vhci_hcd.0-1/input3
+S: Sysfs=/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.3/0003:054C:0DF2.0010/input/input62
+U: Uniq=02:fe:aa:00:00:01
+H: Handlers=event42
+B: EV=19
+
+I: Bus=0003 Vendor=054c Product=0df2 Version=0111
+N: Name="Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors"
+P: Phys=usb-vhci_hcd.0-2/input3
+S: Sysfs=/devices/platform/vhci_hcd.0/usb3/3-2/3-2:1.3/0003:054C:0DF2.0011/input/input65
+U: Uniq=02:fe:aa:00:00:02
+H: Handlers=event45
+B: EV=19
+"""
+
+
 def _rodar(func: str, *args: str) -> str:
     """Executa uma função shell REAL do doctor (source, sem rodar o main)."""
     linha = " ".join([func, *[f'"{a}"' for a in args]])
@@ -93,6 +144,19 @@ class TestVpadMotionEventNodes:
         src = tmp_path / "devices"
         src.write_text(so_fisico + "\n", encoding="utf-8")
         assert _rodar("_vpad_motion_event_nodes", str(src)) == ""
+
+    def test_acha_o_motion_do_pad_usb_pela_posse_e_nao_pelo_rotulo(self, tmp_path: Path) -> None:
+        """O pad virtual de hoje é o gadget USB: o nome é o do Edge, a posse é o vhci_hcd e o uniq
+        da casa. O Motion do DualSense físico (USB e rádio) na mesma lista não conta."""
+        src = tmp_path / "devices"
+        src.write_text(_PROC_DEVICES_PAD_USB, encoding="utf-8")
+        assert _rodar("_vpad_motion_event_nodes", str(src)).splitlines() == ["event42", "event45"]
+
+    def test_pad_usb_e_uhid_juntos_na_mesma_lista(self, tmp_path: Path) -> None:
+        src = tmp_path / "devices"
+        src.write_text(_PROC_DEVICES_PAD_USB + "\n" + _PROC_DEVICES, encoding="utf-8")
+        saida = _rodar("_vpad_motion_event_nodes", str(src)).splitlines()
+        assert saida == ["event42", "event45", "event27", "event29"]
 
     def test_fonte_ausente_devolve_vazio_sem_erro(self, tmp_path: Path) -> None:
         assert _rodar("_vpad_motion_event_nodes", str(tmp_path / "nao-existe")) == ""
@@ -169,6 +233,31 @@ class TestMotionNodeSample:
         assert _rodar("_motion_node_sample", str(node), "0.4") == "silencio"
 
 
+class TestSemNoMotion:
+    """«Não se aplica» só sai com a emulação de fato desligada ou a máscara que não é DualSense."""
+
+    @staticmethod
+    def _estado(enabled: str, flavor: str, backend: str) -> str:
+        return f"enabled={enabled}\nflavor={flavor}\nbackend={backend}"
+
+    def test_emulacao_ligada_dualsense_com_pad_vivo_e_sem_no_e_falta(self) -> None:
+        for backend in ("uhid", "usb", "uinput"):
+            estado = self._estado("True", "dualsense", backend)
+            assert _rodar("_sem_no_motion_de_vpad", estado) == "falta"
+
+    def test_desligada_ou_outra_mascara_nao_se_aplica(self) -> None:
+        for estado in (
+            self._estado("False", "dualsense", ""),
+            self._estado("True", "xbox", "uinput"),
+            self._estado("None", "", ""),
+        ):
+            assert _rodar("_sem_no_motion_de_vpad", estado) == "nao-se-aplica"
+
+    def test_sem_pad_vivo_e_sem_resposta_do_servico_nao_acusam(self) -> None:
+        assert _rodar("_sem_no_motion_de_vpad", self._estado("True", "dualsense", "")) == "sem-pad"
+        assert _rodar("_sem_no_motion_de_vpad", "") == "desconhecida"
+
+
 class TestFiacaoNoDoctor:
     """Contratos de texto (padrão do repo para lógica do doctor.sh)."""
 
@@ -187,6 +276,7 @@ class TestFiacaoNoDoctor:
         bloco = self._bloco_do_check()
         assert "_vpad_motion_event_nodes" in bloco
         assert "_motion_node_sample" in bloco
+        assert "_sem_no_motion_de_vpad" in bloco
 
     def test_read_only_por_construcao(self) -> None:
         """O check NUNCA escreve em nó de input: dd só com if= (nunca of=),"""

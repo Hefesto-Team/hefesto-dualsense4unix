@@ -4866,10 +4866,15 @@ _vpad_motion_event_nodes() {
     local src="${1:-/proc/bus/input/devices}"
     [[ -r "${src}" ]] || return 0
     awk '
-        /^N: Name=/ {
-            alvo = ($0 ~ /Hefesto Virtual DualSense P[0-9]+ Motion Sensors/)
-        }
-        alvo && /^H: Handlers=/ {
+        /^I:/ { nome = ""; sysfs = ""; uniq = "" }
+        /^N: Name=/ { nome = $0 }
+        /^S: Sysfs=/ { sysfs = $0 }
+        /^U: Uniq=/ { uniq = tolower($0) }
+        /^H: Handlers=/ {
+            motion = (nome ~ /Motion Sensors"?$/)
+            uhid = (nome ~ /Hefesto Virtual DualSense P[0-9]+ Motion Sensors/)
+            usb = (motion && (sysfs ~ /\/vhci_hcd\.[0-9]+\// || uniq ~ /^u: uniq=02:fe:/))
+            if (!uhid && !usb) next
             for (i = 2; i <= NF; i++) {
                 t = $i
                 sub(/^Handlers=/, "", t)
@@ -4877,6 +4882,51 @@ _vpad_motion_event_nodes() {
             }
         }
     ' "${src}" 2>/dev/null
+}
+
+_a_emulacao_do_daemon() {
+    local sock; sock="$(runtime_socket)"
+    [[ -S "${sock}" ]] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    python3 - "${sock}" <<'PYEOF' 2>/dev/null
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect(sys.argv[1])
+s.sendall(
+    json.dumps({"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}).encode("utf-8")
+    + b"\n"
+)
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+ge = (json.loads(buf.decode("utf-8")).get("result") or {}).get("gamepad_emulation") or {}
+print(f"enabled={ge.get('enabled')}")
+print(f"flavor={ge.get('flavor') or ''}")
+print(f"backend={ge.get('backend') or ''}")
+PYEOF
+}
+
+_sem_no_motion_de_vpad() {
+    local estado="$1" enabled flavor backend
+    enabled="$(sed -n 's/^enabled=//p' <<<"${estado}")"
+    flavor="$(sed -n 's/^flavor=//p' <<<"${estado}")"
+    backend="$(sed -n 's/^backend=//p' <<<"${estado}")"
+    if [[ -z "${enabled}" ]]; then
+        printf 'desconhecida\n'
+    elif [[ "${enabled}" != "True" || "${flavor}" != "dualsense" ]]; then
+        printf 'nao-se-aplica\n'
+    elif [[ -z "${backend}" ]]; then
+        printf 'sem-pad\n'
+    else
+        printf 'falta\n'
+    fi
 }
 
 _motion_node_sample() {
@@ -4892,7 +4942,12 @@ check_vpad_motion() {
     local nodes
     nodes="$(_vpad_motion_event_nodes)"
     if [[ -z "${nodes}" ]]; then
-        info "nenhum nó Motion de vpad agora (emulação desligada, backend uinput ou máscara xbox) — giroscópio via vpad não se aplica"
+        case "$(_sem_no_motion_de_vpad "$(_a_emulacao_do_daemon)")" in
+            nao-se-aplica) info "emulação de gamepad desligada ou com máscara que não é DualSense — giroscópio via vpad não se aplica" ;;
+            sem-pad) info "nenhum controle virtual vivo agora — sem giroscópio de vpad para amostrar" ;;
+            falta) warn "o serviço tem o controle virtual DualSense no ar, mas nenhum nó Motion dele (USB ou uhid) aparece na lista de entradas do kernel — o giroscópio não chega ao jogo" ;;
+            *) info "o serviço não respondeu e nenhum nó Motion de controle virtual aparece — não sei dizer se o giroscópio via vpad se aplica" ;;
+        esac
         return
     fi
     local ev node veredito
