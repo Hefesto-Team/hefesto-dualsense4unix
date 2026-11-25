@@ -45,12 +45,14 @@ from hefesto_dualsense4unix.mods.instalador import (
     atualizar,
     aviso_por_ver,
     commit_novo,
+    dar_por_provada,
     gravar_registro,
     ler_registro,
     manifesto_instalado,
     migrar_os_alcances,
     migrar_os_aparelhos,
     troca_viva,
+    voltar_para_a_anterior,
 )
 from hefesto_dualsense4unix.mods.leitura_da_caixa import abrir_o_no_sem_seguir, abrir_sem_seguir
 from hefesto_dualsense4unix.mods.manifesto import (
@@ -1399,6 +1401,13 @@ def _resolver_o_comando(codigo: Path, executar: list[str]) -> list[str] | None:
     return None
 
 
+def _ha_jogo_aberto() -> bool:
+    """A pergunta que a troca no fim do jogo faz; na dúvida, há jogo."""
+    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import _jogo_aberto
+
+    return _jogo_aberto()
+
+
 def _instalacao(entrada: Entrada) -> tuple[str, str, str, bool]:
     return (entrada.commit, entrada.instalada_em, entrada.ligada_em, entrada.sem_caixa)
 
@@ -1424,6 +1433,7 @@ class Supervisor:
         prazo_para_parar_s: float = PRAZO_PARA_PARAR_S,
         intervalo_s: float = INTERVALO_DO_REGISTRO_S,
         chaves: Sequence[str] = CHAVES_OFICIAIS,
+        jogo_aberto: Callable[[], bool] = _ha_jogo_aberto,
     ) -> None:
         self.lugares = lugares or Lugares.do_xdg()
         self.porta = Porta(
@@ -1453,6 +1463,7 @@ class Supervisor:
         self._ouvinte_do_parar: asyncio.Task[None] | None = None
         self._parar_curtos: set[asyncio.Task[bool]] = set()
         self.chaves = tuple(chaves)
+        self._jogo_aberto = jogo_aberto
         self.piso_da_atualizacao_s = PISO_DA_ATUALIZACAO_S
         self.espera_depois_da_falha_s = ESPERA_DEPOIS_DA_FALHA_S
         self._proxima_conferencia: dict[str, float] = {}
@@ -1671,7 +1682,9 @@ class Supervisor:
         """Abre a conferência da primeira extensão do git cujo intervalo passou.
 
         Uma por vez, numa tarefa à parte: o ``atualizar`` desliga a extensão viva e espera
-        a vigia pará-la, e a vigia é esta volta, que não pode esperar por ele.
+        a vigia pará-la, e a vigia é esta volta, que não pode esperar por ele. A extensão com
+        processo não se atualiza com jogo aberto: a pergunta é feita uma vez por volta e, com
+        jogo, a conferência da extensão volta na espera de depois de uma falha.
         """
         if self._atualizando is not None and not self._atualizando.done():
             return
@@ -1679,15 +1692,27 @@ class Supervisor:
         agora = time.monotonic()
         for mod_id in [m for m in self._proxima_conferencia if m not in registro]:
             self._proxima_conferencia.pop(mod_id, None)
+        com_jogo: bool | None = None
         for entrada in registro.values():
             if entrada.origem == "local" or not entrada.atualiza_sozinha:
                 continue
             if agora < self._proxima_conferencia.get(entrada.id, agora):
                 continue
+            if entrada.id in self._vigiadas:
+                if com_jogo is None:
+                    com_jogo = self._jogo_aberto()
+                if com_jogo:
+                    self._proxima_conferencia[entrada.id] = agora + self._espera_curta(entrada)
+                    continue
             self._atualizando = asyncio.create_task(
                 self.atualizar_sozinha(entrada), name="mods-atualizar-sozinha"
             )
             return
+
+    def _espera_curta(self, entrada: Entrada) -> float:
+        """A volta que a conferência faz depois de uma falha ou de um jogo aberto."""
+        intervalo = max(float(entrada.intervalo_da_atualizacao_s), self.piso_da_atualizacao_s)
+        return min(intervalo, max(self.espera_depois_da_falha_s, self.piso_da_atualizacao_s))
 
     async def atualizar_sozinha(self, entrada: Entrada) -> bool:
         """Pergunta ao endereço se há commit novo e, havendo, atualiza como o «Atualizar».
@@ -1697,7 +1722,7 @@ class Supervisor:
         fica na versão de agora, viva como estava.
         """
         intervalo = max(float(entrada.intervalo_da_atualizacao_s), self.piso_da_atualizacao_s)
-        espera = min(intervalo, max(self.espera_depois_da_falha_s, self.piso_da_atualizacao_s))
+        espera = self._espera_curta(entrada)
         self._proxima_conferencia[entrada.id] = time.monotonic() + intervalo
         try:
             novo = await asyncio.to_thread(commit_novo, entrada, lugares=self.lugares)
@@ -1840,9 +1865,12 @@ class Supervisor:
                 "rodando", pid=processo.pid, caixa=caixa, motivo=sem_caixa, quedas=quedas))
             aberto_em = time.monotonic()
             vigia = asyncio.create_task(self._avisar_as_pontes_caladas(vigiada, processo.pid))
+            prova = asyncio.create_task(
+                self._provar_depois_de_estavel(self._registro_lido.get(mod_id)))
             codigo = await processo.wait()
             vigia.cancel()
-            await asyncio.wait({vigia})
+            prova.cancel()
+            await asyncio.wait({vigia, prova})
             copia, vigiada.copia = vigiada.copia, None
             await _esvaziar_a_copia(copia, ESPERA_DO_DIARIO_S)
             self.porta.esquecer(vigiada.ficha)
@@ -1854,6 +1882,11 @@ class Supervisor:
             ultima = ultima_linha_do_diario(diario, hora=True)
             logger.warning("mods_caiu", mod=mod_id, codigo=codigo, quedas=quedas)
             if quedas > len(self.esperas):
+                if volta := await self._voltar_para_a_anterior(mod_id):
+                    self._marcar(mod_id, EstadoDaModificacao(
+                        "voltando", caixa=caixa, motivo=volta, ultima_linha=ultima,
+                        quedas=quedas))
+                    return
                 self._marcar(mod_id, EstadoDaModificacao(
                     "parou",
                     caixa=caixa,
@@ -1869,6 +1902,34 @@ class Supervisor:
                 await asyncio.wait_for(
                     vigiada.quer_parar.wait(), timeout=self.esperas[quedas - 1]
                 )
+
+    async def _provar_depois_de_estavel(self, entrada: Entrada | None) -> None:
+        """A versão recém-trocada que fica estável deixa de poder voltar para a guardada."""
+        if entrada is None or not entrada.em_prova:
+            return
+        await asyncio.sleep(self.estavel_s)
+        try:
+            await asyncio.to_thread(dar_por_provada, self.lugares, entrada.id, entrada.commit)
+        except (OSError, InstalacaoRecusadaError) as exc:
+            logger.warning("mods_prova_nao_gravou", mod=entrada.id, err=str(exc))
+
+    async def _voltar_para_a_anterior(self, mod_id: str) -> str:
+        """A versão recém-trocada que caiu até parar volta para a guardada; devolve o motivo,
+        ou vazio quando não havia para onde voltar. A vigia reabre a extensão pelo registro."""
+        entrada = self._registro_lido.get(mod_id)
+        if entrada is None or not entrada.em_prova:
+            return ""
+        try:
+            voltou = await asyncio.to_thread(
+                voltar_para_a_anterior, self.lugares, mod_id, entrada.commit)
+        except (OSError, InstalacaoRecusadaError) as exc:
+            logger.warning("mods_volta_falhou", mod=mod_id, err=str(exc))
+            return ""
+        if voltou is None:
+            return ""
+        logger.warning("mods_voltou_para_a_anterior", mod=mod_id, versao=voltou.versao,
+                       caiu=voltou.versao_esperando)
+        return voltou.motivo_da_espera
 
     async def _avisar_as_pontes_caladas(self, vigiada: _Vigiada, pid: int) -> None:
         if not vigiada.pontes:

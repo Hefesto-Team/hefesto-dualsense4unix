@@ -84,6 +84,7 @@ def _instalar_ligada(lar: Lugares, origem: Path, **ajuste: Any) -> None:
 
 
 def _supervisor_rapido(lar: Lugares, **mais: Any) -> Any:
+    mais.setdefault("jogo_aberto", lambda: False)
     sup = _supervisor(lar, procurar_bwrap=False, intervalo_s=0.05, **mais)
     sup.piso_da_atualizacao_s = 0.0
     sup.espera_depois_da_falha_s = 0.0

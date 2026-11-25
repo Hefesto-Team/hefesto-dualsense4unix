@@ -289,6 +289,9 @@ class Entrada(BaseModel):
     em_troca: str = ""
     sem_caixa: bool = False
     espera_o_sim: bool = False
+    versao_anterior: str = ""
+    commit_anterior: str = ""
+    em_prova: bool = False
 
 
 @dataclass(frozen=True)
@@ -918,6 +921,9 @@ def instalar(
             entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
             entrada.preparo_aceito = list(anterior.preparo_aceito)
             entrada.sem_caixa = anterior.sem_caixa
+            entrada.versao_anterior = anterior.versao
+            entrada.commit_anterior = anterior.commit
+            entrada.em_prova = True
         if prepara_agora:
             _rodar_o_preparo(lg, manifesto, entrada)
         if a_substituir:
@@ -1142,14 +1148,73 @@ def _desfazer_a_troca(lg: Lugares, mod_id: str, marca: str, *, desligar: bool) -
         gravar_registro(lg.registro, registro)
 
 
+def _guarda_do_codigo(final: Path) -> Path:
+    """Onde mora a versão anterior (uma só): ao lado do código, fora da caixa."""
+    return final.with_name(f".{final.name}.anterior")
+
+
+def _apagar_a_pasta(pasta: Path) -> None:
+    if pasta.is_symlink():
+        with contextlib.suppress(OSError):
+            pasta.unlink()
+        return
+    shutil.rmtree(pasta, ignore_errors=True)
+
+
 def _trocar_o_codigo(nova: Path, final: Path) -> None:
-    velha: Path | None = None
+    """Põe ``nova`` no lugar de ``final``; a versão de antes fica guardada em
+    :func:`_guarda_do_codigo`, e só a guardada numa troca anterior é apagada."""
+    guarda = _guarda_do_codigo(final)
     if final.exists() or final.is_symlink():
-        velha = final.with_name(f".{final.name}.velha-{os.getpid()}-{time.monotonic_ns()}")
-        final.rename(velha)
+        _apagar_a_pasta(guarda)
+        final.rename(guarda)
     nova.rename(final)
-    if velha is not None:
-        shutil.rmtree(velha, ignore_errors=True)
+
+
+def dar_por_provada(lg: Lugares, mod_id: str, commit: str) -> None:
+    """A versão de ``commit`` ficou estável: não volta mais para a guardada se cair depois."""
+    registro = ler_registro(lg.registro)
+    entrada = registro.get(mod_id)
+    if entrada is not None and entrada.em_prova and entrada.commit == commit:
+        entrada.em_prova = False
+        gravar_registro(lg.registro, registro)
+
+
+def voltar_para_a_anterior(lg: Lugares, mod_id: str, commit: str) -> Entrada | None:
+    """A versão de ``commit``, recém-trocada, caiu até parar: devolve a guardada, com o registro.
+
+    O código de antes volta ao lugar, o commit que caiu fica esperando (a conferência não o
+    oferece de novo) e o motivo diz o que houve. ``None`` quando não há o que devolver: outra
+    versão no lugar, a que já ficou estável, a guarda que sumiu ou uma troca em curso.
+    """
+    registro = ler_registro(lg.registro)
+    entrada = registro.get(mod_id)
+    final = lg.codigo / mod_id
+    guarda = _guarda_do_codigo(final)
+    if (entrada is None or entrada.commit != commit or not entrada.em_prova
+            or entrada.em_troca or not entrada.versao_anterior or not guarda.is_dir()):
+        return None
+    anotar_o_gesto(lg, "voltar", [mod_id], tocados=[final, guarda, lg.registro])
+    caida = final.with_name(f".{final.name}.caiu-{os.getpid()}-{time.monotonic_ns()}")
+    final.rename(caida)
+    try:
+        guarda.rename(final)
+    except OSError:
+        caida.rename(final)
+        raise
+    _apagar_a_pasta(caida)
+    entrada.versao_esperando = entrada.versao
+    entrada.commit_esperando = entrada.commit
+    entrada.motivo_da_espera = (
+        f"A versão {entrada.versao} caiu ao abrir; voltou para a {entrada.versao_anterior}.")
+    entrada.versao, entrada.commit = entrada.versao_anterior, entrada.commit_anterior
+    entrada.versao_anterior = entrada.commit_anterior = ""
+    entrada.em_prova = False
+    entrada.instalada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+    with contextlib.suppress(ManifestoRecusadoError):
+        entrada.nome = ler_manifesto(final, exigir_api=False).nome
+    gravar_registro(lg.registro, registro)
+    return entrada
 
 
 def atualizar(
@@ -1359,6 +1424,7 @@ def esperar_parar(
 
 def _apagar_o_codigo(lg: Lugares, mod_id: str) -> None:
     shutil.rmtree(lg.codigo / mod_id, ignore_errors=True)
+    _apagar_a_pasta(_guarda_do_codigo(lg.codigo / mod_id))
 
 
 def _apagar_os_dados(lg: Lugares, mod_id: str) -> None:
@@ -1405,7 +1471,8 @@ def conferir_remocao(mod_id: str, *, lugares: Lugares | None = None) -> list[str
     conta: ele é da pessoa e fica (``o_css_que_fica``)."""
     lg = lugares or Lugares.do_xdg()
     restos: list[str] = []
-    for pasta in (lg.codigo / mod_id, lg.dados / mod_id, lg.pasta_do_diario(mod_id)):
+    for pasta in (lg.codigo / mod_id, _guarda_do_codigo(lg.codigo / mod_id), lg.dados / mod_id,
+                  lg.pasta_do_diario(mod_id)):
         if pasta.exists() or pasta.is_symlink():
             if pasta == lg.dados / mod_id and _so_o_css_da_pessoa(pasta):
                 continue
@@ -1460,6 +1527,7 @@ __all__ = [
     "commit_novo",
     "conferir_a_cifra",
     "conferir_remocao",
+    "dar_por_provada",
     "desligar",
     "esperar_parar",
     "frase_do_preparo",
@@ -1480,4 +1548,5 @@ __all__ = [
     "rodar_sem_caixa",
     "tirar_da_caixa",
     "troca_viva",
+    "voltar_para_a_anterior",
 ]
