@@ -22,9 +22,6 @@ GRAVAM_SEM_DECLARAR: dict[Chave, str] = {
         "`sensor.set`: o daemon grava `ControllerOverrides.sensores` no perfil "
         "que vale (`_handle_sensor_set` → `save_profile`); a outra ponta é "
         "conferida em `test_o_sensor_grava_pelo_daemon`",
-    ("*", "importar"):
-        "o perfil que quem usa escolhe no seletor do sistema entra na pasta de "
-        "perfis (`write_text`), sem sobrescrever nenhum",
     ("10-perfis.html", "ordenar"):
         "a ordem da lista vai ao `gui_preferences.json` de quem usa, o arquivo da "
         "janela (`_prefs`); nenhum perfil nem aparelho muda",
