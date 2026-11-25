@@ -154,6 +154,7 @@ FILTRO_DO_BLUEZ: tuple[str, ...] = (
         "org.bluez.GattDescriptor1.WriteValue",
     )),
     f"--broadcast={_BLUEZ}=@/org/bluez/*",
+    f"--broadcast={_BLUEZ}=org.freedesktop.DBus.ObjectManager.*@/",
 )
 
 ENTRAM_NA_CAIXA: tuple[str, ...] = (

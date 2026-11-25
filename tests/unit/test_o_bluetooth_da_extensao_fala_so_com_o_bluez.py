@@ -13,6 +13,8 @@ MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
   ``test_o_filtro_do_bluez_nao_traz_o_que_desliga_ou_esquece`` e
   ``test_de_dentro_da_caixa_so_o_bluez_responde``;
 - o proxy tirado do ``_abrir`` reprova ``test_de_dentro_da_caixa_so_o_bluez_responde``;
+- o aviso do ``ObjectManager`` em ``/`` tirado do filtro (o aparelho achado na varredura nasce
+  ali) reprova ``test_de_dentro_da_caixa_so_o_bluez_responde``;
 - a recusa tirada do ``_comecar`` reprova ``test_sem_o_proxy_a_extensao_com_bluetooth_recusa``;
 - o ``_soltar_o_proxy`` tirado da falha de abertura do ``_cuidar`` reprova
   ``test_a_abertura_que_falha_depois_do_proxy_o_solta``.
@@ -53,6 +55,10 @@ _SONDA = textwrap.dedent('''
         Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
         | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION,
         None, None)
+    sinais = []
+    c.signal_subscribe("org.bluez", None, None, None, None, Gio.DBusSignalFlags.NONE,
+                       lambda _c, _r, caminho, interface, nome, _p: sinais.append(
+                           f"{caminho} {interface}.{nome}"))
 
     def chamar(destino, caminho, interface, chamada, parametros=None):
         try:
@@ -76,7 +82,14 @@ _SONDA = textwrap.dedent('''
                                "Set", V("(ssv)", ("org.bluez.Adapter1", "Powered", V("b", False))))
     saida["logind"] = chamar("org.freedesktop.login1", "/org/freedesktop/login1",
                              "org.freedesktop.DBus.Peer", "Ping")
-    with open(os.path.join(os.environ["HEFESTO_MOD_DADOS"], "relato.json"), "w") as f:
+    dados = os.environ["HEFESTO_MOD_DADOS"]
+    open(os.path.join(dados, "ouvindo"), "w").close()
+    contexto, fim = GLib.MainContext.default(), time.monotonic() + 5
+    while time.monotonic() < fim and not any("InterfacesAdded" in s for s in sinais):
+        contexto.iteration(False)
+        time.sleep(0.02)
+    saida["sinais"] = sinais
+    with open(os.path.join(dados, "relato.json"), "w") as f:
         json.dump(saida, f)
     while True:
         time.sleep(1)
@@ -91,7 +104,7 @@ def _manifesto_do_bluetooth() -> Manifesto:
     })
 
 
-def _caixa(base: Path, **mais: str | None) -> list[str]:
+def _caixa(base: Path, bluez: str | None = None) -> list[str]:
     for pasta in ("fonte", "dados", "casa"):
         (base / pasta).mkdir(exist_ok=True)
     porta = base / "porta.sock"
@@ -99,7 +112,7 @@ def _caixa(base: Path, **mais: str | None) -> list[str]:
     return sup.comando_na_caixa(
         bwrap=shutil.which("bwrap") or "bwrap", comando=["true"], codigo=base / "fonte",
         dados=base / "dados", porta=porta, manifesto=_manifesto_do_bluetooth(),
-        casa=base / "casa", execucao=(), **mais)
+        casa=base / "casa", execucao=(), bluez=bluez)
 
 
 def test_a_linha_montada_nao_traz_o_run_dbus(curto: Path) -> None:
@@ -133,7 +146,7 @@ def _tem_o_proxy() -> bool:
 @pytest.mark.skipif(not _tem_o_proxy(), reason="sem xdg-dbus-proxy, dbus-daemon ou Gio")
 def test_de_dentro_da_caixa_so_o_bluez_responde(
         curto: Path, lar: Lugares, monkeypatch: pytest.MonkeyPatch) -> None:
-    """D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ: vê o org.bluez, nada além dele."""
+    """D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ: vê o org.bluez e os avisos dele."""
     exigir_caixa_do_bwrap()
     pasta = curto / "fonte-exemplo"
     pasta.mkdir()
@@ -155,6 +168,12 @@ def test_de_dentro_da_caixa_so_o_bluez_responde(
         async def corrida() -> None:
             await sup_.iniciar()
             try:
+                await _ate(lambda: (lar.dados / "exemplo" / "ouvindo").exists(), prazo=20.0)
+                variante = bluez.bluez.GLib.Variant
+                bluez.bluez.conexao.emit_signal(
+                    None, "/", "org.freedesktop.DBus.ObjectManager", "InterfacesAdded",
+                    variante("(oa{sa{sv}})", ("/org/bluez/hci9/dev_AA_BB_CC_00_00_01", {
+                        "org.bluez.Device1": {"Name": variante("s", "Brinquedo")}})))
                 await _ate(lambda: (lar.dados / "exemplo" / "relato.json").exists(), prazo=20.0)
                 visto.update(json.loads((lar.dados / "exemplo" / "relato.json").read_text()))
                 vigiada = sup_._vigiadas["exemplo"]
@@ -172,6 +191,10 @@ def test_de_dentro_da_caixa_so_o_bluez_responde(
     assert visto["logind"] in ("AccessDenied", "ServiceUnknown"), visto
     assert "RemoveDevice" not in metodos and "Set" not in metodos, metodos
     assert "StartDiscovery" in metodos
+    sinais = visto["sinais"]
+    assert isinstance(sinais, list)
+    assert "/ org.freedesktop.DBus.ObjectManager.InterfacesAdded" in sinais, sinais
+    assert "/org/bluez/hci9 org.freedesktop.DBus.Properties.PropertiesChanged" in sinais, sinais
     with pytest.raises(ProcessLookupError):
         os.kill(proxies[0], 0)
 
