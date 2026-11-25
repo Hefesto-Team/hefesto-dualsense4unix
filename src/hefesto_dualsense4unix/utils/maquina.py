@@ -29,6 +29,7 @@ from pydantic import (
 from hefesto_dualsense4unix.profiles.schema import (
     ControllerOverrides,
     LedsConfig,
+    ModoDaAba,
     Profile,
     ProfileAnalogicosConfig,
     ProfileAtivacaoConfig,
@@ -36,6 +37,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileMouseConfig,
     ProfileSpeakerConfig,
     RumbleConfig,
+    TriggersConfig,
 )
 from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
@@ -1061,6 +1063,11 @@ SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
 
 CAMPOS_DO_CONTROLE_NO_COMPUTADOR: dict[str, tuple[str, ...]] = {"triggers": ("intensidade",)}
 
+CAMPOS_GUARDADOS_POR_CONTROLE_NO_COMPUTADOR: dict[str, tuple[str, ...]] = {
+    "triggers": ("intensidade", "left", "right")}
+
+CAMPOS_GLOBAIS_DO_GATILHO_NO_COMPUTADOR: tuple[str, ...] = ("modo",)
+
 
 class MouseDoComputador(BaseModel):
     """As velocidades do mouse emulado e o perfil de point and click; o liga é do jogo."""
@@ -1097,6 +1104,21 @@ class ComputadorGlobal(BaseModel):
     ativacao: ProfileAtivacaoConfig | None = None
     analogicos: ProfileAnalogicosConfig | None = None
     cursor: ProfileCursorConfig | None = None
+    triggers: TriggersConfig | None = None
+    controles_modo: ModoDaAba | None = None
+
+    @field_validator("triggers")
+    @classmethod
+    def _do_gatilho_global_so_o_modo(cls, valor: TriggersConfig | None) -> TriggersConfig | None:
+        """O efeito é de cada controle: do gatilho global, o computador guarda só o modo."""
+        if valor is not None:
+            do_jogo = sorted(
+                c for c in valor.model_fields_set
+                if c not in CAMPOS_GLOBAIS_DO_GATILHO_NO_COMPUTADOR)
+            if do_jogo:
+                raise ValueError(
+                    f"o gatilho global traz {do_jogo}, que são do jogo e não do computador")
+        return valor
 
     @model_validator(mode="after")
     def _botoes_e_teclas_pelo_dono(self) -> ComputadorGlobal:
@@ -1148,7 +1170,7 @@ class ComputadorDeclarado(BaseModel):
                 if c not in SECOES_DO_CONTROLE_NO_COMPUTADOR
                 and getattr(entrada, c) is not None
             )
-            for secao, so_estes in CAMPOS_DO_CONTROLE_NO_COMPUTADOR.items():
+            for secao, so_estes in CAMPOS_GUARDADOS_POR_CONTROLE_NO_COMPUTADOR.items():
                 parte = getattr(entrada, secao, None)
                 if parte is not None:
                     do_jogo += sorted(f"{secao}.{c}" for c in parte.model_fields_set

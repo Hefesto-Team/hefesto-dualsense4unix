@@ -40,6 +40,8 @@ def _campo_do_cartao(cartao: str, uniq: str) -> dict[str, Any]:
         "luz": {"leds": {"lightbar_brightness": 0.4}},
         "vibracao": {"rumble": {"motor_forte_pct": 40}},
         "gatilho": {"triggers": {"intensidade": 0.5}},
+        "modo_dos_gatilhos": {"triggers": {"modo": "automatico"}},  # (noqa-acento)
+        "modo_dos_controles": {"controles_modo": "automatico"},  # (noqa-acento)
         "som": {"speaker": {"volume": 55}},
         "sensores": {"sensores": {"giroscopio": False}},
         "mouse": {"mouse": {"enabled": False, "speed": 9, "scroll_speed": 3}},

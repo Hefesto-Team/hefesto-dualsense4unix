@@ -322,12 +322,16 @@ def modo_dos_gatilhos_do_perfil(p: dict[str, Any] | None) -> str:
     from hefesto_dualsense4unix.profiles.schema import (
         MODO_PERSONALIZADO,
         decidir_o_modo_dos_gatilhos,
+        extensao_do_modo,
     )
 
     if not isinstance(p, dict) or not p:
         return MODO_PERSONALIZADO
     globais = p.get("triggers")
     escrito = globais.get("modo") if isinstance(globais, dict) else None
+    if "name" not in p:
+        vale = escrito == MODO_AUTOMATICO or extensao_do_modo(escrito) is not None
+        return str(escrito) if vale else MODO_PERSONALIZADO
     return decidir_o_modo_dos_gatilhos(
         escrito if isinstance(escrito, str) else None, _todos_os_gatilhos_sem_efeito(p))
 
@@ -351,7 +355,7 @@ def _nao_no_automatico(ctx: Contexto) -> None:
     aceitando o que sempre aceitou.
     """
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if nome and _o_modo_escrito_e_automatico(perfil.ativo_que_vale(nome)):
+    if _o_modo_escrito_e_automatico(perfil.ativo_que_vale(nome)):
         raise RuntimeError(RECADO_DO_AUTOMATICO_PARADO)
 
 
@@ -946,7 +950,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         entradas = c.get("inputs") or {}
         l2, r2 = entradas.get("l2_raw"), entradas.get("r2_raw")
 
-        cfgs = {sig: _o_que_o_controle_recebe(p, uniq, disco)
+        cfgs = {sig: _o_que_o_controle_recebe(vale, uniq, disco)
                 for sig, disco in LADOS.items()}
         deste = {sig: _do_lado(cfgs[sig], specs) for sig in LADOS}
 
@@ -998,7 +1002,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
     blocos[SELETOR_DOS_SEUS] = html_dos_seus_efeitos()
-    modo_da_aba = _monta().modo_na_tela(modo_dos_gatilhos_do_perfil(p), ABA_DO_MODO)
+    modo_da_aba = _monta().modo_na_tela(modo_dos_gatilhos_do_perfil(vale), ABA_DO_MODO)
     return {
         "colunas": colunas,
         "blocos": blocos,
@@ -1375,8 +1379,11 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     inteiro acende de volta a barra de luz que o usuário desligou noutra aba.
     """
     nome = perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
-    if not nome:
-        return ""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import e_o_freestyle
+
+    if not nome or e_o_freestyle(nome):
+        return _guardar_no_computador(nome, uniq, disco, cfg)
     try:
         prof = perfil._com_o_src().load_profile(nome)
     except Exception:
@@ -1390,6 +1397,31 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
         raise RuntimeError(
             f"o efeito foi para o aparelho, mas não entrou no perfil "
             f"{nome}. Ele vale até você trocar de perfil.") from erro
+    return ""
+
+
+def _guardar_no_computador(nome: str, uniq: str, disco: str, cfg: dict[str, Any]) -> str:
+    """Sem perfil de jogo, o efeito de UM lado de UM controle vai ao padrão do computador.
+
+    Mesmo caminho do cartão «gatilho» (`gravar_pelo_gesto`): o computador guarda o efeito pela
+    identidade do controle, e o perfil de um jogo que escolhe o gatilho o sobrepõe. O Freestyle
+    não sobrepõe nada e grava aqui também.
+    """
+    chave = _chave_no_perfil(uniq)
+    if not chave:
+        return ("o efeito foi para o aparelho, mas este controle não tem endereço fixo. "
+                "Ele vale até você desligar o controle.")
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    try:
+        gravar_pelo_gesto(
+            CARTAO_DA_INTENSIDADE, nome,
+            lambda vista: _com_os_gatilhos(vista, uniq, {disco: cfg}),
+            uniq=chave, origem="interface-nova")
+    except Exception as erro:
+        raise RuntimeError(
+            "o efeito foi para o aparelho, mas não ficou guardado no computador. "
+            "Ele vale até você desligar o controle.") from erro
     return ""
 
 
@@ -1633,7 +1665,7 @@ def _ajustes_de_agora(ctx: Contexto, uniq: str, disco: str, modo_: str) -> list[
     escolha «Todos» ou por uma página que ainda não repintou) não troca os números dele pelos de
     nascença.
     """
-    p = perfil.ativo(ctx.state.get("active_profile")) or {}
+    p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     cfg = _o_que_o_controle_recebe(p, uniq, disco)
     agora, params = _na_lista_da_tela(str(cfg.get("mode") or "Off"), _params_inteiros(cfg),
                                       _specs())
@@ -1830,7 +1862,7 @@ def sentir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             _tocar(p, disco, partir, params, uniq)
         _segurar_o_toque()
     finally:
-        agora = perfil.ativo(ctx.state.get("active_profile"))
+        agora = perfil.ativo_que_vale(ctx.state.get("active_profile"))
         for disco in LADOS.values():
             volta = _o_que_o_controle_recebe(agora, uniq, disco)
             _tocar(p, disco, str(volta.get("mode") or "Off"),
@@ -1880,7 +1912,7 @@ def _monta() -> Any:
     return monta
 
 
-@gesto("03-gatilhos.html", GESTO_DO_MODO, grava="_gravar_so_o_gatilho")
+@gesto("03-gatilhos.html", GESTO_DO_MODO, grava="gravar_pelo_gesto")
 def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O par «Modo automático | Modo personalizado» — e ele MUDA o perfil.
 
@@ -1902,17 +1934,17 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
             f"{GESTO_DO_MODO}: o clique não disse qual modo. Cada botão do par manda o "
             f"`data-modo`; um pedido sem ele não vem da tela")
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        raise RuntimeError(
-            "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
     if _monta().modo_na_tela(
             modo_dos_gatilhos_do_perfil(perfil.ativo_que_vale(nome)), ABA_DO_MODO) == pedido:
         return None
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
-    novo = prof.model_copy(update={
-        "triggers": prof.triggers.model_copy(update={"modo": pedido})})
-    _gravar_so_o_gatilho(novo, p)
+    gravar_pelo_gesto(
+        "modo_dos_gatilhos", nome,
+        lambda prof: prof.model_copy(update={
+            "triggers": prof.triggers.model_copy(update={"modo": pedido})}),
+        origem="interface-nova")
     perfil.reaplicar(nome, ctx, p)
     if pedido not in (MODO_AUTOMATICO, "personalizado"):
         return {"recado": f"Gatilhos no {_monta().rotulo_do_modo(pedido, ABA_DO_MODO)}."}
@@ -1923,7 +1955,7 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
 def _modo_de_agora(ctx: Contexto, uniq: str, disco: str) -> str:
     """O modo em que aquele gatilho está, pela MESMA função que a tela pinta."""
-    p = perfil.ativo(ctx.state.get("active_profile")) or {}
+    p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     cfg = _o_que_o_controle_recebe(p, uniq, disco)
     return _na_lista_da_tela(
         str(cfg.get("mode") or "Off"), _params_inteiros(cfg), _specs())[0]

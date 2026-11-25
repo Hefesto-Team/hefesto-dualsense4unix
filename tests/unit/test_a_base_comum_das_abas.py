@@ -253,7 +253,7 @@ def test_o_modo_grava_e_volta_igual_ao_reabrir(
 
 @pytest.mark.parametrize(("aba", "gesto", "_s", "_c"), GESTOS_DO_MODO,
                          ids=[g[1] for g in GESTOS_DO_MODO])
-def test_o_modo_recusa_pedido_sem_modo_e_sem_perfil(aba: str, gesto: str, _s: Any, _c: Any) -> None:
+def test_o_modo_recusa_pedido_sem_modo(aba: str, gesto: str, _s: Any, _c: Any) -> None:
     save_profile(_perfil("Jogo X"))
     fn = pacotes.gesto_da_pagina(aba, gesto)
     assert fn is not None
@@ -261,8 +261,6 @@ def test_o_modo_recusa_pedido_sem_modo_e_sem_perfil(aba: str, gesto: str, _s: An
         fn(_contexto(pacotes, "Jogo X"), {}, _Ponte())
     with pytest.raises(ValueError):
         fn(_contexto(pacotes, "Jogo X"), {"modo": "qualquer"}, _Ponte())
-    with pytest.raises(RuntimeError):
-        fn(_contexto(pacotes, ""), {"modo": AUTO}, _Ponte())
 
 
 def test_o_modo_sobrevive_ao_salvar_do_rodape() -> None:
@@ -317,10 +315,11 @@ def test_os_modos_nao_se_deduzem_do_perfil() -> None:
     assert ctl({"controles_modo": AUTO}) == AUTO
 
 
-def test_os_dois_gestos_do_modo_tem_camada() -> None:
+def test_os_gestos_do_modo_tem_camada() -> None:
+    """O modo grava pelo dono do computador (sem jogo, no padrão dele): camada computador."""
     camada = pacotes.camada
     for aba, gesto, _s, _c in GESTOS_DO_MODO:
-        assert camada.CAMADA[(aba, gesto)] == camada.JOGO, f"{aba}·{gesto}"
+        assert camada.CAMADA[(aba, gesto)] == camada.COMPUTADOR, f"{aba}·{gesto}"
 
 
 def test_o_webkit_cala_o_menu_dele() -> None:

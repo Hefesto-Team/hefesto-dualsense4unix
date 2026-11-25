@@ -1692,15 +1692,17 @@ def modo_da_vibracao_do_perfil(p: dict[str, Any] | None) -> str:
     return MODO_PERSONALIZADO
 
 
-@gesto("05-vibracao.html", GESTO_DO_MODO, grava="save_profile")
+@gesto("05-vibracao.html", GESTO_DO_MODO, grava="gravar_pelo_gesto")
 def modo_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O botão «Modo automático» da aba: grava ``rumble.modo`` no perfil ativo.
+    """O botão «Modo automático» da aba: grava ``rumble.modo`` onde o cartão «vibracao» grava.
 
-    O ``data-modo`` do botão diz o que o usuário PEDIU, e pedir o modo em que o perfil já está não
-    grava nada. Nada se apaga: as escolhas da aba ficam no perfil, e o Personalizado as devolve.
-    O modo só diz quem manda; a receita do estilo que o Automático lê é do motor do tato.
+    Com um jogo, no perfil dele; sem perfil de jogo, no padrão do computador. O ``data-modo`` do
+    botão diz o que o usuário PEDIU, e pedir o modo em que a aba já está não grava nada. Nada se
+    apaga: as escolhas da aba ficam guardadas, e o Personalizado as devolve. O modo só diz quem
+    manda; a receita do estilo que o Automático lê é do motor do tato.
     """
-    loader = _perfil._com_o_src()
+    _perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     pedido = str(o.get("modo") or "")
     if not _monta().pedido_da_aba(pedido, ABA_DO_MODO):
@@ -1708,15 +1710,14 @@ def modo_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
             f"um pedido sem ele não vem da tela")
     nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
-    if not nome:
-        raise RuntimeError(
-            "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
     if _monta().modo_na_tela(
             modo_da_vibracao_do_perfil(_perfil.ativo_que_vale(nome)), ABA_DO_MODO) == pedido:
         return
-    prof = loader.load_profile(nome)
-    novo = prof.model_copy(update={"rumble": prof.rumble.model_copy(update={"modo": pedido})})
-    loader.save_profile(novo, origem="interface-nova")
+    gravar_pelo_gesto(
+        "vibracao", nome,
+        lambda prof: prof.model_copy(update={
+            "rumble": prof.rumble.model_copy(update={"modo": pedido})}),
+        origem="interface-nova")
 
 
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",

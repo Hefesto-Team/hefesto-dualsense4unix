@@ -20,7 +20,11 @@ from hefesto_dualsense4unix.profiles.schema import (
     RumbleConfig,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.maquina import CAMPOS_DO_CONTROLE_NO_COMPUTADOR
+from hefesto_dualsense4unix.utils.maquina import (
+    CAMPOS_DO_CONTROLE_NO_COMPUTADOR,
+    CAMPOS_GLOBAIS_DO_GATILHO_NO_COMPUTADOR,
+    CAMPOS_GUARDADOS_POR_CONTROLE_NO_COMPUTADOR,
+)
 
 logger = get_logger(__name__)
 
@@ -52,6 +56,10 @@ SECOES: dict[str, Secao] = {
                       ("rumble",), ("rumble",), ("rumble",)),
     "gatilho": Secao("gatilho", "03-gatilhos.html", "Intensidade do gatilho",
                      (), (), ("triggers",)),
+    "modo_dos_gatilhos": Secao("modo_dos_gatilhos", "03-gatilhos.html", "Modo dos gatilhos",
+                               ("triggers",), ("triggers",), ()),
+    "modo_dos_controles": Secao("modo_dos_controles", "01-jogar.html", "Modo dos controles",
+                                ("controles_modo",), ("controles_modo",), ()),
     "mouse": Secao("mouse", "06-navegacao.html", "Mouse",
                    ("mouse", "button_actions", "tabela_no_jogo"),
                    ("mouse", "button_actions", "tabela_no_jogo"), ()),
@@ -65,7 +73,7 @@ SECOES: dict[str, Secao] = {
 DO_JOGO: dict[str, str] = {
     "mode": "o modo (Sony, Xbox, Navegação, Nativo) é de cada jogo",
     "movimento": "a Mira é do jogo que mira",
-    "triggers": "o efeito do gatilho é de cada jogo; a intensidade é do computador",
+    "triggers": "o efeito do gatilho e o modo valem no computador; o jogo que escolhe os sobrepõe",
     "remapeamento": "a troca de botões é do jogo",
     "mouse.enabled": "o Point-and-click liga com o jogo de mouse",
     "suppress_desktop_emulation": "o modo-jogo é de cada jogo",
@@ -117,6 +125,12 @@ _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
 def _so_a_parte_do_computador(secao: str, dados: Mapping[str, Any]) -> dict[str, Any]:
     """Os campos de ``secao`` que são do computador (do gatilho, só a intensidade)."""
     so_estes = CAMPOS_DO_CONTROLE_NO_COMPUTADOR.get(secao)
+    return dict(dados) if so_estes is None else {c: v for c, v in dados.items() if c in so_estes}
+
+
+def _o_que_o_computador_guarda(secao: str, dados: Mapping[str, Any]) -> dict[str, Any]:
+    """Os campos de ``secao`` que o computador guarda por controle (no gatilho, escala e efeito)."""
+    so_estes = CAMPOS_GUARDADOS_POR_CONTROLE_NO_COMPUTADOR.get(secao)
     return dict(dados) if so_estes is None else {c: v for c, v in dados.items() if c in so_estes}
 
 
@@ -247,7 +261,7 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
         return perfil
     cru: dict[str, Any] = perfil.model_dump(mode="json", exclude_unset=True)
     do_global = computador.global_
-    for secao in ("leds", "rumble", "speaker", "mouse"):
+    for secao in ("leds", "rumble", "speaker", "mouse", "triggers"):
         modelo = getattr(do_global, secao, None)
         if modelo is None:
             continue
@@ -282,6 +296,8 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
         cru["key_bindings"] = (
             {**teclas_do_jogo, **do_global.key_bindings} if freestyle
             else {**do_global.key_bindings, **teclas_do_jogo})
+    if do_global.controles_modo is not None and (freestyle or perfil.controles_modo is None):
+        cru["controles_modo"] = do_global.controles_modo
     if do_global.teclado_emulado is not None and (freestyle or perfil.teclado_emulado is None):
         cru["teclado_emulado"] = do_global.teclado_emulado
     for escalar in ("teclado_so_no_jogo", "teclado_sempre", "tabela_no_jogo"):
@@ -320,6 +336,8 @@ def _controles_que_valem(
         secao: set(escolhas_globais_do_jogo(perfil, secao))
         for secao in ("leds", "rumble", "speaker", "mic")
     }
+    globais["triggers"] = set(escolhas_globais_do_jogo(perfil, "triggers")) - {
+        "intensidade", "modo"}
     for identidade, do_computador in computador.controles.items():
         dados = do_computador.model_dump(mode="json", exclude_unset=True)
         original = originais.get(identidade, identidade)
@@ -327,7 +345,7 @@ def _controles_que_valem(
         for secao, campos in dados.items():
             if secao not in _CAMPOS_DO_CONTROLE or not isinstance(campos, Mapping):
                 continue
-            campos = _so_a_parte_do_computador(secao, campos)
+            campos = _o_que_o_computador_guarda(secao, campos)
             do_controle = dict(entrada.get(secao) or {})
             do_jogo_na_peca = dict(do_controle)
             escritos = set() if freestyle else {
@@ -467,7 +485,7 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
         controles = dict(documento.get("controles") or {})
         entrada = dict(controles.get(identidade) or {})
         _remendar(entrada, {
-            s: (_so_a_parte_do_computador(s, v) if isinstance(v, Mapping) else v)
+            s: (_o_que_o_computador_guarda(s, v) if isinstance(v, Mapping) else v)
             for s, v in campos.items() if s in _CAMPOS_DO_CONTROLE})
         if entrada:
             controles[identidade] = entrada
@@ -480,7 +498,9 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
 
 
 _CAMPOS_DO_GLOBAL: dict[str, tuple[str, ...]] = {
-    "mouse": ("speed", "scroll_speed", "point_and_click")}
+    "mouse": ("speed", "scroll_speed", "point_and_click"),
+    "triggers": CAMPOS_GLOBAIS_DO_GATILHO_NO_COMPUTADOR,
+}
 
 
 def _so_os_campos_do_computador(secao: str, valor: Mapping[str, Any]) -> dict[str, Any]:

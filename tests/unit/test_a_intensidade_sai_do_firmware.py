@@ -766,14 +766,19 @@ def test_com_jogo_o_trilho_grava_no_jogo_e_o_100_dele_vence_o_do_computador(a03_
     assert _o_gerente_publica("Jogo X") == [None], "o 100% do jogo deixou a do computador valer"
 
 
-def test_o_computador_guarda_so_a_intensidade_e_nunca_o_efeito() -> None:
-    """O efeito do gatilho é de cada jogo: o `maquina.json` com um lado recusa o documento."""
+def test_o_computador_guarda_a_escala_e_o_efeito_do_controle_e_recusa_o_resto() -> None:
+    """O efeito do gatilho de cada controle entra no `maquina.json`; o modo por controle, não.
+
+    D-1911-O-MODO-E-O-GATILHO-TEM-PADRAO-DO-COMPUTADOR: o efeito guardado sem perfil ativo mora
+    aqui, ao lado da escala. O que segue de cada jogo (o `modo`) o documento recusa.
+    """
     from hefesto_dualsense4unix.utils import maquina as m
 
-    assert m.gravar_o_computador({"controles": {_MAC[0]: {"triggers": {"intensidade": 0.7}}}})
-    with pytest.raises(ValueError, match=r"triggers\.left"):
+    assert m.gravar_o_computador({"controles": {_MAC[0]: {"triggers": {
+        "left": {"mode": "Rigid", "params": [0, 180]}, "intensidade": 0.7}}}})
+    with pytest.raises(ValueError, match=r"triggers\.modo"):
         m.MaquinaConfig.model_validate({"computador": {"controles": {
-            _MAC[0]: {"triggers": {"left": {"mode": "Rigid"}, "intensidade": 0.7}}}}})
+            _MAC[0]: {"triggers": {"modo": "automatico", "intensidade": 0.7}}}}})  # (noqa-acento)
 
 
 def test_a_migracao_leva_ao_computador_so_a_intensidade_do_freestyle() -> None:
@@ -821,5 +826,6 @@ def _cartao_da_03() -> str:
     """O cartão do computador em que a intensidade mora, lido do dono (sem carregar o GTK)."""
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
-    (nome,) = [n for n, s in opc.SECOES.items() if s.pagina == "03-gatilhos.html"]
+    (nome,) = [n for n, s in opc.SECOES.items()
+               if s.pagina == "03-gatilhos.html" and s.por_controle]
     return nome

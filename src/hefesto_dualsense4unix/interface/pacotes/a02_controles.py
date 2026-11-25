@@ -2532,15 +2532,17 @@ def modo_dos_controles_do_perfil(p: dict[str, Any] | None) -> str:
     return MODO_PERSONALIZADO
 
 
-@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, GESTO_DO_MODO, grava="save_profile")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, GESTO_DO_MODO, grava="gravar_pelo_gesto")
 def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O botão «Modo automático» da aba: grava ``controles_modo`` no perfil ativo.
+    """O botão «Modo automático» da aba: grava ``controles_modo`` no perfil ativo ou no computador.
 
-    Automático é os quatro controles aceitarem o que o jogo pede, sem ajuste do Hefesto. O
-    ``data-modo`` do botão diz o que o usuário PEDIU, e pedir o modo em que o perfil já está não
-    grava nada. Nada se apaga: as escolhas da aba ficam no perfil, e o Personalizado as devolve.
+    Automático é os quatro controles aceitarem o que o jogo pede, sem ajuste do Hefesto. Com um
+    jogo, o modo vai ao perfil dele; sem perfil de jogo, ao padrão do computador. O ``data-modo``
+    do botão diz o que o usuário PEDIU, e pedir o modo em que a aba já está não grava nada. Nada
+    se apaga: as escolhas da aba ficam guardadas, e o Personalizado as devolve.
     """
-    loader = _perfil._com_o_src()
+    _perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     pedido = str(o.get("modo") or "")
     if not _monta().pedido_da_aba(pedido, ABA_DO_MODO):
@@ -2548,14 +2550,13 @@ def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
             f"um pedido sem ele não vem da tela")
     nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
-    if not nome:
-        raise RuntimeError(
-            "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
     if _monta().modo_na_tela(
             modo_dos_controles_do_perfil(_perfil.ativo_que_vale(nome)), ABA_DO_MODO) == pedido:
         return
-    novo = loader.load_profile(nome).model_copy(update={"controles_modo": pedido})
-    loader.save_profile(novo, origem="interface-nova")
+    gravar_pelo_gesto(
+        "modo_dos_controles", nome,
+        lambda prof: prof.model_copy(update={"controles_modo": pedido}),
+        origem="interface-nova")
 
 
 PONTE = {"mic_canal_set_detalhado", "speaker_set",

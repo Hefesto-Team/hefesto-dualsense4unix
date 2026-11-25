@@ -1684,7 +1684,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def sala_visada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Tem gente sentada entre o dongle e o sofá?" — grava a resposta.
 
-    O par da altura: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:150`), `"com_gente"` /
+    O par da altura: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:204`), `"com_gente"` /
     `"livre"` / `None`. Corpo humano absorve 2,4 GHz e nenhum barramento sabe. É gesto separado
     porque são duas perguntas: um gesto único mandaria as duas chaves e a não respondida iria como
     `None`, que na fusão é uma ESCOLHA ("voltei para 'Não sei'"), não ausência

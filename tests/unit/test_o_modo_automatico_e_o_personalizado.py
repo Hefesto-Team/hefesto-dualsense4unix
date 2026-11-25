@@ -355,7 +355,7 @@ def test_pedir_o_modo_em_que_o_perfil_ja_esta_nao_grava_nada(
     assert ponte.chamadas == []
 
 
-def test_o_gesto_dos_gatilhos_recusa_pedido_sem_modo_e_sem_perfil(
+def test_o_gesto_dos_gatilhos_recusa_pedido_sem_modo(
     pasta_de_perfis: pathlib.Path, pac: Any
 ) -> None:
     funcao = pac.gesto_da_pagina("03-gatilhos.html", "modo-dos-gatilhos")
@@ -363,13 +363,6 @@ def test_o_gesto_dos_gatilhos_recusa_pedido_sem_modo_e_sem_perfil(
     for ruim in ("", "qualquer"):
         with pytest.raises(ValueError):
             funcao(_ctx(pac), {"modo": ruim, "uniq": UM}, Ponte())
-    with pytest.raises(RuntimeError):
-        funcao(_pac_sem_perfil(pac), {"modo": AUTOMATICO, "uniq": UM}, Ponte())
-
-
-def _pac_sem_perfil(pac: Any) -> Any:
-    return pac.Contexto(state={}, mesa=[dict(m) for m in MESA], conectados=[dict(P1)],
-                        estados={})
 
 
 @pytest.mark.parametrize("gesto", ["modo", "imersao"])
