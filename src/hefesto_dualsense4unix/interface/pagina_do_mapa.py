@@ -6591,8 +6591,6 @@ EDICOES_DO_ARRANJO_PELA_RESPOSTA: tuple[Edicao, ...] = (
         ),
         depois=(
             '  function vereditoDaAltura() {\n'
-            '    if (ALTURA === "acima") return { v: "melhor", txt: "'
-            'Melhor lugar", porque: FRASE_DA_ALTURA.acima };\n'
             '    return { v: "serve", txt: "Serve", porque: FRASE_DA_'
             'ALTURA[ALTURA] || FRASE_SEM_ALTURA };\n'
             '  }\n'

@@ -1013,7 +1013,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   }
   function frase1(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
   function vereditoDaAltura() {
-    if (ALTURA === "acima") return { v: "melhor", txt: "Melhor lugar", porque: FRASE_DA_ALTURA.acima };
     return { v: "serve", txt: "Serve", porque: FRASE_DA_ALTURA[ALTURA] || FRASE_SEM_ALTURA };
   }
   function julgar(porta) {

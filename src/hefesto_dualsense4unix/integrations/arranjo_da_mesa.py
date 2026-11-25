@@ -932,9 +932,7 @@ def julgar(
 
 
 def _veredito_da_altura(altura: str | None) -> Veredito:
-    """O dongle sem outro motivo: a altura que a pessoa respondeu, ou a entrada direta."""
-    if altura == "acima":
-        return Veredito("melhor", "Melhor lugar", FRASE_DA_ALTURA[altura])
+    """O dongle sem outro motivo serve, com a altura que a pessoa respondeu ou a entrada direta."""
     return Veredito("serve", "Serve", FRASE_DA_ALTURA.get(altura or "", FRASE_SEM_ALTURA))
 
 

@@ -94,15 +94,15 @@ def test_sem_resposta_o_hub_do_barramento_nao_ganha_o_alto_nem_a_frase() -> None
 def test_com_a_resposta_a_frase_segue_o_que_foi_respondido() -> None:
     """D-2511-O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU: a frase repete a resposta.
 
-    `abaixo` diz «Serve» e «abaixo da cabeça, como você disse» em toda entrada livre, hub ou
-    gabinete; `acima` diz «Melhor lugar» e conta o bônus de +60 entre as razões.
+    Toda entrada livre, hub ou gabinete, diz «Serve» com a frase da resposta (desenho A): a
+    resposta vale para todas, e não faz de nenhuma a melhor; `acima` conta o +60 entre as razões.
     """
     for entrada in ("3", "11", "13"):
         abaixo = _julga_o_dongle(entrada, "abaixo")
         acima = _julga_o_dongle(entrada, "acima")
         assert abaixo is not None and acima is not None
         assert (abaixo.v, abaixo.porque) == ("serve", motor.FRASE_DA_ALTURA["abaixo"])
-        assert (acima.v, acima.porque) == ("melhor", motor.FRASE_DA_ALTURA["acima"])
+        assert (acima.v, acima.porque) == ("serve", motor.FRASE_DA_ALTURA["acima"])
     assert "abaixo da cabeça" in " ".join(motor.consequencias(_mesa(altura="abaixo")))
     assert "cabeça" not in " ".join(motor.consequencias(_mesa(altura="acima")))
     razoes = [
