@@ -80,3 +80,52 @@ def test_o_de_fabrica_cai_mesmo_com_o_do_dkms_guardado(tmp_path: Path) -> None:
     (tmp_path / "sys-module").mkdir()
     saida = _doctor(tmp_path, fabrica)
     assert "o do Hefesto entra" not in saida, saida
+
+
+def _funcao_do_uninstall(nome: str) -> str:
+    fonte = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
+    inicio = fonte.index(f"{nome}() {{\n")
+    return fonte[inicio:fonte.index("\n}\n", inicio) + 3]
+
+
+def _orfaos_do_uninstall(tmp_path: Path, ko: Path) -> list[str]:
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    (bin_ / "modinfo").write_text(
+        f'#!/bin/sh\ncase "$*" in *hid-playstation*) echo "{ko}" ;; *) exit 1 ;; esac\n',
+        encoding="utf-8")
+    (bin_ / "modinfo").chmod(0o755)
+    r = subprocess.run(
+        [BASH, "-c", _funcao_do_uninstall("os_orfaos_do_dkms") + "\nos_orfaos_do_dkms\n"],
+        env={"PATH": f"{bin_}:/usr/bin:/bin", "HOME": str(tmp_path), "ROOT_DIR": str(RAIZ),
+             "HEFESTO_DKMS_TREE": str(tmp_path / "dkms"),
+             "HEFESTO_DKMS_SRC_ROOT": str(tmp_path / "src")},
+        capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert r.returncode == 0, r.stderr
+    return r.stdout.split()
+
+
+@pytest.mark.parametrize("destino", DESTINOS)
+def test_o_uninstall_acha_o_ko_orfao_onde_o_dkms_o_pos(tmp_path: Path, destino: str) -> None:
+    """D-1911-O-MODULO-DA-CASA-E-A-COPIA-QUE-O-DKMS-GUARDA: o órfão se acha em todo destino."""
+    ko = ko_do_dkms(tmp_path, tmp_path / "dkms", "hefesto-hid-playstation",
+                    "hid-playstation.ko.zst", destino=destino, kernel=KERNEL)
+    assert _orfaos_do_uninstall(tmp_path, ko) == [str(ko)]
+
+
+def test_o_uninstall_nao_acusa_o_modulo_de_fabrica(tmp_path: Path) -> None:
+    """D-1911-O-MODULO-DA-CASA-E-A-COPIA-QUE-O-DKMS-GUARDA: o de fábrica não é órfão."""
+    ko_do_dkms(tmp_path, tmp_path / "dkms", "hefesto-hid-playstation", "hid-playstation.ko.zst",
+               destino="extra", kernel=KERNEL)
+    fabrica = tmp_path / "lib" / "modules" / KERNEL / "kernel/drivers/hid/hid-playstation.ko.zst"
+    fabrica.parent.mkdir(parents=True)
+    fabrica.write_bytes(b"o de fabrica")
+    assert _orfaos_do_uninstall(tmp_path, fabrica) == []
+
+
+def test_o_uninstall_acusa_a_fonte_de_um_pacote_da_casa(tmp_path: Path) -> None:
+    """A fonte que o dkms deixou em /usr/src também é órfã, uhid incluído."""
+    fonte = tmp_path / "src" / "hefesto-uhid-1.0.0"
+    fonte.mkdir(parents=True)
+    assert _orfaos_do_uninstall(tmp_path, tmp_path / "nenhum.ko") == [str(fonte)]

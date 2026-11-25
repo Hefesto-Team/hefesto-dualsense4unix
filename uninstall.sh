@@ -1012,19 +1012,28 @@ if [[ -d /usr/local/lib/hefesto-dualsense4unix ]] && sudo -n true 2>/dev/null; t
     sudo rmdir /usr/local/lib/hefesto-dualsense4unix 2>/dev/null || true
 fi
 
+os_orfaos_do_dkms() {
+    local _pkg _mod _ko
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb hefesto-hid-playstation hefesto-uhid \
+                hefesto-usb-f-hid; do
+        compgen -G "$(_dkms_src_root)/${_pkg}-*" || true
+    done
+    for _mod in hid-nintendo rtw88_usb hid-playstation uhid usb_f_hid; do
+        _ko="$(_dkms_arquivo_do_modulo "${_mod}")" || continue
+        dkms_ko_da_casa "${_ko}" && printf '%s\n' "${_ko}"
+    done
+    return 0
+}
+
 if ! command -v dkms >/dev/null 2>&1; then
-    _orfaos=""
-    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb hefesto-hid-playstation hefesto-usb-f-hid; do
-        compgen -G "/usr/src/${_pkg}-*" >/dev/null 2>&1 && _orfaos="${_orfaos} ${_pkg}(src)"
-    done
-    for _ko in hid-nintendo rtw88_usb hid-playstation usb_f_hid; do
-        compgen -G "/lib/modules/$(uname -r)/updates/dkms/${_ko}.ko*" >/dev/null 2>&1 \
-            && _orfaos="${_orfaos} ${_ko}(.ko)"
-    done
+    _orfaos="$(os_orfaos_do_dkms)"
     if [[ -n "${_orfaos}" ]]; then
-        log "AVISO: dkms ausente, mas há artefato DKMS do hefesto órfão:${_orfaos}"
-        log "  o .ko em updates/dkms segue vencendo o in-tree — instale o dkms e re-rode ./uninstall.sh,"
-        log "  ou remova à mão: sudo rm -rf /usr/src/hefesto-* /lib/modules/\$(uname -r)/updates/dkms/{hid-nintendo,rtw88_usb,hid-playstation,usb_f_hid}.ko* && sudo depmod -a && sudo update-initramfs -u"
+        log "AVISO: dkms ausente, mas há artefato DKMS do hefesto órfão:"
+        while IFS= read -r _orfao; do log "  ${_orfao}"; done <<<"${_orfaos}"
+        log "  o .ko de fora do kernel segue vencendo o in-tree — instale o dkms e re-rode ./uninstall.sh,"
+        log "  ou remova à mão: sudo rm -rf $(tr '\n' ' ' <<<"${_orfaos}")&& sudo depmod -a && sudo update-initramfs -u"
     fi
 fi
 
