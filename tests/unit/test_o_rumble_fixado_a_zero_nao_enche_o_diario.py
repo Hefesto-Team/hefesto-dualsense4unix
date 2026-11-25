@@ -33,6 +33,7 @@ from typing import Any
 import pytest
 from structlog.testing import capture_logs
 
+from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 from hefesto_dualsense4unix.daemon import ipc_handlers
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     TETO_DO_RUMBLE_FIXADO_S,
@@ -69,7 +70,12 @@ def relogio(monkeypatch: pytest.MonkeyPatch) -> _Relogio:
 
 @pytest.fixture
 def mesa(tmp_path: Path) -> _Mesa:
-    return _Mesa(tmp_path)
+    m = _Mesa(tmp_path)
+    for uniq in m.uniqs[2:]:
+        m.handles[uniq].conType = type("CT", (), {"name": "BT"})()
+    transportes = [PyDualSenseController._detect_transport(m.handles[u]) for u in m.uniqs]
+    assert transportes == ["usb", "usb", "bt", "bt"], "a mesa é dois no cabo e dois no rádio"
+    return m
 
 
 def _tique(mesa: _Mesa, relogio: _Relogio, ate_s: float) -> None:
@@ -126,10 +132,11 @@ async def test_o_par_com_forca_parado_alem_do_teto_solta_com_uma_linha_por_dono(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("indice", [1, 3], ids=["cabo", "radio"])
 async def test_o_zero_com_um_par_forte_de_pe_silencia_no_mesmo_tique(
-    mesa: _Mesa, relogio: _Relogio
+    mesa: _Mesa, relogio: _Relogio, indice: int
 ) -> None:
-    dois = mesa.uniqs[1]
+    dois = mesa.uniqs[indice]
     await mesa.server._handle_rumble_set({"uniq": dois, "weak": 160, "strong": 220})
     _tique(mesa, relogio, 1.0)
     mesa.limpar_motores()
