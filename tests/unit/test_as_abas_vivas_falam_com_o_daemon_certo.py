@@ -52,9 +52,9 @@ def test_nenhuma_aba_viva_crava_a_arvore_do_usuario(nome: str) -> None:
 def test_toda_aba_viva_deriva_a_raiz_do_proprio_arquivo(nome: str) -> None:
     """A forma positiva da régua acima: não basta não cravar, tem de derivar."""
     fonte = _fonte(nome)
-    assert "Path(__file__).resolve()" in fonte or "__file__" in fonte, (
-        f"{nome} não deriva nada de `__file__`: não há como ele saber em que "
-        "árvore está."
+    assert "__file__" in fonte or "utils.repo_files" in fonte, (
+        f"{nome} não deriva nada de `__file__` nem pergunta a `utils.repo_files`: não há como "
+        "ele saber em que árvore está."
     )
 
 

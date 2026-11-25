@@ -259,7 +259,7 @@ def test_apptray_em_cosmic_difere_indicator_via_glib_timeout(
 
 
 def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatch):
-    """Em GNOME (não-COSMIC), start() cria indicator imediatamente."""
+    """Em GNOME (não-COSMIC), start() cria o indicator na hora e agenda só a sonda do hospedeiro."""
     fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
     fake_glib = MagicMock()
     _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
@@ -269,7 +269,9 @@ def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatc
     assert tray.start() is True
 
     assert tray._indicator is not None
-    fake_glib.timeout_add.assert_not_called()
+    fake_glib.timeout_add.assert_called_once()
+    from hefesto_dualsense4unix.app.tray import _WATCHER_PROBE_RETRY_MS
+    assert fake_glib.timeout_add.call_args.args[0] == _WATCHER_PROBE_RETRY_MS
 
 
 def test_apptray_cosmic_emite_notification_se_watcher_ausente(
