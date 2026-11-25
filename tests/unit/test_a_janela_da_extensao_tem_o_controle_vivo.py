@@ -243,9 +243,11 @@ def test_a_janela_desenha_o_controle_o_clima_a_fileira_e_os_cartoes_na_ordem_das
     assert "cv-faixa" not in html and "mod-ao-vivo" not in html, "a faixa «Ao vivo» saiu"
     assert html.count('class="mj-fileira"') == 1, "o cartão só de chaves vira uma fileira"
     assert re.search(r'<span class="mj-fc on" id="mod-op-c1" data-canal="vibracao"[^>]*'
-                     r'data-gesto="guardar-opcao-da-modificacao" data-v="imersao:c1">Motores<',
-                     html)
-    assert re.search(r'<span class="mj-fc" id="mod-op-c2"[^>]*aria-checked="false"', html)
+                     r'data-gesto="guardar-opcao-da-modificacao" data-v="imersao:c1" '
+                     r'data-ligado="0">Motores<', html), "a chave ligada pede desligar"
+    assert re.search(r'<span class="mj-fc" id="mod-op-c2"[^>]*aria-checked="false"[^>]*'
+                     r'data-v="imersao:c2" data-ligado="1">Gatilhos<', html), \
+        "a chave desligada pede ligar"
     assert re.findall(r'<label for="mj-aba-\d+">([^<]+)<', html) == ["Geral", "Efeitos"]
     assert exp.acoes_por_aba(opcoes, acoes, None, abas=("Geral", "Efeitos")) == {1: acoes}
     assert html.count('class="mj-cartao') == 2 and html.count('class="mj-cartao" data-canal') == 1
