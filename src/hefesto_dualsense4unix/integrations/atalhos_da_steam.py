@@ -155,34 +155,25 @@ def atalhos_do_arquivo(arquivo: Path) -> list[AtalhoDeFora]:
         return []
 
 
-def os_que_nao_abrem(raiz: Path) -> list[str]:
-    """O motivo de cada arquivo de jogos de fora sob ``raiz`` que o produto não lê inteiro.
+def achados_nos_jogos_de_fora(raiz: Path) -> tuple[list[str], int]:
+    """O que o produto acha nos jogos de fora sob ``raiz``: (os que não abrem, entradas vazias).
 
-    Cortado, ou bytes que não são VDF binário, ou ilegível. Arquivo ausente não é quebra; o arquivo
-    que abre com entrada sem nome ou sem executável é de :func:`entradas_sem_nome_ou_executavel`.
+    O primeiro item traz o motivo de cada arquivo que não se lê inteiro (cortado, bytes que não são
+    VDF binário, ilegível). O segundo conta as entradas sem nome ou sem executável (os dois campos
+    que o catálogo e o pino usam) só nos arquivos que abrem inteiros. Arquivo ausente não é quebra.
     """
     motivos: list[str] = []
+    vazias = 0
     for arquivo in sorted((raiz / "userdata").glob(f"*/config/{NOME_DO_ARQUIVO}")):
         try:
-            atalhos_do_bruto(arquivo.read_bytes())
+            atalhos = atalhos_do_bruto(arquivo.read_bytes())
         except OSError as erro:
             motivos.append(str(erro.strerror))
         except ValueError as erro:
             motivos.append(str(erro))
-    return motivos
-
-
-def entradas_sem_nome_ou_executavel(raiz: Path) -> int:
-    """Quantas entradas, nos arquivos de jogos de fora que ABREM inteiros sob ``raiz``, não têm nome
-    ou não têm executável: os dois campos que o catálogo e o pino usam."""
-    total = 0
-    for arquivo in sorted((raiz / "userdata").glob(f"*/config/{NOME_DO_ARQUIVO}")):
-        try:
-            atalhos = atalhos_do_bruto(arquivo.read_bytes())
-        except (OSError, ValueError):
-            continue
-        total += sum(1 for atalho in atalhos if not atalho.nome or not atalho.exe)
-    return total
+        else:
+            vazias += sum(1 for atalho in atalhos if not atalho.nome or not atalho.exe)
+    return motivos, vazias
 
 
 def com_as_opcoes(bruto: bytes, appid: str, opcoes: str) -> bytes:

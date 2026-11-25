@@ -20,7 +20,7 @@ byte a byte, appid da faixa fictícia (9900000 em diante) e título inventado:
    `scripts/check_os_contratos_de_fora.py` fica verde.
 
 MORDIDAS (25/11/2026): a sonda sem a pergunta do `shortcuts.vdf` reprova os casos do arquivo
-quebrado; o `cobre` sem o alvo reprova o portão; o `entradas_sem_nome_ou_executavel` sem a conta
+quebrado; o `cobre` sem o alvo reprova o portão; o `achados_nos_jogos_de_fora` sem a conta
 das entradas sem campos reprova o caso da entrada vazia; com a frase única de volta (a entrada vazia
 na lista do que não abre), o caso da entrada vazia reprova (25/11/2026).
 """

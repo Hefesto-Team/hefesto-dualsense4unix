@@ -269,8 +269,9 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
             if '"UserLocalConfigStore"' in texto[:4096]:
                 abriu = True
                 perderam += _perderam_o_wrapper(amb, conf)
-        de_fora += atalhos_da_steam.os_que_nao_abrem(raiz)
-        vazias += atalhos_da_steam.entradas_sem_nome_ou_executavel(raiz)
+        nao_abrem, sem_campos = atalhos_da_steam.achados_nos_jogos_de_fora(raiz)
+        de_fora += nao_abrem
+        vazias += sem_campos
     if abriu and (perderam or opcoes or de_fora or vazias):
         partes = []
         if de_fora:
