@@ -18,7 +18,9 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("o pacote do mapa do controle carrega o GTK")
 
+import hashlib
 import json
+import os
 import pathlib
 import types
 from typing import Any
@@ -146,22 +148,67 @@ def test_o_trocar_sem_perfil_com_botao_proprio_abre_em_navegar(
     assert _mesa(_ctx(ativo=""))["ancora-trocar"] == a13.NAV
 
 
-def test_abrir_pela_ancora_nao_grava_nada(monkeypatch: pytest.MonkeyPatch,
-                                          tmp_path: pathlib.Path) -> None:
+def _o_lar() -> dict[str, tuple[int, int, int, str]]:
+    """Cada arquivo do lar de mentira e o que o disco diz dele: inode, tamanho, hora e conteúdo."""
+    raiz = pathlib.Path(os.environ["HOME"])
+    visto: dict[str, tuple[int, int, int, str]] = {}
+    for caminho in sorted(raiz.rglob("*")):
+        if caminho.is_file() and not caminho.is_symlink():
+            marca = caminho.stat()
+            visto[str(caminho.relative_to(raiz))] = (
+                marca.st_ino, marca.st_size, marca.st_mtime_ns,
+                hashlib.sha1(caminho.read_bytes()).hexdigest())
+    return visto
+
+
+def _o_que_mudou(antes: dict[str, tuple[int, int, int, str]]) -> list[str]:
+    depois = _o_lar()
+    return sorted(
+        nome for nome in antes.keys() | depois.keys() if antes.get(nome) != depois.get(nome)
+    )
+
+
+def _com_os_write(alvo: pathlib.Path) -> None:
+    fd = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+    os.write(fd, b"x")
+    os.close(fd)
+
+
+def _com_open(alvo: pathlib.Path) -> None:
+    with open(alvo, "w", encoding="utf-8") as arquivo:
+        arquivo.write("x")
+
+
+def _com_replace(alvo: pathlib.Path) -> None:
+    provisorio = alvo.with_name(alvo.name + ".tmp")
+    provisorio.touch()
+    os.replace(provisorio, alvo)
+
+
+def _com_write_text(alvo: pathlib.Path) -> None:
+    alvo.write_text("x", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "gravar", [_com_os_write, _com_open, _com_replace, _com_write_text],
+    ids=["os.write", "open", "os.replace", "write_text"],
+)
+def test_a_regua_do_lar_ve_toda_forma_de_gravar(gravar: Any) -> None:
+    """A régua das gravações olha o disco do lar de mentira, não a função que gravou."""
+    antes = _o_lar()
+    gravar(pathlib.Path(os.environ["HOME"]) / "gravado")
+    assert _o_que_mudou(antes) == ["gravado"]
+
+
+def test_abrir_pela_ancora_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:
     """O gesto que a âncora dispara só escolhe o perfil na tela: nenhum arquivo, nenhuma edição."""
     _o_disco(monkeypatch, {ATIVO: {"name": ATIVO, "remapeamento": {"triangle": "cross"}}})
     _a_escolha_da_06(monkeypatch, "molde:visual_novel")
-    gravou: list[Any] = []
-
-    def anota(nome: str) -> Any:
-        return lambda self, *a, **k: gravou.append((nome, str(self)))
-
-    monkeypatch.setattr(pathlib.Path, "write_text", anota("write_text"))
-    monkeypatch.setattr(pathlib.Path, "write_bytes", anota("write_bytes"))
     ctx = _ctx()
+    antes = _o_lar()
     for chave in (_mesa(ctx)["ancora-pac"], _mesa(ctx)["ancora-trocar"]):
         a13.mapa_perfil(ctx, {"valor": chave}, None)
-    assert gravou == []
+    assert _o_que_mudou(antes) == []
     assert a13._estado()["edicoes"] == {}
 
 
