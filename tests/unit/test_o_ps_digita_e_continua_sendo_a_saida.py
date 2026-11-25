@@ -177,15 +177,15 @@ def test_o_de_fabrica_da_linha_do_ps_e_nenhuma_tecla():
 
 
 def test_o_ps_nao_cai_na_terceira_sacola():
-    """O de fábrica do PS é `__STEAM__`, que está em `SEM_ATENDENTE`.
+    """O PS nunca cai na terceira sacola, seja qual for o token que ele guarda.
 
-    Sem a saída própria, o PS cairia em `sem_dono` — e a tira da aba escreveria
-    na tela do usuário que o botão que abre a Steam "não acende nada hoje", enquanto
-    `profiles/manager.py` registraria o mesmo no journal como
+    Sem a saída própria, o PS entraria nas sacolas do `resolver()`: no teclado, o toque
+    digitaria duas vezes; em `sem_dono`, a tira da aba diria que o PS "não acende nada hoje",
+    e `profiles/manager.py` registraria o mesmo no journal como
     `button_actions_sem_atendente`.
 
     A MORDIDA: apague o `tabela.pop(BOTAO_PS, None)` de `resolver()` — este
-    caso reprova com o PS listado como sem dono.
+    caso reprova com o PS numa das sacolas.
     """
     for escolhas in (None, {"ps": acoes.TOKEN_STEAM}, {"ps": "KEY_F11"}):
         do_mouse, do_teclado, sem_dono = acoes.resolver(escolhas)

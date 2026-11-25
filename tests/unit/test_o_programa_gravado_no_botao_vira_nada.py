@@ -16,7 +16,8 @@ da máquina é a saída de emergência dele.
 MORDIDAS (cada uma reprova nomeando as linhas): arrancar a conversão do `tabela_efetiva` reprova
 a tela e o caminho do computador nas linhas de fábrica; arrancar também o desvio do `resolver`
 reprova o jogo aberto; arrancar a conversão do `_com_a_linha` (a06_navegacao) reprova o salvar, e
-arrancar o `_acertar_o_arquivo_do_perfil` reprova só o arquivo do Freestyle.
+arrancar o `_acertar_o_arquivo_do_perfil` reprova só o arquivo do Freestyle, e arrancar a exceção
+do PS do `sem_o_que_ninguem_faz` reprova a régua do PS.
 """
 from __future__ import annotations
 
@@ -79,9 +80,18 @@ def test_a_tabela_efetiva_le_o_programa_como_nada(linha: str) -> None:
 
 
 def test_o_ps_continua_com_o_degrau_da_maquina() -> None:
-    """O PS não é uma das linhas de botão: o que ele guarda é lido pelo `ps_solo`, e `None` e o
-    programa seguem devolvendo o degrau da máquina."""
-    assert acoes.acao_do_ps({acoes.BOTAO_PS: acoes.TOKEN_PROGRAMA}) == acoes.TOKEN_PROGRAMA
+    """O PS fica fora da leitura: o que ele guarda vai ao `ps_solo`, que dá ao programa o degrau
+    da máquina (a saída de emergência), e o PS não é calado nem lido como «— Nada —»."""
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+    from hefesto_dualsense4unix.daemon.subsystems.hotkey import _a_metade_da_maquina
+
+    gravado = {acoes.BOTAO_PS: acoes.TOKEN_PROGRAMA}
+    assert acoes.tabela_efetiva(gravado)[acoes.BOTAO_PS] == acoes.TOKEN_PROGRAMA
+    assert acoes.BOTAO_PS not in acoes.botoes_calados(gravado)
+    escolha = acoes.acao_do_ps(gravado)
+    assert escolha == acoes.TOKEN_PROGRAMA
+    maquina = types.SimpleNamespace(ps_button_action="steam")
+    assert _a_metade_da_maquina(maquina, escolha) == ag.ABRIR_A_STEAM
 
 
 def test_a_tela_mostra_nada_nas_linhas_com_o_programa_gravado() -> None:
