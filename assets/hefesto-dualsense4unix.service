@@ -50,6 +50,10 @@ SuccessExitStatus=143 SIGTERM
 # (`utils/single_instance.PRAZO_DO_DESLIGAMENTO_S`); um teste confere os dois.
 TimeoutStopSec=45
 KillMode=mixed
+# A-EXTENSAO-TEM-TETO-E-CAI-SOZINHA-01: cada extensão abre numa unidade própria, com teto de
+# memória e de tarefas; o filho que o kernel mata por falta de memória não derruba o serviço
+# (o padrão, `stop`, pararia a unidade inteira) e o supervisor o reabre como qualquer queda.
+OOMPolicy=continue
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

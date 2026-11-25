@@ -100,6 +100,18 @@ INTERVALO_DO_REGISTRO_S = 1.0
 
 PRAZO_DO_PARAR_CURTO_S = 0.3
 
+TETO_DA_MEMORIA = "512M"
+
+TETO_DAS_TAREFAS = 256
+
+PESO_DA_CPU = 50
+
+OOM_SCORE_DA_EXTENSAO = 500
+
+TAMANHO_DO_TMP_BYTES = 128 << 20
+
+CONTROLADORES_DO_TETO = frozenset({"cpu", "memory", "pids"})
+
 PISO_DA_ATUALIZACAO_S = 60.0
 
 ESPERA_DEPOIS_DA_FALHA_S = 600.0
@@ -181,8 +193,19 @@ def _acoes_dos_aparelhos(manifesto: Manifesto) -> tuple[str, ...]:
     return tuple(a.id for a in geridos.acoes) if geridos else ()
 
 
+def _subir_o_oom_score(alvo: int) -> None:
+    """Põe o ``oom_score_adj`` do processo em ``alvo`` se ele estiver abaixo: a extensão é a
+    primeira a morrer por falta de memória. Subir não pede privilégio; o que não grava fica como
+    está, porque no filho não há a quem dizer."""
+    with contextlib.suppress(OSError, ValueError), open("/proc/self/oom_score_adj", "r+") as f:
+        if int(f.read() or 0) < alvo:
+            f.seek(0)
+            f.write(str(alvo))
+
+
 def _morre_com_o_pai(prctl: Callable[..., int] | None) -> Callable[[], None]:
-    """O ``preexec_fn`` do filho: ``PR_SET_PDEATHSIG`` com ``SIGKILL``.
+    """O ``preexec_fn`` do filho: ``PR_SET_PDEATHSIG`` com ``SIGKILL`` e o ``oom_score_adj``
+    acima do do serviço (:data:`OOM_SCORE_DA_EXTENSAO`).
 
     A função da libc é resolvida ANTES do ``fork``: no filho só a chamada roda.
     """
@@ -190,8 +213,48 @@ def _morre_com_o_pai(prctl: Callable[..., int] | None) -> Callable[[], None]:
     def antes_de_executar() -> None:
         if prctl is not None:
             prctl(_PR_SET_PDEATHSIG, int(signal.SIGKILL), 0, 0, 0)
+        _subir_o_oom_score(OOM_SCORE_DA_EXTENSAO)
 
     return antes_de_executar
+
+
+def systemd_run_com_teto(
+    *, raiz: Path = Path("/sys/fs/cgroup"), uid: int | None = None,
+    achar: Callable[[str], str | None] = shutil.which, execucao: str | None = None,
+) -> str | None:
+    """O ``systemd-run`` que abre a extensão numa unidade própria com teto, ou ``None``.
+
+    Só com o barramento do gerenciador de usuário à vista e ``cpu memory pids`` delegados a ele
+    (``cgroup.controllers`` do ``user@<uid>.service``); sem isso a unidade nasceria sem teto, ou
+    nem nasceria, e a extensão cairia na abertura.
+    """
+    programa = achar("systemd-run")
+    pasta = os.environ.get("XDG_RUNTIME_DIR") if execucao is None else execucao
+    dono = os.getuid() if uid is None else uid
+    if programa is None or not pasta or not (Path(pasta) / "bus").exists():
+        return None
+    gerenciador = raiz / "user.slice" / f"user-{dono}.slice" / f"user@{dono}.service"
+    try:
+        delegados = set((gerenciador / "cgroup.controllers").read_text(encoding="utf-8").split())
+    except OSError:
+        return None
+    return programa if delegados >= CONTROLADORES_DO_TETO else None
+
+
+def comando_com_teto(comando: list[str], systemd_run: str | None, mod_id: str) -> list[str]:
+    """``comando`` aberto por ``systemd-run --user --scope`` com os tetos de fábrica de memória
+    (sem trocar para o disco), de tarefas e de CPU; sem ``systemd_run``, o próprio ``comando``.
+
+    O ``--scope`` troca o processo pelo ``comando``: o PID, o cano do diário e o ``wait`` de quem
+    abre seguem os mesmos."""
+    if systemd_run is None:
+        return comando
+    return [
+        systemd_run, "--user", "--scope", "--quiet", f"--description=Extensão {mod_id}",
+        "-p", f"MemoryMax={TETO_DA_MEMORIA}", "-p", "MemorySwapMax=0",
+        "-p", f"TasksMax={TETO_DAS_TAREFAS}", "-p", f"CPUWeight={PESO_DA_CPU}",
+        "--", *comando,
+    ]
 
 
 @dataclass
@@ -555,6 +618,7 @@ def comando_na_caixa(
     argv += [
         "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try",
         "--proc", "/proc",
+        *(["--size", str(TAMANHO_DO_TMP_BYTES)] if bwrap_aceita_o_tamanho(bwrap) else []),
         "--tmpfs", "/tmp", "--dir", "/var", "--tmpfs", "/sys",
     ]
     for coberta in (str(casa), *map(str, execucao)):
@@ -1244,6 +1308,19 @@ def bwrap_fecha_o_userns(bwrap: str) -> bool:
     return "--disable-userns" in ajuda.stdout + ajuda.stderr
 
 
+@functools.lru_cache(maxsize=4)
+def bwrap_aceita_o_tamanho(bwrap: str) -> bool:
+    """O ``bwrap`` aceita ``--size`` antes do ``--tmpfs`` (0.8.0 em diante): o ``/tmp`` da caixa
+    nasce com teto. O que não responde à ajuda fica sem a opção, porque uma opção que ele não
+    conhece o impediria de abrir."""
+    try:
+        ajuda = subprocess.run([bwrap, "--help"], capture_output=True, text=True, check=False)
+    except OSError as exc:
+        logger.info("mods_bwrap_sem_ajuda", bwrap=bwrap, err=str(exc))
+        return False
+    return "--size BYTES" in ajuda.stdout + ajuda.stderr
+
+
 async def mudar_por_dentro_da_caixa(pid: int, pedido: dict[str, Any]) -> dict[str, Any] | None:
     """Roda :data:`POR_DENTRO_DA_CAIXA` no espaço de montagem de ``pid`` com ``pedido``; a
     resposta, ou ``None`` quando ele não respondeu no :data:`PRAZO_POR_DENTRO_S`."""
@@ -1434,6 +1511,7 @@ class Supervisor:
         intervalo_s: float = INTERVALO_DO_REGISTRO_S,
         chaves: Sequence[str] = CHAVES_OFICIAIS,
         jogo_aberto: Callable[[], bool] = _ha_jogo_aberto,
+        systemd_run: str | None = None,
     ) -> None:
         self.lugares = lugares or Lugares.do_xdg()
         self.porta = Porta(
@@ -1464,6 +1542,7 @@ class Supervisor:
         self._parar_curtos: set[asyncio.Task[bool]] = set()
         self.chaves = tuple(chaves)
         self._jogo_aberto = jogo_aberto
+        self.systemd_run = systemd_run
         self.piso_da_atualizacao_s = PISO_DA_ATUALIZACAO_S
         self.espera_depois_da_falha_s = ESPERA_DEPOIS_DA_FALHA_S
         self._proxima_conferencia: dict[str, float] = {}
@@ -2010,6 +2089,10 @@ class Supervisor:
             )
         else:
             argv = comando
+        argv = comando_com_teto(argv, self.systemd_run, manifesto.id)
+        if self.systemd_run is None:
+            logger.info("mods_sem_teto_do_systemd", mod=manifesto.id,
+                        oom_score_adj=OOM_SCORE_DA_EXTENSAO, tmp_bytes=TAMANHO_DO_TMP_BYTES)
         await _preparar_com_teto(dados / DIARIO_DA_MODIFICACAO, diario, ESPERA_DA_PODA_S)
         if vigiada.quer_parar.is_set():
             return None
@@ -2040,7 +2123,8 @@ class Supervisor:
                              acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto),
                              abrir_o_aparelho=self._abridor_dos_aparelhos(manifesto,
                                                                           vigiada.ficha))
-        logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
+        logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap),
+                    teto=bool(self.systemd_run))
         return processo
 
     def _abridor_dos_aparelhos(self, manifesto: Manifesto,
@@ -2212,6 +2296,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
         uniq_do_posto=uniq_do_posto_no_servico(daemon),
         pulsador=pulsar_no_servico(daemon),
         controles=controles_no_servico(daemon),
+        systemd_run=systemd_run_com_teto(),
     )
 
 
@@ -2220,6 +2305,7 @@ __all__ = [
     "A_REDE_INCLUI_A_MAQUINA",
     "CLASSES_PELA_PORTA",
     "COBERTOS_NA_CAIXA",
+    "CONTROLADORES_DO_TETO",
     "DEVOLVIDO_COM_A_PERMISSAO",
     "DEVOLVIDO_COM_A_REDE",
     "DIARIO_DA_MODIFICACAO",
@@ -2233,10 +2319,15 @@ __all__ = [
     "FALTA_O_BWRAP",
     "JANELA_DO_LACO_DOS_APARELHOS_S",
     "NOS_QUE_A_CAIXA_ACEITA",
+    "OOM_SCORE_DA_EXTENSAO",
     "PASTA_DA_CAIXA",
     "PASTA_DO_HID",
+    "PESO_DA_CPU",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
+    "TAMANHO_DO_TMP_BYTES",
+    "TETO_DAS_TAREFAS",
+    "TETO_DA_MEMORIA",
     "EstadoDaModificacao",
     "Supervisor",
     "a_caixa_escapa",
@@ -2245,8 +2336,10 @@ __all__ = [
     "abrir_o_aparelho",
     "aparelhos_que_casam",
     "avisar_o_grupo_da_extensao",
+    "bwrap_aceita_o_tamanho",
     "bwrap_fecha_o_userns",
     "colecoes_de_aplicacao",
+    "comando_com_teto",
     "comando_na_caixa",
     "diario_da_extensao",
     "frase_da_rede",
@@ -2264,5 +2357,6 @@ __all__ = [
     "pastas_pela_porta",
     "rede_propria_da_caixa",
     "supervisor_do_servico",
+    "systemd_run_com_teto",
     "ultima_linha_do_diario",
 ]
