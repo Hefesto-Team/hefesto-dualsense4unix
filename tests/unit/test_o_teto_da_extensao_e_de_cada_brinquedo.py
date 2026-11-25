@@ -186,8 +186,11 @@ def _descendentes(no: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def test_a_barra_mora_numa_linha_propria_logo_abaixo_da_linha_do_nome() -> None:
-    """O cartão, filho a filho: a linha do nome (nome, bateria e chave, sem a barra), a linha da
-    barra, a onda e o rodapé. A barra vem no DOM depois da chave, na ordem em que se lê."""
+    """Prova da D-2511-O-TETO-DA-EXTENSAO-E-DE-CADA-BRINQUEDO.
+
+    O cartão, filho a filho: a linha do nome (nome, bateria e chave, sem a barra), a linha da
+    barra, a onda e o rodapé. A barra vem no DOM depois da chave, na ordem em que se lê.
+    """
     cartoes = _cartoes(exp.aparelhos_geridos_html(_gestao(BARRA, COM_O_TETO)))
     assert sorted(cartoes) == ["ap-1", "ap-2", "ap-3", "ap-4"], "uma barra em cada cartão"
     for alvo, cartao in cartoes.items():
