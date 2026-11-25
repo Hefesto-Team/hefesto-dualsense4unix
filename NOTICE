@@ -222,7 +222,8 @@ Três formas de distribuição embutem dependência, cada uma com o próprio avi
     linuxdeploy-plugin-gtk copia do sistema de build (GTK, GLib, Pango, Cairo e
     GdkPixbuf, em geral LGPL-2.1-or-later, cada uma com a própria licença);
   - o .flatpak embute as dependências dentro de /app, inclusive python-uinput e
-    python-xlib, mais três peças nativas compiladas no build: hidapi 0.14.0
+    python-xlib, mais o pygments (BSD-2-Clause), que o rich pede para o texto da
+    ajuda, e três peças nativas compiladas no build: hidapi 0.14.0
     (três licenças à escolha de quem redistribui: GPL-3.0, BSD e a original do
     hidapi), wlrctl 0.2.2 (MIT) e wvkbd 0.14.3 (GPL-3.0).
 

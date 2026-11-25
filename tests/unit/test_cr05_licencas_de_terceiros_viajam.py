@@ -431,36 +431,55 @@ def test_notice_nao_confunde_a_licenca_do_codigo_com_a_das_curvas() -> None:
     )
 
 
+_NOME_DO_PACOTE = re.compile(r"[A-Za-z0-9_.-]+")
+
+
 def _nomes_das_dependencias() -> list[str]:
     import tomllib
 
-    dados = tomllib.loads(_texto(REPO / "pyproject.toml"))
-    return [
-        re.match(r"[A-Za-z0-9_.-]+", item).group(0)  # type: ignore[union-attr]
-        for item in dados["project"]["dependencies"]
-    ]
+    projeto = tomllib.loads(_texto(REPO / "pyproject.toml"))["project"]
+    extras: set[str] = set()
+    for script in ("scripts/build_deb.sh", "scripts/build_appimage_gui.sh"):
+        instala = re.findall(r'(?i)pip\}?"?\s+install[^\n]*\[([a-z,]+)\]', _texto(REPO / script))
+        for lista in instala:
+            extras.update(lista.split(","))
+    assert {"emulation", "cosmic", "tray"} <= extras, extras
+    itens = [*projeto["dependencies"]]
+    for extra in sorted(extras):
+        itens += projeto["optional-dependencies"][extra]
+    return [_NOME_DO_PACOTE.match(item).group(0) for item in itens]  # type: ignore[union-attr]
 
 
-def _modulos_baixados_do_flatpak() -> list[str]:
+def _o_que_o_flatpak_embute() -> list[str]:
     import yaml
 
     manifesto = yaml.safe_load(
         _texto(REPO / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml")
     )
-    return [
-        modulo["name"]
-        for modulo in manifesto["modules"]
-        if any("url" in fonte for fonte in modulo.get("sources") or [])
-    ]
+    nomes = []
+    for modulo in manifesto["modules"]:
+        if any("url" in fonte for fonte in modulo.get("sources") or []):
+            nomes.append(modulo["name"])
+        for comando in modulo.get("build-commands") or []:
+            if comando.startswith("pip3 install"):
+                nomes += [
+                    _NOME_DO_PACOTE.match(item).group(0)  # type: ignore[union-attr]
+                    for item in re.findall(r'"([^"]+)"', comando)
+                ]
+    return nomes
 
 
 def test_o_notice_cita_toda_dependencia_e_todo_modulo_nativo_do_flatpak() -> None:
     """D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA: todo pacote embutido tem o nome no NOTICE."""
     nomes = _nomes_das_dependencias()
-    modulos = _modulos_baixados_do_flatpak()
-    assert len(nomes) >= 10 and len(modulos) >= 3, (nomes, modulos)
+    embutidos = _o_que_o_flatpak_embute()
+    assert len(nomes) >= 13 and {"hidapi", "pygments"} <= set(embutidos), (nomes, embutidos)
     notice = _texto(NOTICE).lower()
-    faltam = [nome for nome in [*nomes, *modulos] if nome.lower() not in notice]
+    faltam = [
+        nome
+        for nome in dict.fromkeys([*nomes, *embutidos])
+        if not re.search(rf"(?<![\w-]){re.escape(nome.lower())}(?![\w-])", notice)
+    ]
     assert not faltam, f"o NOTICE não cita: {faltam}"
 
 
@@ -520,10 +539,9 @@ def test_a_licenca_da_peca_gdk_viaja_com_a_release_o_install_e_o_atualizador(
         "gameinput_sha256": hashlib.sha256(dados["gameinput.dll"]).hexdigest(),
     }
     cache = tmp_path / "cache"
-    for arquivo, _c, _u, destino in pa.ARQUIVOS_DA_GDK:
-        (cache / "gdk" / "nova").mkdir(parents=True, exist_ok=True)
+    (cache / "gdk" / "nova").mkdir(parents=True)
+    for arquivo, _c, _u, _d in pa.ARQUIVOS_DA_GDK:
         (cache / "gdk" / "nova" / arquivo).write_bytes(dados[arquivo])
-        assert destino
     casa = tmp_path / "peca"
     monkeypatch.setattr(pa, "_pino_da_gdk", lambda: pino)
     monkeypatch.setattr(pa, "_pasta_da_gdk", lambda: casa)
