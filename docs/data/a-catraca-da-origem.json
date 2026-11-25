@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1321617,
+      "piso": 1322016,
       "por_item": {
-        "docs": 108002,
+        "docs": 108004,
         "scripts": 116862,
-        "src": 332736,
-        "tests": 764017
+        "src": 332897,
+        "tests": 764253
       },
-      "razao": "tamanho: +217 linhas (1321400 -> 1321617), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo d6400976c7f2",
+      "razao": "tamanho: +399 linhas (1321617 -> 1322016), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA, D-2511-O-SERVICO-DIZ-QUEM-MANDA-A-VIBRACAO; registrado no fecho, topo b6c11cca0f5c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2535,10 +2535,16 @@
           "de": 1321400,
           "para": 1321617,
           "razao": "tamanho: +217 linhas (1321400 -> 1321617), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo d6400976c7f2"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1321617,
+          "para": 1322016,
+          "razao": "tamanho: +399 linhas (1321617 -> 1322016), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA, D-2511-O-SERVICO-DIZ-QUEM-MANDA-A-VIBRACAO; registrado no fecho, topo b6c11cca0f5c"
         }
       ],
       "unidade": "linhas",
-      "universo": 3690
+      "universo": 3691
     }
   }
 }
