@@ -120,6 +120,23 @@ def test_o_efeito_guardado_pinta_na_coluna_sem_rascunho(a03) -> None:
     vale = perfil.ativo_que_vale(None)
     assert a03._o_que_o_controle_recebe(vale, UNIQS[0], "left")["mode"] == "Machine"
     assert a03._o_que_o_controle_recebe(vale, UNIQS[1], "left").get("mode") != "Machine"
+    colunas = a03.pacote(_ctx())["colunas"]
+    assert colunas[UNIQS[0]][f"{a03.CAMPO_DA_IMERSAO}-e"] == escolhida.chave
+    assert colunas[UNIQS[1]][f"{a03.CAMPO_DA_IMERSAO}-e"] != escolhida.chave
+
+
+def test_no_freestyle_o_efeito_tambem_fica_no_computador(a03) -> None:
+    """D-1911-O-MODO-E-O-GATILHO-TEM-PADRAO-DO-COMPUTADOR: o Freestyle não sobrepõe; grava aqui."""
+    from hefesto_dualsense4unix.profiles import efeitos_de_imersao as imersao
+    from hefesto_dualsense4unix.profiles import loader
+
+    assert loader.seed_default_presets()
+    escolhida = imersao.POR_CHAVE[IMERSAO["left"]]
+    ctx = _ctx()
+    ctx.state["active_profile"] = "Freestyle"
+    a03.imersao_escolhida(ctx, {"uniq": UNIQS[0], "lado": "e", "valor": escolhida.chave}, Ponte())
+
+    assert _computador().controles[CHAVES[0]].triggers.left.mode == "Machine"
 
 
 @pytest.mark.parametrize("aba,gesto", [

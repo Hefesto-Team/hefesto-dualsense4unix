@@ -72,6 +72,19 @@ def test_sem_copia_o_torto_vai_ao_lado_antes_de_gravar(pasta: Path) -> None:
     assert guardados[0].read_text(encoding="utf-8").startswith('{"gatilhos_meus_efeitos"')
 
 
+def test_gravar_direto_sobre_o_torto_o_preserva_ao_lado(pasta: Path) -> None:
+    """D-1911-O-ESTADO-SE-GRAVA-INTEIRO: quem grava sem ler antes não apaga o arquivo torto."""
+    pasta.mkdir(parents=True)
+    arquivo = pasta / "gui_preferences.json"
+    arquivo.write_text('{"imersao_meus_efeitos": {"a": {"le', encoding="utf-8")
+
+    gui_prefs.save_gui_prefs({"advanced_editor": True})
+
+    guardados = list(pasta.glob("gui_preferences.json.corrompido-*"))
+    assert len(guardados) == 1
+    assert guardados[0].read_text(encoding="utf-8").startswith('{"imersao_meus_efeitos"')
+
+
 def test_arquivo_que_nao_e_texto_ou_nao_e_objeto_tambem_se_recupera(pasta: Path) -> None:
     """D-1911-O-ESTADO-SE-GRAVA-INTEIRO: bytes soltos e JSON que não é objeto valem o mesmo."""
     _guardar_a_biblioteca()
