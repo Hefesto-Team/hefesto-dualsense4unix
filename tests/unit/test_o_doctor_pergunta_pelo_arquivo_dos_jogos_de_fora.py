@@ -22,7 +22,9 @@ byte a byte, appid da faixa fictícia (9900000 em diante) e título inventado:
 MORDIDAS (25/11/2026): a sonda sem a pergunta do `shortcuts.vdf` reprova os casos do arquivo
 quebrado; o `cobre` sem o alvo reprova o portão; o `achados_nos_jogos_de_fora` sem a conta
 das entradas sem campos reprova o caso da entrada vazia; com a frase única de volta (a entrada vazia
-na lista do que não abre), o caso da entrada vazia reprova (25/11/2026).
+na lista do que não abre), o caso da entrada vazia reprova (25/11/2026); com a consequência «ficam
+de fora do catálogo e do atalho» na frase, o caso da entrada com nome e sem executável reprova,
+porque o catálogo a lista (25/11/2026).
 """
 
 from __future__ import annotations
@@ -139,6 +141,22 @@ def test_com_um_arquivo_cortado_e_outro_com_entrada_vazia_a_linha_diz_os_dois(
     assert tag == "[WARN]"
     assert "1 shortcuts.vdf dos jogos de fora não abre(m) inteiro(s)" in dito
     assert "2 entrada(s) sem nome ou sem executável" in dito
+
+
+def test_a_entrada_com_nome_e_sem_executavel_segue_no_catalogo_e_a_linha_nao_diz_o_contrario(
+    tmp_path: Path,
+) -> None:
+    """D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM (nota de 25/11/2026)."""
+    from hefesto_dualsense4unix.integrations import jogos_locais
+
+    sem_exe = _arquivo(_entrada(0, appid=WINDOWS, nome="Jogo Inventado Sem Exe", exe="", opcoes=""))
+    _conta(tmp_path, "1000", sem_exe)
+    nomes = {j.nome for j in jogos_locais.jogos_da_biblioteca_steam(tmp_path / "home")}
+    assert "Jogo Inventado Sem Exe" in nomes
+    tag, msg = _linha(tmp_path)
+    dito = msg.split("Prometia")[0]
+    assert tag == "[WARN]" and "1 entrada(s) sem nome ou sem executável" in dito
+    assert "catálogo" not in dito, dito
 
 
 def test_com_duas_contas_a_quebrada_derruba_a_linha(tmp_path: Path) -> None:

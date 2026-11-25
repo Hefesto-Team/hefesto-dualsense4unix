@@ -283,8 +283,7 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
         if vazias:
             partes.append(
                 f"{vazias} entrada(s) sem nome ou sem executável no "
-                f"{atalhos_da_steam.NOME_DO_ARQUIVO} dos jogos de fora: ficam de fora do catálogo "
-                "e do atalho"
+                f"{atalhos_da_steam.NOME_DO_ARQUIVO} dos jogos de fora"
             )
         if perderam:
             mostrados = ", ".join(sorted(set(perderam))[:5])
