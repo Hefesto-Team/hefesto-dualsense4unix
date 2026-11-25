@@ -10,13 +10,17 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+
+logger = get_logger(__name__)
 
 NOME_DO_ARQUIVO = "pedido-ao-servico"
 FORA_DO_PRODUTO = "fora-do-produto"
@@ -25,6 +29,8 @@ VERBOS_QUE_SOBEM = ("start", "restart", "try-restart")
 TETO_DA_PARADA_S = 30.0
 TETO_DA_SUBIDA_S = 120.0
 _LIMITE_DO_CAMPO = 120
+_INSTANTE = re.compile(r"\d+(\.\d+)?")
+_PID = re.compile(r"\d+")
 
 
 @dataclass(frozen=True)
@@ -73,17 +79,18 @@ def anotar(verbo: str, quem: str, motivo: str = "") -> bool:
 def ler(teto_s: float, agora: float | None = None) -> Pedido | None:
     """A anotação com menos de `teto_s` segundos; None se falta, é ilegível ou é velha."""
     try:
-        texto = arquivo().read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+        alvo = arquivo()
+        if not alvo.is_file():
+            return None
+        texto = alvo.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as erro:
+        logger.warning("pedido_ao_servico_ilegivel", erro=str(erro))
         return None
     partes = texto.strip("\n").split("\t", 4)
-    if len(partes) < 4:
+    if len(partes) < 4 or not _INSTANTE.fullmatch(partes[0]) or not _PID.fullmatch(partes[3]):
         return None
-    try:
-        instante = float(partes[0])
-        pid = int(partes[3])
-    except ValueError:
-        return None
+    instante = float(partes[0])
+    pid = int(partes[3])
     idade = (time.time() if agora is None else agora) - instante
     if idade < -1.0 or idade > teto_s:
         return None

@@ -1,6 +1,7 @@
 """Quem pede o reinício do serviço deixa o nome no diário.
 
-Sprint QUEM-PEDE-O-REINICIO-DO-SERVICO-DEIXA-O-NOME-NO-DIARIO-01.
+Sprint QUEM-PEDE-O-REINICIO-DO-SERVICO-DEIXA-O-NOME-NO-DIARIO-01, decisão
+D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO.
 
 Medido em 22/11/2026: dez paradas e subidas do serviço entre 01h58 e 05h31 e o diário só trazia
 `daemon_stop_requested` sem campo; nenhum caminho do produto dizia quem pedia. O que se prova:
