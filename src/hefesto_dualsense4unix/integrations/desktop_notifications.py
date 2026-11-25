@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import os
 from typing import Any
 
@@ -99,11 +100,10 @@ def statusnotifierwatcher_available() -> bool | None:
     ``None`` quando não dá para perguntar (sem o ``jeepney``, ou o D-Bus não respondeu): «não
     sei» nunca vale como «não há», porque quem pergunta larga o ícone com um «não».
     """
-    try:
-        from jeepney import DBusAddress, new_method_call
-        from jeepney.io.blocking import open_dbus_connection
-    except ImportError:
+    if importlib.util.find_spec("jeepney") is None:
         return None
+    from jeepney import DBusAddress, new_method_call
+    from jeepney.io.blocking import open_dbus_connection
 
     addr = DBusAddress(
         "/org/freedesktop/DBus",
