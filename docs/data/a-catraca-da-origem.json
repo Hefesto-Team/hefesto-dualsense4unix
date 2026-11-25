@@ -48,10 +48,10 @@
       "universo": 416
     },
     "remendos-de-sintoma": {
-      "data": "2026-11-21",
+      "data": "2026-11-25",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 949,
+      "piso": 948,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -184,7 +184,7 @@
         "interface/pacotes/a08_conexoes.py": 20,
         "interface/pacotes/a09_sistema.py": 16,
         "interface/pacotes/a10_perfis.py": 2,
-        "interface/pacotes/perfil.py": 4,
+        "interface/pacotes/perfil.py": 3,
         "interface/pacotes/rodape.py": 1,
         "interface/regua_do_mockup.py": 4,
         "mods/porta.py": 3,
@@ -253,20 +253,20 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 440
+      "universo": 443
     },
     "tamanho": {
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1326131,
+      "piso": 1327003,
       "por_item": {
-        "docs": 108019,
+        "docs": 108022,
         "scripts": 122921,
-        "src": 327883,
-        "tests": 767308
+        "src": 328148,
+        "tests": 767912
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +872 linhas (1326131 -> 1327003), pagas por Origem: D-2511-A-BANDEJA-AVISA-QUANDO-NAO-APARECE, D-2511-A-JANELA-ABRE-EM-QUALQUER-INSTALACAO, D-2511-O-MAPA-DO-CONTROLE-NAO-RELE-OS-PERFIS; registrado no fecho, topo a711e864dfa2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2601,10 +2601,16 @@
           "de": 1325403,
           "para": 1326479,
           "razao": "tamanho: +1076 linhas (1325403 -> 1326479), pagas por Origem: D-2511-A-ATUALIZACAO-DA-EXTENSAO-ESPERA-O-JOGO-E-VOLTA-SE-CAIR, D-2511-A-EXTENSAO-TEM-TETO-E-CAI-SOZINHA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ; registrado no fecho, topo 68e96b944f31"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1326131,
+          "para": 1327003,
+          "razao": "tamanho: +872 linhas (1326131 -> 1327003), pagas por Origem: D-2511-A-BANDEJA-AVISA-QUANDO-NAO-APARECE, D-2511-A-JANELA-ABRE-EM-QUALQUER-INSTALACAO, D-2511-O-MAPA-DO-CONTROLE-NAO-RELE-OS-PERFIS; registrado no fecho, topo a711e864dfa2"
         }
       ],
       "unidade": "linhas",
-      "universo": 3703
+      "universo": 3706
     }
   }
 }
