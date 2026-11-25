@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gerar-fatos-de-tela.py — o CSV vira Python que viaja no pacote."""
+"""gerar-fatos-de-tela.py — o CSV vira Python que os testes leem."""
 from __future__ import annotations
 
 import argparse
@@ -19,7 +19,7 @@ from check_paridade_transporte import (
 )
 
 CSV_RELATIVO = "docs/data/mapa-controles.csv"
-SAIDA_RELATIVO = "src/hefesto_dualsense4unix/app/fatos_do_mapa.py"
+SAIDA_RELATIVO = "scripts/fatos_do_mapa.py"
 CSV_CAMINHO = RAIZ / CSV_RELATIVO
 SAIDA_CAMINHO = RAIZ / SAIDA_RELATIVO
 

@@ -2,6 +2,7 @@
 """O CARTÃO DIZ SE O SOM TEM PARA ONDE IR — CONTROLES-OS-TRES-SELOS-01."""
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import re
 import sys
@@ -13,12 +14,17 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
+_ESPEC_DOS_FATOS = importlib.util.spec_from_file_location(
+    "_fatos_do_mapa", RAIZ / "scripts" / "fatos_do_mapa.py"
+)
+assert _ESPEC_DOS_FATOS and _ESPEC_DOS_FATOS.loader
+_FATOS_DO_MAPA = importlib.util.module_from_spec(_ESPEC_DOS_FATOS)
+_ESPEC_DOS_FATOS.loader.exec_module(_FATOS_DO_MAPA)
+FATOS = _FATOS_DO_MAPA.FATOS
+CAUSA_DE_FORA = frozenset({"nada-a-acionar", "o-aparelho-recusa"})
+
 
 from hefesto_dualsense4unix.app import audio_saida
-from hefesto_dualsense4unix.app.fala_do_mapa import (
-    CAUSA_DE_FORA,
-)
-from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
     DICA_AUDIO_SEM_ENDERECO,
     DICA_TITULO_SEM_VPAD,

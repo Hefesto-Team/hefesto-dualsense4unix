@@ -29,7 +29,6 @@ sys.path.insert(0, str(RAIZ / "scripts"))
 def arvore(tmp_path: Path) -> Path:
     (tmp_path / "scripts").mkdir()
     (tmp_path / "docs" / "data").mkdir(parents=True)
-    (tmp_path / "src" / "hefesto_dualsense4unix" / "app").mkdir(parents=True)
 
     for nome in ("check_paridade_transporte.py", "eliminacao.py", "gerar-fatos-de-tela.py"):
         (tmp_path / "scripts" / nome).write_bytes((RAIZ / "scripts" / nome).read_bytes())

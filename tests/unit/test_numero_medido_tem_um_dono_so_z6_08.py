@@ -43,11 +43,6 @@ def monta_arvore(tmp_path: Path, sem_mic: float, ressalva: str) -> Path:
     (app / "fala_do_mapa.py").write_text(
         FALA_DO_MAPA_REAL.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    (app / "fatos_do_mapa.py").write_text(
-        '"""de mentira."""\nfrom __future__ import annotations\n'
-        "from typing import Final\nFATOS: Final[dict] = {}\n",
-        encoding="utf-8",
-    )
     (integracoes / "radio_da_mesa.py").write_text(
         RADIO_DA_MESA_MENTIROSA.format(sem_mic=sem_mic), encoding="utf-8"
     )

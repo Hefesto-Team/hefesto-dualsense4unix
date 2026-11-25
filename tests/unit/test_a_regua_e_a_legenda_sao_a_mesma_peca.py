@@ -66,11 +66,6 @@ def monta_arvore(tmp_path: Path, *, casas: int, ressalva: str) -> Path:
     app.mkdir(parents=True, exist_ok=True)
     integracoes.mkdir(parents=True, exist_ok=True)
     (app / "fala_do_mapa.py").write_text(_com_formato(casas), encoding="utf-8")
-    (app / "fatos_do_mapa.py").write_text(
-        '"""de mentira."""\nfrom __future__ import annotations\n'
-        "from typing import Final\nFATOS: Final[dict] = {}\n",
-        encoding="utf-8",
-    )
     (integracoes / "radio_da_mesa.py").write_text(RADIO_DA_MESA_MENTIROSA, encoding="utf-8")
     dados = tmp_path / "docs" / "data"
     dados.mkdir(parents=True, exist_ok=True)

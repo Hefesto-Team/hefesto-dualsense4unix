@@ -161,9 +161,7 @@ FALHA (as duas mais novas)
                           família "a casa sabe e o produto não faz", com dois
                           dias de idade. O domínio ganhou o quinto valor,
                           `o-aparelho-recusa` (causa FORA do nosso código) —
-                          ver `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`
-                          e `CAUSA_DE_FORA` em
-                          `src/hefesto_dualsense4unix/app/fala_do_mapa.py`.
+                          ver `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`.
 
  18. `escada-de-vibracao` — número de multiplicador citado em célula que NÃO
                           bate com `RUMBLE_POLICY_MULT`, lido por AST do dono

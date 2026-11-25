@@ -21,8 +21,9 @@ tela: `movimento.giroscopio.jogo@dualsense` e `luz.lightbar.cor@dualsense` têm
 
 POR QUE UM PORTÃO NOVO, SE A Z6 JÁ ENTREGOU UM
 ===============================================
-`scripts/validar-fala-de-tela.py` (Z6, 24/08) compara `Fala.afirma` com a
-coluna `aciona` — e só com a coluna. Para esta célula `aciona` vale `sim` nos dois
+`scripts/validar-fala-de-tela.py` comparava `Fala.afirma` com a coluna
+`aciona` (Z6, 24/08), e só com a coluna; saiu em 25/11/2026 sem que a tela
+declarasse uma `Fala`. Para esta célula `aciona` vale `sim` nos dois
 lados: **a régua da Z6 licenciaria a frase forte**, porque a dúvida não está em
 `aciona`, está em `de_onde_sei` e em `ate_onde_foi` (vazio no rádio). Régua que
 não alcança o defeito não é redundância a remover; é o motivo de haver a
@@ -55,8 +56,7 @@ O CSV (o que está medido), o `gui/main.glade` (o que a aba lê) e o bloco de
 declaração de `app/actions/emulation_actions.py` (a amarra entre os dois). O
 bloco é lido por **AST**, nunca importado: `emulation_actions` puxa GTK, e um
 runner sem GTK transformaria `ImportError` em "zero declarações encontradas" —
-o jeito silencioso de este portão se desligar (mesma razão escrita em
-`scripts/validar-fala-de-tela.py`).
+o jeito silencioso de este portão se desligar.
 
 A MORDIDA, PROVADA EM 25/08/2026 — ver o relatório da mordida E1.
 """

@@ -56,9 +56,14 @@ def test_a_celula_do_alto_falante_so_diz_sim_com_prova() -> None:
     import csv
     import pathlib
 
-    from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
+    spec = importlib.util.spec_from_file_location(
+        "_fatos_do_mapa", RAIZ / "scripts" / "fatos_do_mapa.py"
+    )
+    assert spec and spec.loader
+    fatos = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fatos)
 
-    celula = FATOS["audio.alto_falante@dualsense"]["radio"]
+    celula = fatos.FATOS["audio.alto_falante@dualsense"]["radio"]
     assert isinstance(celula, dict)
     if celula["aciona"] != "sim":
         return

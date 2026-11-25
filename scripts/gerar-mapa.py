@@ -706,40 +706,6 @@ def degraus_em_prosa(direcao: str) -> str:
     )
 
 
-def _bloco_fila_no_specs() -> str:
-    """Z6-11 (24/08/2026) — os placeholders abertos, ao lado do"""
-    try:
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location(
-            "validar_fala_de_tela_do_specs", RAIZ / "scripts" / "validar-fala-de-tela.py"
-        )
-        if spec is None or spec.loader is None:
-            return '<p class="quieto">fila indisponível: não consegui carregar o portão.</p>'
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = mod
-        spec.loader.exec_module(mod)
-        falas = mod.descobre_falas(RAIZ / mod.APP_RELATIVO, RAIZ)
-        fila = mod.monta_fila(falas)
-    except Exception as exc:
-        return f'<p class="quieto">fila indisponível: {html.escape(f"{type(exc).__name__}: {exc}")}</p>'
-
-    if not fila:
-        return '<p class="quieto">Nenhum placeholder aberto agora.</p>'
-    linhas_html = "".join(
-        f"<tr><td>{html.escape(f.chave or '')}</td><td>{html.escape(f.lado or '')}</td>"
-        f"<td>{html.escape(f.aba or '')}</td><td class=\"quieto\">{html.escape(f.origem)}</td>"
-        f"<td>{html.escape(str((f.pendente or {}).get('aberta_em') or ''))}</td>"
-        f"<td>{html.escape(str((f.pendente or {}).get('prazo_dias') or ''))}</td></tr>"
-        for f in fila
-    )
-    return (
-        f"<p>{len(fila)} placeholder(s) aberto(s):</p>"
-        "<table><thead><tr><th>id</th><th>lado</th><th>aba</th><th>onde</th>"
-        f"<th>aberta em</th><th>prazo (dias)</th></tr></thead><tbody>{linhas_html}</tbody></table>"
-    )
-
-
 _DRIVER = re.compile(
     r"hid[-_](playstation|nintendo|sony)|xpadneo|drivers/hid|linux|kernel"
     r"|dualsense\.c|sony_gamepad|8bitdo|SDL|steam|dualshock|ds4|joycon|\.c:|\.h:",
@@ -828,7 +794,6 @@ def monta() -> str:
     inf_sem_ref = proc["sem_referencia"]
     escada_de_saida = degraus_em_prosa(DIRECAO_SAIDA)
     escada_de_entrada = degraus_em_prosa(DIRECAO_ENTRADA)
-    bloco_fila = _bloco_fila_no_specs()
 
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -959,15 +924,6 @@ def monta() -> str:
        inocentados dizem <em>o que dá para parar de fazer</em>.</p>
     <p class="selo">gerado em {agora} a partir de docs/data/mapa-controles.csv ·
        {len(linhas)} linhas · os três desenhos são assets/control-svg/</p>
-  </footer>
-
-  <footer>
-    <h2>A fila do ensaio</h2>
-    <p>Cada <code>Fala</code> declarada em <code>app/</code> com
-       <code>pendente=</code> aberta — a interface pedindo a medição de que
-       precisa, gerada direto de <code>scripts/validar-fala-de-tela.py --fila</code>
-       (Z6-11, 24/08/2026).</p>
-    {bloco_fila}
   </footer>
 
   {carimbo("scripts/gerar-mapa.py", indice=False)}

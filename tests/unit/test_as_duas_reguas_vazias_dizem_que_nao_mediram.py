@@ -1,4 +1,4 @@
-"""Duas réguas saíam verdes por VACUIDADE, e diziam `OK` ao fazê-lo."""
+"""A régua das curvas saía verde por VACUIDADE, e dizia `OK` ao fazê-lo."""
 from __future__ import annotations
 
 import importlib.util
@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
-FALA = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 CURVAS = RAIZ_REAL / "scripts" / "gerar-tabela-de-curvas.py"
 
 
@@ -19,26 +18,6 @@ def _rodar(script: Path, *args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         check=False,
     )
-
-
-def test_fala_de_tela_nao_diz_ok_com_uma_fala_so() -> None:
-    """MORDIDA — a frase de sucesso não pode ser `OK` sobre conjunto de um."""
-    processo = _rodar(FALA, "--all")
-    assert processo.returncode == 0, processo.stdout + processo.stderr
-    ultima = processo.stdout.strip().splitlines()[-1]
-    assert not ultima.startswith("OK:"), (
-        "a régua declarou OK sobre um conjunto que a própria régua diz ser de uma "
-        "`Fala`:\n" + ultima
-    )
-    assert "NÃO MEDIU" in ultima or "QUASE NÃO MEDIU" in ultima, ultima
-
-
-def test_fala_de_tela_diz_o_tamanho_do_conjunto_medido() -> None:
-    """MORDIDA — o número de células do mapa tem de aparecer na frase."""
-    processo = _rodar(FALA, "--all")
-    ultima = processo.stdout.strip().splitlines()[-1]
-    for pedaco in ("`Fala` declarada(s)", "célula(s)", "aba(s) promovida(s)"):
-        assert pedaco in ultima, f"a frase não diz {pedaco!r}:\n{ultima}"
 
 
 def _modulo_das_curvas():

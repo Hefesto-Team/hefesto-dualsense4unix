@@ -894,7 +894,6 @@ _DECLARADOS = {
     "interpretador-do-portao": ("@sempre", "git worktree list: as outras árvores da máquina"),
     "src-desta-arvore": ("@sempre", "git worktree list: as outras árvores da máquina"),
     "paridade-transporte": ("@dia", "date.today(): dívida com prazo que vence"),
-    "fala-de-tela": ("@dia", "date.today(): prazo que vence"),
     "codigo-sem-comentario": ("@sempre", "git ls-files: os arquivos versionados do índice"),
     "biblioteca-pessoal": (
         "@sempre", "git ls-files, os nomes dos ramos e a lista vedada que mora fora do git"),

@@ -1,388 +1,70 @@
-"""Z6-04 — o portão `validar-fala-de-tela.py`, nos dois sentidos."""
+"""Z6-04 — o portão `validar-fala-de-tela.py` mede o número de tela, ou sai."""
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
-
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 FALA_DO_MAPA_REAL = RAIZ_REAL / "src" / "hefesto_dualsense4unix" / "app" / "fala_do_mapa.py"
+RADIO_REAL = RAIZ_REAL / "src" / "hefesto_dualsense4unix" / "integrations" / "radio_da_mesa.py"
+MAPA_REAL = RAIZ_REAL / "docs" / "data" / "mapa-controles.csv"
 
-APP_RELATIVO = Path("src") / "hefesto_dualsense4unix" / "app"
-
-
-def _serializa_fatos(fatos: dict[str, dict[str, Any]]) -> str:
-    linhas = [
-        '"""fatos_do_mapa.py de MENTIRA — só para teste."""',
-        "from __future__ import annotations",
-        "",
-        "from typing import Final",
-        "",
-        "FATOS: Final[dict[str, dict[str, object]]] = " + repr(fatos),
-        "",
-    ]
-    return "\n".join(linhas)
+_UM_DOS_TRES = (
+    '    Numero(constante="HZ_AUDIO_COM_MIC", valor=HZ_AUDIO_COM_MIC,\n'
+    '           chave="audio.microfone@dualsense", coluna="radio_ressalva"),\n'
+)
 
 
-def monta_arvore(
-    tmp_path: Path,
-    fatos: dict[str, dict[str, Any]],
-    arquivos_app: dict[str, str],
-) -> Path:
-    destino = tmp_path / APP_RELATIVO
-    destino.mkdir(parents=True, exist_ok=True)
-    (destino / "fala_do_mapa.py").write_text(
-        FALA_DO_MAPA_REAL.read_text(encoding="utf-8"), encoding="utf-8"
+def monta_produto(tmp_path: Path, *, radio: str | None = None) -> Path:
+    """O produto com os arquivos REAIS que o portão lê, e as duas raízes de tela."""
+    pacote = tmp_path / "src" / "hefesto_dualsense4unix"
+    for pasta in ("app", "interface", "integrations"):
+        (pacote / pasta).mkdir(parents=True)
+    shutil.copy(FALA_DO_MAPA_REAL, pacote / "app" / "fala_do_mapa.py")
+    (pacote / "integrations" / "radio_da_mesa.py").write_text(
+        radio if radio is not None else RADIO_REAL.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    (destino / "fatos_do_mapa.py").write_text(_serializa_fatos(fatos), encoding="utf-8")
-    for relativo, conteudo in arquivos_app.items():
-        caminho = destino / relativo
-        caminho.parent.mkdir(parents=True, exist_ok=True)
-        caminho.write_text(conteudo, encoding="utf-8")
+    (tmp_path / "docs" / "data").mkdir(parents=True)
+    shutil.copy(MAPA_REAL, tmp_path / "docs" / "data" / "mapa-controles.csv")
     return tmp_path
 
 
-def rodar(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
+def rodar(raiz: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(SCRIPT), "--raiz", str(raiz), *args],
+        [sys.executable, str(SCRIPT), "--raiz", str(raiz), "--all"],
         capture_output=True,
         text=True,
         check=False,
     )
 
 
-FATOS_BASE = {
-    "audio.alto_falante@dualsense": {
-        "existe": "tem",
-        "cabo": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
-        "radio": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
-    },
-    "identidade.cor_do_aparelho@dualsense": {
-        "existe": "tem",
-        "cabo": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
-        "radio": {
-            "aciona": "não",
-            "de_onde_sei": "medido",
-            "por_que_nao_aciona": "o-aparelho-recusa",
-        },
-    },
-    "audio.saida_dedicada@dualsense": {
-        "existe": "tem",
-        "cabo": {"aciona": "", "de_onde_sei": "", "por_que_nao_aciona": ""},
-        "radio": {"aciona": "", "de_onde_sei": "incerto", "por_que_nao_aciona": ""},
-    },
-}
-
-
-def test_baseline_sem_fala_passa(tmp_path: Path) -> None:
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {})
-    processo = rodar(raiz, "--all")
+def test_o_produto_passa_e_diz_o_que_mediu(tmp_path: Path) -> None:
+    processo = rodar(monta_produto(tmp_path))
     assert processo.returncode == 0, processo.stdout
-    assert "0 `Fala`" in processo.stdout
+    ultima = processo.stdout.strip().splitlines()[-1]
+    assert ultima.startswith("OK: 3 número(s) de tela"), ultima
+    assert "QUASE NÃO MEDIU" not in processo.stdout, processo.stdout
+    assert "Piso: numeros≥3, raizes≥2." in ultima, ultima
 
 
-def test_fala_correta_passa(tmp_path: Path) -> None:
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_ACIONA, Fala
-
-DICA = Fala(
-    chave="audio.alto_falante@dualsense",
-    lado="radio",
-    aba="Status",
-    texto="O alto-falante toca também por rádio.",
-    afirma=AFIRMA_ACIONA,
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"widgets/dica.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
+def test_apagar_um_numero_de_tela_reprova_pelo_piso(tmp_path: Path) -> None:
+    """D-2511-A-REGUA-DA-FALA-DE-TELA-SO-MEDE-O-QUE-A-TELA-MOSTRA — dois números: `rc=1`."""
+    fonte = RADIO_REAL.read_text(encoding="utf-8")
+    assert fonte.count(_UM_DOS_TRES) == 1, (
+        "o terceiro `Numero` mudou de forma em `radio_da_mesa.py`: sem a linha esta mordida "
+        "rodaria sem apagar nada e passaria sempre"
+    )
+    raiz = monta_produto(tmp_path, radio=fonte.replace(_UM_DOS_TRES, ""))
+    processo = rodar(raiz)
+    assert processo.returncode == 1, processo.stdout
+    assert "numeros: a régua mede 2 e o piso é 3" in processo.stdout, processo.stdout
 
 
-def test_afirma_nao_existe_contra_existe_tem_reprova_nomeando_endereco(tmp_path: Path) -> None:
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_EXISTE, Fala
-
-TEXTO_SONO_SEM_PLACA = Fala(
-    chave="audio.alto_falante@dualsense",
-    lado="radio",
-    aba="Status",
-    texto="Sem placa de som do controle (no rádio não existe alto-falante)",
-    afirma=AFIRMA_NAO_EXISTE,
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"audio_saida.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 1
-    assert "audio_saida.py" in processo.stdout
-    assert "audio.alto_falante@dualsense" in processo.stdout
-    assert "existe='tem'" in processo.stdout or 'existe="tem"' in processo.stdout
-
-
-def test_medicao_chegou_com_pendencia_aberta_reprova(tmp_path: Path) -> None:
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
-
-DICA_SOM_DEDICADO = Fala(
-    chave="audio.saida_dedicada@dualsense",
-    lado="radio",
-    aba="Status",
-    texto=NAO_MEDIDO,
-    afirma=AFIRMA_NADA,
-    pendente=Pendencia(
-        aberta_em="2026-08-24",
-        prazo_dias=30,
-        quem_fecha="o ensaio",
-        o_que_falta="o conteúdo do payload",
-    ),
-)
-'''
-    fatos_com_medicao = {
-        **FATOS_BASE,
-        "audio.saida_dedicada@dualsense": {
-            "existe": "tem",
-            "cabo": {"aciona": "", "de_onde_sei": "", "por_que_nao_aciona": ""},
-            "radio": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
-        },
-    }
-    raiz = monta_arvore(tmp_path, fatos_com_medicao, {"audio_saida.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 1
-    assert "a medição chegou" in processo.stdout
-    assert "audio.saida_dedicada@dualsense" in processo.stdout
-
-
-def test_pendencia_com_placeholder_ainda_aberto_nao_reprova(tmp_path: Path) -> None:
-    """O contraste: `de_onde_sei` continua NÃO medido — nada a reprovar."""
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
-
-DICA_SOM_DEDICADO = Fala(
-    chave="audio.saida_dedicada@dualsense",
-    lado="radio",
-    aba="Status",
-    texto=NAO_MEDIDO,
-    afirma=AFIRMA_NADA,
-    pendente=Pendencia(
-        aberta_em="2026-08-24",
-        prazo_dias=30,
-        quem_fecha="o ensaio",
-        o_que_falta="o conteúdo do payload",
-    ),
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"audio_saida.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
-
-
-def test_prazo_vencido_all_avisa_exigir_prazo_reprova(tmp_path: Path) -> None:
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
-
-DICA = Fala(
-    chave="audio.saida_dedicada@dualsense",
-    lado="radio",
-    aba="Status",
-    texto=NAO_MEDIDO,
-    afirma=AFIRMA_NADA,
-    pendente=Pendencia(
-        aberta_em="2026-01-01",
-        prazo_dias=1,
-        quem_fecha="o ensaio",
-        o_que_falta="x",
-    ),
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"audio_saida.py": arquivo})
-
-    todos = rodar(raiz, "--all", "--hoje", "2026-08-24")
-    assert todos.returncode == 0, todos.stdout
-    assert "AVISO" in todos.stdout
-    assert "venceu" in todos.stdout
-
-    release = rodar(raiz, "--exigir-prazo", "--hoje", "2026-08-24")
-    assert release.returncode == 1
-    assert "FALHA" in release.stdout
-
-
-def test_prazo_dentro_do_prazo_nao_avisa(tmp_path: Path) -> None:
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
-
-DICA = Fala(
-    chave="audio.saida_dedicada@dualsense",
-    lado="radio",
-    aba="Status",
-    texto=NAO_MEDIDO,
-    afirma=AFIRMA_NADA,
-    pendente=Pendencia(
-        aberta_em="2026-08-24",
-        prazo_dias=30,
-        quem_fecha="o ensaio",
-        o_que_falta="x",
-    ),
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"audio_saida.py": arquivo})
-    processo = rodar(raiz, "--exigir-prazo", "--hoje", "2026-08-24")
-    assert processo.returncode == 0, processo.stdout
-
-
-def test_afirma_nao_aciona_com_causa_de_fora_passa(tmp_path: Path) -> None:
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala
-
-DICA_DA_COR_NO_RADIO = Fala(
-    chave="identidade.cor_do_aparelho@dualsense",
-    lado="radio",
-    aba="Início",
-    texto="No rádio o controle recusa o pedido da cor. Escolha na lista.",
-    afirma=AFIRMA_NAO_ACIONA,
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"widgets/external_card.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
-
-
-def test_afirma_nao_aciona_com_causa_nossa_reprova_e_oferece_afirma_nada(tmp_path: Path) -> None:
-    """`by_que_nao_aciona = divida` é causa NOSSA — reprova e diz o que fazer."""
-    fatos = {
-        **FATOS_BASE,
-        "identidade.cor_do_aparelho@dualsense": {
-            "existe": "tem",
-            "cabo": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
-            "radio": {"aciona": "não", "de_onde_sei": "medido", "por_que_nao_aciona": "divida"},
-        },
-    }
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala
-
-DICA_DA_COR_NO_RADIO = Fala(
-    chave="identidade.cor_do_aparelho@dualsense",
-    lado="radio",
-    aba="Início",
-    texto="No rádio o controle recusa o pedido da cor. Escolha na lista.",
-    afirma=AFIRMA_NAO_ACIONA,
-)
-'''
-    raiz = monta_arvore(tmp_path, fatos, {"widgets/external_card.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 1
-    assert "causa NOSSA" in processo.stdout
-    assert "AFIRMA_NADA" in processo.stdout
-
-
-def test_afirma_nao_aciona_com_decisao_tomada_tambem_reprova(tmp_path: Path) -> None:
-    """`decisao-tomada` na linha da cor: a MESMA reprovação (mordida 3 de Z6-05)."""
-    fatos = {
-        **FATOS_BASE,
-        "identidade.cor_do_aparelho@dualsense": {
-            "existe": "tem",
-            "cabo": {"aciona": "sim", "de_onde_sei": "medido", "por_que_nao_aciona": ""},
-            "radio": {
-                "aciona": "não",
-                "de_onde_sei": "medido",
-                "por_que_nao_aciona": "decisao-tomada",
-            },
-        },
-    }
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala
-
-DICA_DA_COR_NO_RADIO = Fala(
-    chave="identidade.cor_do_aparelho@dualsense",
-    lado="radio",
-    aba="Início",
-    texto="No rádio o controle recusa o pedido da cor.",
-    afirma=AFIRMA_NAO_ACIONA,
-)
-'''
-    raiz = monta_arvore(tmp_path, fatos, {"widgets/external_card.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 1
-    assert "causa NOSSA" in processo.stdout
-
-
-def test_fila_lista_placeholder_aberto_e_esvazia_quando_fecha(tmp_path: Path) -> None:
-    arquivo_com_pendencia = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NADA, NAO_MEDIDO, Fala, Pendencia
-
-DICA = Fala(
-    chave="audio.saida_dedicada@dualsense",
-    lado="radio",
-    aba="Status",
-    texto=NAO_MEDIDO,
-    afirma=AFIRMA_NADA,
-    pendente=Pendencia(
-        aberta_em="2026-08-24",
-        prazo_dias=30,
-        quem_fecha="o ensaio",
-        o_que_falta="o conteúdo do payload",
-    ),
-)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"audio_saida.py": arquivo_com_pendencia})
-    aberto = rodar(raiz, "--fila")
-    assert "1 placeholder" in aberto.stdout
-    assert "audio.saida_dedicada@dualsense" in aberto.stdout
-    assert "audio_saida.py" in aberto.stdout
-
-    arquivo_fechado = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_ACIONA, Fala
-
-DICA = Fala(
-    chave="audio.saida_dedicada@dualsense",
-    lado="radio",
-    aba="Status",
-    texto="Toca também por rádio.",
-    afirma=AFIRMA_ACIONA,
-)
-'''
-    raiz2 = monta_arvore(tmp_path / "fechado", FATOS_BASE, {"audio_saida.py": arquivo_fechado})
-    fechado = rodar(raiz2, "--fila")
-    assert "nenhum placeholder" in fechado.stdout
-
-
-def test_populacao_de_fala_e_a_contagem_exata_e_nao_derivada(tmp_path: Path) -> None:
-    """3 `Fala` plantadas, 3 encontradas — o `3` é literal AQUI, nunca lido"""
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_ACIONA, AFIRMA_NAO_ACIONA, Fala
-
-UM = Fala(chave="audio.alto_falante@dualsense", lado="radio", aba="Status",
-          texto="a", afirma=AFIRMA_ACIONA)
-DOIS = Fala(chave="audio.alto_falante@dualsense", lado="cabo", aba="Status",
-            texto="b", afirma=AFIRMA_ACIONA)
-TRES = Fala(chave="identidade.cor_do_aparelho@dualsense", lado="radio", aba="Início",
-            texto="c", afirma=AFIRMA_NAO_ACIONA)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"varios.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
-    assert "3 `Fala`" in processo.stdout
-
-
-def test_fala_dinamica_nao_e_engolida_em_silencio(tmp_path: Path) -> None:
-    """`afirma` construído em runtime (não um `AFIRMA_*` nem literal) reprova"""
-    arquivo = '''
-from hefesto_dualsense4unix.app.fala_do_mapa import Fala
-
-def _monta(valor):
-    return Fala(chave="audio.alto_falante@dualsense", lado="radio", aba="Status",
-                texto="a", afirma=valor)
-'''
-    raiz = monta_arvore(tmp_path, FATOS_BASE, {"dinamico.py": arquivo})
-    processo = rodar(raiz, "--all")
-    assert processo.returncode == 1
-    assert "não é um AFIRMA_* conhecido" in processo.stdout
-
-
-def test_os_dois_modulos_de_registro_nao_tem_dependencia_pesada() -> None:
-    """`import gi`/`Gtk` em `fala_do_mapa.py` faria este portão ImportError em"""
+def test_o_registro_nao_tem_dependencia_pesada() -> None:
+    """`import gi`/`Gtk` em `fala_do_mapa.py` faria este portão sair com ImportError."""
     fonte = FALA_DO_MAPA_REAL.read_text(encoding="utf-8")
-    proibidos = ("import gi", "from gi", "Gtk", "gi.repository")
-    for termo in proibidos:
+    for termo in ("import gi", "from gi", "Gtk", "gi.repository"):
         assert termo not in fonte, f"{termo!r} em fala_do_mapa.py — dependência pesada"

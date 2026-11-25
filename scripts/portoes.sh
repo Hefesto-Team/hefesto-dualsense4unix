@@ -32,7 +32,7 @@ rapido|ate-onde-a-prova-chegou|py|scripts/check_ate_onde_a_prova_chegou.py
 rapido|ate-onde-a-prova-chegou-morde|pytest|tests/unit/test_portao_a_quinta_pergunta_morde.py
 rapido|mapa-de-canais|py|scripts/gerar-mapa.py --check
 rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
-rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all|@dia
+rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all
 rapido|caducos|py|scripts/validar-caducos.py --all
 rapido|texto-publico|py|scripts/check_texto_publico.py
 rapido|texto-sem-pessoa|py|scripts/check_texto_sem_pessoa.py

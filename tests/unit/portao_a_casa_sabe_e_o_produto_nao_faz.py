@@ -1366,16 +1366,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "executa pela ponte (`interface/pacotes/a01_jogar.py`, `PROVAS`). Sai "
         "com o piloto da aba Controles."
     ),
-    "app/fala_do_mapa.py::Fala": (
-        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o tipo que duas "
-        "réguas leem por AST, não promessa ao produto: "
-        "`scripts/validar-fala-de-tela.py:149` (`descobre_falas`) e "
-        "`scripts/check_a_tela_nao_confessa.py:126` (`_falas`) varrem toda chamada "
-        "`Fala(...)` em `src/`. Hoje há zero (`scripts/validar-fala-de-tela.py:670` "
-        "(`PISO_DA_REGUA`), "
-        "`PISO_DA_REGUA[\"falas\"] = 0`): a interface nova não declara nenhuma. "
-        "O tipo fica para a próxima frase de tela que ligar um número ao mapa."
-    ),
     "app/mic_monitor.py::MicMonitor": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "

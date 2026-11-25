@@ -60,11 +60,6 @@ _FORA_DO_PRODUTO: dict[str, str] = {
         "`docs/method/COMO-OLHAR-A-TELA.md` o cita neste endereço, e "
         "`tests/unit/test_a_tabela_dos_scripts_de_tela.py` cobra que ele exista"
     ),
-    "app.fatos_do_mapa": (
-        "GERADO por `scripts/gerar-fatos-de-tela.py` a partir do `mapa-controles.csv`, e "
-        "conferido pelo portão `fatos-de-tela`; as réguas de tela o leem para cobrar que a "
-        "tela não afirme mais que o mapa"
-    ),
     "profiles.curva_propria": (
         "o formato da curva própria com proveniência (sala limpa, CR-02), citado pelo NOTICE; "
         "`scripts/gerar-tabela-de-curvas.py` o usa no portão `curvas`"
