@@ -343,7 +343,7 @@ em que o jogo ou outra extensão ainda vibra: nenhum motor fica preso.
 O par de um `vibracao.set` vale por 3 s
 (`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:16`): sem um novo pedido
 nesse prazo, o serviço o solta
-(`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:373`). Quem quer uma
+(`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:378`). Quem quer uma
 vibração contínua repete o pedido antes dos 3 s. A resposta de sucesso não garante o motor: no Modo Nativo, e com o `uniq` de um controle fora da
 mesa, a resposta traz `status: "recusado"`, o `desfecho` e o `motivo` na frase
 (`RUMBLE_RECUSADO_MODO_NATIVO` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3743`,

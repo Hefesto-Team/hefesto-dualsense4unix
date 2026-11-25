@@ -362,7 +362,12 @@ def silenciar_dono_abandonado(
 
 
 def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
-    """Re-aplica cada par fixado no controle dele a cada ~200ms, com a força dele."""
+    """Re-aplica cada par fixado no controle dele a cada ~200ms, com a força dele.
+
+    O par parado além de ``TETO_DO_RUMBLE_FIXADO_S`` é solto; a linha de motor preso só é escrita
+    para o par que vibrava, porque o ``(0, 0)`` é o silêncio deliberado e quem o repete a cada
+    poucos segundos (o ``rumble.set`` de zero) enchia o diário com a soltura dele.
+    """
     cfg = daemon.config
     pares = _pares_de_pe(cfg)
     if not pares:
@@ -371,13 +376,14 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     vivos = []
     for dono, par, carimbo in pares:
         if isinstance(carimbo, (int, float)) and now - carimbo > TETO_DO_RUMBLE_FIXADO_S:
-            logger.info(
-                "rumble_fixado_solto_por_ociosidade",
-                parado_ha_s=round(now - carimbo, 1),
-                teto_s=TETO_DO_RUMBLE_FIXADO_S,
-                par=par,
-                dono=dono,
-            )
+            if any(par):
+                logger.info(
+                    "rumble_fixado_solto_por_ociosidade",
+                    parado_ha_s=round(now - carimbo, 1),
+                    teto_s=TETO_DO_RUMBLE_FIXADO_S,
+                    par=par,
+                    dono=dono,
+                )
             if dono in pares_fixados(cfg):
                 del pares_fixados(cfg)[dono]
             continue
