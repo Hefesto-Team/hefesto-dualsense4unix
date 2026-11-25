@@ -26,15 +26,16 @@ LEITOR = RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "quem_o_jogo
 
 LEVANTA = 'def ha_jogo_aberto(*a, **k):\n    raise OSError("x")\n\n\n'
 QUE_REENUMERAM = ("hidraw", "idVendor=054c", "subsystem-match=usb", "subsystem-match=input")
+PID_ACIMA_DO_TETO_DO_KERNEL = "4999999"
 
 
 def _proc(raiz: Path, *, jogo: bool) -> Path:
     proc = raiz / ("proc-com-jogo" if jogo else "proc-sem-jogo")
-    (proc / "42").mkdir(parents=True)
+    (proc / PID_ACIMA_DO_TETO_DO_KERNEL).mkdir(parents=True)
     ambiente = b"HOME=/x\0"
     if jogo:
         ambiente += quem_o_jogo_le.ENV_DO_JOGO.encode() + b"=/compat/1234\0"
-    (proc / "42" / "environ").write_bytes(ambiente)
+    (proc / PID_ACIMA_DO_TETO_DO_KERNEL / "environ").write_bytes(ambiente)
     (proc / "self").mkdir()
     return proc
 
@@ -181,7 +182,7 @@ def test_o_jogo_em_cena_do_install_so_libera_no_sem_jogo_exato(tmp_path: Path) -
 
 def _raizes_que_nao_se_leem(raiz: Path) -> dict[str, Path]:
     fechada = raiz / "proc-fechado"
-    (fechada / "42").mkdir(parents=True)
+    (fechada / PID_ACIMA_DO_TETO_DO_KERNEL).mkdir(parents=True)
     fechada.chmod(0)
     return {"ausente": raiz / "proc-que-nao-existe", "fechada": fechada}
 

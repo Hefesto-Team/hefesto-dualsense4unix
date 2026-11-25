@@ -33,6 +33,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 CAMADA = RAIZ / "scripts/lib/camada_de_maquina.sh"
 UDEV = RAIZ / "scripts/install_udev.sh"
 INSTALL = RAIZ / "install.sh"
+PID_ACIMA_DO_TETO_DO_KERNEL = "4999999"
 
 
 def _funcao(texto: str, nome: str) -> str:
@@ -43,11 +44,11 @@ def _funcao(texto: str, nome: str) -> str:
 
 def _proc(tmp_path: Path, *, jogo: bool) -> Path:
     raiz = tmp_path / ("proc-com-jogo" if jogo else "proc-sem-jogo")
-    (raiz / "42").mkdir(parents=True)
+    (raiz / PID_ACIMA_DO_TETO_DO_KERNEL).mkdir(parents=True)
     ambiente = b"HOME=/x\0"
     if jogo:
         ambiente += quem_o_jogo_le.ENV_DO_JOGO.encode() + b"=/compat/1234\0"
-    (raiz / "42" / "environ").write_bytes(ambiente)
+    (raiz / PID_ACIMA_DO_TETO_DO_KERNEL / "environ").write_bytes(ambiente)
     (raiz / "self").mkdir()
     return raiz
 
