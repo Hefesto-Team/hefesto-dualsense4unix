@@ -166,7 +166,7 @@ def ativo(nome: str | None) -> dict[str, Any]:
             lido = json.loads(texto) if texto is not None else None
         except Exception:
             lido = None
-        if isinstance(lido, dict):
+        if isinstance(lido, dict) and texto is not None:
             _lembrar(onde, str(nome), texto)
             return lido
     return _o_que_a_tela_leu(onde, str(nome))
@@ -229,7 +229,7 @@ _DAS_DUAS_PRIMEIRAS_PERNAS: dict[tuple[str, str], pathlib.Path] = {}
 
 _LIDO: dict[tuple[str, str], str] = {}
 
-_DO_DISCO: dict[tuple[str, str], tuple[tuple[int, int, int], str, dict[str, Any] | None]] = {}
+_DO_DISCO: dict[tuple[str, str], tuple[tuple[int, int, int], str, dict[str, Any]]] = {}
 
 
 def _carimbo(p: pathlib.Path | None) -> tuple[int, int, int] | None:
@@ -247,14 +247,14 @@ def _carimbo(p: pathlib.Path | None) -> tuple[int, int, int] | None:
     return (st.st_mtime_ns, st.st_size, st.st_ino)
 
 
-def _linha_da_lista(texto: str, arquivo: pathlib.Path) -> dict[str, Any] | None:
-    """A linha de `lista()` de um perfil, ou ``None`` quando o texto não é um perfil."""
+def _linha_da_lista(texto: str, arquivo: pathlib.Path) -> dict[str, Any]:
+    """A linha de `lista()` de um perfil, ou `{}` quando o texto não é um perfil."""
     try:
         j = json.loads(texto)
-    except Exception:
-        return None
+    except ValueError:
+        j = None
     if not isinstance(j, dict):
-        return None
+        return {}
     return {
         "nome": j.get("name") or arquivo.stem,
         "prioridade": j.get("priority", 0),
@@ -263,7 +263,7 @@ def _linha_da_lista(texto: str, arquivo: pathlib.Path) -> dict[str, Any] | None:
     }
 
 
-def _leitura_do_perfil(p: pathlib.Path) -> tuple[str, dict[str, Any] | None] | None:
+def _leitura_do_perfil(p: pathlib.Path) -> tuple[str, dict[str, Any]] | None:
     """O texto e a linha da lista do arquivo de perfil `p`, ou ``None`` quando ele não abre.
 
     O disco só é aberto quando o carimbo do arquivo mudou desde a última leitura: o tique de
@@ -277,8 +277,10 @@ def _leitura_do_perfil(p: pathlib.Path) -> tuple[str, dict[str, Any] | None] | N
     if guardado is not None and guardado[0] == carimbo:
         return guardado[1], guardado[2]
     try:
-        texto = p.read_text(encoding="utf-8")
+        texto: str | None = p.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
+        texto = None
+    if texto is None:
         return None
     _DO_DISCO[chave] = (carimbo, texto, _linha_da_lista(texto, p))
     return _DO_DISCO[chave][1], _DO_DISCO[chave][2]
@@ -422,7 +424,7 @@ def lista() -> list[dict[str, Any]]:
     arquivos = sorted(onde.glob("*.json"))
     for p in arquivos:
         lido = _leitura_do_perfil(p)
-        if lido is not None and lido[1] is not None:
+        if lido is not None and lido[1]:
             fora.append(dict(lido[1]))
     de_agora = {(str(onde), p.name) for p in arquivos}
     for chave in [c for c in _DO_DISCO if c[0] == str(onde) and c not in de_agora]:
