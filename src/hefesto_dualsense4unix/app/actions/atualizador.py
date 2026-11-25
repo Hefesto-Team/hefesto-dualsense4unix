@@ -963,9 +963,21 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
 
 
 def _de_para(versoes: Versoes) -> str:
-    if versoes.rotulo and not versoes.instalada:
+    """O que o registro diz da troca: o rótulo da peça que tem um (a contagem de pacotes não é
+    versão), senão a versão de antes e a nova."""
+    if versoes.rotulo:
         return versoes.rotulo
     return f"{versoes.instalada or '—'} -> {versoes.publicada or '—'}"
+
+
+def _linha_da_conferencia(item: dict[str, Any]) -> str:
+    """A linha de uma peça no ``--conferir``: com rótulo e versão instalada, o rótulo; senão o
+    par de versões."""
+    if item.get("rotulo") and item.get("de"):
+        troca = str(item["rotulo"])
+    else:
+        troca = f"{item['de'] or item['rotulo'] or '—'} -> {item['para'] or '—'}"
+    return f"{item['nome']}: {troca} ({item['estado']})"
 
 
 def _atualizada(peca: Peca, versoes: Versoes, linha: dict[str, Any], motivo: str, *,
@@ -1424,8 +1436,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args[:1] == ["--conferir"]:
         conferencia = conferir(rede="--sem-rede" not in args)
         for item in conferencia["pecas"]:
-            print(f"{item['nome']}: {item['de'] or item['rotulo'] or '—'} -> "
-                  f"{item['para'] or '—'} ({item['estado']})")
+            print(_linha_da_conferencia(item))
         return 0
     if args[:1] == ["--voltar"] and len(args) == 2:
         motivo = voltar(args[1])
