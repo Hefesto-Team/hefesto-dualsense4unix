@@ -1569,6 +1569,30 @@ def _a_mascara_que_fica(mascaras: list[str], caminho: object) -> str:
 CHAVE_DO_COMANDO_NO_ARQUIVO: Final = "evento_comando"
 
 
+FRASE_DO_NOME_VAZIO: Final = "O nome não pode ficar vazio"
+FRASE_DO_NOME_COM_BARRA: Final = "O nome não pode ter barra nem dois pontos seguidos"
+FRASE_DO_NOME_SEM_SLUG: Final = "O nome precisa de letra ou número"
+
+
+def recusa_do_nome_do_perfil(nome: str) -> str | None:
+    """Por que `nome` não serve como `Profile.name`, em uma frase; `None` quando serve.
+
+    O dono único de «este nome serve?»: o validador do `Profile` levanta esta frase, e a aba
+    Perfis a pergunta antes de gravar (o `model_copy` não roda o validador).
+    """
+    if not nome or not nome.strip():
+        return FRASE_DO_NOME_VAZIO
+    if "/" in nome or ".." in nome or os.sep in nome:
+        return FRASE_DO_NOME_COM_BARRA
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
+    try:
+        slugify(nome)
+    except ValueError:
+        return FRASE_DO_NOME_SEM_SLUG
+    return None
+
+
 class Profile(BaseModel):
     """Perfil v1 (ADR-005)."""
 
@@ -1740,16 +1764,17 @@ class Profile(BaseModel):
     @field_validator("name")
     @classmethod
     def _name_nonempty(cls, value: str) -> str:
-        if not value or not value.strip():
-            raise ValueError("name não pode ser vazio")
-        if "/" in value or ".." in value or os.sep in value:
-            raise ValueError(f"name contém caractere inválido: {value!r}")
-        from hefesto_dualsense4unix.profiles.slug import slugify
-        try:
-            slugify(value)
-        except ValueError as exc:
-            raise ValueError(f"name não produz slug válido: {value!r}") from exc
+        if (frase := recusa_do_nome_do_perfil(value)) is not None:
+            raise ValueError(frase)
         return value
+
+    def renomeado(self, nome: str, **campos: Any) -> Profile:
+        """Este perfil com outro `name` (e `campos`), validado como na leitura.
+
+        O `model_copy(update={"name": …})` não roda o validador do nome, e o arquivo gravado com
+        nome que não serve some da lista na leitura seguinte.
+        """
+        return type(self).model_validate({**self.model_dump(), **campos, "name": nome})
 
     @field_validator("nome_do_jogo", mode="before")
     @classmethod
@@ -3143,6 +3168,9 @@ __all__ = [
     "E_SECAO",
     "FATOR_DO_GATILHO_NA_ECONOMIA",
     "FORCAS_DO_GATILHO",
+    "FRASE_DO_NOME_COM_BARRA",
+    "FRASE_DO_NOME_SEM_SLUG",
+    "FRASE_DO_NOME_VAZIO",
     "MODOS_DE_GATILHO_SEM_FORCA",
     "MODO_AUTOMATICO",
     "MODO_DE_NASCIMENTO_DO_GATILHO",
@@ -3197,6 +3225,7 @@ __all__ = [
     "perfil_e_de_jogo",
     "perfil_e_regra_de_jogo",
     "perfil_no_modo",
+    "recusa_do_nome_do_perfil",
     "registrar_classes_de_jogo",
     "registrar_declaracao_da_mesa",
     "resolver_teclado_emulado",

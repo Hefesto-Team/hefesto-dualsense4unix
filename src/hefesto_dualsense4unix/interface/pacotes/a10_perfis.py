@@ -59,6 +59,7 @@ reaplicar, `launch_env.refresh` para a antecipação por appid).
 """
 from __future__ import annotations
 
+import re
 import sys
 import time
 from collections.abc import Callable
@@ -1142,6 +1143,13 @@ def _em_uso(ctx: Contexto, todos: list[Any] | None = None) -> str:
     return _valendo(ctx, todos) if _servico_responde(ctx) else ""
 
 
+def _recusar_o_nome(frase: str) -> RuntimeError:
+    """A recusa do renomear: a faixa do alto da aba diz o motivo, e a tarja leva a mesma frase."""
+    global _DESFECHO
+    _DESFECHO = (frase, time.monotonic())
+    return RuntimeError(frase)
+
+
 def _recusar_o_ativar(frase: str) -> RuntimeError:
     """Guarda a recusa para o Ativar (campo `perfis.ativar-razao`) e a devolve para a tarja."""
     _RECUSA_DO_ATIVAR[0] = frase
@@ -1473,7 +1481,9 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     from hefesto_dualsense4unix.profiles.loader import (
         delete_profile,
         load_all_profiles,
+        perfil_em_disco,
     )
+    from hefesto_dualsense4unix.profiles.schema import recusa_do_nome_do_perfil
     from hefesto_dualsense4unix.profiles.slug import slugify
 
     if not _so_mudou(o):
@@ -1487,21 +1497,26 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     do_editor = _perfil_do_editor(ctx)
     era = str(o.get("hefPerfil") or "").strip() or do_editor
     if not novo:
-        raise RuntimeError("o perfil precisa de um nome — o campo ficou vazio.")
+        raise _recusar_o_nome("o perfil precisa de um nome — o campo ficou vazio.")
+    if (frase := recusa_do_nome_do_perfil(novo)) is not None:
+        raise _recusar_o_nome(frase)
     if e_o_freestyle(novo):
-        raise RuntimeError(FRASE_DO_FREESTYLE)
+        raise _recusar_o_nome(FRASE_DO_FREESTYLE)
     prof = _o_perfil_no_disco(era)
     if prof.name == novo:
+        _anotar("")
         return None
     troca_de_arquivo = slugify(novo) != slugify(prof.name)
     if troca_de_arquivo:
         for outro in load_all_profiles():
             if slugify(outro.name) == slugify(novo):
-                raise RuntimeError(
+                raise _recusar_o_nome(
                     f"já existe um perfil chamado “{outro.name}”. Escolha outro "
                     f"nome — gravar este por cima apagaria o dele.")
-    _gravar(prof.model_copy(update={"name": novo}), ctx, p, era=era)
+    _gravar(prof.renomeado(novo), ctx, p, era=era)
     if troca_de_arquivo:
+        if perfil_em_disco(novo) is None:
+            raise RuntimeError(f"“{novo}” não pôde ser relido; “{era}” ficou como estava.")
         delete_profile(era)
     levar_o_perfil_renomeado(prof.name, novo)
     if era == do_editor:
@@ -2200,8 +2215,9 @@ def criar_para_o_jogo(ctx: Contexto, p: Any, *, classes: tuple[str, ...],
     else:
         regra = MatchCriteria(window_class=list(limpas))
     jogo = nome_do_jogo.strip()
+    nome = " ".join(re.sub(r"/|\.\.+", " ", jogo).split())
     try:
-        return _nascer(ctx, p, regra, jogo or NOME_DO_PERFIL_NOVO, jogo=jogo)
+        return _nascer(ctx, p, regra, nome or NOME_DO_PERFIL_NOVO, jogo=jogo)
     except ValueError:
         return _nascer(ctx, p, regra, NOME_DO_PERFIL_NOVO, jogo=jogo)
 
@@ -2248,7 +2264,7 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     prof = load_profile(era)
     copia = _nome_livre(f"{prof.name} (cópia)", todos)
     carimbo = carimbo_que_o_save_leva(find_by_slug(copia, todos), None)
-    _gravar(prof.model_copy(update={"name": copia, "ponte": carimbo}), ctx, p)
+    _gravar(prof.renomeado(copia, ponte=carimbo), ctx, p)
     comando = comando_do_evento(prof.name)
     if comando and not gravar_os_comandos_dos_eventos({copia: comando}):
         raise RuntimeError(f"“{copia}” nasceu sem o comando de “{prof.name}”.")

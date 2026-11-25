@@ -291,7 +291,7 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     print(f"[exportar] {destino}")
 
 
-@gesto("*", "importar")
+@gesto("*", "importar", grava="save_profile")
 def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Carrega um perfil de um `.json` que o usuário escolhe, pelo seletor injetado do sistema.
 

@@ -161,7 +161,7 @@ CSS = CSS_GLIFO + """  .perfis{flex:1;min-height:0;display:grid;grid-template-co
   :root{--rot-p:86px}
 
   .desfecho{padding:0 14px;margin-top:0;height:0;line-height:15px;
-            font-size:11px;color:var(--green);
+            font-size:11px;color:var(--orange);
             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
             overflow:hidden;
             visibility:hidden}
@@ -222,6 +222,7 @@ CSS = CSS_GLIFO + """  .perfis{flex:1;min-height:0;display:grid;grid-template-co
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
   .tab td .renome{width:100%;box-sizing:border-box;height:22px;font:inherit;padding:0 6px;
                   border:1px solid var(--purple);border-radius:5px;background:var(--app-bg);color:var(--fg)}
+  .tab td .renome.recusado{border-color:var(--orange)}
   .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
@@ -618,9 +619,26 @@ ROTEIRO = """
         if(e.key === 'Enter'){ e.preventDefault(); campo.blur(); }
         else if(e.key === 'Escape'){ e.preventDefault(); campo.value = era; campo.blur(); }
       });
+      campo.addEventListener('change', function(){ campo.dataset.enviado = '1'; });
       campo.addEventListener('blur', function(){
-        setTimeout(function(){ if(td.contains(campo)) td.textContent = guarda.textContent; }, 0);
+        setTimeout(function(){
+          if(td.contains(campo) && campo.dataset.enviado !== '1') td.textContent = guarda.textContent;
+        }, 0);
       });
+      var olho = new MutationObserver(function(){
+        if(!td.contains(campo)){ olho.disconnect(); return; }
+        if(campo.classList.contains('hef-recusou')){
+          if(campo.classList.contains('recusado')) return;
+          delete campo.dataset.enviado;
+          campo.classList.add('recusado');
+          campo.focus();
+          campo.select();
+        } else if(campo.classList.contains('hef-deu-certo')){
+          olho.disconnect();
+          setTimeout(function(){ if(td.contains(campo)) td.textContent = guarda.textContent; }, 800);
+        }
+      });
+      olho.observe(campo, {attributes: true, attributeFilter: ['class']});
     }
 
     var voo = null;
