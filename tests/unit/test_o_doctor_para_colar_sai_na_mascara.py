@@ -69,6 +69,7 @@ def _rodar_o_sh(capfd: pytest.CaptureFixture[str], para_colar: bool) -> tuple[in
 def test_a_saida_de_colar_do_doctor_sh_nao_traz_endereco_nem_conta(
     conta: Path, capfd: pytest.CaptureFixture[str]
 ) -> None:
+    """D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA: sem endereço inteiro, sem a conta e o home."""
     rc, saida = _rodar_o_sh(capfd, para_colar=True)
     assert rc == cmd_doctor._GRAVIDADE_FAIL
     assert not _O_MIOLO.search(saida), saida
