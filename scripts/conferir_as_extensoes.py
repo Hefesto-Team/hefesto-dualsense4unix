@@ -33,9 +33,10 @@ SECOES_MINIMAS: tuple[tuple[str, ...], ...] = (
     ("Testes", "A suíte", "Provas"),
     ("Licença",),
 )
-SPDX_DO_TEXTO: tuple[tuple[str, frozenset[str]], ...] = (
-    ("mit license", frozenset({"MIT"})),
-    ("gnu general public license", frozenset({"GPL-3.0-only", "GPL-3.0-or-later"})),
+SPDX_DO_TEXTO: tuple[tuple[tuple[str, ...], frozenset[str]], ...] = (
+    (("mit license",), frozenset({"MIT"})),
+    (("gnu general public license", "version 3"),
+     frozenset({"GPL-3.0-only", "GPL-3.0-or-later"})),
 )
 PRAZO_DA_SONDA_S = 10
 
@@ -63,9 +64,9 @@ def versao_do_pyproject(texto: str) -> str | None:
 
 def licencas_do_arquivo(texto: str) -> frozenset[str]:
     """Os identificadores SPDX que o texto do ``LICENSE`` admite; vazio se ele não se reconhece."""
-    cabeca = texto[:400].casefold()
-    for marca, ids in SPDX_DO_TEXTO:
-        if marca in cabeca:
+    cabeca = " ".join(texto[:400].split()).casefold()
+    for marcas, ids in SPDX_DO_TEXTO:
+        if all(marca in cabeca for marca in marcas):
             return ids
     return frozenset()
 

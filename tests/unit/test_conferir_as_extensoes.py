@@ -98,6 +98,15 @@ def test_a_licenca_do_arquivo_que_nao_e_a_do_manifesto_reprova(
     assert "LICENSE" in frase and "MIT" in frase
 
 
+@pytest.mark.parametrize(("linha", "aceita"), [("Version 3, 29 June 2007", True),
+                                               ("Version 2, June 1991", False)])
+def test_o_license_da_gpl_vale_so_na_gpl_3(conferidor: ModuleType, linha: str,
+                                          aceita: bool) -> None:
+    """O LICENSE da GPL 2 não passa por GPL-3.0 do manifesto; o da GPL 3 passa."""
+    texto = f"                    GNU GENERAL PUBLIC LICENSE\n                       {linha}\n"
+    assert ("GPL-3.0-or-later" in conferidor.licencas_do_arquivo(texto)) is aceita
+
+
 def test_o_readme_que_diz_outra_licenca_reprova(conferidor: ModuleType, extensao: Path) -> None:
     """O README que não diz a licença do manifesto reprova."""
     (extensao / "README.md").write_text(README.replace("MIT.", "GPL-3.0-or-later."),
