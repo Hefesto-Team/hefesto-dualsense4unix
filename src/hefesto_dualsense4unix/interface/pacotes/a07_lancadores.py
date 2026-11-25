@@ -3125,7 +3125,7 @@ def _pede_o_segundo_clique(mod_id: str, acao: str, alvo: str) -> bool:
 
 def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     """A cada tique, os blocos vivos da janela aberta: os aparelhos, as ações em curso, o rastro
-    do livre e quem o recebe. A barra que se arrasta nunca está num bloco repintado."""
+    do livre e quem o recebe. A barra que se arrasta nunca se troca sob o dedo."""
     if not (_MEXIDA.html_mod and _MEXIDA.mod):
         return carga
     item = next((i for i in REGISTRO.ler() if i.entrada.id == _MEXIDA.mod), None)

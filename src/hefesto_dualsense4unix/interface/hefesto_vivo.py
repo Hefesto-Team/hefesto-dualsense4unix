@@ -382,9 +382,9 @@ BOOTSTRAP = r"""
       if(!alvo) continue;
       if(alvo.__hefBloco === html) continue;
       if(alvo.innerHTML === html){ alvo.__hefBloco = html; continue; }
-      if(alvo.querySelector('.hef-em-voo') || alvo.closest('.hef-em-voo')){
-        window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
-        continue;
+      if(alvo.querySelector('.hef-em-voo') || alvo.closest('.hef-em-voo') || [].some.call(
+           alvo.querySelectorAll('input[type="range"]'), r => r.matches(':active'))){
+        window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1; continue;
       }
       alvo.innerHTML = html;
       alvo.__hefBloco = html;
