@@ -29,6 +29,10 @@ depois de o arquivo sumir.
 qual está valendo" e "não há nenhum valendo" são fatos diferentes; transformar o
 primeiro em recusa travaria o Remover por ignorância nossa.
 
+FATO SUBSTITUÍDO — 25/11/2026: o Remover não recusa mais o perfil que vale; pergunta, e no segundo
+clique o serviço passa ao perfil de fora do jogo (O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA-01). A
+guarda segue sendo ``_valendo``, que decide a pergunta e a troca.
+
 FATO SUBSTITUÍDO — 02/09/2026. Esta última frase é verdadeira da FUNÇÃO e
 **vazia nesta aba**: ``perfil_que_esta_valendo`` só devolve ``nao_sei`` quando o
 ``state`` não é dicionário, e ``Contexto.state`` é tipado ``dict[str, Any]`` e
@@ -140,38 +144,30 @@ def _remover(nome: str, state: dict[str, Any]) -> tuple[PonteDeMentira, Exceptio
     return ponte, None
 
 
-def test_remover_recusa_o_perfil_que_vale_pelo_disco(
+def test_remover_sabe_que_o_perfil_vale_pelo_disco(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Daemon calado, marcador em disco valendo: o Remover RECUSA.
+    """Daemon calado, marcador em disco valendo: o Remover pergunta e passa o serviço ao apagar.
 
-    Este é o §P7 chegando à interface nova. Antes, com o daemon em ``null``, o
-    primeiro clique ARMAVA e o segundo apagava o perfil que estava valendo — e
-    depois disso o daemon segue com as seções daquele perfil no controle, o
-    marcador em disco aponta para um arquivo que não existe, e nada na tela diz.
+    Este é o §P7 chegando à interface nova. Com o daemon em ``null`` o gesto não sabia que o
+    perfil vale, e o daemon seguia com as seções de um arquivo que já não existia. Desde
+    25/11/2026 (O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA-01) o que vale se remove, depois da
+    pergunta, e a pergunta do dono é o que decide que o serviço passa ao perfil de fora do jogo.
 
-    MORDIDA: troque a chamada a ``frase_da_remocao_do_perfil_ativo`` por um
-    ``mesmo_slug`` contra ``ctx.state`` e este teste reprova: o gesto arma em
-    vez de recusar.
+    MORDIDA: troque ``_valendo(ctx)`` por ``ctx.state.get("active_profile")`` no ``remover`` e
+    este teste reprova: o segundo clique apaga sem trocar o perfil do serviço.
     """
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    loader.save_profile(Profile(name=loader.NOME_DO_PADRAO, match=MatchAny()), origem="régua")
     _o_disco_diz(monkeypatch, "meu_perfil")
     ponte, erro = _remover("meu_perfil", {"active_profile": None})
-    assert isinstance(erro, RuntimeError), "o Remover armou sobre o perfil que vale"
-    assert str(erro) == profiles_actions._AVISO_DA_REMOCAO_DO_ATIVO, (
-        "a recusa não é a frase do produto — há uma segunda verdade escrita à mão")
+    assert isinstance(erro, RuntimeError) and "Clique em Remover de novo" in str(erro)
     assert ponte.chamadas == []
-
-
-def test_a_recusa_do_remover_e_a_frase_inteira_do_produto(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """As TRÊS partes da frase chegam: o quê, o que não se desfaz, e o que fazer."""
-    _o_disco_diz(monkeypatch, "meu_perfil")
-    _, erro = _remover("meu_perfil", {})
-    texto = str(erro)
-    assert "está valendo agora" in texto
-    assert "seguem aplicados" in texto, "sumiu o que a remoção NÃO desfaz"
-    assert "ative outro perfil em seguida" in texto
+    ponte, erro = _remover("meu_perfil", {"active_profile": None})
+    assert erro is None, f"o segundo clique foi recusado: {erro}"
+    assert [c[0] for c in ponte.chamadas][:1] == ["profile.switch"], ponte.chamadas
 
 
 def test_com_ninguem_valendo_o_remover_nao_trava(
@@ -225,7 +221,7 @@ def test_a_aba_nao_le_mais_o_active_profile_cru() -> None:
     segura o defeito é a régua de comportamento, e agora existe para os cinco:
 
         ativar               este arquivo, ``test_ativar_recusa_o_mesmo_perfil…``
-        remover              este arquivo, ``test_remover_recusa_o_perfil_que_vale…``
+        remover              este arquivo, ``test_remover_sabe_que_o_perfil_vale…``
         pacote               ``test_a_aba_perfis_nomeia_o_alvo_que_vai_apagar``
                              — ``…_o_marcador_que_existe_continua_valendo``
         _perfil_do_editor    idem — ``…_o_editor_abre_no_perfil_que_o_disco_diz…``

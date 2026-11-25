@@ -1,7 +1,8 @@
 """A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO-01: o Delete sobre o perfil escolhido é o «Remover».
 
 A tecla aciona o MESMO botão `data-hef-gesto="remover"`, logo a mesma pergunta (o armamento do
-`a10_perfis.remover`) e as mesmas recusas. Dentro de um campo de texto, o Delete é do campo.
+`a10_perfis.remover`), inclusive sobre o perfil que vale. Dentro de um campo de texto, o Delete
+é do campo.
 
 A MORDIDA: tire o ouvinte do `keydown` do Delete do `aba10.ROTEIRO`, regere o mockup, e a régua
 reprova.
@@ -90,22 +91,32 @@ class _Ponte:
         self.chamadas.append(metodo)
         return True
 
+    def resultado(self, metodo: str, *_a: Any, **_k: Any) -> dict[str, Any]:
+        self.chamadas.append(metodo)
+        return {}
 
-def test_o_gesto_que_a_tecla_aciona_pergunta_antes_e_recusa_o_que_vale(
+
+def test_o_gesto_que_a_tecla_aciona_pergunta_antes_e_apaga_o_que_vale(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO, load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     monkeypatch.setattr(a10_perfis, "_ARMADO", None, raising=False)
+    save_profile(Profile(name=NOME_DO_PADRAO, match=MatchAny(), priority=1))
     save_profile(Profile(name="Pragmata", match=MatchAny(), priority=90))
     save_profile(Profile(name="Sackboy", match=MatchAny(), priority=80))
     ponte = _Ponte()
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Pragmata")
     ctx = Contexto(state={"active_profile": "Pragmata"}, mesa=[], conectados=[], estados={})
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="Apagar “Pragmata”"):
         a10_perfis.remover(ctx, {}, ponte)
     assert load_profile("Pragmata").name == "Pragmata"
+    a10_perfis.remover(ctx, {}, ponte)
+    assert ponte.chamadas[0] == "profile.switch"
+    with pytest.raises(FileNotFoundError):
+        load_profile("Pragmata")
+    ctx = Contexto(state={"active_profile": "Sackboy"}, mesa=[], conectados=[], estados={})
 
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Sackboy")
     with pytest.raises(RuntimeError, match="Apagar “Sackboy”"):

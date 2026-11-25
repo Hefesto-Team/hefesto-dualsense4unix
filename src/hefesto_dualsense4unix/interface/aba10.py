@@ -208,6 +208,7 @@ CSS = CSS_GLIFO + """  .perfis{flex:1;min-height:0;display:grid;grid-template-co
 
   .barra-quatro{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px}
   .barra-quatro .btn{width:100%;height:36px;justify-content:center;font-size:12.5px}
+  .barra-quatro .btn.vermelho.pergunta{border-color:var(--red)}
   .barra-quatro .btn.verde,.barra-quatro .btn.verde:hover{background:var(--green);
       color:var(--app-bg);border-color:var(--green);font-weight:700}
   .barra-quatro .btn.verde.apagado,.barra-quatro .btn.verde.apagado:hover{background:transparent;
@@ -889,7 +890,7 @@ MIOLO = f'''
         <div class="barra-quatro-onde"><div class="barra-quatro">
           <button class="btn" data-hef-gesto="duplicar" data-dica="Copia o perfil, com «(cópia)» no nome">Duplicar</button>
           <button class="btn" data-hef-gesto="novo" data-dica="Perfil em branco; com jogo aberto, nasce para ele">Novo</button>
-          <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" data-dica="Apaga o perfil; pergunta antes">Remover</button>
+          <button class="btn vermelho" data-hef-gesto="remover" data-campo="perfis.remover-pergunta" data-hef-alvo="classe" data-hef-classe="pergunta" data-hef-razao="sim" title="Apaga o perfil; pergunta antes"><span data-hef="perfis.remover">Remover</span></button>
           {ATIVAR}
         </div></div>
       </div>

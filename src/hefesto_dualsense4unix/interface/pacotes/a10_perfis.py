@@ -211,6 +211,8 @@ def _ordenada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 SEGUNDOS_PARA_CONFIRMAR = 8.0
+ROTULO_DO_QUE_VALE = "Remover o que vale?"
+CAMPO_DA_PERGUNTA_DO_REMOVER = "perfis.remover-pergunta"
 
 _DESFECHO: tuple[str, float] | None = None
 
@@ -890,7 +892,7 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
     return str(getattr(achado, "name", "") or "") if achado is not None else ""
 
 
-def _rotulo_do_remover(alvo: str) -> str:
+def _rotulo_do_remover(alvo: str, vale: bool = False) -> str:
     """"Remover", ou a PERGUNTA que a dica promete — sobre o alvo de AGORA.
 
     A dica diz *"Apaga do disco. Pergunta antes."* e esta janela não tem diálogo: o
@@ -921,10 +923,21 @@ def _rotulo_do_remover(alvo: str) -> str:
     rótulo já diz "Jogo B", dentro de um tique de 500 ms). Com o alvo o rótulo volta a "Remover" ao
     trocar de linha, o que é a verdade: o próximo clique ARMA.
     """
-    if (_ARMADO and _ARMADO[0] == alvo
-            and (time.monotonic() - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR):
-        return f"Remover “{_ARMADO[0]}”? Clique de novo"
-    return "Remover"
+    if not _perguntando(alvo):
+        return "Remover"
+    return ROTULO_DO_QUE_VALE if vale else f"Remover “{alvo}”? Clique de novo"
+
+
+def _perguntando(alvo: str) -> bool:
+    """O Remover está armado para `alvo` e o prazo da pergunta não venceu?"""
+    return bool(_ARMADO and _ARMADO[0] == alvo
+                and (time.monotonic() - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR)
+
+
+def _dica_da_pergunta_do_que_vale(nome: str) -> str:
+    """A dica da pergunta sobre o perfil que vale: quem sai e quem assume os controles."""
+    return (f"«{nome}» está valendo. Clique de novo em até oito segundos: ele sai do disco e "
+            f"os controles passam ao perfil do computador.")
 
 
 LUGARES_DA_TABELA = len(TODOS_OS_LUGARES)
@@ -1011,7 +1024,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     for chave in _uma_vez_so(str(getattr(alvo, "name", ""))):
         fora.pop(chave, None)
 
-    fora["perfis.remover"] = _rotulo_do_remover(escolhido)
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    vale = bool(escolhido) and mesmo_slug(_valendo(ctx, todos), escolhido)
+    fora["perfis.remover"] = _rotulo_do_remover(escolhido, vale)
+    fora[CAMPO_DA_PERGUNTA_DO_REMOVER] = (
+        _dica_da_pergunta_do_que_vale(escolhido) if vale and _perguntando(escolhido) else "")
 
     fora["perfis.desfecho"] = _desfecho_para_a_tela()
     if _servico_responde(ctx):
@@ -2240,29 +2258,31 @@ def duplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("10-perfis.html", "remover", grava="delete_profile")
 def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão."""
+    """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão.
+
+    O perfil que vale entra na mesma pergunta (D-1911-O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA):
+    o clique na linha ativa, então o do editor é quase sempre o que vale, e recusar o ativo deixava
+    o botão inalcançável. No segundo clique o serviço passa, pelo mesmo `_ativar_o` do «Ativar», ao
+    perfil de fora do jogo (o Freestyle, o do computador) ANTES do arquivo sair: a recusa do daemon
+    deixa o perfil no disco, e nada fica aplicado de um perfil que não existe. Serviço parado não
+    aplica nada, e o boot seguinte não tem escolha a restaurar.
+    """
     global _ARMADO, _ESCOLHIDO
-    from hefesto_dualsense4unix.profiles.loader import delete_profile
+    from hefesto_dualsense4unix.profiles.loader import delete_profile, o_perfil_de_fora_do_jogo
     from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     nome = _perfil_do_editor(ctx)
-    from hefesto_dualsense4unix.app.actions.profiles_actions import (
-        frase_da_remocao_do_perfil_ativo,
-        perfil_que_esta_valendo,
-    )
-
-    aviso = frase_da_remocao_do_perfil_ativo(nome, perfil_que_esta_valendo(ctx.state))
-    if aviso:
-        raise RuntimeError(aviso)
-    agora = time.monotonic()
-    armado = (_ARMADO and _ARMADO[0] == nome
-              and (agora - _ARMADO[1]) < SEGUNDOS_PARA_CONFIRMAR)
-    if not armado:
-        _ARMADO = (nome, agora)
+    if not _perguntando(nome):
+        _ARMADO = (nome, time.monotonic())
         raise RuntimeError(
             f"Apagar “{nome}” do disco? Clique em Remover de novo para "
             f"confirmar — o botão espera oito segundos.")
     _ARMADO = None
+    if mesmo_slug(_valendo(ctx), nome) and _servico_responde(ctx):
+        destino = o_perfil_de_fora_do_jogo()
+        if destino:
+            _ativar_o(destino, p, ctx)
     delete_profile(nome)
     esquecer_o_perfil_apagado(nome)
     _ESCOLHIDO = ""
