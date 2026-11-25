@@ -4906,10 +4906,13 @@ while not buf.endswith(b"\n"):
     if not chunk:
         raise SystemExit(1)
     buf += chunk
-ge = (json.loads(buf.decode("utf-8")).get("result") or {}).get("gamepad_emulation") or {}
+estado = json.loads(buf.decode("utf-8")).get("result") or {}
+ge = estado.get("gamepad_emulation") or {}
+pads = (estado.get("rumble_ff") or {}).get("per_vpad") or []
+backends = [ge.get("backend")] + [p.get("backend") for p in pads if isinstance(p, dict)]
 print(f"enabled={ge.get('enabled')}")
 print(f"flavor={ge.get('flavor') or ''}")
-print(f"backend={ge.get('backend') or ''}")
+print(f"backend={next((b for b in backends if b), '')}")
 PYEOF
 }
 

@@ -20,9 +20,14 @@ sem grab) virado ferramenta pro leigo, read-only por construção.
 """
 from __future__ import annotations
 
+import json
 import os
+import shutil
+import socket
 import struct
 import subprocess
+import tempfile
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -90,7 +95,7 @@ I: Bus=0003 Vendor=054c Product=0df2 Version=0111
 N: Name="Sony Interactive Entertainment DualSense Edge Wireless Controller"
 P: Phys=usb-vhci_hcd.0-1/input3
 S: Sysfs=/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.3/0003:054C:0DF2.0010/input/input60
-U: Uniq=02:fe:aa:00:00:01
+U: Uniq=02:fe:00:00:00:01
 H: Handlers=event40 js2
 B: EV=1b
 
@@ -98,7 +103,7 @@ I: Bus=0003 Vendor=054c Product=0df2 Version=0111
 N: Name="Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors"
 P: Phys=usb-vhci_hcd.0-1/input3
 S: Sysfs=/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.3/0003:054C:0DF2.0010/input/input62
-U: Uniq=02:fe:aa:00:00:01
+U: Uniq=02:fe:00:00:00:01
 H: Handlers=event42
 B: EV=19
 
@@ -106,7 +111,7 @@ I: Bus=0003 Vendor=054c Product=0df2 Version=0111
 N: Name="Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors"
 P: Phys=usb-vhci_hcd.0-2/input3
 S: Sysfs=/devices/platform/vhci_hcd.0/usb3/3-2/3-2:1.3/0003:054C:0DF2.0011/input/input65
-U: Uniq=02:fe:aa:00:00:02
+U: Uniq=02:fe:00:00:00:02
 H: Handlers=event45
 B: EV=19
 """
@@ -256,6 +261,68 @@ class TestSemNoMotion:
     def test_sem_pad_vivo_e_sem_resposta_do_servico_nao_acusam(self) -> None:
         assert _rodar("_sem_no_motion_de_vpad", self._estado("True", "dualsense", "")) == "sem-pad"
         assert _rodar("_sem_no_motion_de_vpad", "") == "desconhecida"
+
+
+def _o_estado_lido_do_servico(estado: dict[str, object]) -> str:
+    """O ``_sem_no_motion_de_vpad`` sobre o que ``_a_emulacao_do_daemon`` leu de um serviço de
+    mentira, num runtime curto que nunca é o de quem roda."""
+    runtime = Path(tempfile.mkdtemp(prefix="hv-gy-", dir=os.environ.get("TMPDIR")))
+    pasta = runtime / "hefesto-dualsense4unix"
+    pasta.mkdir()
+    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    servidor.bind(str(pasta / "hefesto-dualsense4unix.sock"))
+    servidor.listen(1)
+    servidor.settimeout(10)
+
+    def _responder() -> None:
+        try:
+            conexao, _ = servidor.accept()
+        except OSError:
+            return
+        with conexao:
+            pedido = b""
+            while not pedido.endswith(b"\n"):
+                parte = conexao.recv(65536)
+                if not parte:
+                    return
+                pedido += parte
+            resposta = {"jsonrpc": "2.0", "id": 1, "result": estado}
+            conexao.sendall(json.dumps(resposta).encode("utf-8") + b"\n")
+
+    fio = threading.Thread(target=_responder, daemon=True)
+    fio.start()
+    try:
+        res = subprocess.run(
+            ["bash", "-c", 'set --; source "$DOCTOR_SH"; '
+             '_sem_no_motion_de_vpad "$(_a_emulacao_do_daemon)"'],
+            capture_output=True, text=True, timeout=30, check=False,
+            env={"PATH": "/usr/bin:/bin", "DOCTOR_SH": str(DOCTOR),
+                 "XDG_RUNTIME_DIR": str(runtime)},
+        )
+    finally:
+        fio.join(timeout=5)
+        servidor.close()
+        shutil.rmtree(runtime, ignore_errors=True)
+    assert res.returncode == 0, res.stderr
+    return res.stdout.strip()
+
+
+class TestOPadDeQualquerJogador:
+    """O pad vivo conta em qualquer jogador, não só no P1."""
+
+    def test_so_o_pad_do_p2_no_ar_e_sem_no_e_falta(self) -> None:
+        estado = {
+            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+            "rumble_ff": {"per_vpad": [{"player": 2, "backend": "usb"}]},
+        }
+        assert _o_estado_lido_do_servico(estado) == "falta"
+
+    def test_nenhum_pad_no_ar_e_sem_pad(self) -> None:
+        estado = {
+            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+            "rumble_ff": {"per_vpad": []},
+        }
+        assert _o_estado_lido_do_servico(estado) == "sem-pad"
 
 
 class TestFiacaoNoDoctor:
