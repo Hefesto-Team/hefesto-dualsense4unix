@@ -292,7 +292,8 @@ def _html_dos_externos(ctx: Contexto) -> str:
     título, o transporte e o aviso do `hid-nintendo` são da janela antiga
     (``_format_external_title``, ``_format_external_subtitle``, ``nintendo_bt_warning``), e a cor
     e os botões declarados são de ``a08_conexoes.marcas_do_externo``. Não leva `.ctl`, `.cartao`
-    nem `data-controle`: essas marcas são dos assentos.
+    nem `data-controle`: essas marcas são dos assentos. A «Mira virtual» do cartão é de
+    ``a02_controles.mira_do_externo``.
     """
     if not ctx.externos:
         return str(_monta().NADA_A_DIZER)
@@ -305,7 +306,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
         externos_na_mesa,
     )
 
-    from . import a08_conexoes
+    from . import a02_controles, a08_conexoes
 
     def _e(x: object) -> str:
         return html.escape(str(x), quote=True)
@@ -316,12 +317,13 @@ def _html_dos_externos(ctx: Contexto) -> str:
         linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
                           if aviso else "")
         da_borda, botoes = a08_conexoes.marcas_do_externo(entrada, "div")
+        mira, aviso_da_mira = a02_controles.mira_do_externo(entrada)
         fora.append(
             f'<div class="ext-cartao"{da_borda}>'
             f'<input class="radio-mesa" type="radio" name="mesa" id="c-{_id_do_externo(entrada)}">'
             f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
             f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
-            f'{botoes}{linha_do_aviso}</div>')
+            f'{botoes}{mira}{linha_do_aviso}{aviso_da_mira}</div>')
     return "".join(fora) or str(_monta().NADA_A_DIZER)
 
 

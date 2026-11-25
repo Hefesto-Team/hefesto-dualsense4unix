@@ -104,6 +104,7 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
     background:transparent;font-size:12.5px;line-height:14px;color:var(--fg);
     white-space:nowrap;overflow:hidden}
   .quadro.estica .ext-nome{font-weight:600}
+  .quadro.estica .ext-mira{display:flex;gap:8px;justify-content:center}
   .quadro.estica .ext-aviso{color:var(--orange);overflow:hidden;text-overflow:ellipsis}
   .degrau .silhueta{height:20px;width:auto;flex:0 0 auto;fill:currentColor}
   .degrau .silhueta.traco{fill:none;stroke-width:3.6}

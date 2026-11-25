@@ -592,6 +592,7 @@ async def test_controller_list_external_roda_fora_do_event_loop(
     slot = ext.pop("player_slot")
     assert slot is None or (isinstance(slot, int) and slot >= 1)
     assert ext.pop("identity") == MAC_8BITDO_FORJADO.replace(":", "")
+    assert ext.pop("mira")["ligada"] is False, "o inventário leva a mira do controle de fora"
     assert ext == sentinela[0]
     assert result["controllers"], "o shape legado continua presente"
     assert visto["thread"] != loop_thread, (

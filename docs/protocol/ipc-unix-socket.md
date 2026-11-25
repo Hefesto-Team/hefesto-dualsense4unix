@@ -81,7 +81,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mouse.emulation.set` | `daemon/ipc_handlers.py:4776` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
 | `mouse.emulation.restore` | `daemon/ipc_handlers.py:4835` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | sim |
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4852` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click. | sim |
-| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6624` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
+| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6625` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
 | `keyboard.emulation.set` | `daemon/ipc_handlers.py:5055` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | sim |
 | `desktop.status.set` | `daemon/ipc_handlers.py:4882` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
 | `navegacao.interna.set` | `daemon/ipc_handlers.py:4930` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |
@@ -102,24 +102,24 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mods.agora` | `daemon/ipc_handlers.py:5360` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado. | **não** |
 | `mods.parar_tudo` | `daemon/ipc_handlers.py:5375` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
 | `mods.jogos` | `daemon/ipc_handlers.py:5411` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
-| `mods.acao` | `daemon/ipc_handlers.py:6656` (`_handle_mods_acao`) | O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``. | **não** |
-| `mods.livre` | `daemon/ipc_handlers.py:6688` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
-| `mods.opcao` | `daemon/ipc_handlers.py:6719` (`_handle_mods_opcao`) | O arrastar de um deslizante da janela: ``extensao.opcao`` só à extensão ``{mod}``. | **não** |
-| `mods.mensagem` | `daemon/ipc_handlers.py:6742` (`_handle_mods_mensagem`) | O que a página da janela manda: ``extensao.mensagem`` só à extensão ``{mod}``. | **não** |
+| `mods.acao` | `daemon/ipc_handlers.py:6657` (`_handle_mods_acao`) | O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``. | **não** |
+| `mods.livre` | `daemon/ipc_handlers.py:6689` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
+| `mods.opcao` | `daemon/ipc_handlers.py:6720` (`_handle_mods_opcao`) | O arrastar de um deslizante da janela: ``extensao.opcao`` só à extensão ``{mod}``. | **não** |
+| `mods.mensagem` | `daemon/ipc_handlers.py:6743` (`_handle_mods_mensagem`) | O que a página da janela manda: ``extensao.mensagem`` só à extensão ``{mod}``. | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5739` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
 | `radio.mover` | `daemon/ipc_handlers.py:5769` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:5887` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
-| `haptica.testar` | `daemon/ipc_handlers.py:6128` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
-| `radio.busca.set` | `daemon/ipc_handlers.py:6159` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
-| `radio.dispensar` | `daemon/ipc_handlers.py:6174` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
-| `motion.calibrate` | `daemon/ipc_handlers.py:6255` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
-| `perfil.ativacao.set` | `daemon/ipc_handlers.py:6564` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
-| `perfil.analogicos.set` | `daemon/ipc_handlers.py:6569` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
-| `perfil.cursor.set` | `daemon/ipc_handlers.py:6574` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
-| `sequencia.gravar` | `daemon/ipc_handlers.py:6579` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
-| `sequencia.tocar` | `daemon/ipc_handlers.py:6600` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
-| `motion.sinal` | `daemon/ipc_handlers.py:6366` (`_handle_motion_sinal`) | `motion.sinal {uniq}` — confere o gesto guiado de UM controle, sem gravar nada. | sim |
-| `motion.rampa` | `daemon/ipc_handlers.py:6422` (`_handle_motion_rampa`) | `motion.rampa {uniq, pedido}` — a rampa do «Início do analógico», num controle. | sim |
+| `mira.set` | `daemon/ipc_handlers.py:5888` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `haptica.testar` | `daemon/ipc_handlers.py:6129` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
+| `radio.busca.set` | `daemon/ipc_handlers.py:6160` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
+| `radio.dispensar` | `daemon/ipc_handlers.py:6175` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
+| `motion.calibrate` | `daemon/ipc_handlers.py:6256` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
+| `perfil.ativacao.set` | `daemon/ipc_handlers.py:6565` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
+| `perfil.analogicos.set` | `daemon/ipc_handlers.py:6570` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
+| `perfil.cursor.set` | `daemon/ipc_handlers.py:6575` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
+| `sequencia.gravar` | `daemon/ipc_handlers.py:6580` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
+| `sequencia.tocar` | `daemon/ipc_handlers.py:6601` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
+| `motion.sinal` | `daemon/ipc_handlers.py:6367` (`_handle_motion_sinal`) | `motion.sinal {uniq}` — confere o gesto guiado de UM controle, sem gravar nada. | sim |
+| `motion.rampa` | `daemon/ipc_handlers.py:6423` (`_handle_motion_rampa`) | `motion.rampa {uniq, pedido}` — a rampa do «Início do analógico», num controle. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 

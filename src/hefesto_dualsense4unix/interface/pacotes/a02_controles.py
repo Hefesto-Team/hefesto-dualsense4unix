@@ -1608,11 +1608,54 @@ def dica_do_giro(dele: dict[str, Any], nativo: bool, navegacao: bool = False) ->
 
 MIRA_NO_NATIVO = "NATIVO"
 INCLINACAO_PARADA = "parada"
+ROTULO_DA_INCLINACAO = "Mira virtual"
+DICA_DA_INCLINACAO = {
+    "analogico_esquerdo": "Girar o controle move o analógico esquerdo",
+    "analogico_direito": "Girar o controle move o analógico direito",
+}
+LADO_NO_BOTAO_DO_EXTERNO = {"analogico_esquerdo": "Esquerdo", "analogico_direito": "Direito"}
+AVISO_DA_MIRA_SEM_MEDIDA = "Mira por movimento: sem medida"
 
 
 def mira_fora(nativo: bool) -> str:
     """`NATIVO` quando o chip da Mira fica cinza, `""` quando não fica."""
     return MIRA_NO_NATIVO if nativo else ""
+
+
+def mira_do_externo(entrada: dict[str, Any]) -> tuple[str, str]:
+    """`(os dois «Mira virtual», a linha do aviso)` do cartão de um controle de fora.
+
+    O bloco `mira` da entrada é o do daemon (`controller.list`). Sem ele, ou com o motivo de não
+    haver sensor, o cartão não leva botão. Com o motivo de não haver medida da família, os dois
+    botões ficam cinza com a frase na dica e a linha diz o porquê; não acendem.
+    """
+    import html
+
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    uniq = str(entrada.get("uniq") or "")
+    bloco = entrada.get("mira")
+    motivo = bloco.get("motivo") if isinstance(bloco, dict) else None
+    if not uniq or not isinstance(bloco, dict) or motivo == rot.FRASE_SEM_SENSOR:
+        return "", ""
+    aceso = lado_aceso(entrada)
+    dono = html.escape(uniq, quote=True)
+    sem_mira = ' class="sw sem-mira" aria-disabled="true"' if motivo else ' class="sw"'
+    botoes = "".join(
+        f'<span class="chip-virtual{" on" if aceso == lado else ""}"><button{sem_mira} '
+        f'data-gesto="analogico-lado" data-lado="{lado}" data-uniq="{dono}" '
+        f'data-dica="{html.escape(str(motivo or DICA_DA_INCLINACAO[lado]), quote=True)}">'
+        f'<span class="p"></span>{ROTULO_DA_INCLINACAO} · {nome}</button></span>'
+        for lado, nome in LADO_NO_BOTAO_DO_EXTERNO.items())
+    aviso = (f'<div class="ext-aviso">{AVISO_DA_MIRA_SEM_MEDIDA}</div>'
+             if motivo == rot.FRASE_SEM_MEDIDA else "")
+    return f'<div class="ext-mira">{botoes}</div>', aviso
+
+
+def _dele(ctx: Contexto, uniq: str) -> dict[str, Any]:
+    """A entrada do daemon deste controle: a da mesa, ou a do controle de fora."""
+    return ctx.por_uniq(uniq) or next(
+        (e for e in getattr(ctx, "externos", ()) if str(e.get("uniq") or "") == uniq), {})
 
 
 def _uniq(o: dict[str, Any]) -> str:
@@ -2379,7 +2422,7 @@ def analogico_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     uniq = _uniq(o)
     lado = str(o.get("lado") or "")
-    if uniq and lado in rot.LADOS_DO_VIRTUAL and lado == lado_aceso(ctx.por_uniq(uniq)):
+    if uniq and lado in rot.LADOS_DO_VIRTUAL and lado == lado_aceso(_dele(ctx, uniq)):
         corpo = _corpo(p.mira_set_detalhado(ligada=False, uniq=uniq))
         if corpo is None:
             raise RuntimeError(

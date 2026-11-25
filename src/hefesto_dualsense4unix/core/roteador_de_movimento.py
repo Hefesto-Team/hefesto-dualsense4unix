@@ -1291,6 +1291,10 @@ def orientar(familia: str | None, vetor: Vetor) -> Vetor | None:
     return (x, y, z)
 
 
+FRASE_SEM_SENSOR: Final = "Este controle não tem sensor de movimento neste modo"
+FRASE_SEM_MEDIDA: Final = "A mira por movimento não vale neste controle"
+
+
 __all__ = [
     "BOTAO_DA_ZONA_DE_BAIXO",
     "BOTAO_DA_ZONA_DE_CIMA",
@@ -1303,6 +1307,8 @@ __all__ = [
     "DESTINO_MOUSE",
     "DESTINO_NENHUM",
     "FRACAO_DO_DIRECIONAL",
+    "FRASE_SEM_MEDIDA",
+    "FRASE_SEM_SENSOR",
     "GANHO_MINIMO_DA_MIRA",
     "GANHO_NA_SENSIBILIDADE_PADRAO",
     "GIRO_DA_PEGADA_GRAUS_S",

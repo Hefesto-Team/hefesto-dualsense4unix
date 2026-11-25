@@ -19,6 +19,7 @@ from pacotes.a02_controles import DICA_DA_LUZ as DE_QUEM_E_A_LUZ
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
                                    DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
 from pacotes.a02_controles import GESTO_DO_MODO, INCLINACAO_PARADA, regiao_do_toque
+from pacotes.a02_controles import DICA_DA_INCLINACAO, ROTULO_DA_INCLINACAO
 from pacotes.a02_controles import PISO_DA_FOLHA, regra_do_plastico
 from pacotes.a02_controles import (ACENDE_O_JOGO, CAMPOS_DO_JOGO,
                                    DICA_DO_PONTO_DO_JOGO)
@@ -407,11 +408,6 @@ LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 
 
 ROTULO_DA_MIRA_VIRTUAL = "Analógico virtual"
-ROTULO_DA_INCLINACAO = "Mira virtual"
-DICA_DA_INCLINACAO = {
-    "analogico_esquerdo": "Girar o controle move o analógico esquerdo",
-    "analogico_direito": "Girar o controle move o analógico direito",
-}
 
 
 def chip_da_inclinacao(destino, aceso=False):

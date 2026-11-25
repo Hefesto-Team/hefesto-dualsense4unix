@@ -275,3 +275,113 @@ def test_a_tela_diz_a_frase_de_quem_recusou() -> None:
         a02._recusa_da_mira({"status": "sem_movimento",
                              "motivo": "Este controle não tem sensor de movimento neste modo"})
     a02._recusa_da_mira({"status": "ok"})
+
+
+def _inventario(*uniqs: str) -> list[dict[str, Any]]:
+    return [{"name": "Controle de fora", "vid": "2dc8", "pid": "6003", "bus": "usb", "uniq": u,
+             "driver": "hid-generic", "player_slot": 2 + n} for n, u in enumerate(uniqs)]
+
+
+def test_o_inventario_dos_externos_leva_o_bloco_da_mira(
+    perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES: o `controller.list` do externo diz se a
+    mira anda e por que não, pelo dono do `mira.set`.
+
+    MORDIDA: tirar o `_merge_mira` do `controller.list` deixa o externo sem o bloco.
+    """
+    from hefesto_dualsense4unix.daemon import ipc_handlers
+
+    monkeypatch.setitem(rot.ORIENTACAO_MEDIDA, "pro", _LINHA_DE_EXEMPLO)
+    servidor = _servidor(tmp_path, {P3: "8bitdo", P4: "pro"})
+    rot.definir_ativo(servidor.store, rot.ArranjoDeMovimento(destino=_DIR))
+    monkeypatch.setattr(ipc_handlers, "_external_inventory",
+                        lambda *_a, **_k: _inventario(P2, P3, P4))
+    lista = asyncio.run(servidor._handlers["controller.list"]({"external": True}))["external"]
+    mira = {e["uniq"]: e["mira"] for e in lista}
+    assert mira[P2]["motivo"] == rot.FRASE_SEM_SENSOR and mira[P2]["virtual"] is False
+    assert mira[P3]["motivo"] == rot.FRASE_SEM_MEDIDA and mira[P3]["virtual"] is False
+    assert "motivo" not in mira[P4] and mira[P4]["virtual"] is True and mira[P4]["lado"] == _DIR
+
+
+def _externo(uniq: str, **mira: Any) -> dict[str, Any]:
+    entrada = _inventario(uniq)[0]
+    return {**entrada, "mira": {"ligada": False, "virtual": False, "lado": _DIR, **mira}}
+
+
+def _botoes_da_mira(html: str) -> list[tuple[str, bool, bool]]:
+    import re
+
+    return [(lado, "chip-virtual on" in chip, 'aria-disabled="true"' in chip)
+            for chip, lado in re.findall(
+                r'(<span class="chip-virtual[^"]*"><button.*?data-lado="(\w+)".*?</span>)', html)]
+
+
+def test_o_cartao_do_externo_tem_os_dois_botoes_da_mira() -> None:
+    """D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES: um botão por analógico em todo
+    controle de fora com sensor; sem medida ele fica cinza e a linha diz por quê.
+
+    MORDIDA: tirar o `mira_do_externo` do `_html_dos_externos` apaga os botões e a linha.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+    from hefesto_dualsense4unix.interface.pacotes import a01_jogar as jogar
+
+    esq = "analogico_esquerdo"
+    externos = [
+        _externo(P2, motivo=rot.FRASE_SEM_SENSOR),
+        _externo(P3, motivo=rot.FRASE_SEM_MEDIDA),
+        _externo(P4, ligada=True, virtual=True),
+    ]
+    ctx = Contexto(state={}, mesa=[], conectados=[], externos=externos)
+    cartoes = jogar._html_dos_externos(ctx).split('<div class="ext-cartao"')[1:]
+    assert len(cartoes) == 3
+    assert "ext-mira" not in cartoes[0], "sem sensor não há botão"
+    assert _botoes_da_mira(cartoes[1]) == [(esq, False, True), (_DIR, False, True)]
+    assert a02.AVISO_DA_MIRA_SEM_MEDIDA in cartoes[1]
+    assert rot.FRASE_SEM_MEDIDA in cartoes[1], "a frase do daemon é a dica do botão"
+    assert _botoes_da_mira(cartoes[2]) == [(esq, False, False), (_DIR, True, False)]
+    assert a02.AVISO_DA_MIRA_SEM_MEDIDA not in cartoes[2]
+    assert f'data-uniq="{P4}"' in cartoes[2], "o clique tem de dizer de qual controle é"
+
+
+def test_o_cartao_sem_o_bloco_da_mira_nao_leva_botao() -> None:
+    """O daemon que não respondeu à mira não ganha botão inventado: nada se pinta sem leitura."""
+    assert a02.mira_do_externo(_inventario(P4)[0]) == ("", "")
+
+
+class _PonteDaMira:
+    def __init__(self, corpo: dict[str, Any]) -> None:
+        self.corpo = corpo
+        self.chamadas: list[dict[str, Any]] = []
+
+    def mira_set_detalhado(self, **kw: Any) -> dict[str, Any]:
+        self.chamadas.append(kw)
+        return self.corpo
+
+
+def _clicar(externo: dict[str, Any], lado: str, corpo: dict[str, Any]) -> _PonteDaMira:
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    ponte = _PonteDaMira(corpo)
+    ctx = Contexto(state={}, mesa=[], conectados=[], externos=[externo])
+    a02.analogico_lado(ctx, {"uniq": externo["uniq"], "lado": lado}, ponte)
+    return ponte
+
+
+def test_o_clique_no_botao_do_externo_liga_o_lado_e_no_aceso_desliga() -> None:
+    """D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES: o botão apagado liga o lado dele, o
+    aceso desliga a mira.
+
+    MORDIDA: tirar o `_dele` do `analogico_lado` faz o aceso religar o lado em vez de desligar.
+    """
+    ok = {"status": "ok"}
+    apagado = _clicar(_externo(P4), _DIR, ok)
+    assert apagado.chamadas == [{"lado": _DIR, "uniq": P4}]
+    aceso = _clicar(_externo(P4, ligada=True, virtual=True), _DIR, ok)
+    assert aceso.chamadas == [{"ligada": False, "uniq": P4}]
+
+
+def test_o_clique_no_botao_cinza_do_externo_diz_a_frase_e_nao_acende() -> None:
+    corpo = {"status": "sem_movimento", "motivo": rot.FRASE_SEM_MEDIDA}
+    with pytest.raises(RuntimeError, match="não vale neste controle"):
+        _clicar(_externo(P3, motivo=rot.FRASE_SEM_MEDIDA), _DIR, corpo)

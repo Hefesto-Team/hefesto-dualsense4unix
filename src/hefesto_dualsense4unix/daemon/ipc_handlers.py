@@ -3533,7 +3533,7 @@ class IpcHandlersMixin:
         FORA do event loop por `asyncio.to_thread` (pool default; o `daemon._executor` de 2 workers
         "hefesto-hid" atrasaria rumble/led, e `self.daemon` pode ser None); nunca no `state_full`.
         Resposta: chave `external` = lista de `{name, vid, pid, bus, uniq, driver, evdev_path,
-        hidraw[, holders]}`; sem opt-in, payload byte-idêntico ao legado.
+        hidraw[, holders], mira}`; sem opt-in, payload byte-idêntico ao legado.
 
         **O NÚMERO ENTRA (UM-NUMERO-SO-01, 18/09/2026).** O ``index`` é a ordem dos HANDLES, não um
         número de jogador, e discordava do ``state_full`` (medido com quatro DualSense: índices
@@ -3572,8 +3572,8 @@ class IpcHandlersMixin:
             )
             peek = getattr(registry, "peek", None) if registry is not None else None
             resolver = peek if callable(peek) else None
-            result["external"] = await asyncio.to_thread(
-                _external_inventory, ds_count, resolver
+            result["external"] = _a_mira_dos_externos(
+                self, await asyncio.to_thread(_external_inventory, ds_count, resolver)
             )
         return result
 
@@ -5840,8 +5840,8 @@ class IpcHandlersMixin:
                 continue
             vale = rot.da_peca(store, uniq, mesa)
             numeros = rot.parametros_da_peca(store, uniq)
-            anda = self._o_que_falta_ao_movimento(uniq, idade_aceita=5.0) is None
-            mira = vale if vale is not None and vale.ligado and anda else None
+            falta = self._o_que_falta_ao_movimento(uniq, idade_aceita=5.0)
+            mira = vale if vale is not None and vale.ligado and falta is None else None
             entry["mira"] = {
                 "ligada": mira is not None,
                 "virtual": mira is not None and rot.virtual_aceso(mira),
@@ -5864,6 +5864,7 @@ class IpcHandlersMixin:
                 "mesmo_parado": numeros.mesmo_parado,
                 "piso": numeros.piso,
                 "velocidade_do_jogo": numeros.velocidade_do_jogo,
+                **({"motivo": falta} if falta is not None else {}),
             }
 
     def _o_que_falta_ao_movimento(self, uniq: str, *, idade_aceita: float = 0.0) -> str | None:
@@ -5879,9 +5880,9 @@ class IpcHandlersMixin:
             uniq, idade_aceita=idade_aceita
         )
         if familia is None:
-            return "Este controle não tem sensor de movimento neste modo"
+            return rot.FRASE_SEM_SENSOR
         if rot.orientar(familia, (0.0, 0.0, 0.0)) is None:
-            return "A mira por movimento não vale neste controle"
+            return rot.FRASE_SEM_MEDIDA
         return None
 
     async def _handle_mira_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -7178,3 +7179,12 @@ def _amostras_do_leitor(leitor: Any) -> dict[str, int] | None:
         for nome, valor in amostras.items()
         if isinstance(valor, int) and not isinstance(valor, bool)
     }
+
+
+def _a_mira_dos_externos(donos: Any, externos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """O inventário dos externos com o bloco `mira` de cada um; se o bloco falha, o de antes."""
+    try:
+        donos._merge_mira(externos)
+    except Exception as exc:
+        logger.warning("controller_list_sem_a_mira_dos_externos", erro=str(exc))
+    return externos

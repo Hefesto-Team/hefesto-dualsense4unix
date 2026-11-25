@@ -1647,7 +1647,7 @@ def caminho_da_maquina() -> Path:
     """Path do ``maquina.json`` — import LAZY de ``config_dir``.
 
     Lazy porque resolver ``config_dir()`` no topo do módulo mata o monkeypatch da
-    bateria: ``app/gui_prefs.py:13`` é a cicatriz exata dessa escolha, e é por essa escolha
+    bateria: ``app/gui_prefs.py:19`` é a cicatriz exata dessa escolha, e é por essa escolha
     que aquele módulo é inisolável em teste.
     """
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir
