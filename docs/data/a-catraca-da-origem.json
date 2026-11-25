@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1322789,
+      "piso": 1323674,
       "por_item": {
-        "docs": 108009,
-        "scripts": 116862,
-        "src": 333042,
-        "tests": 764876
+        "docs": 108011,
+        "scripts": 116954,
+        "src": 333214,
+        "tests": 765495
       },
-      "razao": "tamanho: +18 linhas (1322771 -> 1322789), pagas por Origem: D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 020c7daf03ab",
+      "razao": "tamanho: +885 linhas (1322789 -> 1323674), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 60e9d7f79913",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2565,10 +2565,16 @@
           "de": 1322771,
           "para": 1322789,
           "razao": "tamanho: +18 linhas (1322771 -> 1322789), pagas por Origem: D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 020c7daf03ab"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1322789,
+          "para": 1323674,
+          "razao": "tamanho: +885 linhas (1322789 -> 1323674), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 60e9d7f79913"
         }
       ],
       "unidade": "linhas",
-      "universo": 3694
+      "universo": 3696
     }
   }
 }
