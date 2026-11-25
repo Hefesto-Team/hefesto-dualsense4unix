@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import asyncio
 import getpass
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -36,11 +38,17 @@ _GRAVIDADE_FAIL = 2
 
 @dataclass
 class _Saida:
-    """O que o ``--quiet``, o ``--json`` e o ``--para-colar`` pedem de toda linha."""
+    """O que o ``--quiet``, o ``--json`` e o ``--para-colar`` pedem de toda linha.
+
+    ``falhas`` e ``avisos`` somam o que o script e os blocos disseram, para o veredito do fim.
+    """
 
     quiet: bool = False
     como_json: bool = False
     para_colar: bool = False
+    contando: bool = True
+    falhas: int = 0
+    avisos: int = 0
     achados: list[dict[str, str]] = field(default_factory=list)
 
 
@@ -67,12 +75,18 @@ def _na_mascara(texto: str) -> str:
     return mascarar(texto)
 
 
-def _executar(args: list[str]) -> int:
+def _executar(args: list[str], ambiente: dict[str, str] | None = None) -> int:
     """Roda o comando e devolve o código; com ``--para-colar`` cada linha sai pela máscara."""
+    env = {**os.environ, **ambiente} if ambiente else None
     if not _SAIDA.para_colar:
-        return subprocess.run(args, check=False).returncode
+        return subprocess.run(args, check=False, env=env).returncode
     with subprocess.Popen(
-        args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace"
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        env=env,
     ) as processo:
         assert processo.stdout is not None
         for linha in processo.stdout:
@@ -88,6 +102,9 @@ def _bloco(titulo: str, linhas: Iterable[tuple[str, str]], **como_imprimir: Any)
     ``{bloco, tag, mensagem}`` em ``_SAIDA.achados`` e não imprime nada.
     """
     linhas = [(tag, _na_mascara(mensagem)) for tag, mensagem in linhas]
+    if _SAIDA.contando:
+        _SAIDA.falhas += sum(_o_nome_da_tag(tag) == "FAIL" for tag, _m in linhas)
+        _SAIDA.avisos += sum(_o_nome_da_tag(tag) == "WARN" for tag, _m in linhas)
     if _SAIDA.como_json:
         _SAIDA.achados.extend(
             {"bloco": titulo, "tag": _o_nome_da_tag(tag), "mensagem": mensagem}
@@ -142,6 +159,11 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
 
 _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
 _TIQUE_PARADO_S = 2.0
+_PARADAS_POR_MINUTO_QUE_AVISAM = 0.5
+_VIDA_MINIMA_DA_TAXA_MIN = 10.0
+_ESTOURO_DO_TIQUE_QUE_AVISA = 0.02
+_TIQUES_PARA_JULGAR = 600
+_O_QUE_CONFERIR = "confira janelas e bandejas abertas e as extensões"
 _PREFIXO_DA_VOLTA = "poll.laco.lenta."
 _PREFIXO_DO_OCUPANTE = "poll.pool.ocupante."
 _SEM_AMOSTRA = "sem_amostra"
@@ -221,7 +243,17 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
         return formata_pt_br(quanto / 1000)
 
     estouros = counters.get("poll.tique.estouros", 0)
+    if not isinstance(estouros, int) or isinstance(estouros, bool):
+        estouros = 0
     contagem = f"tique do laço: {estouros} de {medidos} acima de 16,7 ms"
+    parte = estouros / medidos
+    pesado = medidos >= _TIQUES_PARA_JULGAR and parte >= _ESTOURO_DO_TIQUE_QUE_AVISA
+    marca = "[WARN]" if pesado else "[ OK ]"
+    cobranca = (
+        f"; {formata_pt_br(parte * 100)} % dos tiques acima do orçamento: {_O_QUE_CONFERIR}"
+        if pesado
+        else ""
+    )
     ultimo = counters.get("poll.tique.ultimo_ms")
     if isinstance(ultimo, int) and not isinstance(ultimo, bool):
         ha_s = max(time.time() - ultimo / 1000, 0.0)
@@ -230,7 +262,7 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
             return ("[FAIL]", f"tique do laço parado há {parado} s: o controle não é lido")
         contagem = f"{contagem}, o último há {formata_pt_br(ha_s)} s"
     if "poll.tique.p99_us" not in counters:
-        return ("[ OK ]", contagem)
+        return (marca, f"{contagem}{cobranca}")
     relogio = _o_pior_nome(counters, _PREFIXO_DO_RELOGIO)
     onde = f", o pior com «{relogio[0].replace('_', ' ')}»" if relogio is not None else ""
     atraso = ""
@@ -240,9 +272,9 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
             f"pior {ms('poll.tique.atraso_pior_us')} ms"
         )
     return (
-        "[ OK ]",
+        marca,
         f"{contagem}; p99 {ms('poll.tique.p99_us')} ms, pior {ms('poll.tique.pior_us')} ms{onde}"
-        f"{atraso}",
+        f"{atraso}{cobranca}",
     )
 
 
@@ -262,11 +294,14 @@ def _o_pior_nome(counters: dict[str, Any], prefixo: str) -> tuple[str, int] | No
     return pior, nomes[pior]
 
 
-def _linha_do_atraso(counters: Any) -> tuple[str, str] | None:
+def _linha_do_atraso(counters: Any, vida_s: float | None = None) -> tuple[str, str] | None:
     """O laço e o pool presos desde que o serviço subiu, com o nome de quem prendeu.
 
     ``None`` quando o daemon não conhece a medida. A janela do tique esquece em segundos:
-    estes contadores são os que ainda valem depois de jogar.
+    estes contadores são os que ainda valem depois de jogar. Com a ``vida_s`` do serviço, as
+    paradas por minuto acima de ``_PARADAS_POR_MINUTO_QUE_AVISAM`` viram ``[WARN]`` (a vida conta
+    ao menos ``_VIDA_MINIMA_DA_TAXA_MIN`` minutos, para as paradas da subida não acusarem).
+    Sem a vida não há taxa, e a linha só informa.
     """
     if not isinstance(counters, dict) or "poll.laco.lentas" not in counters:
         return None
@@ -289,7 +324,38 @@ def _linha_do_atraso(counters: Any) -> tuple[str, str] | None:
         )
         palavra = "espera" if filas == 1 else "esperas"
         partes.append(f"{filas} {palavra} na fila do controle{detalhe}")
-    return ("[ OK ]", "atraso do serviço: " + "; ".join(partes))
+    texto = "atraso do serviço: " + "; ".join(partes)
+    if vida_s is None:
+        return ("[ OK ]", texto)
+    taxa = (int(lentas) + int(filas)) / max(vida_s / 60, _VIDA_MINIMA_DA_TAXA_MIN)
+    if taxa < _PARADAS_POR_MINUTO_QUE_AVISAM:
+        return ("[ OK ]", texto)
+    em = f"{formata_pt_br(taxa)} por minuto em {formata_pt_br(vida_s / 60)} min de serviço"
+    return ("[WARN]", f"{texto}; {em}: {_O_QUE_CONFERIR}")
+
+
+def _vida_do_servico_s() -> float | None:
+    """Segundos desde que a unit do serviço ficou ativa; ``None`` sem o número.
+
+    Levanta ``OSError`` ou ``SubprocessError`` quando o ``systemctl`` não responde.
+    """
+    from hefesto_dualsense4unix.utils.identidade import HEFESTO
+
+    feito = subprocess.run(
+        ["systemctl", "--user", "show", HEFESTO.unit_daemon,
+         "--property=ActiveEnterTimestampMonotonic", "--value"],
+        capture_output=True, text=True, check=False, timeout=_PRAZO_DO_SYSTEMCTL_S,
+    )
+    valor = feito.stdout.strip()
+    if not valor.isdigit() or int(valor) <= 0:
+        return None
+    return max(time.monotonic() - int(valor) / 1e6, 0.0)
+
+
+def _ha_parada(counters: Any) -> bool:
+    return isinstance(counters, dict) and bool(
+        counters.get("poll.laco.lentas") or counters.get("poll.pool.lentas")
+    )
 
 
 def _linha_da_mascara_pro(estado: Any) -> tuple[str, str] | None:
@@ -417,9 +483,16 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             )
             if linha_do_tique is not None:
                 rows.append(linha_do_tique)
-            linha_do_atraso = _linha_do_atraso(
-                estado.get("counters") if isinstance(estado, dict) else None
-            )
+            contadores = estado.get("counters") if isinstance(estado, dict) else None
+            vida_s = None
+            if _ha_parada(contadores):
+                try:
+                    vida_s = _vida_do_servico_s()
+                except (OSError, subprocess.SubprocessError) as exc:
+                    rows.append(
+                        ("[INFO]", f"vida do serviço ilegível ({type(exc).__name__}): sem taxa")
+                    )
+            linha_do_atraso = _linha_do_atraso(contadores, vida_s)
             if linha_do_atraso is not None:
                 rows.append(linha_do_atraso)
             linha_do_nascimento = _linha_do_nascimento(
@@ -638,7 +711,45 @@ def _rodar_o_doctor_sh(fix: bool, quiet: bool) -> int:
         args.append("--fix")
     if quiet:
         args.append("--quiet")
-    return _GRAVIDADE_FAIL if _executar(args) else 0
+    with tempfile.TemporaryDirectory() as pasta:
+        contagem = Path(pasta) / "contagem"
+        rc = _executar(args, {"HEFESTO_DOCTOR_CONTAGEM": str(contagem)})
+        falhas, avisos = _a_contagem_do_script(contagem)
+    falhas = max(falhas, 1 if rc else 0)
+    _SAIDA.falhas += falhas
+    _SAIDA.avisos += avisos
+    return _GRAVIDADE_FAIL if rc else 0
+
+
+def _a_contagem_do_script(arquivo: Path) -> tuple[int, int]:
+    """As falhas e os avisos que o ``doctor.sh`` anotou ao fechar; ``(0, 0)`` sem a anotação."""
+    try:
+        falhas, avisos = arquivo.read_text(encoding="utf-8").split()
+        return int(falhas), int(avisos)
+    except (OSError, ValueError):
+        return 0, 0
+
+
+def _o_veredito(codigo: int) -> str:
+    """A linha única que fecha o doctor: o total do script e dos blocos, e o código de saída.
+
+    Os avisos do ``doctor.sh`` entram na conta e não mudam o código
+    (D-0810-A-OPCAO-QUE-A-STEAM-DESFAZ-E-AVISO-DO-DOCTOR).
+    """
+    avisos = _SAIDA.avisos
+    falhas = max(_SAIDA.falhas, 1 if codigo == _GRAVIDADE_FAIL else 0)
+    ha = f"{avisos} {'aviso' if avisos == 1 else 'avisos'}"
+    if codigo == _GRAVIDADE_FAIL:
+        quebra = f"{falhas} {'falha' if falhas == 1 else 'falhas'}"
+        return f"Diagnóstico: {quebra} e {ha}. Código de saída 2: há falha."
+    if codigo == _GRAVIDADE_WARN:
+        return f"Diagnóstico: {ha}, nenhuma falha. Código de saída 1: só avisos."
+    if avisos:
+        return (
+            f"Diagnóstico: {ha}, nenhuma falha. "
+            "Código de saída 0: os avisos do script não mudam o código."
+        )
+    return "Diagnóstico: nenhum aviso e nenhuma falha. Código de saída 0."
 
 
 def _rodar_o_doctor(
@@ -679,8 +790,13 @@ def _rodar_o_doctor(
         _run_script("scripts/disable_steam_input.sh", "--apply-quiet")
         _run_script("scripts/fix_wireplumber_default_source.sh", "--install")
         _run_script("scripts/install_snd_quirk.sh", "--runtime")
+        _SAIDA.contando = False
         rc = max(rc, _print_storm_block())
 
+    if _SAIDA.falhas:
+        rc = _GRAVIDADE_FAIL
+    if not como_json:
+        console.print(f"\n{_o_veredito(rc)}", markup=False, highlight=False, soft_wrap=True)
     raise typer.Exit(code=rc)
 
 
@@ -701,11 +817,13 @@ def doctor_cmd(
     """
     _SAIDA.quiet, _SAIDA.como_json, _SAIDA.achados = quiet, como_json, []
     _SAIDA.para_colar = para_colar
+    _SAIDA.contando, _SAIDA.falhas, _SAIDA.avisos = True, 0, 0
     try:
         _rodar_o_doctor(fix, quiet, fix_safe, perfis, como_json)
     finally:
         _SAIDA.quiet, _SAIDA.como_json, _SAIDA.achados = False, False, []
         _SAIDA.para_colar = False
+        _SAIDA.contando, _SAIDA.falhas, _SAIDA.avisos = True, 0, 0
 
 
 __all__ = ["doctor_cmd"]

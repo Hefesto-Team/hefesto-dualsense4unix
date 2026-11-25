@@ -6705,13 +6705,17 @@ main() {
     hdr "USB / dropout"
     check_usb_dropout
 
-    printf '\n─────────────────────────────────────────\n'
-    if [[ "${FAILS}" -eq 0 ]]; then
-        printf ' Diagnóstico: tudo OK (%d aviso(s))\n' "${WARNS}"
+    if [[ -n "${HEFESTO_DOCTOR_CONTAGEM:-}" ]]; then
+        printf '%d %d\n' "${FAILS}" "${WARNS}" >"${HEFESTO_DOCTOR_CONTAGEM}" 2>/dev/null || true
     else
-        printf ' Diagnóstico: %d FALHA(s), %d aviso(s)\n' "${FAILS}" "${WARNS}"
+        printf '\n─────────────────────────────────────────\n'
+        if [[ "${FAILS}" -eq 0 ]]; then
+            printf ' Diagnóstico: tudo OK (%d aviso(s))\n' "${WARNS}"
+        else
+            printf ' Diagnóstico: %d FALHA(s), %d aviso(s)\n' "${FAILS}" "${WARNS}"
+        fi
+        printf '─────────────────────────────────────────\n'
     fi
-    printf '─────────────────────────────────────────\n'
     [[ "${FAILS}" -eq 0 ]]
 }
 
