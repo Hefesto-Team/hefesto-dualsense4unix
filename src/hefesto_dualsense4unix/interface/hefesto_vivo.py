@@ -107,6 +107,14 @@ BOOTSTRAP = r"""
            && ATRIBUTO_DE_ENDERECO.indexOf(n) < 0;
   }
   window.__hef.atributoEscrevivel = atributo_escrevivel;
+  const CAMPO_DE_TEXTO = 'textarea,[contenteditable]:not([contenteditable="false"]),'
+    + 'input:not([type="checkbox"]):not([type="radio"]):not([type="button"])'
+    + ':not([type="submit"]):not([type="reset"]):not([type="range"]):not([type="color"])'
+    + ':not([type="file"]):not([type="image"])';
+  function campo_em_edicao(bloco){
+    const f = document.activeElement;
+    return !!(f && f !== bloco && bloco.contains(f) && f.matches(CAMPO_DE_TEXTO));
+  }
   function escrever(el, v){
     if(!el) return 0;
     const vazio = (v === null || v === undefined || v === '');
@@ -161,6 +169,7 @@ BOOTSTRAP = r"""
       return 1;
     }
     if(alvo === 'html'){
+      if(campo_em_edicao(el)) return 0;
       const h = (v === null || v === undefined || v === '') ? '' : t;
       if(el.__hefHtml === h) return 0;
       if(el.innerHTML !== h){ el.innerHTML = h; el.__hefHtml = h; return 1; }
@@ -245,6 +254,7 @@ BOOTSTRAP = r"""
       && Array.prototype.every.call(el.children, function(f){
            return f.classList.contains('pt') && !f.firstElementChild; });
     if(el.textContent !== t || so_o_ponto){
+      if(campo_em_edicao(el)) return 0;
       el.textContent = t;
       if(el.dataset.hefRolar === 'fim'){ el.scrollTop = el.scrollHeight; }
       return 1;
@@ -383,7 +393,8 @@ BOOTSTRAP = r"""
       if(alvo.__hefBloco === html) continue;
       if(alvo.innerHTML === html){ alvo.__hefBloco = html; continue; }
       if(alvo.querySelector('.hef-em-voo') || alvo.closest('.hef-em-voo') || [].some.call(
-           alvo.querySelectorAll('input[type="range"]'), r => r.matches(':active'))){
+           alvo.querySelectorAll('input[type="range"]'), r => r.matches(':active'))
+         || campo_em_edicao(alvo)){
         window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1; continue;
       }
       alvo.innerHTML = html;

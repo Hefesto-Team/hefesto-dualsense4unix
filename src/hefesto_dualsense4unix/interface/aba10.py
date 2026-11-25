@@ -547,9 +547,44 @@ ROTEIRO = """
       }
     }, false);
 
+    var INTERVALO_DO_DUPLO_CLIQUE = 400;
+    var esperando = null, liberado = false;
+    function celula_do_nome(alvo){
+      return alvo && alvo.closest ? alvo.closest('td[data-hef="perfis.linha.nome"]') : null;
+    }
+    function cancelar_a_espera(){
+      if(esperando === null) return;
+      clearTimeout(esperando);
+      esperando = null;
+    }
+    function clicar_na_linha(era){
+      var linha = Array.prototype.find.call(
+        document.querySelectorAll('tr[data-hef-perfil]'),
+        function(tr){ return tr.dataset.hefPerfil === era; });
+      var td = linha ? celula_do_nome(linha.firstElementChild) : null;
+      if(!td) return;
+      liberado = true;
+      try { td.click(); } finally { liberado = false; }
+    }
+    document.addEventListener('click', function(ev){
+      if(liberado) return;
+      var td = celula_do_nome(ev.target);
+      if(!td || td.querySelector('input')) return;
+      var tr = td.closest('tr[data-hef-perfil]');
+      if(!tr) return;
+      ev.stopImmediatePropagation();
+      cancelar_a_espera();
+      if(ev.detail >= 2) return;
+      var era = tr.dataset.hefPerfil;
+      esperando = setTimeout(function(){
+        esperando = null;
+        clicar_na_linha(era);
+      }, INTERVALO_DO_DUPLO_CLIQUE);
+    }, true);
+
     document.addEventListener('dblclick', function(ev){
-      var nome = ev.target.closest ? ev.target.closest('td[data-hef="perfis.linha.nome"]') : null;
-      if(nome){ renomear(nome); return; }
+      var nome = celula_do_nome(ev.target);
+      if(nome){ cancelar_a_espera(); renomear(nome); return; }
       var th = ev.target.closest ? ev.target.closest('th[data-coluna]') : null;
       if(!th) return;
       var seta = th.querySelector('.ordena[data-hef-gesto]');
@@ -571,6 +606,7 @@ ROTEIRO = """
       campo.setAttribute('aria-label', 'Novo nome do perfil');
       campo.dataset.hefGesto = 'perfis.renomear';
       campo.dataset.hefPerfil = era;
+      campo.dataset.dica = 'Enter grava; Esc devolve o nome';
       td.textContent = '';
       td.appendChild(guarda);
       td.appendChild(campo);
