@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.utils import pedido_ao_servico
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
@@ -165,6 +166,7 @@ def aplicar(
         if item == "broker":
             feito = pedir_ao_broker()
         elif item == "daemon":
+            pedido_ao_servico.anotar("restart", "troca-do-install", "a troca adiada do install")
             feito = rodar(["systemctl", "--user", "restart", UNIT_DO_DAEMON])
         else:
             feito = rodar([sys.executable, "-m", MODULO_DA_RECARGA])

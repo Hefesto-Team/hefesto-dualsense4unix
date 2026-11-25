@@ -212,7 +212,7 @@ def test_o_reiniciar_da_aba_repoe_depois_do_restart(
     passos: list[str] = []
     monkeypatch.setattr(a09_sistema, "_trava", lambda *_a: "")
     monkeypatch.setattr(a09_sistema, "_systemctl",
-                        lambda v: passos.append(f"systemctl:{v}"))
+                        lambda v, *_m: passos.append(f"systemctl:{v}"))
     monkeypatch.setattr(rl, "repor", lambda: passos.append("repôs") or rl.Recibo())
 
     a09_sistema.reiniciar(None, {}, None)
@@ -226,7 +226,7 @@ def test_a_reposicao_que_falha_nao_derruba_o_reiniciar(
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
     monkeypatch.setattr(a09_sistema, "_trava", lambda *_a: "")
-    monkeypatch.setattr(a09_sistema, "_systemctl", lambda _v: None)
+    monkeypatch.setattr(a09_sistema, "_systemctl", lambda _v, *_m: None)
 
     def _explode() -> rl.Recibo:
         raise RuntimeError("o flatpak sumiu")
@@ -244,7 +244,7 @@ def test_a_trava_continua_vindo_antes_de_tudo(
     monkeypatch.setattr(a09_sistema, "_trava",
                         lambda *_a: "O serviço está desligado.")
     monkeypatch.setattr(a09_sistema, "_systemctl",
-                        lambda _v: pytest.fail("reiniciou com a trava de pé"))
+                        lambda _v, *_m: pytest.fail("reiniciou com a trava de pé"))
     monkeypatch.setattr(rl, "repor",
                         lambda: pytest.fail("repôs com a trava de pé"))
 

@@ -101,6 +101,19 @@ runtime_socket() {
     printf '%s/%s/%s.sock' "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" "${APP_ID}" "${APP_ID}"
 }
 
+anotar_o_pedido_ao_servico() {
+    local verbo="$1" quem="$2" motivo="${3:-}" pasta arquivo
+    pasta="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/${APP_ID}"
+    arquivo="${pasta}/pedido-ao-servico"
+    motivo="${motivo//$'\t'/ }"
+    {
+        mkdir -p "${pasta}" \
+            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" "${verbo}" "${quem}" "$$" "${motivo}" \
+                > "${arquivo}.$$.tmp" \
+            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
+    } 2>/dev/null || true
+}
+
 bluetoothctl() {
     command -v bluetoothctl >/dev/null 2>&1 || return 127
     printf '%s\nquit\n' "$*" | command timeout 8 bluetoothctl 2>/dev/null \
@@ -6086,6 +6099,7 @@ fix_fila_sem_fixture() {
         [[ -S "$(runtime_socket)" ]] && warn "sem systemctl para reiniciar o daemon: ele guarda a fila antiga na memória e a regrava quando um controle chegar — feche-o e rode --fix de novo"
         return
     fi
+    anotar_o_pedido_ao_servico try-restart doctor "--fix: a fila de numeração limpa"
     systemctl --user try-restart "${APP_ID}.service" >/dev/null 2>&1 || true
     estado="$(systemctl --user is-active "${APP_ID}.service" 2>/dev/null || true)"
     if [[ "${estado}" == "active" ]]; then

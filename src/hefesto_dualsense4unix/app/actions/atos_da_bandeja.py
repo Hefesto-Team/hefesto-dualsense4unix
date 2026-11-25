@@ -24,7 +24,7 @@ from typing import Any
 
 from rich.console import Console
 
-from hefesto_dualsense4unix.utils import identidade
+from hefesto_dualsense4unix.utils import identidade, pedido_ao_servico
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
@@ -33,6 +33,9 @@ console = Console()
 LANCADOR_DO_PAINEL = "hefesto-dualsense4unix-gui"
 
 VERBOS: dict[str, str] = {"reiniciar": "restart", "parar": "stop", "ativar": "start"}
+MOTIVOS_DA_BANDEJA: dict[str, str] = {
+    "restart": "reiniciar-do-menu", "stop": "parar-do-menu", "start": "ativar-do-menu",
+}
 
 
 def abrir_o_painel() -> None:
@@ -57,6 +60,7 @@ def mexer_no_servico(verbo: str) -> bool:
     janela = DaemonActionsMixin()
     if verbo in ("start", "restart"):
         janela._invoke_systemctl(["reset-failed", unit], check=False)
+    pedido_ao_servico.anotar(verbo, "bandeja", MOTIVOS_DA_BANDEJA.get(verbo, verbo))
     resultado = janela._invoke_systemctl([verbo, unit], capture=True)
     pegou = getattr(resultado, "returncode", -1) == 0
     if verbo == "restart" and pegou:

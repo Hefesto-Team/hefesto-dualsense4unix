@@ -908,6 +908,9 @@ class Daemon:
 
         migrate_coop_optout()
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
+        from hefesto_dualsense4unix.utils.pedido_ao_servico import dizer_de_quem_foi_a_subida
+
+        dizer_de_quem_foi_a_subida(logger)
         try:
             if self._is_stopping():
                 return
@@ -1007,7 +1010,9 @@ class Daemon:
     def stop(self) -> None:
         """Sinaliza parada; idempotente."""
         if self._stop_event is not None and not self._stop_event.is_set():
-            logger.info("daemon_stop_requested")
+            from hefesto_dualsense4unix.utils.pedido_ao_servico import dizer_quem_pediu_a_parada
+
+            dizer_quem_pediu_a_parada(logger)
             _dizer_parando_e_soltar(self._stop_event)
 
     def pause(self) -> None:

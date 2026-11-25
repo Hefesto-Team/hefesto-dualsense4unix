@@ -80,6 +80,7 @@ from hefesto_dualsense4unix.core.o_modo_no_ar import (
     hora_do_pad,
     modo_contra_o_ar,
 )
+from hefesto_dualsense4unix.utils import pedido_ao_servico
 
 
 ENSAIOS_CHAMADOS: tuple[str, ...] = (
@@ -1531,6 +1532,7 @@ def _reiniciar_o_daemon(s: Sessao, motivo: str) -> None:
     estado = s.maquina.estado() or {}
     if _jogo_vivo(estado):
         raise Recusa(f"{motivo}: há jogo aberto, e o reinício recriaria os pads no meio da partida")
+    pedido_ao_servico.anotar("restart", "o-basico", motivo)
     rc, texto = s.maquina.rodar(["systemctl", "--user", "restart", "hefesto-dualsense4unix"], 60.0)
     s.declarar(f"o daemon reiniciado ({motivo})", "de pé", "reiniciado" if rc == 0 else texto.strip())
     if rc != 0:

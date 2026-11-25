@@ -18,7 +18,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from hefesto_dualsense4unix.utils import identidade, units_de_usuario
+from hefesto_dualsense4unix.utils import identidade, pedido_ao_servico, units_de_usuario
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import (
     bases_de_instalacao,
@@ -110,6 +110,8 @@ class ServiceInstaller:
     """Instala/remove a unidade `hefesto-dualsense4unix.service`."""
 
     dry_run: bool = False
+    quem: str = "instalacao-do-servico"
+    motivo: str = ""
 
     def install(self, *, enable: bool = False) -> Path:
         """Gera a unit para o diretório do usuário, vestida com o executável em uso."""
@@ -161,13 +163,21 @@ class ServiceInstaller:
         return removed
 
     def start(self) -> None:
+        self._anotar_o_pedido("start")
         self._systemctl("start", SERVICE_NORMAL)
 
     def stop(self) -> None:
+        self._anotar_o_pedido("stop")
         self._systemctl("stop", SERVICE_NORMAL)
 
     def restart(self) -> None:
+        self._anotar_o_pedido("restart")
         self._systemctl("restart", SERVICE_NORMAL)
+
+    def _anotar_o_pedido(self, verbo: str) -> None:
+        """Deixa o nome de quem pede no diário do serviço, antes do pedido ao systemd."""
+        if not self.dry_run:
+            pedido_ao_servico.anotar(verbo, self.quem, self.motivo)
 
     def enable(self) -> None:
         """Habilita o auto-start no boot e inicia o daemon (FEAT-DAEMON-DISABLE-CONTROL-01)."""

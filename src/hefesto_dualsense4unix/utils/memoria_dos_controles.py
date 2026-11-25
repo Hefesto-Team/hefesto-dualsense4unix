@@ -873,10 +873,18 @@ class Sistema:
         return self._systemctl_do_usuario("is-active", "--quiet", UNIT_DO_DAEMON) == 0
 
     def parar_daemon(self) -> None:
+        self._anotar_o_pedido("stop")
         self._systemctl_do_usuario("stop", UNIT_DO_DAEMON)
 
     def subir_daemon(self) -> None:
+        self._anotar_o_pedido("start")
         self._systemctl_do_usuario("start", UNIT_DO_DAEMON)
+
+    def _anotar_o_pedido(self, verbo: str) -> None:
+        if not self.ensaio:
+            from hefesto_dualsense4unix.utils import pedido_ao_servico
+
+            pedido_ao_servico.anotar(verbo, "controles-esquecer", "a memória dos controles")
 
     def steam_aberta(self) -> bool:
         if self.ensaio:

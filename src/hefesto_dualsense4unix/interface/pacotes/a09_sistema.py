@@ -67,6 +67,7 @@ from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.utils import area_de_transferencia as _area
 from hefesto_dualsense4unix.utils import maquina as _maquina
+from hefesto_dualsense4unix.utils import pedido_ao_servico
 from hefesto_dualsense4unix.utils.marca_do_parar import lembrar_o_parar
 
 from . import (
@@ -1688,7 +1689,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
     (`daemon/ipc_handlers.py:3840`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
-    teclado comparam `old` com `new` (`daemon/lifecycle.py:1216` e `:1258`) e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:1216` e `:1263`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1214-1215` derruba e sobe
     o leitor dos atalhos do controle, e `ipc_handlers.py:4328` reescreve os
@@ -1832,9 +1833,11 @@ class ReinicioEmCursoError(RuntimeError):
     """O `restart` estourou o prazo de quem espera, mas o systemd segue com ele."""
 
 
-def _systemctl(verbo: str) -> None:
+def _systemctl(verbo: str, motivo: str = "") -> None:
     """Roda `systemctl --user <verbo>` pela janela antiga, e LEVANTA se não pegou."""
     janela = _matriz()
+    if verbo in pedido_ao_servico.VERBOS:
+        pedido_ao_servico.anotar(verbo, "aba-sistema", motivo or verbo)
     if verbo in ("start", "restart"):
         janela._invoke_systemctl(["reset-failed", _unidade()], check=False)
     r = janela._invoke_systemctl([verbo, _unidade()], capture=True)
@@ -1925,7 +1928,7 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     session.marcar_o_reinicio(_daemon.prazo_do_systemctl(["restart"]))
     try:
-        _systemctl("restart")
+        _systemctl("restart", "gesto-reiniciar")
     except ReinicioEmCursoError as em_curso:
         session.marcar_o_reinicio(_daemon.prazo_do_systemctl(["start"]))
         _para_o_painel(str(em_curso))
@@ -1949,6 +1952,7 @@ def _repor_quando_o_servico_voltar() -> None:
     from hefesto_dualsense4unix.utils import session
 
     session.marcar_o_reinicio(_daemon.prazo_do_systemctl(["start"]))
+    pedido_ao_servico.anotar("start", "aba-sistema", "o-reinicio-passou-do-prazo")
     resultado = _matriz()._invoke_systemctl(["start", _unidade()], capture=True)
     if getattr(resultado, "returncode", -1) == 0:
         session.marcar_que_o_servico_subiu(_daemon.prazo_do_systemctl(["start"]))
@@ -2175,7 +2179,7 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if _status_do_daemon(ctx.state) == "online_avulso":
         _parar_o_avulso()
     else:
-        _systemctl("stop")
+        _systemctl("stop", "gesto-desligar")
     _matriz()._user_stopped_daemon = True
     lembrar_o_parar(True)
     return {"blocos": blocos_dos_botoes(False)}
@@ -2247,13 +2251,13 @@ def ativar_o_servico() -> bool:
     if estado == "activating":
         janela._user_stopped_daemon = False
         lembrar_o_parar(False)
-        _systemctl("start")
+        _systemctl("start", "ativar-o-servico")
         return True
     if janela._daemon_pid_alive():
         return False
     janela._user_stopped_daemon = False
     lembrar_o_parar(False)
-    _systemctl("start")
+    _systemctl("start", "ativar-o-servico")
     return True
 
 
@@ -2310,6 +2314,7 @@ def _o_avulso_saiu(pid: int) -> bool:
         return True
     if not _is_hefesto_dualsense4unix_process(pid):
         return False
+    pedido_ao_servico.anotar("stop", "aba-sistema", "desligar-o-servico-avulso")
     try:
         os.kill(pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):

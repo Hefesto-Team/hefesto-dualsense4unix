@@ -56,6 +56,20 @@ rebind_dualsense() {
     echo 1 > "/sys/bus/usb/devices/${dev}/authorized" 2>/dev/null || true
 }
 
+anotar_o_pedido() {
+    local uid="$1" user="$2" motivo="${3:-}" pasta arquivo
+    pasta="${RUNTIME_BASE:-/run/user}/${uid}/${APP_ID}"
+    arquivo="${pasta}/pedido-ao-servico"
+    motivo="${motivo//$'\t'/ }"
+    {
+        mkdir -p "${pasta}" \
+            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" restart dsx-recover "$$" "${motivo}" \
+                > "${arquivo}.$$.tmp" \
+            && { [[ "$(id -u)" != 0 ]] || chown "${user}" "${pasta}" "${arquivo}.$$.tmp"; } \
+            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
+    } 2>/dev/null || true
+}
+
 restart_daemon() {
     local uid user
     uid="$(graphical_user || true)"
@@ -65,6 +79,7 @@ restart_daemon() {
     if runuser -u "${user}" -- env XDG_RUNTIME_DIR="/run/user/${uid}" \
          DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${uid}/bus" \
          systemctl --user cat "${APP_ID}.service" >/dev/null 2>&1; then
+        anotar_o_pedido "${uid}" "${user}" "a tempestade do USB pediu a recuperação"
         runuser -u "${user}" -- env XDG_RUNTIME_DIR="/run/user/${uid}" \
             DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${uid}/bus" \
             systemctl --user restart "${APP_ID}.service" >/dev/null 2>&1 \

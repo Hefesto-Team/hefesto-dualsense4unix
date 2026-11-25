@@ -415,7 +415,7 @@ def daemon_stop() -> None:
     """Para o daemon gerenciado pelo systemd --user."""
     from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
 
-    ServiceInstaller().stop()
+    ServiceInstaller(quem="linha-de-comando", motivo="daemon stop").stop()
 
 
 @daemon_app.command("restart")
@@ -423,7 +423,7 @@ def daemon_restart() -> None:
     """Reinicia o daemon gerenciado pelo systemd --user."""
     from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
 
-    ServiceInstaller().restart()
+    ServiceInstaller(quem="linha-de-comando", motivo="daemon restart").restart()
 
 
 @daemon_app.command("status")
@@ -460,7 +460,7 @@ def daemon_disable() -> None:
     """Desliga: para o daemon e desabilita o auto-start (mantém instalado)."""
     from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
 
-    ServiceInstaller().disable()
+    ServiceInstaller(quem="linha-de-comando", motivo="daemon disable").disable()
     typer.echo(
         "daemon parado e auto-start desabilitado — religue com "
         "'hefesto-dualsense4unix daemon enable'"
@@ -472,7 +472,7 @@ def daemon_enable() -> None:
     """Habilita o auto-start no boot e inicia o daemon."""
     from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
 
-    ServiceInstaller().enable()
+    ServiceInstaller(quem="linha-de-comando", motivo="daemon enable").enable()
     typer.echo("auto-start habilitado e daemon iniciado")
 
 
