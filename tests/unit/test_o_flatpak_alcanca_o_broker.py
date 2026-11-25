@@ -22,8 +22,8 @@ FORA_DO_SANDBOX = ("broker",)
 NAO_SE_EXPOE: dict[str, str] = {
     "/run/dbus": (
         "o código não o abre: o nome está ali para a caixa do `bwrap` o COBRIR com "
-        "um tmpfs vazio (o leitor da modificação, a modificação sem a permissão "
-        "`bluetooth`); o barramento do sistema chega ao sandbox pelo "
+        "um tmpfs vazio (o leitor da modificação e a modificação, que com "
+        "`bluetooth` só recebe o soquete do proxy); o barramento do sistema chega ao sandbox pelo "
         "`--system-talk-name`, nunca pelo arquivo do socket"
     ),
     "/run/systemd": (

@@ -122,6 +122,41 @@ ESPERA_DA_VIGIA_S = 1.0
 
 FALTA_O_BWRAP = "Falta o bwrap: a extensão não abre sem a caixa."
 
+FALTA_O_PROXY_DO_BLUETOOTH = (
+    "Falta o xdg-dbus-proxy: a extensão com Bluetooth não abre sem o filtro do barramento.")
+
+SOQUETE_DO_SISTEMA_NA_CAIXA = "/run/dbus/system_bus_socket"
+
+BARRAMENTO_DO_SISTEMA_NA_CAIXA = f"unix:path={SOQUETE_DO_SISTEMA_NA_CAIXA}"
+
+PRAZO_DO_PROXY_S = 5.0
+
+_BLUEZ = "org.bluez"
+
+FILTRO_DO_BLUEZ: tuple[str, ...] = (
+    "--filter", f"--see={_BLUEZ}",
+    *(f"--call={_BLUEZ}={regra}" for regra in (
+        "org.freedesktop.DBus.ObjectManager.GetManagedObjects",
+        "org.freedesktop.DBus.Properties.Get",
+        "org.freedesktop.DBus.Properties.GetAll",
+        "org.freedesktop.DBus.Introspectable.Introspect",
+        "org.bluez.Adapter1.SetDiscoveryFilter",
+        "org.bluez.Adapter1.StartDiscovery",
+        "org.bluez.Adapter1.StopDiscovery",
+        "org.bluez.Device1.Connect",
+        "org.bluez.Device1.Disconnect",
+        "org.bluez.GattCharacteristic1.ReadValue",
+        "org.bluez.GattCharacteristic1.WriteValue",
+        "org.bluez.GattCharacteristic1.StartNotify",
+        "org.bluez.GattCharacteristic1.StopNotify",
+        "org.bluez.GattCharacteristic1.AcquireNotify",
+        "org.bluez.GattCharacteristic1.AcquireWrite",
+        "org.bluez.GattDescriptor1.ReadValue",
+        "org.bluez.GattDescriptor1.WriteValue",
+    )),
+    f"--broadcast={_BLUEZ}=@/org/bluez/*",
+)
+
 ENTRAM_NA_CAIXA: tuple[str, ...] = (
     "/usr", "/etc", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32")
 
@@ -130,7 +165,7 @@ COBERTOS_NA_CAIXA: tuple[str, ...] = ("/etc/machine-id",)
 PASTA_DOS_PROGRAMAS = "/opt"
 
 DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
-    "bluetooth": ("/run/dbus", "/sys/class/bluetooth"),
+    "bluetooth": ("/sys/class/bluetooth",),
     "aparelhos": ("/run/udev",),
 }
 
@@ -234,10 +269,10 @@ def systemd_run_com_teto(
     if programa is None or not pasta or not (Path(pasta) / "bus").exists():
         return None
     gerenciador = raiz / "user.slice" / f"user-{dono}.slice" / f"user@{dono}.service"
-    try:
-        delegados = set((gerenciador / "cgroup.controllers").read_text(encoding="utf-8").split())
-    except OSError:
+    arquivo = gerenciador / "cgroup.controllers"
+    if not arquivo.is_file():
         return None
+    delegados = set(arquivo.read_text(encoding="utf-8").split())
     return programa if delegados >= CONTROLADORES_DO_TETO else None
 
 
@@ -288,6 +323,9 @@ class _Vigiada:
     aceitos: tuple[str, ...] = ()
     retrato: RetratoDosHubs = field(default_factory=dict)
     hid: dict[str, str] = field(default_factory=dict)
+    proxy: asyncio.subprocess.Process | None = None
+    sincronia: int | None = None
+    soquete: Path | None = None
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -593,16 +631,16 @@ def comando_na_caixa(
     pela_porta: tuple[str, ...] = (),
     retrato: RetratoDosHubs | None = None,
     hid: dict[str, str] | None = None,
+    bluez: str | None = None,
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
-    Entra só :data:`ENTRAM_NA_CAIXA`, com :data:`COBERTOS_NA_CAIXA` vazios; o ``/var``, o
-    ``/sys``, a ``HOME`` e a execução nascem vazios; o ``/dev`` traz só os ``aparelhos``, o
-    ``/sys`` só eles e os ``pela_porta``, e o ``retrato`` recebe os hubs vivos
-    (:func:`_o_sys_dos_achados`); o :data:`PASTA_DO_HID` leva só ``hid`` (:func:`hid_da_caixa`).
-    O ``--unshare-pid`` leva junto TUDO o que a modificação abriu.
-    Dentro do ``pasta`` (:func:`linha_do_pasta`) o ``bwrap`` devolve o ``uid`` e o ``gid`` de
-    quem roda: o barramento do sistema recusa quem diz 0 com a credencial de outro.
+    Entra só :data:`ENTRAM_NA_CAIXA`, com :data:`COBERTOS_NA_CAIXA` vazios; ``/var``, ``/sys``, a
+    ``HOME`` e a execução nascem vazios; o ``/dev`` traz só os ``aparelhos``, o ``/sys`` só eles e
+    os ``pela_porta`` (``retrato`` recebe os hubs vivos), o :data:`PASTA_DO_HID` só o ``hid``. O
+    ``--unshare-pid`` leva junto TUDO o que a modificação abriu; dentro do ``pasta`` o ``bwrap``
+    devolve o ``uid`` e o ``gid`` de quem roda. O barramento do sistema nunca entra: ``bluez`` é
+    o soquete do proxy (:data:`FILTRO_DO_BLUEZ`), montado onde o barramento mora.
     """
     entram = ENTRAM_NA_CAIXA
     propria = pasta is not None and manifesto.rede != "nenhuma"
@@ -633,6 +671,8 @@ def comando_na_caixa(
                      if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no)], retrato)
     for caminho in _devolvidos(manifesto, entram):
         argv += ["--ro-bind", caminho, caminho]
+    if bluez is not None:
+        argv += ["--bind", bluez, SOQUETE_DO_SISTEMA_NA_CAIXA]
     if PASTA_DO_HID in _sinteticas(manifesto):
         argv += a_pasta_do_hid(hid_da_caixa(manifesto, ()) if hid is None else hid)
     comando = _executavel_a_vista(comando, entram, argv)
@@ -1505,6 +1545,8 @@ class Supervisor:
         porta: Path | None = None,
         bwrap: str | None = None,
         procurar_bwrap: bool = True,
+        proxy_dbus: str | None = None,
+        procurar_proxy_dbus: bool = True,
         esperas: tuple[float, ...] = ESPERAS_PARA_VOLTAR,
         estavel_s: float = ESTAVEL_DEPOIS_DE_S,
         prazo_para_parar_s: float = PRAZO_PARA_PARAR_S,
@@ -1525,6 +1567,8 @@ class Supervisor:
             ligar_a_chave=self._ligar_a_chave,
         )
         self.bwrap = bwrap or (shutil.which("bwrap") if procurar_bwrap else None)
+        self.proxy_dbus = proxy_dbus or (
+            shutil.which("xdg-dbus-proxy") if procurar_proxy_dbus else None)
         self.esperas = esperas
         self.estavel_s = estavel_s
         self.prazo_para_parar_s = prazo_para_parar_s
@@ -1914,6 +1958,10 @@ class Supervisor:
         if not self.bwrap and not entrada.sem_caixa:
             self._estados[entrada.id] = EstadoDaModificacao("recusada", motivo=FALTA_O_BWRAP)
             return
+        if self._pede_o_filtro(manifesto) and not self.proxy_dbus:
+            self._estados[entrada.id] = EstadoDaModificacao(
+                "recusada", motivo=FALTA_O_PROXY_DO_BLUETOOTH)
+            return
         if not self.porta.aberta:
             await self.porta.iniciar()
         vigiada = _Vigiada(entrada.id, instalacao=_instalacao(entrada))
@@ -1947,6 +1995,7 @@ class Supervisor:
             prova = asyncio.create_task(
                 self._provar_depois_de_estavel(self._registro_lido.get(mod_id)))
             codigo = await processo.wait()
+            await self._soltar_o_proxy(vigiada)
             vigia.cancel()
             prova.cancel()
             await asyncio.wait({vigia, prova})
@@ -2069,6 +2118,13 @@ class Supervisor:
         vigiada.aparelho_novo = False
         vigiada.retrato = {}
         vigiada.hid = hid_da_caixa(manifesto, vigiada.aceitos) if self.bwrap else {}
+        if self._pede_o_filtro(manifesto):
+            ambiente["DBUS_SYSTEM_BUS_ADDRESS"] = BARRAMENTO_DO_SISTEMA_NA_CAIXA
+            try:
+                await self._abrir_o_proxy(vigiada, manifesto.id)
+            except BaseException:
+                await self._soltar_o_proxy(vigiada)
+                raise
         if self.bwrap:
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
@@ -2086,6 +2142,7 @@ class Supervisor:
                 pela_porta=tuple(pela_porta),
                 retrato=vigiada.retrato,
                 hid=vigiada.hid,
+                bluez=str(vigiada.soquete) if vigiada.proxy is not None else None,
             )
         else:
             argv = comando
@@ -2095,6 +2152,7 @@ class Supervisor:
                         oom_score_adj=OOM_SCORE_DA_EXTENSAO, tmp_bytes=TAMANHO_DO_TMP_BYTES)
         await _preparar_com_teto(dados / DIARIO_DA_MODIFICACAO, diario, ESPERA_DA_PODA_S)
         if vigiada.quer_parar.is_set():
+            await self._soltar_o_proxy(vigiada)
             return None
         processo = await asyncio.create_subprocess_exec(
             *argv,
@@ -2126,6 +2184,66 @@ class Supervisor:
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap),
                     teto=bool(self.systemd_run))
         return processo
+
+    def _pede_o_filtro(self, manifesto: Manifesto) -> bool:
+        """A extensão com ``bluetooth`` na caixa fala com o BlueZ pelo proxy, nunca pelo
+        barramento do sistema inteiro."""
+        return bool(self.bwrap) and "bluetooth" in manifesto.permissoes
+
+    async def _abrir_o_proxy(self, vigiada: _Vigiada, mod_id: str) -> None:
+        """Abre o ``xdg-dbus-proxy`` de ``mod_id`` com o :data:`FILTRO_DO_BLUEZ` e espera o aviso
+        de pronto. A ponta de leitura do cano fica aberta: ao fechar, o proxy sai."""
+        assert self.proxy_dbus is not None
+        soquete = self.porta.caminho.parent / f"bluez-{mod_id}.sock"
+        soquete.unlink(missing_ok=True)
+        vigiada.soquete = soquete
+        de_cima = os.environ.get("DBUS_SYSTEM_BUS_ADDRESS") or BARRAMENTO_DO_SISTEMA_NA_CAIXA
+        leitura, escrita = os.pipe()
+        vigiada.sincronia = leitura
+        try:
+            vigiada.proxy = await asyncio.create_subprocess_exec(
+                self.proxy_dbus, f"--fd={escrita}", de_cima, str(soquete), *FILTRO_DO_BLUEZ,
+                pass_fds=(escrita,), stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        finally:
+            os.close(escrita)
+        loop = asyncio.get_running_loop()
+        pronto: asyncio.Future[bytes] = loop.create_future()
+
+        def avisou() -> None:
+            loop.remove_reader(leitura)
+            pronto.set_result(os.read(leitura, 1))
+
+        loop.add_reader(leitura, avisou)
+        try:
+            aviso = await asyncio.wait_for(pronto, PRAZO_DO_PROXY_S)
+        except asyncio.TimeoutError:
+            raise OSError("o xdg-dbus-proxy não ficou pronto a tempo") from None
+        finally:
+            loop.remove_reader(leitura)
+        if not aviso:
+            raise OSError("o xdg-dbus-proxy saiu antes de abrir o soquete")
+
+    async def _soltar_o_proxy(self, vigiada: _Vigiada) -> None:
+        """Fecha o cano, para o proxy e apaga o soquete; sem proxy aberto, não faz nada."""
+        proxy, vigiada.proxy = vigiada.proxy, None
+        sincronia, vigiada.sincronia = vigiada.sincronia, None
+        soquete, vigiada.soquete = vigiada.soquete, None
+        if sincronia is not None:
+            os.close(sincronia)
+        if proxy is not None:
+            with contextlib.suppress(ProcessLookupError):
+                proxy.terminate()
+            try:
+                await asyncio.wait_for(proxy.wait(), self.prazo_para_parar_s)
+            except asyncio.TimeoutError:
+                with contextlib.suppress(ProcessLookupError):
+                    proxy.kill()
+                await proxy.wait()
+        if soquete is not None:
+            soquete.unlink(missing_ok=True)
 
     def _abridor_dos_aparelhos(self, manifesto: Manifesto,
                                ficha: str) -> Callable[[Any], int] | None:
@@ -2181,6 +2299,7 @@ class Supervisor:
             await asyncio.wait({vigiada.tarefa}, timeout=ESPERA_DA_VIGIA_S)
         copia, vigiada.copia = vigiada.copia, None
         await _esvaziar_a_copia(copia, 0)
+        await self._soltar_o_proxy(vigiada)
         self.porta.esquecer(vigiada.ficha)
         self._marcar(mod_id, EstadoDaModificacao(estado))
 
@@ -2317,6 +2436,8 @@ __all__ = [
     "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
     "FALTA_O_BWRAP",
+    "FALTA_O_PROXY_DO_BLUETOOTH",
+    "FILTRO_DO_BLUEZ",
     "JANELA_DO_LACO_DOS_APARELHOS_S",
     "NOS_QUE_A_CAIXA_ACEITA",
     "OOM_SCORE_DA_EXTENSAO",

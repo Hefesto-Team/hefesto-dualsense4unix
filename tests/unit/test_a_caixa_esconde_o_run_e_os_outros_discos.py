@@ -137,9 +137,8 @@ def test_volta_so_o_que_a_permissao_pede(curto: Path) -> None:
     assert not any(c.startswith("/run/") for c in sem), sem
     if os.path.isdir("/run/systemd/resolve"):
         assert "/run/systemd/resolve" in montados("rede:internet")
-    if os.path.isdir("/run/dbus"):
-        assert "/run/dbus" in montados("rede:nenhuma", "bluetooth")
-        assert "/run/dbus" not in montados("rede:internet")
+    assert "/run/dbus" not in montados("rede:nenhuma", "bluetooth")
+    assert "/run/dbus" not in montados("rede:internet")
     argv = _caixa(curto, _manifesto("rede:nenhuma"), ["true"])
     for flag in ("--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try", "--unshare-pid"):
         assert flag in argv
