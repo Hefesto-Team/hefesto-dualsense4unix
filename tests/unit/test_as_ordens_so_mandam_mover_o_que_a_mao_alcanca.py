@@ -96,7 +96,7 @@ def test_o_censo_le_o_encaixe_e_o_removivel_de_cada_aparelho(sys_usb: SysDeMenti
 
 
 def test_r3_nao_manda_mover_o_adaptador_soldado_atras_do_hub() -> None:
-    """Os dois adaptadores BT são soldados, atrás do hub interno: a ordem fica, sem ação."""
+    """D-2511-AS-ORDENS-SO-MANDAM-MOVER-O-QUE-A-MAO-ALCANCA: o soldado fica sem ação."""
     soldado = _soldar(ensaio.censo(), "3-1.1.4", "3-1.2", encaixe="hardwired")
     ordem = ordens.dongle_atras_de_hub(_leitura(soldado))
     assert ordem is not None
@@ -150,7 +150,7 @@ def test_r1_manda_mover_o_largo_que_a_mao_alcanca_e_nao_o_soldado_que_veio_antes
 
 
 def test_r4_nao_chama_de_unico_o_teclado_quando_o_notebook_tem_o_dele() -> None:
-    """Teclado USB só no hub, e um teclado de outro barramento de entrada presente: sem R4."""
+    """D-2511-AS-ORDENS-SO-MANDAM-MOVER-O-QUE-A-MAO-ALCANCA: o teclado do notebook conta."""
     assert ordens.teclado_so_no_hub(_leitura(ensaio.censo())) is not None
     com_o_dele = dataclasses.replace(ensaio.censo(), teclados_fora_do_usb=1)
     assert ordens.teclado_so_no_hub(_leitura(com_o_dele)) is None
