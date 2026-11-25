@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import subprocess
+import sys
 from typing import Any
 
 import typer
@@ -58,7 +59,7 @@ def _trocar_de_perfil(nome: str) -> bool:
         return False
     try:
         subprocess.Popen(
-            ["hefesto-dualsense4unix", "profile", "activate", nome],
+            [sys.executable, "-m", "hefesto_dualsense4unix.cli.app", "profile", "activate", nome],
             start_new_session=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
@@ -99,6 +100,15 @@ def _reconectar_os_controles() -> bool:
     return primeiro and segundo
 
 
+def _sem_hospedeiro(sair: Any, sem_lugar: list[bool]) -> None:
+    """A sessão não tem quem hospede o ícone: diz, e encerra o processo que ficaria invisível."""
+    console.print(
+        "[red]o ícone não tem onde aparecer[/] — "
+        "não há quem hospede o `org.kde.StatusNotifierWatcher` nesta sessão")
+    sem_lugar.append(True)
+    sair()
+
+
 def tray_cmd() -> None:
     """Sobe o ícone de bandeja e fica em primeiro plano até `Sair`."""
     from hefesto_dualsense4unix.app.tray import AppTray, probe_gi_availability
@@ -116,6 +126,7 @@ def tray_cmd() -> None:
     if not tomar_a_vez():
         console.print("já há um ícone na bandeja nesta sessão")
         raise typer.Exit(code=0)
+    sem_lugar: list[bool] = []
     bandeja = AppTray(
         on_show_window=_abrir_o_painel,
         on_quit=Gtk.main_quit,
@@ -125,6 +136,7 @@ def tray_cmd() -> None:
         on_set_modo=_definir_o_modo,
         on_reconectar=_reconectar_os_controles,
         on_servico=_servico,
+        on_sem_hospedeiro=lambda: _sem_hospedeiro(Gtk.main_quit, sem_lugar),
     )
     if not bandeja.start():
         soltar_a_vez()
@@ -141,6 +153,8 @@ def tray_cmd() -> None:
     finally:
         bandeja.stop()
         soltar_a_vez()
+    if sem_lugar:
+        raise typer.Exit(code=3)
 
 
 __all__ = ["tray_cmd"]

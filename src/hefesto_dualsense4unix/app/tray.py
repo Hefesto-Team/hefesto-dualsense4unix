@@ -15,6 +15,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
 
+from hefesto_dualsense4unix.app.ambiente import ambiente_efetivo, aviso_da_bandeja_ausente
 from hefesto_dualsense4unix.integrations.desktop_notifications import (
     notify,
     statusnotifierwatcher_available,
@@ -87,6 +88,7 @@ class AppTray:
     on_set_modo: ModoFn | None = None
     on_reconectar: ReconectarFn | None = None
     on_servico: ServicoFn | None = None
+    on_sem_hospedeiro: Callable[[], None] | None = None
 
     _indicator: Any = None
     _indicator_ns: Any = None
@@ -187,16 +189,19 @@ class AppTray:
 
         logger.info("apptray_started", icon=icon)
 
-        if _desktop_is_cosmic():
-            GLib.timeout_add(
-                _WATCHER_PROBE_RETRY_MS,
-                lambda: self._probe_watcher_with_retries(0),
-            )
+        GLib.timeout_add(
+            _WATCHER_PROBE_RETRY_MS,
+            lambda: self._probe_watcher_with_retries(0),
+        )
 
         return True
 
     def _probe_watcher_with_retries(self, attempt: int) -> bool:
-        """Probe StatusNotifierWatcher com retries — só notifica se TODAS falharem."""
+        """Probe StatusNotifierWatcher com retries, em toda sessão.
+
+        Só avisa se TODAS falharem, e então diz a quem chamou (`on_sem_hospedeiro`) que o ícone
+        não tem onde aparecer.
+        """
         if statusnotifierwatcher_available():
             logger.debug("statusnotifierwatcher_disponivel_apos_retry", attempt=attempt)
             return False
@@ -207,11 +212,16 @@ class AppTray:
             )
             return False
         self._maybe_notify_tray_missing()
+        if self.on_sem_hospedeiro is not None:
+            self.on_sem_hospedeiro()
         return False
 
     @staticmethod
     def _maybe_notify_tray_missing() -> None:
-        """Emite notify de tray indisponível só se ainda não avisou (flag persistente)."""
+        """Emite notify de tray indisponível só se ainda não avisou (flag persistente).
+
+        A frase é a do ambiente da sessão (`app/ambiente.py`): o que ligar muda do COSMIC ao GNOME.
+        """
         from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
         try:
@@ -231,25 +241,14 @@ class AppTray:
             logger.debug("tray_warning_ja_avisado_em_sessao_anterior")
             return
 
-        logger.warning(
-            "statusnotifierwatcher_ausente",
-            hint=(
-                "cosmic-applet-status-area pode estar desabilitado no "
-                "cosmic-panel. Habilite em Configurações > Painel > "
-                "Applets para o tray aparecer."
-            ),
-        )
+        ambiente = ambiente_efetivo()
+        logger.warning("statusnotifierwatcher_ausente", ambiente=ambiente)
         notify(
             summary=identidade.atual().nome_longo,
-            body=(
-                "Tray icon indisponivel no COSMIC. "
-                "Habilite o applet 'Area de status' no cosmic-panel "
-                "(Configurações > Painel) ou use a janela principal. "
-                "Este aviso só aparece uma vez."
-            ),
+            body=aviso_da_bandeja_ausente(ambiente),
             icon="input-gaming",
             timeout_ms=10000,
-            once_key="cosmic_tray_missing",
+            once_key=f"{ambiente}_tray_missing",
         )
         if flag_path is not None:
             with contextlib.suppress(OSError):
@@ -352,7 +351,7 @@ class AppTray:
         daemon seguia de pé segurando o controle: quem clica em «Sair» acredita
         que o Hefesto acabou. O ato é o MESMO do «Parar o serviço» (e da aba
         Sistema): ``on_servico("stop")``, fora do fio da janela. Se a parada
-        falha, o ícone FICA e o aviso vai ao registro — sumir com o ícone de um
+        falha, o ícone FICA e o aviso vai ao registro e à tela — sumir com o ícone de um
         serviço que segue rodando é o defeito que este ato cura. Sem
         ``on_servico`` (um tray sem serviço para parar) só sai.
         """
@@ -376,7 +375,14 @@ class AppTray:
             logger.warning("apptray_sair_nao_parou", erro=str(erro))
             return False
 
-        run_in_thread(lambda: servico("stop"), _parou, _nao_parou)
+        run_in_thread(
+            AppTray._com_aviso(
+                lambda: servico("stop"),
+                _("Não consegui parar o serviço: o ícone fica na bandeja."),
+            ),
+            _parou,
+            _nao_parou,
+        )
 
     def _ao_mexer_no_servico(self, _item: Any) -> None:
         """Para quando está de pé; liga quando está parado."""
@@ -398,6 +404,38 @@ class AppTray:
 
         lembrar_o_parar(verbo == "stop")
         self._fora_do_fio(lambda: servico(verbo), "apptray_servico_nao_pegou", verbo=verbo)
+
+    @staticmethod
+    def _com_aviso(ato: Any, aviso: str) -> Any:
+        """O `ato` que, ao dar `False` ou levantar, diz `aviso` a quem usa (na thread worker)."""
+
+        def _avisar() -> None:
+            notify(
+                summary=identidade.atual().nome_longo,
+                body=aviso,
+                icon="dialog-warning",
+                timeout_ms=6000,
+            )
+
+        def _com_o_aviso() -> Any:
+            try:
+                deu_certo = ato()
+            except Exception:
+                _avisar()
+                raise
+            if not deu_certo:
+                _avisar()
+            return deu_certo
+
+        return _com_o_aviso
+
+    def _ao_escolher_o_perfil(self, nome: str) -> None:
+        """O clique num perfil: a troca vai à thread worker, e a que não pegou avisa."""
+        trocar = self.on_switch_profile
+        aviso = _("Não consegui trocar para o perfil «{nome}».").format(nome=nome)
+        self._chamar_sem_cair(lambda: self._fora_do_fio(
+            AppTray._com_aviso(lambda: trocar(nome), aviso),
+            "apptray_troca_nao_pegou", nome=nome))
 
     @staticmethod
     def _fora_do_fio(ato: Any, evento: str, **campos: Any) -> None:
@@ -539,7 +577,7 @@ class AppTray:
                 item = Gtk.MenuItem.new_with_label(label)
                 item.set_use_underline(False)
                 item.connect(
-                    "activate", lambda _w, n=name: self.on_switch_profile(n)
+                    "activate", lambda _w, n=name: self._ao_escolher_o_perfil(n)
                 )
                 self._profiles_submenu.append(item)
                 self._profile_menu_items.append(item)
