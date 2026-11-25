@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1319270,
+      "piso": 1320771,
       "por_item": {
-        "docs": 107995,
-        "scripts": 116818,
-        "src": 332393,
-        "tests": 762064
+        "docs": 107999,
+        "scripts": 116862,
+        "src": 332640,
+        "tests": 763270
       },
-      "razao": "tamanho: +393 linhas (1318877 -> 1319270), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU; registrado no fecho, topo 01ffab78ecf7",
+      "razao": "tamanho: +1501 linhas (1319270 -> 1320771), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo c50546ce59bc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2505,10 +2505,16 @@
           "de": 1318877,
           "para": 1319270,
           "razao": "tamanho: +393 linhas (1318877 -> 1319270), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU; registrado no fecho, topo 01ffab78ecf7"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1319270,
+          "para": 1320771,
+          "razao": "tamanho: +1501 linhas (1319270 -> 1320771), pagas por Origem: D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo c50546ce59bc"
         }
       ],
       "unidade": "linhas",
-      "universo": 3682
+      "universo": 3687
     }
   }
 }
