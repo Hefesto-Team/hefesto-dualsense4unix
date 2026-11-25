@@ -44,7 +44,9 @@ def _entradas_do_kernel(*blocos: str) -> str:
 I8042 = _bloco("0011", "teclado de mentira", "/devices/platform/i8042/serio0/input/input3",
                _MAPA_DE_TECLADO)
 BLUETOOTH = _bloco("0005", "teclado sem fio de mentira",
-                   "/devices/pci0000:00/bluetooth/hci0/0005.0001/input/input9", _MAPA_DE_TECLADO)
+                   "/devices/virtual/misc/uhid/0005:0001:0001.0042/input/input9", _MAPA_DE_TECLADO)
+EMULADO_NO_RADIO = _bloco("0005", "teclado emulado de mentira", "/devices/virtual/input/input12",
+                          _MAPA_DE_TECLADO)
 BOTAO_DE_LIGAR = _bloco("0019", "botao de ligar", "/devices/LNXSYSTM:00/input/input0",
                         "10000000000000")
 TECLADO_USB = _bloco("0003", "teclado usb de mentira", "/devices/pci0000:00/usb1/1-4/input/input5",
@@ -162,8 +164,8 @@ def test_r4_nao_manda_tirar_do_hub_o_teclado_soldado() -> None:
 
 
 def test_o_censo_conta_o_teclado_de_outro_barramento_e_so_ele(sys_usb: SysDeMentira) -> None:
-    """i8042 e Bluetooth contam; botão de ligar, USB e teclado virtual não."""
-    entradas = _entradas_do_kernel(BOTAO_DE_LIGAR, TECLADO_USB, TECLADO_VIRTUAL)
+    """i8042 e Bluetooth (pelo ``uhid``) contam; botão de ligar, USB e o ``uinput`` não."""
+    entradas = _entradas_do_kernel(BOTAO_DE_LIGAR, TECLADO_USB, TECLADO_VIRTUAL, EMULADO_NO_RADIO)
     sem = ler_o_barramento(**sys_usb.fontes(), entradas_do_kernel=lambda: entradas)
     assert sem.teclados_fora_do_usb == 0
     com = ler_o_barramento(

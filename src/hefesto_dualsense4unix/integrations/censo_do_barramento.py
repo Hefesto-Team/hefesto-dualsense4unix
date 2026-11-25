@@ -121,6 +121,7 @@ _REMOVIVEL_FIXO = "fixed"
 _RAIZ_USB_REAL = "/sys/bus/usb/devices"
 _ENTRADAS_DO_KERNEL = "/proc/bus/input/devices"
 _BARRAMENTO_USB = "0003"
+_ENTRADA_EMULADA = "/devices/virtual/input/"
 _BARRAMENTO_DA_ENTRADA = re.compile(r"Bus=([0-9a-fA-F]+)")
 _LETRAS = (*range(16, 26), *range(30, 39), *range(44, 51))
 
@@ -957,8 +958,9 @@ def _sem_entradas() -> str:
 def _teclados_fora_do_usb(texto: str) -> int:
     """Quantos teclados de verdade o kernel tem em barramento que não é USB (i8042, I2C, Bluetooth).
 
-    Um teclado é a entrada que tem as 26 letras; o dispositivo virtual (``/devices/virtual/``) é
-    emulação e não conta, e o USB já está no censo pelo ``/sys``.
+    Um teclado é a entrada que tem as 26 letras. A do ``uinput`` (``/devices/virtual/input/``) é
+    emulação e não conta; o teclado Bluetooth do BlueZ nasce no ``uhid``
+    (``/devices/virtual/misc/uhid/``) e conta; o USB já está no censo pelo ``/sys``.
     """
     total = 0
     for bloco in texto.split("\n\n"):
@@ -971,7 +973,7 @@ def _teclados_fora_do_usb(texto: str) -> int:
                 sysfs = linha[len("S: Sysfs="):].strip()
             elif linha.startswith("B: KEY="):
                 teclas = linha[len("B: KEY="):].strip()
-        if not barramento or barramento == _BARRAMENTO_USB or "/virtual/" in sysfs:
+        if not barramento or barramento == _BARRAMENTO_USB or sysfs.startswith(_ENTRADA_EMULADA):
             continue
         if all(_tem_a_tecla(teclas, bit) for bit in _LETRAS):
             total += 1
