@@ -1995,7 +1995,7 @@ def _familia_pela_identidade(
 
 def _versao_no_sysfs(path: str | Path) -> int | None:
     """O `id/version` do nó, que separa o 8BitDo (`0200`) do Pro genuíno (`0210`)."""
-    raiz = f"/sys/class/input/{Path(path).name}/device"
+    raiz = f"{SYS_CLASS_INPUT}/{Path(path).name}/device"
     try:
         with open(f"{raiz}/id/version", encoding="ascii") as fh:
             return int(fh.read().strip(), 16)
