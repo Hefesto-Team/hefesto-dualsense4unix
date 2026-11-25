@@ -38,7 +38,7 @@ ACTIVE_MARKER = "> "
 
 _INDICATOR_DEFERRED_MS = 1500
 
-_WATCHER_PROBE_RETRIES = 3
+_WATCHER_PROBE_RETRIES = 30
 _WATCHER_PROBE_RETRY_MS = 1000
 
 _TRAY_WARNED_FLAG_NAME = "cosmic_tray_warned.flag"
@@ -224,6 +224,10 @@ class AppTray:
 
     def _probe_watcher_with_retries(self, attempt: int) -> bool:
         """Probe StatusNotifierWatcher com retries, em toda sessão.
+
+        As tentativas cobrem o login: o painel pode registrar o watcher segundos depois da bandeja
+        do autostart (5,5 s medidos em 25/11/2026 numa sessão COSMIC), e o veredito só sai depois
+        de `_WATCHER_PROBE_RETRIES` sondas, uma a cada `_WATCHER_PROBE_RETRY_MS`.
 
         Só avisa se TODAS falharem com a certeza de que o ícone não aparece, e então diz a quem
         chamou (`on_sem_hospedeiro`). Não sabe quem não conseguiu perguntar ao D-Bus, e quem tem a

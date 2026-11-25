@@ -440,7 +440,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING": (
         "Faz o aviso da bandeja ser emitido de novo (`HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING` "
-        "em `src/hefesto_dualsense4unix/app/tray.py:269`). "
+        "em `src/hefesto_dualsense4unix/app/tray.py:273`). "
         "Existe "
         "para reencenar um aviso já visto durante uma medição de tela; o "
         "caminho publicado é apagar o arquivo de estado. MEDIDO em 12/08/2026."

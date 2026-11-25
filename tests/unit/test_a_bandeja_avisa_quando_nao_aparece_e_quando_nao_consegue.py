@@ -114,6 +114,32 @@ def test_sem_certeza_de_que_o_icone_sumiu_nada_avisa_e_o_icone_fica(
     assert avisos == [] and tray.chamadas == []
 
 
+ATRASO_DO_PAINEL_NO_LOGIN_MS = 5500
+
+
+def test_o_painel_que_nasce_segundos_depois_do_icone_nao_gera_aviso(
+        gtk_de_mentira: Any, avisos: list[dict[str, Any]],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """MORDIDA: a sonda de volta a três tentativas avisa antes de o painel do login nascer.
+
+    O atraso é o medido em 25/11/2026 numa sessão COSMIC, do autostart da bandeja ao watcher.
+    """
+    tray = _sem_hospedeiro(gtk_de_mentira, monkeypatch, "COSMIC")
+    relogio = [gtk_de_mentira._INDICATOR_DEFERRED_MS + gtk_de_mentira._WATCHER_PROBE_RETRY_MS]
+    agenda: list[tuple[int, Any]] = []
+    monkeypatch.setattr(gtk_de_mentira, "GLib", type("G", (), {
+        "timeout_add": staticmethod(lambda ms, cb: agenda.append((relogio[0] + ms, cb)) or 0),
+    }))
+    monkeypatch.setattr(gtk_de_mentira, "statusnotifierwatcher_available",
+                        lambda: relogio[0] >= ATRASO_DO_PAINEL_NO_LOGIN_MS)
+    tray._probe_watcher_with_retries(0)
+    while agenda:
+        relogio[0], sonda = agenda.pop(0)
+        sonda()
+    assert relogio[0] >= ATRASO_DO_PAINEL_NO_LOGIN_MS, "a sonda parou antes de o painel nascer"
+    assert avisos == [] and tray.chamadas == []
+
+
 def test_a_bandeja_xembed_so_conta_no_x11(gtk_de_mentira: Any) -> None:
     """No Wayland não há XEmbed: a tela que não é do X11 nunca conta como bandeja."""
     assert gtk_de_mentira._bandeja_xembed_de_pe() is False
