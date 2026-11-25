@@ -148,7 +148,8 @@ def test_o_gesto_mira_o_perfil_que_o_editor_pinta(gesto: str, alvos: list[str]) 
         funcao(_ctx(), dict(o), PonteDeMentira())
 
     assert alvos, f"{gesto}: o gesto não leu perfil nenhum do disco"
-    assert set(alvos) == {pintado}, (
+    releitura_do_novo = {o["valor"]} if gesto == "perfis.renomear" else set()
+    assert set(alvos) - releitura_do_novo == {pintado}, (
         f"{gesto}: o editor mostra {pintado!r} e o gesto leu {alvos!r} do disco")
     assert arquivo.is_file(), f"{gesto}: o freestyle.json sumiu do disco"
     assert arquivo.read_bytes() == antes, f"{gesto}: o freestyle.json mudou"
