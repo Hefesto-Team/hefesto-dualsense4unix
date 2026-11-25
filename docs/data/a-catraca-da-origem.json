@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1327003,
+      "piso": 1328081,
       "por_item": {
-        "docs": 108022,
-        "scripts": 122921,
-        "src": 328148,
-        "tests": 767912
+        "docs": 108034,
+        "scripts": 122925,
+        "src": 328467,
+        "tests": 768655
       },
-      "razao": "tamanho: +872 linhas (1326131 -> 1327003), pagas por Origem: D-2511-A-BANDEJA-AVISA-QUANDO-NAO-APARECE, D-2511-A-JANELA-ABRE-EM-QUALQUER-INSTALACAO, D-2511-O-MAPA-DO-CONTROLE-NAO-RELE-OS-PERFIS; registrado no fecho, topo a711e864dfa2",
+      "razao": "tamanho: +1078 linhas (1327003 -> 1328081), pagas por Origem: D-2511-A-CHAVE-DA-EXTENSAO-OBEDECE-AO-QUE-A-TELA-MOSTRA, D-2511-O-TETO-DA-EXTENSAO-E-DE-CADA-BRINQUEDO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 167e47f7a801",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2607,10 +2607,16 @@
           "de": 1326131,
           "para": 1327003,
           "razao": "tamanho: +872 linhas (1326131 -> 1327003), pagas por Origem: D-2511-A-BANDEJA-AVISA-QUANDO-NAO-APARECE, D-2511-A-JANELA-ABRE-EM-QUALQUER-INSTALACAO, D-2511-O-MAPA-DO-CONTROLE-NAO-RELE-OS-PERFIS; registrado no fecho, topo a711e864dfa2"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1327003,
+          "para": 1328081,
+          "razao": "tamanho: +1078 linhas (1327003 -> 1328081), pagas por Origem: D-2511-A-CHAVE-DA-EXTENSAO-OBEDECE-AO-QUE-A-TELA-MOSTRA, D-2511-O-TETO-DA-EXTENSAO-E-DE-CADA-BRINQUEDO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 167e47f7a801"
         }
       ],
       "unidade": "linhas",
-      "universo": 3706
+      "universo": 3709
     }
   }
 }
