@@ -40,13 +40,16 @@ def test_o_salvar_fica_de_fora_em_toda_aba(pagina: str) -> None:
 
 
 def test_o_coringa_nao_isenta_o_que_nao_pediu() -> None:
-    """O ``("*", …)`` isenta o gesto NOMEADO, e nada mais."""
+    """O ``("*", …)`` isenta o gesto NOMEADO, e nada mais.
+
+    O «Importar» do rodapé grava pelo ``save_profile`` e por isso é um coringa nomeado.
+    """
     vistos, pulados = regua_do_mockup._alvos_a_clicar(
         [_Gesto("aplicar"), _Gesto("exportar"), _Gesto("importar")],
         {"aplicar", "exportar", "importar"},
         "01-jogar.html", hefesto_vivo.PERIGOSOS)
-    assert pulados == [], f"o coringa vazou para {pulados}"
-    assert set(vistos) == {"aplicar", "exportar", "importar"}
+    assert pulados == ["importar"], f"o coringa vazou para {pulados}"
+    assert set(vistos) == {"aplicar", "exportar"}
 
 
 def test_a_isencao_por_pagina_continua_valendo() -> None:
