@@ -187,7 +187,9 @@ def test_o_aparelho_cala_a_linha_com_o_programa_com_o_jogo_aberto(
 def test_o_de_fabrica_nao_escapa_nos_seis_que_o_mouse_refazia(
     monkeypatch: pytest.MonkeyPatch, linha: str,
 ) -> None:
-    """Sem o gravado o de fábrica emite (o controle da régua): o silêncio vem da leitura."""
+    """D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA.
+
+    Sem o gravado o de fábrica emite (o controle da régua): o silêncio vem da leitura."""
     sem_nada = _no_computador(monkeypatch, linha, acoes.padrao()[linha])
     assert [e for e in sem_nada if e[1] == 1], f"{linha}: o de fábrica já não emite, a régua mente"
 
