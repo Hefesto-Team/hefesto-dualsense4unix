@@ -13,6 +13,7 @@ import json
 import os
 import select
 import socket as _socket
+import struct
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -21,7 +22,12 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController
 from hefesto_dualsense4unix.daemon import launch_env
-from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin, le_so_do_guardado
+from hefesto_dualsense4unix.daemon.ipc_handlers import (
+    Chamador,
+    IpcHandlersMixin,
+    chamador_de_agora,
+    le_so_do_guardado,
+)
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_CONTROLLER_DISCONNECTED,
@@ -270,6 +276,7 @@ class IpcServer(IpcHandlersMixin):
             return
         self._clientes.add(writer)
         self.store.bump("ipc.conexoes")
+        chamador_de_agora.set(Chamador(pid=_o_par_do_soquete(writer)))
         try:
             while not reader.at_eof():
                 raw = await asyncio.wait_for(reader.readline(), timeout=_TETO_DE_OCIOSIDADE_S)
@@ -399,6 +406,18 @@ def _o_cliente_ja_foi(writer: asyncio.StreamWriter) -> bool:
     return any(
         evento & (select.POLLHUP | select.POLLERR) for _fd, evento in sonda.poll(0)
     )
+
+
+def _o_par_do_soquete(writer: asyncio.StreamWriter) -> int | None:
+    """O PID de quem está do outro lado do soquete Unix (``SO_PEERCRED``); ilegível vale None."""
+    try:
+        sock = writer.get_extra_info("socket")
+        cru = sock.getsockopt(_socket.SOL_SOCKET, _socket.SO_PEERCRED, struct.calcsize("3i"))
+        pid = struct.unpack("3i", cru)[0]
+    except (OSError, AttributeError, struct.error) as exc:
+        logger.debug("ipc_par_do_soquete_ilegivel", err=repr(exc))
+        return None
+    return pid if pid > 0 else None
 
 
 def _json_rpc_result(req_id: Any, result: Any) -> bytes:

@@ -15,7 +15,7 @@ import os
 import time
 from collections.abc import Callable
 from contextvars import ContextVar
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from typing import TYPE_CHECKING, Any, Literal, cast, get_args, get_type_hints
 
 from hefesto_dualsense4unix.core import escritor_cru as _escritor_cru
@@ -3729,6 +3729,9 @@ class IpcHandlersMixin:
         weak = max(0, min(255, weak))
         strong = max(0, min(255, strong))
         uniq = _uniq_do_rumble(params, "rumble.set")
+        anotar_quem_pede_a_vibracao(
+            self, "rumble.set", uniq or uniq_do_alvo_de_output(self.controller), (weak, strong)
+        )
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if modo_nativo_manda_nos_motores(self.daemon):
             par_de_pe = getattr(daemon_cfg, "rumble_active", None)
@@ -3819,6 +3822,9 @@ class IpcHandlersMixin:
         )
 
         uniq = _uniq_do_rumble(params, "rumble.stop")
+        anotar_quem_pede_a_vibracao(
+            self, "rumble.stop", uniq or uniq_do_alvo_de_output(self.controller), ("parar",)
+        )
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         dono_de_agora = uniq if uniq is not None else uniq_do_alvo_de_output(self.controller)
         if modo_nativo_manda_nos_motores(self.daemon):
@@ -3874,6 +3880,7 @@ class IpcHandlersMixin:
         if not isinstance(enabled, bool):
             raise ValueError("rumble.passthrough exige 'enabled' boolean")
         uniq = _uniq_do_rumble(params, "rumble.passthrough")
+        anotar_quem_pede_a_vibracao(self, "rumble.passthrough", uniq, ("soltar", enabled))
         if enabled:
             daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
             if daemon_cfg is not None:
@@ -4006,6 +4013,9 @@ class IpcHandlersMixin:
         ControllerRumbleOverride.model_validate({**pedidos, **escolhas})
 
         alvo = uniq or self._uniq_do_primario()
+        anotar_quem_pede_a_vibracao(
+            self, "rumble.motores.set", alvo, tuple(sorted({**pedidos, **escolhas}.items()))
+        )
         if not alvo:
             return {
                 "status": "sem_controle",
@@ -6803,6 +6813,135 @@ def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
     if not isinstance(uniq, str) or not uniq.strip():
         raise ValueError(f"{metodo}: 'uniq' precisa ser o endereço do controle")
     return uniq.strip()
+
+
+_PROC = "/proc"
+_DESCONHECIDO = "desconhecido"
+_INTERNO = "interno"
+_TETO_DO_NOME = 60
+_TETO_DE_QUEM_PEDE = 64
+_INTERPRETES = ("python", "bash", "sh", "zsh", "node")
+
+
+@dataclass
+class Chamador:
+    """Quem está do outro lado da conexão do IPC: o PID do par do soquete, lido uma vez; o nome
+    se lê do ``/proc`` só na primeira vibração pedida e fica guardado. Ilegível é «desconhecido»."""
+
+    pid: int | None = None
+    _nome: str | None = None
+
+    @property
+    def nome(self) -> str:
+        if self._nome is None:
+            self._nome = nome_do_processo(self.pid)
+        return self._nome
+
+
+chamador_de_agora: ContextVar[Chamador | None] = ContextVar(
+    "hefesto_chamador_de_agora", default=None
+)
+"""Posta pelo servidor ao aceitar a conexão; vazia quando o pedido nasce dentro do serviço."""
+
+
+def nome_do_processo(pid: int | None) -> str:
+    """O nome curto do programa do ``pid``: o script ou módulo quando é um interpretador, o
+    executável nos demais; nunca levanta."""
+    if not isinstance(pid, int) or pid <= 0:
+        return _DESCONHECIDO
+    try:
+        with open(os.path.join(_PROC, str(pid), "cmdline"), "rb") as arq:
+            bruto = arq.read()
+    except OSError:
+        bruto = b""
+    argv = [a.decode("utf-8", "replace") for a in bruto.split(b"\0") if a]
+    nome = ""
+    if argv:
+        exe = os.path.basename(argv[0])
+        nome = exe
+        if exe.startswith(_INTERPRETES):
+            resto = argv[1:]
+            for i, arg in enumerate(resto):
+                if arg == "-m" and i + 1 < len(resto):
+                    nome = resto[i + 1]
+                    break
+                if not arg.startswith("-"):
+                    nome = os.path.basename(arg)
+                    break
+    if not nome:
+        try:
+            with open(os.path.join(_PROC, str(pid), "comm"), encoding="utf-8") as arq:
+                nome = arq.read().strip()
+        except OSError:
+            nome = ""
+    return nome[:_TETO_DO_NOME] or _DESCONHECIDO
+
+
+class QuemPedeAVibracao:
+    """O diário da vibração sem uma linha por pedido: por (controle, chamador) guarda o último
+    (método, par) e conta as repetições. Escreve uma linha quando o par muda e a contagem na
+    linha seguinte, nas potências de dois e ao mudar, nunca a cada pedido."""
+
+    def __init__(self) -> None:
+        self._vistos: dict[tuple[str, str, int | None], list[Any]] = {}
+
+    def anotar(
+        self, controle: str, chamador: Chamador | None, metodo: str, par: Any
+    ) -> None:
+        pid = chamador.pid if chamador is not None else None
+        nome = chamador.nome if chamador is not None else _INTERNO
+        chave = (controle, nome, pid)
+        visto = self._vistos.get(chave)
+        if visto is not None and visto[0] == (metodo, par):
+            visto[1] += 1
+            n = visto[1]
+            if n >= 2 and n & (n - 1) == 0:
+                visto[2] = n
+                self._escrever("vibracao_pedida_repetida", chave, metodo, par, repeticoes=n)
+            return
+        if visto is not None:
+            if visto[1] > visto[2]:
+                self._escrever(
+                    "vibracao_pedida_repetida", chave, visto[0][0], visto[0][1],
+                    repeticoes=visto[1],
+                )
+            del self._vistos[chave]
+        elif len(self._vistos) >= _TETO_DE_QUEM_PEDE:
+            self._vistos.pop(next(iter(self._vistos)))
+        self._vistos[chave] = [(metodo, par), 0, 0]
+        self._escrever("vibracao_pedida_por", chave, metodo, par)
+
+    @staticmethod
+    def _escrever(
+        evento: str, chave: tuple[str, str, int | None], metodo: str, par: Any, **extra: Any
+    ) -> None:
+        controle, nome, pid = chave
+        logger.info(
+            evento, chamador=nome, pid=pid, controle=controle, pedido=metodo, par=par, **extra
+        )
+
+
+def _controle_do_diario(uniq: str | None) -> str:
+    """O controle como o diário o diz: o endereço na máscara da casa; sem alvo, «todos»."""
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar, mascarar_endereco
+
+    if not uniq:
+        return "todos"
+    return mascarar_endereco(uniq) or mascarar(uniq)
+
+
+def anotar_quem_pede_a_vibracao(
+    handlers: Any, metodo: str, uniq: str | None, par: Any
+) -> None:
+    """Registra no diário quem pediu a vibração, uma linha por mudança. Nunca levanta."""
+    try:
+        registro = getattr(handlers, "_quem_pede_a_vibracao", None)
+        if registro is None:
+            registro = QuemPedeAVibracao()
+            handlers._quem_pede_a_vibracao = registro
+        registro.anotar(_controle_do_diario(uniq), chamador_de_agora.get(), metodo, par)
+    except Exception:
+        logger.debug("quem_pede_a_vibracao_falhou", exc_info=True)
 
 
 def _chaves_dos_assentos(registry: Any) -> set[str]:
