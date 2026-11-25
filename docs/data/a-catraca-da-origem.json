@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1321285,
+      "piso": 1321400,
       "por_item": {
         "docs": 108002,
         "scripts": 116862,
-        "src": 332703,
-        "tests": 763718
+        "src": 332727,
+        "tests": 763809
       },
-      "razao": "tamanho: +1 linhas (1321284 -> 1321285), pagas por Origem: D-1911-TODA-ACAO-DO-BOTAO-TEM-QUEM-A-FACA, D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo 37b58d831fbb",
+      "razao": "tamanho: +115 linhas (1321285 -> 1321400), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo e0598e108b85",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2523,6 +2523,12 @@
           "de": 1321284,
           "para": 1321285,
           "razao": "tamanho: +1 linhas (1321284 -> 1321285), pagas por Origem: D-1911-TODA-ACAO-DO-BOTAO-TEM-QUEM-A-FACA, D-2211-A-MISTURA-DA-HAPTICA-LIMITA-SEM-DEGRAU, D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-O-RUMBLE-FIXADO-A-ZERO-NAO-ENCHE-O-DIARIO, D-2211-O-ULTIMO-JOGO-SE-GRAVA-FORA-DO-FIO-DO-LACO, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo 37b58d831fbb"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1321285,
+          "para": 1321400,
+          "razao": "tamanho: +115 linhas (1321285 -> 1321400), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo e0598e108b85"
         }
       ],
       "unidade": "linhas",
