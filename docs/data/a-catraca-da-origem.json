@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1324060,
+      "piso": 1324516,
       "por_item": {
-        "docs": 108012,
-        "scripts": 117173,
-        "src": 333214,
-        "tests": 765661
+        "docs": 108014,
+        "scripts": 117307,
+        "src": 333226,
+        "tests": 765969
       },
-      "razao": "tamanho: +386 linhas (1323674 -> 1324060), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo b12745f0db86",
+      "razao": "tamanho: +456 linhas (1324060 -> 1324516), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-A-NOTA-DE-VERSAO-DIZ-SO-O-QUE-MUDA-PARA-QUEM-USA, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 2df833cad805",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2577,10 +2577,16 @@
           "de": 1323674,
           "para": 1324060,
           "razao": "tamanho: +386 linhas (1323674 -> 1324060), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo b12745f0db86"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1324060,
+          "para": 1324516,
+          "razao": "tamanho: +456 linhas (1324060 -> 1324516), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-A-NOTA-DE-VERSAO-DIZ-SO-O-QUE-MUDA-PARA-QUEM-USA, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 2df833cad805"
         }
       ],
       "unidade": "linhas",
-      "universo": 3698
+      "universo": 3699
     }
   }
 }
