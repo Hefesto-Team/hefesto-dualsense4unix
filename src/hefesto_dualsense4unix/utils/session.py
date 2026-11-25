@@ -22,6 +22,7 @@ Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 from __future__ import annotations
 
 import contextlib
+import itertools
 import json
 import os
 import time
@@ -32,7 +33,12 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
+from hefesto_dualsense4unix.utils.escrita_inteira import (
+    escrever_inteiro,
+    esperar_a_fila,
+    gravar_sem_parar_o_laco,
+    no_fio_do_laco,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.nomes_gravados import MARCA_DA_ESCOLHA, MARCA_DA_ESCOLHA_ANTIGA
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -249,6 +255,25 @@ def _ultimo_jogo_path() -> Path:
     return config_dir(ensure=True) / _ULTIMO_JOGO_FILE
 
 
+_PEDIDOS_DO_ULTIMO_JOGO = itertools.count()
+_PRAZO_DA_FILA_S = 5.0
+
+
+def _o_ultimo_jogo_fora_do_laco(trabalho: Callable[[], None]) -> None:
+    """Roda a gravação ou o apagar do último jogo sem parar o laço, e na ordem dos pedidos.
+
+    No fio de um laço do ``asyncio`` o trabalho vai para o gravador, com uma chave por pedido: a
+    fila não funde pedidos (o esquecer de um nome não pode engolir o lembrar de outro) e a ordem
+    em que o laço pediu é a do disco. Fora de um laço o trabalho roda aqui, depois dos pedidos
+    que o laço deixou na fila, para que o último pedido seja o último no disco.
+    """
+    if no_fio_do_laco():
+        gravar_sem_parar_o_laco(f"ultimo_jogo:{next(_PEDIDOS_DO_ULTIMO_JOGO)}", trabalho)
+        return
+    esperar_a_fila(_PRAZO_DA_FILA_S)
+    trabalho()
+
+
 def lembrar_o_ultimo_jogo(nome: str) -> None:
     """Grava o perfil do último jogo, o que o boot restaura antes da escolha.
 
@@ -262,12 +287,17 @@ def lembrar_o_ultimo_jogo(nome: str) -> None:
     """
     if not isinstance(nome, str) or not nome.strip() or _e_o_freestyle(nome):
         return
-    path = _ultimo_jogo_path()
-    try:
-        escrever_inteiro(path, json.dumps({_ULTIMO_JOGO_KEY: nome.strip()}, ensure_ascii=False))
-        logger.info("o_ultimo_jogo_lembrado", perfil=nome.strip())
-    except Exception as exc:
-        logger.debug("ultimo_jogo_save_failed", err=str(exc))
+    limpo = nome.strip()
+
+    def gravar() -> None:
+        try:
+            conteudo = json.dumps({_ULTIMO_JOGO_KEY: limpo}, ensure_ascii=False)
+            escrever_inteiro(_ultimo_jogo_path(), conteudo)
+            logger.info("o_ultimo_jogo_lembrado", perfil=limpo)
+        except Exception as exc:
+            logger.warning("o_ultimo_jogo_nao_gravado", perfil=limpo, err=str(exc))
+
+    _o_ultimo_jogo_fora_do_laco(gravar)
 
 
 def _ultimo_jogo_cru() -> str | None:
@@ -290,17 +320,26 @@ def o_ultimo_jogo() -> str | None:
 
 
 def esquecer_o_ultimo_jogo(nome: str | None = None) -> None:
-    """Apaga a memória do último jogo — toda, ou só se a memória aponta `nome` (pelo slug)."""
+    """Apaga a memória do último jogo — toda, ou só se a memória aponta `nome` (pelo slug).
+
+    No fio de um laço o apagar roda no gravador, depois dos pedidos que o laço fez antes.
+    """
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    atual = _ultimo_jogo_cru()
-    if atual is None:
-        return
-    if nome is not None and atual != nome and not mesmo_slug(atual, nome):
-        return
-    with contextlib.suppress(OSError):
-        (config_dir() / _ULTIMO_JOGO_FILE).unlink(missing_ok=True)
+    def apagar() -> None:
+        atual = _ultimo_jogo_cru()
+        if atual is None:
+            return
+        if nome is not None and atual != nome and not mesmo_slug(atual, nome):
+            return
+        try:
+            (config_dir() / _ULTIMO_JOGO_FILE).unlink(missing_ok=True)
+        except OSError as exc:
+            logger.warning("o_ultimo_jogo_nao_esquecido", perfil=atual, err=str(exc))
+            return
         logger.info("o_ultimo_jogo_esquecido", perfil=atual)
+
+    _o_ultimo_jogo_fora_do_laco(apagar)
 
 
 def o_jogo_em_cena_no_disco() -> int | None:
