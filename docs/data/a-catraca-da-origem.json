@@ -259,14 +259,14 @@
       "data": "2026-11-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1318824,
+      "piso": 1318877,
       "por_item": {
-        "docs": 107991,
+        "docs": 107993,
         "scripts": 116818,
-        "src": 332288,
-        "tests": 761727
+        "src": 332299,
+        "tests": 761767
       },
-      "razao": "tamanho: +273 linhas (1318551 -> 1318824), pagas por Origem: D-1510-O-JOGO-COM-TOQUE-PROPRIO-E-A-MASCARA-DUALSENSE; registrado no fecho, topo 95b806624c5a",
+      "razao": "tamanho: +53 linhas (1318824 -> 1318877), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo c95a4c47c3a4",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2493,10 +2493,16 @@
           "de": 1318551,
           "para": 1318824,
           "razao": "tamanho: +273 linhas (1318551 -> 1318824), pagas por Origem: D-1510-O-JOGO-COM-TOQUE-PROPRIO-E-A-MASCARA-DUALSENSE; registrado no fecho, topo 95b806624c5a"
+        },
+        {
+          "data": "2026-11-24",
+          "de": 1318824,
+          "para": 1318877,
+          "razao": "tamanho: +53 linhas (1318824 -> 1318877), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo c95a4c47c3a4"
         }
       ],
       "unidade": "linhas",
-      "universo": 3680
+      "universo": 3681
     }
   }
 }
