@@ -99,7 +99,7 @@ Quando algo não funcionar, comece por `hefesto-dualsense4unix doctor` e por [tr
 
 ## Contribuir
 
-Issues são bem-vindas, inclusive relatos de outras distribuições com a saída de `hefesto-dualsense4unix doctor`. Para mexer no código, abra uma issue antes: o pull request de quem ainda não contribuiu só é revisado depois dessa conversa. O guia está em [CONTRIBUTING.md](.github/CONTRIBUTING.md), e o projeto é escrito em português do Brasil. Se o Hefesto te ajuda, considere apoiar pelo [Patreon](https://www.patreon.com/Hefesto_Team).
+Issues são bem-vindas, inclusive relatos de outras distribuições com a saída de `hefesto-dualsense4unix doctor --para-colar`, que não traz o endereço do controle nem o nome da sua conta. Para mexer no código, abra uma issue antes: o pull request de quem ainda não contribuiu só é revisado depois dessa conversa. O guia está em [CONTRIBUTING.md](.github/CONTRIBUTING.md), e o projeto é escrito em português do Brasil. Se o Hefesto te ajuda, considere apoiar pelo [Patreon](https://www.patreon.com/Hefesto_Team).
 
 ## Licença
 

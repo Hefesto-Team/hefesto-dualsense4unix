@@ -379,7 +379,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT": (
         "Desliga a detecção de janela em foco (`HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT` em "
-        "`src/hefesto_dualsense4unix/cli/app.py:361`, "
+        "`src/hefesto_dualsense4unix/cli/app.py:373`, "
         "`HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT` em "
         "`src/hefesto_dualsense4unix/profiles/autoswitch.py:212`). Existe para o teste do "
         "autoswitch "
@@ -400,7 +400,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "`src/hefesto_dualsense4unix/daemon/main.py:120`). Já é escolha "
         "publicada "
         "por OUTRA porta — `--poll-hz` do subcomando `daemon start` "
-        "(`poll_hz` em `src/hefesto_dualsense4unix/cli/app.py:342`). A env é o atalho de ensaio "
+        "(`poll_hz` em `src/hefesto_dualsense4unix/cli/app.py:354`). A env é o atalho de ensaio "
         "para o mesmo "
         "número. "
         "MEDIDO em 12/08/2026."

@@ -206,12 +206,12 @@ Para anexar a uma issue:
 ```bash
 { grep PRETTY_NAME /etc/os-release; uname -r; echo "$XDG_CURRENT_DESKTOP / $XDG_SESSION_TYPE"
   hefesto-dualsense4unix version; lsusb | grep -i 054c; ls -l /dev/hidraw* /dev/uinput
-  hefesto-dualsense4unix doctor
+  hefesto-dualsense4unix doctor --para-colar
   journalctl --user -u hefesto-dualsense4unix.service -n 30 --no-pager; } > diagnostico.txt 2>&1
 ```
 
-Tire do arquivo o que for da sua máquina (nome de usuário, endereços dos
-controles) antes de publicar.
+O `doctor --para-colar` já sai sem endereço de controle e sem o nome da sua
+conta. Leia o arquivo todo antes de publicar.
 
 Veja também [as nove abas](AS-NOVE-ABAS-o-que-cada-uma-faz.md) e
 [o 8BitDo](troubleshooting-8bitdo.md).

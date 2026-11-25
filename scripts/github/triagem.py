@@ -26,7 +26,17 @@ MINIMO_DE_LETRAS = 20
 COMENTARIO = (
     "Obrigado pelo relato. Para a gente conseguir repetir o problema, falta a saída do comando abaixo. "
     "Rode no terminal, edite a issue e cole o resultado no campo «Saída do doctor»:\n\n"
-    "```\nhefesto-dualsense4unix doctor\n```\n"
+    "```\nhefesto-dualsense4unix doctor --para-colar\n```\n"
+)
+COMENTARIO_DO_ENDERECO = (
+    "Obrigado pelo relato. A saída colada no campo «Saída do doctor» traz o endereço inteiro de um "
+    "controle ou do adaptador, e a issue é pública. Rode o comando abaixo no terminal, edite a issue "
+    "e troque o campo pelo resultado, que sai sem endereço e sem o nome da sua conta:\n\n"
+    "```\nhefesto-dualsense4unix doctor --para-colar\n```\n"
+)
+ENDERECO_INTEIRO = re.compile(
+    r"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})([:\-_.])([0-9A-Fa-f]{2})\2([0-9A-Fa-f]{2})\2"
+    r"([0-9A-Fa-f]{2})\2([0-9A-Fa-f]{2})\2([0-9A-Fa-f]{2})(?![0-9A-Fa-f])"
 )
 
 
@@ -40,8 +50,19 @@ def saida_do_campo(corpo: str) -> str | None:
     return texto.strip()
 
 
+def tem_endereco_inteiro(texto: str) -> bool:
+    """Há um endereço de aparelho com os octetos 4 e 5 à mostra (a máscara da casa os zera)."""
+    return any(
+        (a.group(5), a.group(6)) != ("00", "00") for a in ENDERECO_INTEIRO.finditer(texto)
+    )
+
+
 def decidir(corpo: str, rotulos: list[str], acao: str) -> dict[str, Any]:
-    """O que fazer com a issue: `adicionar`, `remover` e `comentar` (só ao abrir)."""
+    """O que fazer com a issue: `adicionar`, `remover` e `comentar` (só ao abrir).
+
+    O campo com endereço de controle inteiro também ganha o rótulo, e `endereco` pede o comentário
+    que manda editar a issue com a saída de `--para-colar`.
+    """
     pede = any(r in rotulos for r in ROTULOS_QUE_PEDEM) or saida_do_campo(corpo) is not None
     if not pede:
         return {"adicionar": [], "remover": [], "comentar": False}
@@ -49,7 +70,13 @@ def decidir(corpo: str, rotulos: list[str], acao: str) -> dict[str, Any]:
     falta = saida is None or saida.lower() in SEM_RESPOSTA or len(saida) < MINIMO_DE_LETRAS
     if falta and ROTULO not in rotulos:
         return {"adicionar": [ROTULO], "remover": [], "comentar": acao == "opened"}
-    if not falta and ROTULO in rotulos:
+    if falta:
+        return {"adicionar": [], "remover": [], "comentar": False}
+    if saida is not None and tem_endereco_inteiro(saida):
+        if ROTULO in rotulos:
+            return {"adicionar": [], "remover": [], "comentar": False}
+        return {"adicionar": [ROTULO], "remover": [], "comentar": True, "endereco": True}
+    if ROTULO in rotulos:
         return {"adicionar": [], "remover": [ROTULO], "comentar": False}
     return {"adicionar": [], "remover": [], "comentar": False}
 
@@ -80,7 +107,10 @@ def principal(argv: list[str] | None = None) -> int:
     for r in d["remover"]:
         _gh("issue", "edit", numero, "--repo", a.repo, "--remove-label", r)
     if d["comentar"]:
-        _gh("issue", "comment", numero, "--repo", a.repo, "--body", COMENTARIO)
+        _gh(
+            "issue", "comment", numero, "--repo", a.repo, "--body",
+            COMENTARIO_DO_ENDERECO if d.get("endereco") else COMENTARIO,
+        )
     return 0
 
 

@@ -48,7 +48,7 @@ body:
     id: doctor
     attributes:
       label: Saída do doctor
-      description: Rode `hefesto-dualsense4unix doctor` com o jogo aberto e cole o resultado aqui.
+      description: Rode `hefesto-dualsense4unix doctor --para-colar` com o jogo aberto e cole o resultado aqui. Essa saída não traz o endereço do controle nem o nome da sua conta.
       render: shell
     validations:
       required: true

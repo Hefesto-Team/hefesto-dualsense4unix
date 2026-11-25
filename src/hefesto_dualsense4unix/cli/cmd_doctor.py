@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import getpass
 import re
 import subprocess
+import sys
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -15,6 +17,7 @@ from rich.console import Console
 
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.daemon.subsystems.diario_do_corpo import (
     CHAVE_DO_SURDO,
     FALA_DA_RECUSA,
@@ -33,14 +36,49 @@ _GRAVIDADE_FAIL = 2
 
 @dataclass
 class _Saida:
-    """O que o ``--quiet`` e o ``--json`` pedem de todo bloco em Python."""
+    """O que o ``--quiet``, o ``--json`` e o ``--para-colar`` pedem de toda linha."""
 
     quiet: bool = False
     como_json: bool = False
+    para_colar: bool = False
     achados: list[dict[str, str]] = field(default_factory=list)
 
 
 _SAIDA = _Saida()
+
+_CONTAS_QUE_NAO_SE_ESCONDEM = {"root"}
+_MENOS_LETRAS_QUE_ISSO_E_PALAVRA = 3
+
+
+def _na_mascara(texto: str) -> str:
+    """O texto como sai com ``--para-colar``: nenhum endereço inteiro, o home em ``~``, sem a conta.
+
+    Sem a opção devolve o texto igual: o comando de cura que o doctor sugere precisa do endereço
+    inteiro.
+    """
+    if not _SAIDA.para_colar:
+        return texto
+    casa = str(Path.home())
+    conta = getpass.getuser()
+    if casa not in ("", "/"):
+        texto = texto.replace(casa, "~")
+    if conta not in _CONTAS_QUE_NAO_SE_ESCONDEM and len(conta) >= _MENOS_LETRAS_QUE_ISSO_E_PALAVRA:
+        texto = re.sub(rf"(?<![\w.-]){re.escape(conta)}(?![\w-])", "<conta>", texto)
+    return mascarar(texto)
+
+
+def _executar(args: list[str]) -> int:
+    """Roda o comando e devolve o código; com ``--para-colar`` cada linha sai pela máscara."""
+    if not _SAIDA.para_colar:
+        return subprocess.run(args, check=False).returncode
+    with subprocess.Popen(
+        args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace"
+    ) as processo:
+        assert processo.stdout is not None
+        for linha in processo.stdout:
+            sys.stdout.write(_na_mascara(linha))
+            sys.stdout.flush()
+        return processo.wait()
 
 
 def _bloco(titulo: str, linhas: Iterable[tuple[str, str]], **como_imprimir: Any) -> None:
@@ -49,7 +87,7 @@ def _bloco(titulo: str, linhas: Iterable[tuple[str, str]], **como_imprimir: Any)
     ``--quiet`` descarta as linhas ``[ OK ]`` e o cabeçalho que ficou sem linha; ``--json`` junta
     ``{bloco, tag, mensagem}`` em ``_SAIDA.achados`` e não imprime nada.
     """
-    linhas = list(linhas)
+    linhas = [(tag, _na_mascara(mensagem)) for tag, mensagem in linhas]
     if _SAIDA.como_json:
         _SAIDA.achados.extend(
             {"bloco": titulo, "tag": _o_nome_da_tag(tag), "mensagem": mensagem}
@@ -98,7 +136,8 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
     console.print(f"[yellow]{relpath} não veio nesta instalação — {consequencia}[/yellow]")
     console.print("[dim]       procurei o share do Hefesto em:[/dim]")
     for base in bases_de_instalacao():
-        console.print(f"[dim]         {base}[/dim]", soft_wrap=True, highlight=False)
+        onde = _na_mascara(str(base))
+        console.print(f"[dim]         {onde}[/dim]", soft_wrap=True, highlight=False)
 
 
 _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
@@ -425,7 +464,7 @@ def _run_script(relpath: str, *args: str, confirm: str | None = None) -> int:
     if confirm is not None and not typer.confirm(confirm):
         console.print("[dim]cancelado.[/dim]")
         return 0
-    return subprocess.run(["bash", str(script), *args], check=False).returncode
+    return _executar(["bash", str(script), *args])
 
 
 async def _state_full_ou_none() -> dict[str, Any] | None:
@@ -599,7 +638,7 @@ def _rodar_o_doctor_sh(fix: bool, quiet: bool) -> int:
         args.append("--fix")
     if quiet:
         args.append("--quiet")
-    return _GRAVIDADE_FAIL if subprocess.run(args, check=False).returncode else 0
+    return _GRAVIDADE_FAIL if _executar(args) else 0
 
 
 def _rodar_o_doctor(
@@ -651,17 +690,22 @@ def doctor_cmd(
     fix_safe: bool = False,
     perfis: bool = False,
     como_json: bool = False,
+    para_colar: bool = False,
 ) -> None:
     """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon.
 
     ``como_json`` imprime só os blocos em Python como lista de ``{bloco, tag, mensagem}``: o
-    `doctor.sh` e o ``--fix-safe`` falam em texto e ficam de fora.
+    `doctor.sh` e o ``--fix-safe`` falam em texto e ficam de fora. ``para_colar`` passa toda linha
+    pela máscara da casa (nenhum endereço inteiro, o home em ``~``, sem o nome da conta): é a saída
+    que um relato público pede.
     """
     _SAIDA.quiet, _SAIDA.como_json, _SAIDA.achados = quiet, como_json, []
+    _SAIDA.para_colar = para_colar
     try:
         _rodar_o_doctor(fix, quiet, fix_safe, perfis, como_json)
     finally:
         _SAIDA.quiet, _SAIDA.como_json, _SAIDA.achados = False, False, []
+        _SAIDA.para_colar = False
 
 
 __all__ = ["doctor_cmd"]
