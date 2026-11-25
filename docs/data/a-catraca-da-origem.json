@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1323674,
+      "piso": 1324060,
       "por_item": {
-        "docs": 108011,
-        "scripts": 116954,
+        "docs": 108012,
+        "scripts": 117173,
         "src": 333214,
-        "tests": 765495
+        "tests": 765661
       },
-      "razao": "tamanho: +885 linhas (1322789 -> 1323674), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 60e9d7f79913",
+      "razao": "tamanho: +386 linhas (1323674 -> 1324060), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo b12745f0db86",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2571,10 +2571,16 @@
           "de": 1322789,
           "para": 1323674,
           "razao": "tamanho: +885 linhas (1322789 -> 1323674), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo 60e9d7f79913"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1323674,
+          "para": 1324060,
+          "razao": "tamanho: +386 linhas (1323674 -> 1324060), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID, D-2011-O-TESTE-ESPERA-O-EVENTO-QUE-PROVA-E-NAO-CONTA-VOLTAS, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-DOCTOR-DA-UM-VEREDITO-SO, D-2511-O-DOCTOR-PARA-COLAR-SAI-NA-MASCARA, D-2511-O-PEDIDO-AO-SERVICO-REPETIDO-ANTES-DA-RESPOSTA-E-O-MESMO-PEDIDO; registrado no fecho, topo b12745f0db86"
         }
       ],
       "unidade": "linhas",
-      "universo": 3696
+      "universo": 3698
     }
   }
 }
