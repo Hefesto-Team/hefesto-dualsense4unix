@@ -136,6 +136,7 @@ def test_o_adaptador_em_que_ele_estava_no_ar_vem_primeiro(
     central = _central(dono, mundo, relogio)
     central._onde_caiu[VERMELHO] = QUARTO
     mundo.dormindo.add(VERMELHO)
+    _mexer(dono, VERMELHO)
     mundo.desligar(VERMELHO)
 
     _andar(central, relogio, 6)
@@ -220,9 +221,14 @@ def test_quem_esta_no_ar_ou_no_cabo_nao_recebe_connect(
     assert mundo.connects() == []
 
 
+def _mexer(dono: bd.DonoVivo, aparelho: str) -> None:
+    """O laço leu o controle com um botão mexido: ele estava em uso quando saiu."""
+    dono._vaga.observar({aparelho.lower(): frozenset({"cross"})})
+
+
 @pytest.mark.parametrize("razao,gesto,chama", [
     (bd.RAZAO_TIMEOUT, False, True),
-    ("", False, True),
+    ("", False, False),
     (bd.RAZAO_DO_CONTROLE, False, False),
     (bd.RAZAO_DAQUI, False, False),
     (bd.RAZAO_TIMEOUT, True, False),
@@ -252,6 +258,7 @@ def test_a_queda_logo_depois_do_aviso_nao_se_perde_com_o_kernel_atrasado(
     mundo.pareado(SALA, VERMELHO, conectado=True)
     central = _central(dono, mundo, relogio, no_cabo)
     no_cabo.add(VERMELHO)
+    _mexer(dono, VERMELHO)
     mundo.desligar(VERMELHO)
     central.religar()
     no_cabo.clear()

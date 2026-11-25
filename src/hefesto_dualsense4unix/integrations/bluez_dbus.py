@@ -81,6 +81,7 @@ BOTOES_DA_VAGA = frozenset({"cross", "circle", "square", "triangle"})
 SEGURADO_DA_VAGA_S = 2.0
 JANELA_DA_VAGA_S = 3.0
 TIQUE_LIDO_VALE_ATE_S = 1.0
+MEXIA_ATE_CAIR_S = 30.0
 
 ESPERA_DO_BUSCTL_S = 5.0
 ESPERA_PARA_ACORDAR_S = 10.0
@@ -1494,6 +1495,8 @@ class VigiaDaVaga:
         self._valeu_em: dict[str, float] = {}
         self._ps_desde: dict[str, float] = {}
         self._lido_em: dict[str, float] = {}
+        self._botoes_vistos: dict[str, frozenset[object]] = {}
+        self._mexeu_em: dict[str, float] = {}
 
     @staticmethod
     def _botao_da_vaga(botoes: object) -> str | None:
@@ -1531,7 +1534,12 @@ class VigiaDaVaga:
     def _ler_o_ps(self, endereco: str, botoes: object, agora: float) -> None:
         """Um tique lido deste controle: o PS segurado desde quando, ou solto. Com a tranca."""
         self._lido_em[endereco] = agora
-        apertados = frozenset(botoes) if isinstance(botoes, (set, frozenset, list, tuple)) else ()
+        apertados: frozenset[object] = (
+            frozenset(botoes) if isinstance(botoes, (set, frozenset, list, tuple)) else frozenset()
+        )
+        if apertados != self._botoes_vistos.get(endereco, frozenset()):
+            self._botoes_vistos[endereco] = apertados
+            self._mexeu_em[endereco] = agora
         if "ps" in apertados:
             self._ps_desde.setdefault(endereco, agora)
         else:
@@ -1546,6 +1554,22 @@ class VigiaDaVaga:
         if lido_em is None or agora - lido_em > TIQUE_LIDO_VALE_ATE_S:
             return None
         return 0.0 if desde is None else max(0.0, lido_em - desde)
+
+    def mexia(self, endereco: str, *, ate_s: float = MEXIA_ATE_CAIR_S) -> bool:
+        """O controle estava em uso quando saiu: botão mexido há menos de ``ate_s`` e o PS solto.
+
+        Sem tique lido há menos de `TIQUE_LIDO_VALE_ATE_S`, ou com o PS segurado no último tique
+        (o desligar na mão), responde ``False``. Esquece o controle: a pergunta é da saída.
+        """
+        agora = self._relogio()
+        with self._tranca:
+            lido_em = self._lido_em.get(endereco)
+            segurava_o_ps = endereco in self._ps_desde
+            mexeu_em = self._mexeu_em.pop(endereco, None)
+            self._botoes_vistos.pop(endereco, None)
+        if lido_em is None or agora - lido_em > TIQUE_LIDO_VALE_ATE_S or segurava_o_ps:
+            return False
+        return mexeu_em is not None and agora - mexeu_em <= ate_s
 
     def tomar(self, endereco: str) -> bool:
         """O gesto valeu há pouco neste controle? Pergunta de uma vez só: ele se gasta."""
@@ -1599,6 +1623,7 @@ class DonoVivo(LeitorDoBluez):
         self._vaga = vaga or _VAGA
         self._razoes: dict[str, str] = {}
         self._saidas: dict[str, str] = {}
+        self._viu_a_razao = False
         self.toca_o_sistema = bool(getattr(barramento, "e_do_sistema", False))
         self._kernel = kernel
         self._lugares_de = lugares
@@ -1702,6 +1727,7 @@ class DonoVivo(LeitorDoBluez):
                 self._entradas[sinal.caminho] = self._entradas.get(sinal.caminho, 0) + 1
         elif sinal.tipo == "desconectou":
             self._razoes[sinal.caminho] = sinal.razao
+            self._viu_a_razao = True
         elif sinal.tipo == "saiu":
             self._razoes.pop(sinal.caminho, None)
             restante = self._objetos.get(sinal.caminho)
@@ -1737,20 +1763,26 @@ class DonoVivo(LeitorDoBluez):
         razao = self._razoes.pop(caminho, "")
         saida = a_saida(razao, gesto_da_vaga=self._vaga.tomar(quem["aparelho"]))
         self._saidas[quem["aparelho"]] = saida
+        entrega_a_razao = self._viu_a_razao or bool(razao)
+        mexia = self._vaga.mexia(quem["aparelho"])
         segurado = self._vaga.ps_segurado(quem["aparelho"])
         _registrar(
             "bluez_controle_saiu",
             saida=saida,
             razao=razao,
+            entrega_a_razao=entrega_a_razao,
+            mexia=mexia,
             hci=hci_do_aparelho(caminho) or "",
             uniq=quem["aparelho"],
             adaptador=_mac(quem["adaptador"]) or "",
             **({"ps_segurado": "nao_lido"} if segurado is None
                else {"ps_segurado_s": round(segurado, 1)}),
         )
+        indicios = {"entrega_a_razao": entrega_a_razao, "mexia": mexia}
         if saida == SAIDA_OUTRO_APARELHO:
-            return {**quem, "razao": razao, "saida": saida, "frase": FRASE_OUTRO_APARELHO}
-        return {**quem, "razao": razao, "saida": saida}
+            return {**quem, "razao": razao, "saida": saida, "frase": FRASE_OUTRO_APARELHO,
+                    **indicios}
+        return {**quem, "razao": razao, "saida": saida, **indicios}
 
     def como_saiu(self, endereco: str) -> str | None:
         """Como este controle saiu (``SAIDA_*``); ``None`` se ele voltou ou não saiu."""

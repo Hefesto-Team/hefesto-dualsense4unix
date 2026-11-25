@@ -137,6 +137,7 @@ from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     PONTE_INSTALADA,
     PedidoAPonte,
+    PontePrivilegiada,
     mac_limpo,
     pedido_a_ponte,
 )
@@ -233,7 +234,11 @@ ESPERA_DO_CONNECT_DO_RELIGADOR_S = 6.0
 
 ESPERA_DA_TRAVA_DO_RELIGADOR_S = 0.5
 
-SAIDAS_QUE_RELIGAM = frozenset({bluez_dbus.SAIDA_CAIU, bluez_dbus.SAIDA_SEM_RAZAO})
+_NUNCA_PERGUNTADA = object()
+
+SAIDAS_QUE_RELIGAM = frozenset({bluez_dbus.SAIDA_CAIU})
+
+SAIDAS_QUE_RELIGAM_COM_INDICIO = frozenset({bluez_dbus.SAIDA_SEM_RAZAO})
 
 _TODOS_OS_CAIDOS = "*"
 
@@ -616,6 +621,7 @@ class CentralDoRadio:
         no_kernel: Callable[[str], bool | None] | None = None,
         movimento: Movimentacao | None = None,
         esquecer_na_ponte: EsquecerNaPonte | None = None,
+        ponte: PontePrivilegiada | None = None,
         abrir_janela: AbrirJanela | None = None,
         nomes: GuardaDosNomes | None = None,
         sysfs: Mapping[str, Any] | None = None,
@@ -631,7 +637,10 @@ class CentralDoRadio:
         self._onde_esta = onde_esta or _onde_esta_pelo_hid_phys
         self._no_kernel = no_kernel or tem_hid_no_kernel
         self._movimento = movimento
-        self._esquecer_na_ponte = esquecer_na_ponte or esquecer_pela_ponte
+        self._ponte = ponte
+        self._firma_da_ponte: object = _NUNCA_PERGUNTADA
+        self._impedimentos_da_ponte: list[str] = []
+        self._esquecer_na_ponte = esquecer_na_ponte or self._esquecer_se_a_ponte_deixa
         self._abrir_janela = abrir_janela or _janela_de_busca
         self._nomes: GuardaDosNomes = nomes if nomes is not None else NomesNaMaquina()
         self._alias_vistos: dict[str, str] = {}
@@ -724,8 +733,15 @@ class CentralDoRadio:
         with self._tranca_da_limpeza:
             if adaptador is not None:
                 self._onde_caiu[aparelho] = adaptador
-        if dados.get("saida") in SAIDAS_QUE_RELIGAM:
+        saida = dados.get("saida")
+        if saida in SAIDAS_QUE_RELIGAM or (
+            saida in SAIDAS_QUE_RELIGAM_COM_INDICIO
+            and (dados.get("entrega_a_razao") or dados.get("mexia"))
+        ):
             self.pedir_o_religador(aparelho)
+        elif saida in SAIDAS_QUE_RELIGAM_COM_INDICIO:
+            logger.info("central_religador_nao_chamou", aparelho=mascarar(aparelho),
+                        por_que="saiu sem razão do BlueZ e parado")
 
     def pedir_o_religador(self, aparelho: str = _TODOS_OS_CAIDOS) -> None:
         """Abre a janela de ``aparelho``, ou de todo controle caído, na volta seguinte."""
@@ -2368,14 +2384,49 @@ class CentralDoRadio:
             logger.warning("central_diario_nao_gravou", exc_info=True)
         return sai, aparelho
 
+    def _esquecer_se_a_ponte_deixa(self, adaptador: str, aparelho: str) -> tuple[bool, str]:
+        """O verbo ``esquecer`` da ponte, só se a ponte deixa: sem a regra do sudo, nem tenta."""
+        motivos = self._impedimentos_do_esquecer(adaptador, aparelho)
+        if motivos:
+            return False, "; ".join(motivos)
+        return esquecer_pela_ponte(adaptador, aparelho)
+
+    def _impedimentos_do_esquecer(self, adaptador: str, aparelho: str) -> list[str]:
+        """Os impedimentos da ponte para o ``esquecer``, perguntados de novo só quando a firma muda.
+
+        A firma é a da ponte e da pasta da regra do sudoers: o instalador que corrige o impedimento
+        a muda. A pergunta é a mesma dos gestos da tela (``PontePrivilegiada``); sob a suíte, sem
+        ponte injetada, não se pergunta ao sudo de verdade.
+        """
+        ponte = self._ponte
+        if ponte is None:
+            if bluez_dbus.a_suite_esta_rodando():
+                return []
+            ponte = PontePrivilegiada()
+        firma = ponte.firma()
+        with self._tranca_da_limpeza:
+            if firma == self._firma_da_ponte:
+                return list(self._impedimentos_da_ponte)
+        try:
+            pedido = pedido_a_ponte("esquecer", adaptador, aparelho)
+        except ValueError:
+            return []
+        motivos = ponte.impedimentos_do_pedido(pedido)
+        with self._tranca_da_limpeza:
+            self._firma_da_ponte = firma
+            self._impedimentos_da_ponte = list(motivos)
+        with self._tranca:
+            self._sem_lapide_dito.clear()
+        return list(motivos)
+
     def _nao_limpou(self, sai: str, aparelho: str, fica: str, motivo: str) -> None:
-        """A ponte não enterrou a sobra: nada sai, e o diário diz UMA vez por par."""
-        logger.warning("central_sobra_sem_lapide", aparelho=mascarar(aparelho),
-                       adaptador=mascarar(sai), motivo=str(motivo)[:200])
+        """A ponte não enterrou a sobra: nada sai, e o log e o diário dizem UMA vez por par."""
         with self._tranca:
             if (sai, aparelho) in self._sem_lapide_dito:
                 return
             self._sem_lapide_dito.add((sai, aparelho))
+        logger.warning("central_sobra_sem_lapide", aparelho=mascarar(aparelho),
+                       adaptador=mascarar(sai), motivo=str(motivo)[:200])
         try:
             from hefesto_dualsense4unix.integrations import diario_do_radio
 
