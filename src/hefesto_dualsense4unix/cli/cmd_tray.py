@@ -100,13 +100,16 @@ def _reconectar_os_controles() -> bool:
     return primeiro and segundo
 
 
-def _sem_hospedeiro(sair: Any, sem_lugar: list[bool]) -> None:
-    """A sessão não tem quem hospede o ícone: diz, e encerra o processo que ficaria invisível."""
+def _sem_hospedeiro() -> None:
+    """A sessão ainda não tem quem hospede o ícone: diz, e o processo fica.
+
+    O AppIndicator se registra sozinho quando o `org.kde.StatusNotifierWatcher` nasce, e o painel
+    pode nascer depois da bandeja do login: sair aqui apagaria o ícone pela sessão inteira.
+    """
     console.print(
-        "[red]o ícone não tem onde aparecer[/] — "
-        "não há quem hospede o `org.kde.StatusNotifierWatcher` nesta sessão")
-    sem_lugar.append(True)
-    sair()
+        "[yellow]o ícone ainda não tem onde aparecer[/] — "
+        "não há quem hospede o `org.kde.StatusNotifierWatcher` nesta sessão; "
+        "ele aparece quando houver")
 
 
 def tray_cmd() -> None:
@@ -126,7 +129,6 @@ def tray_cmd() -> None:
     if not tomar_a_vez():
         console.print("já há um ícone na bandeja nesta sessão")
         raise typer.Exit(code=0)
-    sem_lugar: list[bool] = []
     bandeja = AppTray(
         on_show_window=_abrir_o_painel,
         on_quit=Gtk.main_quit,
@@ -136,7 +138,7 @@ def tray_cmd() -> None:
         on_set_modo=_definir_o_modo,
         on_reconectar=_reconectar_os_controles,
         on_servico=_servico,
-        on_sem_hospedeiro=lambda: _sem_hospedeiro(Gtk.main_quit, sem_lugar),
+        on_sem_hospedeiro=_sem_hospedeiro,
     )
     if not bandeja.start():
         soltar_a_vez()
@@ -153,8 +155,6 @@ def tray_cmd() -> None:
     finally:
         bandeja.stop()
         soltar_a_vez()
-    if sem_lugar:
-        raise typer.Exit(code=3)
 
 
 __all__ = ["tray_cmd"]

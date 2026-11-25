@@ -219,11 +219,32 @@ def test_o_plano_b_da_troca_chama_o_python_em_uso(monkeypatch: pytest.MonkeyPatc
                       "profile", "activate", "Corrida"]]
 
 
-def test_sem_hospedeiro_o_comando_diz_e_manda_sair(capsys: pytest.CaptureFixture[str]) -> None:
+def test_sem_hospedeiro_o_comando_diz_e_o_icone_fica(
+        monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    """MORDIDA: sair do laço sem hospedeiro apaga o ícone que o painel lento do login hospedaria."""
+    from hefesto_dualsense4unix.app import tray as mod_tray
     from hefesto_dualsense4unix.cli import cmd_tray
 
+    gtk = mod_tray.Gtk
+    montadas: list[dict[str, Any]] = []
     saidas: list[str] = []
-    achou: list[bool] = []
-    cmd_tray._sem_hospedeiro(lambda: saidas.append("sair"), achou)
-    assert saidas == ["sair"] and achou == [True]
+
+    class Bandeja:
+        def __init__(self, **kw: Any) -> None:
+            montadas.append(kw)
+
+        def start(self) -> bool:
+            return True
+
+        def stop(self) -> None:
+            saidas.append("stop")
+
+    monkeypatch.setattr(mod_tray, "AppTray", Bandeja)
+    monkeypatch.setattr(mod_tray, "probe_gi_availability", lambda: (True, ""))
+    monkeypatch.setattr(cmd_tray, "tomar_a_vez", lambda: True)
+    monkeypatch.setattr(cmd_tray, "soltar_a_vez", lambda: None)
+    monkeypatch.setattr(gtk, "main_quit", lambda: saidas.append("main_quit"))
+    monkeypatch.setattr(gtk, "main", lambda: montadas[0]["on_sem_hospedeiro"]())
+    cmd_tray.tray_cmd()
+    assert saidas == ["stop"]
     assert "não tem onde aparecer" in capsys.readouterr().out
