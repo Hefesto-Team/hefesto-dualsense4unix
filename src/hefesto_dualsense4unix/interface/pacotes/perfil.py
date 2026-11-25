@@ -161,9 +161,9 @@ def ativo(nome: str | None) -> dict[str, Any]:
         return {}
     alvo = arquivo(str(nome), onde)
     if alvo is not None:
+        texto = _texto_do_perfil(alvo)
         try:
-            texto = alvo.read_text(encoding="utf-8")
-            lido = json.loads(texto)
+            lido = json.loads(texto) if texto is not None else None
         except Exception:
             lido = None
         if isinstance(lido, dict):
@@ -225,18 +225,69 @@ CUSTO_QUE_SE_GUARDA_S = 0.001
 
 _ONDE_ACHOU: dict[tuple[str, str], tuple[tuple[Any, ...], float, pathlib.Path | None]] = {}
 
+_DAS_DUAS_PRIMEIRAS_PERNAS: dict[tuple[str, str], pathlib.Path] = {}
+
 _LIDO: dict[tuple[str, str], str] = {}
 
+_DO_DISCO: dict[tuple[str, str], tuple[tuple[int, int, int], str, dict[str, Any] | None]] = {}
 
-def _carimbo(p: pathlib.Path | None) -> tuple[int, int] | None:
-    """`(mtime_ns, tamanho)` de um caminho, ou ``None`` quando ele não está lá."""
+
+def _carimbo(p: pathlib.Path | None) -> tuple[int, int, int] | None:
+    """`(mtime_ns, tamanho, inode)` de um caminho, ou ``None`` quando ele não está lá.
+
+    O inode pega o perfil trocado por outro de mesmo tamanho dentro do mesmo tique do relógio do
+    disco: a gravação do loader troca o arquivo, e o inode muda.
+    """
     if p is None:
         return None
     try:
         st = p.stat()
     except OSError:
         return None
-    return (st.st_mtime_ns, st.st_size)
+    return (st.st_mtime_ns, st.st_size, st.st_ino)
+
+
+def _linha_da_lista(texto: str, arquivo: pathlib.Path) -> dict[str, Any] | None:
+    """A linha de `lista()` de um perfil, ou ``None`` quando o texto não é um perfil."""
+    try:
+        j = json.loads(texto)
+    except Exception:
+        return None
+    if not isinstance(j, dict):
+        return None
+    return {
+        "nome": j.get("name") or arquivo.stem,
+        "prioridade": j.get("priority", 0),
+        "casamento": (j.get("match") or {}).get("type", "criteria"),
+        "arquivo": arquivo.name,
+    }
+
+
+def _leitura_do_perfil(p: pathlib.Path) -> tuple[str, dict[str, Any] | None] | None:
+    """O texto e a linha da lista do arquivo de perfil `p`, ou ``None`` quando ele não abre.
+
+    O disco só é aberto quando o carimbo do arquivo mudou desde a última leitura: o tique de
+    100 ms, que pergunta pela mesma pasta dezenas de vezes, não reabre o que não mudou.
+    """
+    carimbo = _carimbo(p)
+    if carimbo is None:
+        return None
+    chave = (str(p.parent), p.name)
+    guardado = _DO_DISCO.get(chave)
+    if guardado is not None and guardado[0] == carimbo:
+        return guardado[1], guardado[2]
+    try:
+        texto = p.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    _DO_DISCO[chave] = (carimbo, texto, _linha_da_lista(texto, p))
+    return _DO_DISCO[chave][1], _DO_DISCO[chave][2]
+
+
+def _texto_do_perfil(p: pathlib.Path) -> str | None:
+    """O texto do arquivo de perfil `p`, pela memória enquanto o carimbo não muda."""
+    lido = _leitura_do_perfil(p)
+    return lido[0] if lido is not None else None
 
 
 def _assinatura_da_pasta(onde: pathlib.Path) -> tuple[Any, ...]:
@@ -249,6 +300,21 @@ def _assinatura_da_pasta(onde: pathlib.Path) -> tuple[Any, ...]:
 def _assinatura(onde: pathlib.Path, achado: pathlib.Path | None) -> tuple[Any, ...]:
     """O que muda quando a resposta de :func:`arquivo` pode ter mudado."""
     return (*_assinatura_da_pasta(onde), _carimbo(achado))
+
+
+def _ainda_vale_o_do_nome_ou_do_slug(
+    chave: tuple[str, str], direto: pathlib.Path,
+) -> pathlib.Path | None:
+    """O achado de antes, se for o `<nome>.json` ou o `<slug>.json` e a resposta não mudou.
+
+    As duas primeiras pernas do loader têm resposta exata sem varrer: o achado vale enquanto
+    existir e, sendo o do slug, enquanto o do nome não nascer. Custa dois `stat` por nome, e é o
+    que o tique paga por perfil.
+    """
+    achado = _DAS_DUAS_PRIMEIRAS_PERNAS.get(chave)
+    if achado is not None and achado.exists() and (achado == direto or not direto.exists()):
+        return achado
+    return None
 
 
 def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
@@ -280,6 +346,10 @@ def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
     if onde is None or not nome:
         return None
     chave = (str(onde), nome)
+    direto = onde / f"{nome}.json"
+    das_pernas = _ainda_vale_o_do_nome_ou_do_slug(chave, direto)
+    if das_pernas is not None:
+        return das_pernas
     guardado = _ONDE_ACHOU.pop(chave, None)
     if guardado is not None:
         assinatura, quando, achado = guardado
@@ -294,9 +364,22 @@ def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
         achado = loader.arquivo_do_perfil(nome, onde)
     except Exception:
         achado = None
+    pernas = (direto, onde / f"{_slug(nome)}.json")
+    if achado in pernas:
+        _DAS_DUAS_PRIMEIRAS_PERNAS[chave] = achado
     if time.perf_counter() - inicio >= CUSTO_QUE_SE_GUARDA_S:
         _ONDE_ACHOU[chave] = ((*da_pasta, _carimbo(achado)), time.monotonic(), achado)
     return achado
+
+
+def _slug(nome: str) -> str:
+    """O slug do nome, ou o próprio nome quando ele não tem slug."""
+    try:
+        from hefesto_dualsense4unix.profiles.slug import slugify
+
+        return slugify(nome)
+    except Exception:
+        return nome
 
 
 def _chave_da_lembranca(onde: pathlib.Path, nome: str) -> tuple[str, str]:
@@ -327,22 +410,23 @@ def _o_que_a_tela_leu(onde: pathlib.Path, nome: str) -> dict[str, Any]:
 
 
 def lista() -> list[dict[str, Any]]:
-    """Todos os perfis do disco: nome, prioridade e tipo de casamento."""
+    """Todos os perfis do disco: nome, prioridade e tipo de casamento.
+
+    Cada arquivo é lido uma vez e relido só quando o carimbo dele muda; o que saiu da pasta sai
+    da memória.
+    """
     onde = pasta()
     if onde is None or not onde.exists():
         return []
     fora = []
-    for p in sorted(onde.glob("*.json")):
-        try:
-            j = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        fora.append({
-            "nome": j.get("name") or p.stem,
-            "prioridade": j.get("priority", 0),
-            "casamento": (j.get("match") or {}).get("type", "criteria"),
-            "arquivo": p.name,
-        })
+    arquivos = sorted(onde.glob("*.json"))
+    for p in arquivos:
+        lido = _leitura_do_perfil(p)
+        if lido is not None and lido[1] is not None:
+            fora.append(dict(lido[1]))
+    de_agora = {(str(onde), p.name) for p in arquivos}
+    for chave in [c for c in _DO_DISCO if c[0] == str(onde) and c not in de_agora]:
+        del _DO_DISCO[chave]
     return fora
 
 

@@ -39,6 +39,9 @@ def _as_abas() -> tuple[str, ...]:
 
 ABAS = _as_abas()
 
+AVULSAS = ("calibrar-sensores.html", "mapa-do-controle.html")
+PERFIS_DO_MAPA = 60
+
 TIQUES = 40
 ASSENTAR = 3
 TETO_DA_MEDIANA_MS = 15.0
@@ -202,6 +205,47 @@ def test_o_tique_de_cada_aba_tem_teto(
     assert not acima, (
         f"o tique passou do teto (mediana {TETO_DA_MEDIANA_MS:.0f} ms, p95 "
         f"{TETO_DO_P95_MS:.0f} ms de CPU do fio do GTK): {acima}")
+
+
+@pytest.mark.no_cover
+def test_o_tique_das_paginas_avulsas_tem_teto_com_dezenas_de_perfis(
+    casa: SimpleNamespace  # noqa: F811
+) -> None:
+    """D-2511-O-MAPA-DO-CONTROLE-NAO-RELE-OS-PERFIS: o mapa do controle e o calibrar, no teto.
+
+    O pacote de cada página avulsa roda 40 vezes com sessenta perfis no disco, e a CPU de cada volta
+    entra na mesma conta das dez abas.
+    """
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.interface.pacotes import a13_mapa_do_controle as a13
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
+
+    assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
+    for i in range(PERFIS_DO_MAPA):
+        loader.save_profile(Profile(name=f"Perfil {i:02d}", match=MatchManual(),
+                                    remapeamento={"cross": "circle", "l1": "r1"}))
+    ctx = pacotes.Contexto(state={"active_profile": "Perfil 00"}, mesa=[], conectados=[],
+                           escolhido="todos")
+    custos: dict[str, list[float]] = {}
+    for pagina in AVULSAS:
+        assert pagina in pacotes.PACOTES, f"a página avulsa {pagina} perdeu o pacote"
+        a13._largar()
+        for _ in range(ASSENTAR):
+            pacotes.pacote_da_pagina(pagina, ctx)
+        voltas, referencias = [], []
+        for _ in range(TIQUES):
+            with _sem_o_rastreador():
+                referencias.append(_trabalho_de_referencia())
+                t0 = time.thread_time()
+                pacotes.pacote_da_pagina(pagina, ctx)
+                voltas.append((time.thread_time() - t0) * 1000)
+        custos[pagina] = _sem_a_carga(voltas, referencias)
+    a13._largar()
+    acima = _acima_do_teto(custos)
+    assert not acima, (
+        f"o tique da página avulsa passou do teto (mediana {TETO_DA_MEDIANA_MS:.0f} ms, p95 "
+        f"{TETO_DO_P95_MS:.0f} ms de CPU): {acima}")
 
 
 def _acima_do_teto(custos: dict[str, list[float]]) -> dict[str, str]:

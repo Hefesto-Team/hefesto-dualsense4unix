@@ -474,18 +474,21 @@ def _usar_em(ctx: Contexto, estado: dict[str, Any]) -> str:
     return "".join(chips)
 
 
-def _opcoes_do_perfil(ctx: Contexto) -> str:
+def _opcoes_do_perfil(ctx: Contexto, meus_perfis: list[dict[str, Any]] | None = None) -> str:
     """O conteúdo de `#perfil`: o perfil que vale, Moldes, Meus perfis e o «+ Novo perfil…».
 
     O grupo «Navegação» só aparece quando é a Navegação que vale; com o jogo, o nome dele vem solto.
+    `meus_perfis` é a lista do disco que o tique já leu (`None`: lê aqui).
     """
+    if meus_perfis is None:
+        meus_perfis = _perfis_do_disco(ctx)
     moldes = "".join(
         f'<option value="{MOLDE}{m.chave}">{html.escape(m.nome)}</option>'
         for m in _moldes_a_vista())
     meus = "".join(
         f'<option value="{PERFIL}{html.escape(str(c.get("name") or ""), quote=True)}">'
         f'{html.escape(str(c.get("name") or ""))}</option>'
-        for c in _perfis_do_disco(ctx)
+        for c in meus_perfis
         if _chave_no_seletor(ctx, PERFIL + str(c.get("name") or "")) != NAV)
     nav = f'<option value="{NAV}">{html.escape(_nome_do_que_vale(ctx))}</option>'
     if _vale_a_navegacao(ctx):
@@ -524,14 +527,15 @@ def _chave_no_seletor(ctx: Contexto, chave: str) -> str:
     return chave
 
 
-def _chave_de_agora(ctx: Contexto, estado: dict[str, Any]) -> str:
+def _chave_de_agora(ctx: Contexto, estado: dict[str, Any],
+                    meus_perfis: list[dict[str, Any]] | None = None) -> str:
     """A chave em edição no seletor de agora: o perfil que subiu com o jogo passa ao topo, e o
     topo que mudou de dono devolve o que não se guardou ao perfil de antes, ou o larga."""
     ativo = _nome_do_ativo(ctx)
     chave = _chave_no_seletor(ctx, str(estado["chave"]))
     antes = estado.get("nav_de")
     if chave == NAV and antes is not None and antes != ativo and estado["edicoes"]:
-        meus = {str(c.get("name") or "") for c in _perfis_do_disco(ctx)}
+        meus = _nomes_dos(ctx, meus_perfis)
         if antes and antes in meus:
             chave = _chave_no_seletor(ctx, PERFIL + antes)
         else:
@@ -551,17 +555,31 @@ def _chave_do_point_and_click(ctx: Contexto) -> str:
     return _chave_no_seletor(ctx, escolha) if _chave_valida(ctx, escolha) else NAV
 
 
-def _chave_das_trocas(ctx: Contexto) -> str:
+def _nomes_dos(ctx: Contexto, meus_perfis: list[dict[str, Any]] | None) -> set[str]:
+    """Os nomes dos perfis do disco: da lista que o tique já leu, ou lida aqui."""
+    if meus_perfis is None:
+        meus_perfis = _perfis_do_disco(ctx)
+    return {str(c.get("name") or "") for c in meus_perfis}
+
+
+def _chave_das_trocas(ctx: Contexto, meus_perfis: list[dict[str, Any]] | None = None) -> str:
     """O perfil ativo, se tem lugar no seletor (troca ou ação própria de botão); senão Navegar."""
     nome = _nome_do_ativo(ctx)
-    meus = {str(c.get("name") or "") for c in _perfis_do_disco(ctx)}
+    meus = _nomes_dos(ctx, meus_perfis)
     return _chave_no_seletor(ctx, PERFIL + nome) if nome and nome in meus else NAV
 
 
-def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
-    """Tudo o que a tela mostra do perfil em edição, num só dicionário."""
+def _mesa_da_edicao(
+    ctx: Contexto, meus_perfis: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Tudo o que a tela mostra do perfil em edição, num só dicionário.
+
+    `meus_perfis` é a lista do disco que o tique já leu: uma por tique, repassada a quem a usa.
+    """
+    if meus_perfis is None:
+        meus_perfis = _perfis_do_disco(ctx)
     estado = _estado()
-    chave = _chave_de_agora(ctx, estado)
+    chave = _chave_de_agora(ctx, estado, meus_perfis)
     valores = _valores(ctx, estado)
     tipo = _tipo_de(ctx, estado, valores)
     mesa: dict[str, Any] = {
@@ -573,7 +591,7 @@ def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
         "usar-em": _usar_em(ctx, estado),
         "cursor-mover": _cursor(valores),
         "ancora-pac": _chave_do_point_and_click(ctx),
-        "ancora-trocar": _chave_das_trocas(ctx),
+        "ancora-trocar": _chave_das_trocas(ctx, meus_perfis),
     }
     return mesa
 
@@ -650,13 +668,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     _largar_se_outro_controle(ctx, no_tique=True)
     acesas = _acesos(ctx, itens)
     _acompanha_a_gravacao()
-    mesa: dict[str, Any] = {**_mesa_da_edicao(ctx), **_linhas(ctx, acesas),
+    meus_perfis = _perfis_do_disco(ctx)
+    mesa: dict[str, Any] = {**_mesa_da_edicao(ctx, meus_perfis), **_linhas(ctx, acesas),
                             **_campos_da_sequencia(ctx), LUZ: _luz(ctx, ativo, itens)}
     return {
         "mesa": mesa,
         "blocos": {BLOCO_DOS_CONTROLES: chips_do_controle(
             ctx.mesa, ativo, pendente=_ha_o_que_guardar(_estado())),
-                   BLOCO_DO_PERFIL: _opcoes_do_perfil(ctx)},
+                   BLOCO_DO_PERFIL: _opcoes_do_perfil(ctx, meus_perfis)},
         "cobertura": {"pintados": len(mesa) + 2, "sem_dono": 0},
         "sem_dono": {},
     }
