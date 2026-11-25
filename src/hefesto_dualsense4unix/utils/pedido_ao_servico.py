@@ -4,7 +4,9 @@ Dono único da anotação: uma linha (``instante<TAB>verbo<TAB>quem<TAB>pid<TAB>
 do produto, sobrescrita inteira. O serviço, ao parar, a lê e escreve o nome no diário; sem
 anotação de até 30 s a parada diz `fora-do-produto` (o `systemctl` na mão não deixa nome). Os
 scripts de shell gravam a mesma linha no mesmo formato e este módulo lê as duas. :func:`anotar`
-nunca levanta: o pedido ao systemd não falha por causa da anotação.
+nunca levanta: o pedido ao systemd não falha por causa da anotação. A parada lê sem consumir; a
+subida consome a que leu (:func:`consumir`), para que a queda seguinte, reerguida pelo systemd
+dentro dos 120 s, não leve o nome de quem pediu o reinício anterior.
 """
 from __future__ import annotations
 
@@ -111,6 +113,18 @@ def a_subida_pedida(agora: float | None = None) -> Pedido | None:
     return pedido
 
 
+def consumir(pedido: Pedido) -> bool:
+    """Apaga a anotação só se ainda é a linha que `pedido` leu; nunca levanta."""
+    try:
+        atual = ler(float("inf"))
+        if atual != pedido:
+            return False
+        arquivo().unlink()
+    except Exception:
+        return False
+    return True
+
+
 def _dizer_quem_pediu_a_parada(logger: Any) -> None:
     pedido = a_parada_pedida()
     if pedido is None:
@@ -124,6 +138,7 @@ def _dizer_de_quem_foi_a_subida(logger: Any) -> None:
     pedido = a_subida_pedida()
     if pedido is None:
         return
+    consumir(pedido)
     logger.info("daemon_subiu_depois_de", quem=pedido.quem, motivo=pedido.motivo or "-",
                 verbo=pedido.verbo)
 
@@ -152,6 +167,7 @@ __all__ = [
     "a_subida_pedida",
     "anotar",
     "arquivo",
+    "consumir",
     "dizer_de_quem_foi_a_subida",
     "dizer_quem_pediu_a_parada",
     "ler",

@@ -446,6 +446,49 @@ def test_a_subida_diz_de_quem_foi_o_reinicio(monkeypatch: pytest.MonkeyPatch) ->
     assert (subida[0]["quem"], subida[0]["verbo"]) == ("aba-sistema", "restart")
 
 
+def test_a_subida_consome_a_anotacao_e_a_queda_seguinte_nao_leva_o_nome(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO (nota de 25/11/2026: a subida consome)."""
+    pedido.anotar("restart", "bandeja", "reiniciar-do-menu")
+    parada = _o_diario_da_parada(_um_daemon_para_parar(), "daemon_stop_requested")
+    assert parada["quem"] == "bandeja"
+    assert pedido.arquivo().is_file(), "a parada consumiu a anotação que a subida ainda lê"
+    primeira = [ln for ln in _a_subida_do_daemon(monkeypatch)
+                if ln["event"] == "daemon_subiu_depois_de"]
+    assert len(primeira) == 1 and primeira[0]["quem"] == "bandeja"
+    assert not pedido.arquivo().exists()
+    segunda = [ln for ln in _a_subida_do_daemon(monkeypatch)
+               if ln["event"] == "daemon_subiu_depois_de"]
+    assert not segunda, segunda
+
+
+def test_a_subida_que_nao_consegue_apagar_a_anotacao_ainda_diz_o_nome(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO (apagar que falha não impede)."""
+    pedido.anotar("restart", "bandeja", "reiniciar-do-menu")
+
+    def _recusa(_self: Path, *_a: Any, **_k: Any) -> None:
+        raise PermissionError("sem permissão")
+
+    monkeypatch.setattr(Path, "unlink", _recusa)
+    linhas = [ln for ln in _a_subida_do_daemon(monkeypatch)
+              if ln["event"] == "daemon_subiu_depois_de"]
+    assert len(linhas) == 1 and linhas[0]["quem"] == "bandeja"
+
+
+def test_a_anotacao_nova_que_chega_durante_a_subida_nao_e_apagada() -> None:
+    """D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO (só se consome a linha que se leu)."""
+    pedido.anotar("restart", "bandeja")
+    lida = pedido.ler(pedido.TETO_DA_SUBIDA_S)
+    assert lida is not None
+    pedido.anotar("restart", "aba-sistema")
+    pedido.consumir(lida)
+    outra = pedido.ler(pedido.TETO_DA_SUBIDA_S)
+    assert outra is not None and outra.quem == "aba-sistema"
+
+
 def test_a_subida_sem_pedido_do_produto_nao_inventa_quem(monkeypatch: pytest.MonkeyPatch) -> None:
     linhas = _a_subida_do_daemon(monkeypatch)
     assert not [ln for ln in linhas if ln["event"] == "daemon_subiu_depois_de"]
