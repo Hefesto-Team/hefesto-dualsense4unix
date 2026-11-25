@@ -735,10 +735,10 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   antes, sem chave nem botão. Desde 25/11/2026, `aparelhos_acoes` aceita a `barra`, com `id`, `rotulo`, `minimo`,
   `maximo`, `passo`, `degraus` e `dica` (os dois últimos opcionais), uma barra por aparelho (o `id` é chave e não repete o de uma ação; o `rotulo` tem até
   20 letras; a faixa em ordem; o `passo` acima de zero; os `degraus`, de 1 a 1000, dão o número ao lado, como
-  `16/20`). A barra mora no cartão, na linha do nome, entre a bateria e a chave, e pede o `grupo` (sem ele, recusa o
-  manifesto). O valor de cada aparelho vem no `barra` dele no `acessorios.estado` (um número, só no aparelho com
-  `id`; outra coisa recusa o estado), e o aparelho sem ele não ganha a barra. Arrastar e soltar chegam como
-  `extensao.acao` (abaixo); a janela mostra o valor pedido até o estado seguinte, e então o que a extensão
+  `16/20`). A barra mora no cartão, numa linha própria logo abaixo do nome, com a largura do cartão, e pede o
+  `grupo` (sem o grupo, recusa o manifesto). O valor de cada aparelho vem no `barra` do aparelho no
+  `acessorios.estado` (um número, só no aparelho com `id`; outra coisa recusa o estado), e o aparelho sem o
+  valor não ganha a barra. Arrastar e soltar chegam como `extensao.acao` (abaixo); a janela mostra o valor pedido até o estado seguinte, e então o que a extensão
   publicou. Entra na mesma `api` 2; o Hefesto de antes recusa o manifesto pelo campo.
 - **o tipo `livre`** de `opcoes[]`, um só por manifesto: o controle ao vivo, uma faixa fixa no pé da janela,
   com o rastro dos últimos 10 s. Arrastar manda `extensao.livre`; «Gravar» guarda o arrastar como uma forma

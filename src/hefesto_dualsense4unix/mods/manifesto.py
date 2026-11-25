@@ -573,9 +573,10 @@ class Acao(BaseModel):
 
 
 class BarraDoAparelho(BaseModel):
-    """A barra de cada aparelho gerido, na linha do nome dele no cartão: o valor é do aparelho e
-    vem no ``barra`` dele em ``acessorios.estado``. Arrastar e soltar chegam à extensão como a
-    ``extensao.acao`` de ``id``, com ``alvo``, ``valor`` (número da faixa) e ``soltou``."""
+    """A barra de cada aparelho gerido, numa linha própria do cartão, abaixo do nome: o valor é do
+    aparelho e vem no ``barra`` do aparelho em ``acessorios.estado``. Arrastar e soltar chegam à
+    extensão como a ``extensao.acao`` de ``id``, com ``alvo``, ``valor`` (número da faixa) e
+    ``soltou``."""
 
     model_config = ConfigDict(extra="forbid")
 

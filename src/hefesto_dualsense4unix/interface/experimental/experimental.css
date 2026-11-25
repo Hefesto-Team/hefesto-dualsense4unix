@@ -603,12 +603,11 @@
   text-overflow:ellipsis;min-width:0 }
 #mod-janela .mj-pct { font:11px 'JetBrains Mono',ui-monospace,monospace;color:var(--texto-suave) }
 #mod-janela .mj-ap-cab .mj-chave { margin-left:auto }
-#mod-janela .mj-ap-barra { display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex:0 1 180px;min-width:96px }
+#mod-janela .mj-ap-barra { display:flex;align-items:center;gap:8px;min-width:0 }
 #mod-janela .mj-ap-barra-rot { flex:none;font-size:11.5px;color:var(--texto-suave) }
 #mod-janela .mj-ap-barra .ext-desl { width:auto;flex:1;min-width:0;gap:6px }
 #mod-janela .mj-ap-barra .ext-desl b { min-width:38px }
 #mod-janela .mj-ap-barra input[disabled] { opacity:.45;cursor:default }
-#mod-janela .mj-ap-cab .mj-ap-barra + .mj-chave { margin-left:0 }
 #mod-janela .mj-cc-chave { display:inline-flex;align-items:center;gap:6px;flex:none }
 #mod-janela .mj-ap-cab .mj-cc-chave { margin-left:auto }
 #mod-janela .mj-ap-cab .mj-cc-chave .mj-chave { margin-left:0 }

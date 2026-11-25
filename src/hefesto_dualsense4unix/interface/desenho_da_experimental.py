@@ -2236,8 +2236,8 @@ def veredito_html(veredito: Veredito | None) -> str:
 
 
 class BarraDaJanela(NamedTuple):
-    """A barra de cada aparelho gerido, na linha do nome dele no cartão: a faixa, os degraus que o
-    número conta e ``vez``, que sobe a cada soltar, para a barra se repintar com o valor que vale."""
+    """A barra de cada aparelho gerido, numa linha própria do cartão, abaixo do nome: a faixa, os
+    degraus que o número conta e ``vez``, que sobe a cada soltar, para a barra se repintar com o valor que vale."""
 
     id: str
     rotulo: str
@@ -2471,10 +2471,12 @@ def _botoes_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
 
 
 def _barra_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
-    """A barra do aparelho na linha do nome, com o rótulo e o número (``16/20``): o valor é o que
-    a extensão publica no ``barra`` dele. Arrastar vale na hora (:data:`GESTO_DA_BARRA_VIVA`) e
-    soltar grava (:data:`GESTO_DE_SOLTAR_A_BARRA`). Vazio sem a barra no manifesto ou sem o valor
-    no aparelho; com a chave da extensão desligada, à vista e parada."""
+    """A barra do aparelho numa linha própria do cartão, abaixo do nome e com a largura do cartão,
+    com o rótulo e o número (``16/20``): o valor é o que a extensão publica no ``barra`` do
+    aparelho. Arrastar vale na hora (:data:`GESTO_DA_BARRA_VIVA`) e soltar grava
+    (:data:`GESTO_DE_SOLTAR_A_BARRA`). Vazio sem a barra no manifesto ou sem o valor no aparelho;
+    com a chave da extensão desligada, à vista e parada. Vem no DOM depois da chave, na ordem do
+    foco e do leitor de tela."""
     b = g.aparelhos.barra
     valor = ap.get("barra")
     if b is None or isinstance(valor, bool) or not isinstance(valor, (int, float)):
@@ -2489,11 +2491,11 @@ def _barra_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
                  f'data-hef-vivo="{GESTO_DA_BARRA_VIVA}" data-vez="{b.vez}" '
                  f'oninput="{_NUMERO_AO_ARRASTAR}"')
     dica = f' data-dica="{_a(b.dica)}"' if b.dica else ""
-    return (f'<span class="mj-ap-barra"{dica}><span class="mj-ap-barra-rot">{_e(b.rotulo)}</span>'
+    return (f'<div class="mj-ap-barra"{dica}><span class="mj-ap-barra-rot">{_e(b.rotulo)}</span>'
             f'<span class="ext-desl"><input type="range" min="{b.minimo:g}" max="{b.maximo:g}" '
             f'step="{b.passo:g}" value="{v:g}" {gesto} aria-label="{_a(b.rotulo)}">'
             f'<b data-unidade="" data-zero=""{_degraus_do_numero(b.degraus)}>{_e(numero)}</b>'
-            "</span></span>")
+            "</span></div>")
 
 
 def _por_cento(bateria: Any) -> str:
@@ -2525,9 +2527,9 @@ def _controles_no_cartao(g: Gestao, ap: Mapping[str, Any]) -> str:
 
 
 def aparelhos_geridos_html(g: Gestao) -> str:
-    """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha, a barra do aparelho
-    (:func:`_barra_do_aparelho`), a chave, a força de agora, os controles do aparelho (com
-    ``g.controles``) e um botão por ação. O aparelho desligado pela chave fica apagado e segue com
+    """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha e a chave numa linha, a
+    barra do aparelho na linha de baixo (:func:`_barra_do_aparelho`), a força de agora, os
+    controles do aparelho (com ``g.controles``) e um botão por ação. O aparelho desligado pela chave fica apagado e segue com
     as ações; o fora do alcance só esquece."""
     cartoes = []
     for ap in _aparelhos_geridos(g.estado):
@@ -2537,7 +2539,7 @@ def aparelhos_geridos_html(g: Gestao) -> str:
             f'{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="mj-ap-nome">{_e(ap.get("nome") or ap["id"])}</span>'
             f'{bateria_html(ap.get("bateria"))}{_por_cento(ap.get("bateria"))}'
-            f'{_barra_do_aparelho(g, ap)}{_chave_do_aparelho(g, ap)}</div>'
+            f'{_chave_do_aparelho(g, ap)}</div>{_barra_do_aparelho(g, ap)}'
             f'<div class="mj-ap-meio">{como.vivo}</div>'
             f'{_controles_no_cartao(g, ap)}'
             f'<div class="mj-ap-pe">{_botoes_do_aparelho(g, ap)}</div></div>')

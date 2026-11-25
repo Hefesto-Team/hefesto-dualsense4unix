@@ -1,20 +1,32 @@
-"""A barra de cada aparelho gerido mora no cartão dele, na linha do nome (25/11/2026).
+"""A barra de cada aparelho gerido mora no cartão, numa linha própria abaixo do nome (25/11/2026).
 
 A força mais alta de uma extensão de brinquedos era uma barra só, na aba «Força», para todos os
 brinquedos. Agora o manifesto declara, junto das ações dos aparelhos, uma ``barra`` por aparelho
 (id, rótulo, faixa e degraus), e o estado que a extensão publica traz o valor de cada um. A janela
-a desenha entre a bateria e a chave; arrastar chega à extensão pela ``extensao.acao`` com o alvo
+a desenha numa linha própria do cartão, logo abaixo da linha do nome (o nome inteiro, a bateria e
+a chave), com a largura do cartão: o rótulo à esquerda, a barra e o número à direita. Na ordem do
+DOM, a barra vem depois da chave, e o foco do teclado e o leitor de tela a alcançam depois do
+nome. Arrastar chega à extensão pela ``extensao.acao`` com o alvo
 (no compasso de 20 por segundo) e soltar grava, e a janela mostra o que a extensão publica. Sem a
 declaração, nada muda para as outras extensões.
 
 Prova da D-2511-O-TETO-DA-EXTENSAO-E-DE-CADA-BRINQUEDO.
+
+MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
+
+- a barra de volta à linha do nome, entre a bateria e a chave, reprova a estrutura do cartão e,
+  no WebKit, a linha própria, a largura do cartão e o nome inteiro;
+- a barra sem ``display:flex`` no CSS (o rótulo numa linha e o deslizante em outra) reprova a
+  linha única do rótulo, do deslizante e do número no WebKit.
 """
 from __future__ import annotations
 
 import asyncio
 import copy
+import json
 import pathlib
 import re
+from html.parser import HTMLParser
 from types import SimpleNamespace
 from typing import Any
 
@@ -44,6 +56,14 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
     _Ponte,
     _servico,
     janela,
+)
+from tests.unit.test_a_linha_sem_aparelho_fica_a_direita_do_parear import no_webkit
+from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito import (  # noqa: F401
+    ENDERECO,
+    MOD,
+    VISTAS,
+    pagina_fresca,
+    pecas_da_lovense,
 )
 
 TETO = {"id": "teto", "rotulo": "Teto", "minimo": 0, "maximo": 100,  # (noqa-acento)
@@ -112,25 +132,91 @@ def test_o_estado_leva_o_valor_da_barra_de_cada_aparelho() -> None:
             porta_das_extensoes._aparelho(torto)
 
 
-def test_a_barra_mora_na_linha_do_nome_entre_a_bateria_e_a_chave() -> None:
-    html = exp.aparelhos_geridos_html(_gestao(BARRA, COM_O_TETO))
-    cabeca = re.search(r'<div class="mj-ap-cab">(.*?)</div>', _cartao(html, "ap-4"), re.S)
-    assert cabeca, "o cartão perdeu a linha do nome"
-    linha = cabeca.group(1)
-    ordem = [linha.find(p) for p in ('class="mj-ap-nome"', 'class="mj-pct"',
-                                     'class="mj-ap-barra"', 'class="mj-chave')]
-    assert -1 not in ordem and ordem == sorted(ordem), f"a ordem da linha do nome: {ordem}"
-    barra = re.search(r'<input type="range"[^>]*>', linha)
-    assert barra, "a barra não está na linha do nome"
-    entrada = barra.group(0)
-    assert 'value="80"' in entrada and 'min="0"' in entrada and 'max="100"' in entrada
-    assert f'data-gesto="{exp.GESTO_DE_SOLTAR_A_BARRA}"' in entrada
-    assert f'data-hef-vivo="{exp.GESTO_DA_BARRA_VIVA}"' in entrada
-    assert 'data-v="toque:teto:ap-4"' in entrada, "a barra leva o aparelho do cartão"
-    assert ">Teto<" in linha and ">16/20<" in linha, "o rótulo e o número (degrau) ao lado"
-    assert html.count('class="mj-ap-barra"') == 4, "uma barra em cada cartão"
-    assert html.count('class="mj-ap-pe"') == 4 and 'class="mj-ap-barra"' not in re.sub(
-        r'<div class="mj-ap-cab">.*?</div>', "", html, flags=re.S), "a barra só na linha do nome"
+class _Arvore(HTMLParser):
+    """A árvore dos elementos de um pedaço de HTML: cada nó é (tag, classes, atributos, filhos)."""
+
+    VAZIOS = frozenset({"input", "br", "img", "hr", "meta", "link", "source", "path", "circle",
+                        "rect", "line", "polyline", "polygon", "ellipse", "use"})
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.raiz: dict[str, Any] = {"tag": "", "classes": (), "attrs": {}, "filhos": [],
+                                     "texto": ""}
+        self.pilha = [self.raiz]
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        mapa = {k: v or "" for k, v in attrs}
+        no = {"tag": tag, "classes": tuple(mapa.get("class", "").split()), "attrs": mapa,
+              "filhos": [], "texto": ""}
+        self.pilha[-1]["filhos"].append(no)
+        if tag not in self.VAZIOS:
+            self.pilha.append(no)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag not in self.VAZIOS:
+            self.pilha.pop()
+
+    def handle_endtag(self, tag: str) -> None:
+        while len(self.pilha) > 1:
+            if self.pilha.pop()["tag"] == tag:
+                break
+
+    def handle_data(self, data: str) -> None:
+        for no in self.pilha:
+            no["texto"] += data
+
+
+def _cartoes(html: str) -> dict[str, dict[str, Any]]:
+    arvore = _Arvore()
+    arvore.feed(html)
+    return {no["attrs"]["data-alvo"]: no for no in arvore.raiz["filhos"]
+            if "mj-ap" in no["classes"]}
+
+
+def _filho(no: dict[str, Any], classe: str) -> dict[str, Any] | None:
+    return next((f for f in no["filhos"] if classe in f["classes"]), None)
+
+
+def _descendentes(no: dict[str, Any]) -> list[dict[str, Any]]:
+    saida = []
+    for f in no["filhos"]:
+        saida += [f, *_descendentes(f)]
+    return saida
+
+
+def test_a_barra_mora_numa_linha_propria_logo_abaixo_da_linha_do_nome() -> None:
+    """O cartão, filho a filho: a linha do nome (nome, bateria e chave, sem a barra), a linha da
+    barra, a onda e o rodapé. A barra vem no DOM depois da chave, na ordem em que se lê."""
+    cartoes = _cartoes(exp.aparelhos_geridos_html(_gestao(BARRA, COM_O_TETO)))
+    assert sorted(cartoes) == ["ap-1", "ap-2", "ap-3", "ap-4"], "uma barra em cada cartão"
+    for alvo, cartao in cartoes.items():
+        linhas = [next((c for c in f["classes"] if c.startswith("mj-ap-")), f["tag"])
+                  for f in cartao["filhos"]]
+        assert linhas == ["mj-ap-cab", "mj-ap-barra", "mj-ap-meio", "mj-ap-pe"], (alvo, linhas)
+        cab, barra = _filho(cartao, "mj-ap-cab"), _filho(cartao, "mj-ap-barra")
+        assert cab is not None and barra is not None
+        na_cab = [next((c for c in ("mj-ap-nome", "mj-pct", "mj-chave") if c in d["classes"]), "")
+                  for d in _descendentes(cab)]
+        assert [c for c in na_cab if c] == ["mj-ap-nome", "mj-pct", "mj-chave"], (alvo, na_cab)
+        assert not [d for d in _descendentes(cab) if d["tag"] == "input"], \
+            f"{alvo}: a linha do nome ainda leva a barra"
+        rotulo = barra["filhos"][0]
+        assert "mj-ap-barra-rot" in rotulo["classes"] and rotulo["texto"] == "Teto", alvo
+        entradas = [d for d in _descendentes(barra) if d["tag"] == "input"]
+        numeros = [d for d in _descendentes(barra) if d["tag"] == "b"]
+        assert len(entradas) == 1 and entradas[0]["attrs"]["type"] == "range", alvo
+        assert len(numeros) == 1 and _descendentes(barra).index(numeros[0]) > \
+            _descendentes(barra).index(entradas[0]), f"{alvo}: o número fica à direita da barra"
+    barra_4 = _filho(cartoes["ap-4"], "mj-ap-barra")
+    assert barra_4 is not None
+    entrada = next(d for d in _descendentes(barra_4) if d["tag"] == "input")["attrs"]
+    assert (entrada["value"], entrada["min"], entrada["max"]) == ("80", "0", "100")
+    assert entrada["data-gesto"] == exp.GESTO_DE_SOLTAR_A_BARRA
+    assert entrada["data-hef-vivo"] == exp.GESTO_DA_BARRA_VIVA
+    assert entrada["data-v"] == "toque:teto:ap-4", "a barra leva o aparelho do cartão"
+    numero = next(d for d in _descendentes(barra_4) if d["tag"] == "b")
+    assert numero["texto"] == "16/20", "o número (degrau) ao lado"
 
 
 def test_sem_a_barra_declarada_ou_sem_o_valor_nada_muda() -> None:
@@ -224,7 +310,7 @@ def test_a_janela_arrasta_vivo_solta_e_mostra_o_que_a_extensao_publica(
         barras: Any, ctx: Any) -> None:  # noqa: F811
     """O arrastar manda o valor sem gravar e segura a lista sob o dedo; o soltar manda o
     ``soltou``, e a barra mostra o valor pedido até a extensão publicar o estado novo, e então o
-    que a extensão publicou. MORDIDA: sem a barra na linha do nome, o cartão não a tem."""
+    que a extensão publicou. MORDIDA: sem a barra no cartão, o cartão não a tem."""
     a07, instalar, abrir = barras
     instalar(**_com_a_barra())
     ponte = _Ponte(VIVO_COM_O_TETO)
@@ -276,3 +362,123 @@ def test_o_soltar_que_nao_chega_devolve_a_barra_ao_que_vale(barras: Any, ctx: An
     depois = a07._com_os_aparelhos({"blocos": {}})["blocos"]["#mod-aparelhos"]
     assert 'value="40"' in _cartao(depois, "ap-2"), "a barra ficou no valor que não valeu"
     assert depois != antes, "a barra não se repinta, e a tela segue no valor arrastado"
+
+
+NOMES = ("Hush", "Nora", "Lush 3",
+         "Gravity com um nome comprido demais para caber na linha do cartão")
+NA_TELA = [{**ap, "nome": nome} for ap, nome in zip(COM_O_TETO, NOMES, strict=True)]
+_ABRIR_A_ABA = """(function(endereco, h){
+  if (!document.getElementById('mod-janela')) return 'a página não tem a janela #mod-janela';
+  location.hash = endereco;
+  window.__hef.pintar({blocos: {'#mod-janela': h}});
+  const j = document.getElementById('mod-janela');
+  const rot = [...j.querySelectorAll('.mj-abas > label')].find(l => l.textContent === 'Brinquedos');
+  if (!rot) return 'sem a aba';
+  rot.click();
+  return 'ok';
+})(%s, %s)"""
+_PINTAR_OS_CARTOES = """(function(h){
+  window.__hef.pintar({blocos: {'#mod-aparelhos': h}});
+  return 'ok';
+})(%s)"""
+_MEDIR_OS_CARTOES = """(function(){
+  const r = e => { if (!e) return null; const x = e.getBoundingClientRect();
+    return {x: x.left, y: x.top, d: x.right, b: x.bottom}; };
+  const depois = (a, b) => !!(a && b && (a.compareDocumentPosition(b) & 4));
+  return JSON.stringify([...document.querySelectorAll('#mod-aparelhos > .mj-ap')].map(c => {
+    const cs = getComputedStyle(c), cab = c.querySelector('.mj-ap-cab');
+    const nome = c.querySelector('.mj-ap-nome'), chave = cab.querySelector('.mj-chave');
+    const barra = c.querySelector('.mj-ap-barra');
+    const entrada = barra && barra.querySelector('input[type=range]');
+    const dentro = c.getBoundingClientRect().left + c.clientLeft;
+    return {alvo: c.dataset.alvo, cartao: r(c),
+      miolo: {x: dentro + parseFloat(cs.paddingLeft),
+                 d: dentro + c.clientWidth - parseFloat(cs.paddingRight)},
+      cab: r(cab), nome: r(nome), nome_inteiro: nome.scrollWidth <= nome.clientWidth,
+      antes_da_chave: r(chave.previousElementSibling), chave: r(chave),
+      vao: parseFloat(getComputedStyle(cab).columnGap) || 0,
+      barra: r(barra), rotulo: r(barra && barra.querySelector('.mj-ap-barra-rot')),
+      entrada: r(entrada), numero: r(barra && barra.querySelector('b')),
+      meio: r(c.querySelector('.mj-ap-meio')),
+      ordem: depois(nome, chave) && depois(chave, entrada),
+      parada: !!(entrada && entrada.disabled)};
+  }));
+})()"""
+
+
+def _falhas_da_geometria(caso: str, cartoes: list[dict[str, Any]], parada: bool) -> list[str]:
+    falhas: list[str] = []
+    if len(cartoes) != 4:
+        return [f"{caso}: {len(cartoes)} cartões"]
+    if abs(cartoes[0]["cartao"]["y"] - cartoes[1]["cartao"]["y"]) > 0.5 or \
+            cartoes[0]["cartao"]["d"] > cartoes[1]["cartao"]["x"]:
+        falhas.append(f"{caso}: os cartões não seguem dois por fileira")
+    for c in cartoes:
+        onde = f"{caso} {c['alvo']}"
+        cab, barra, miolo = c["cab"], c["barra"], c["miolo"]
+        if barra is None or c["entrada"] is None:
+            falhas.append(f"{onde}: sem a barra")
+            continue
+        if barra["y"] < cab["b"] - 0.5:
+            falhas.append(f"{onde}: a barra começa em {barra['y']:.1f}, na linha do nome "
+                          f"(que acaba em {cab['b']:.1f})")
+        if barra["b"] > c["meio"]["y"] + 0.5:
+            falhas.append(f"{onde}: a barra invade a linha da onda")
+        if abs(barra["x"] - miolo["x"]) > 1 or abs(barra["d"] - miolo["d"]) > 1:
+            falhas.append(f"{onde}: a barra vai de {barra['x']:.1f} a {barra['d']:.1f}, e o "
+                          f"cartão de {miolo['x']:.1f} a {miolo['d']:.1f}")
+        largura = barra["d"] - barra["x"]
+        entrada = c["entrada"]["d"] - c["entrada"]["x"]
+        if entrada < 0.6 * largura:
+            falhas.append(f"{onde}: o deslizante tem {entrada:.0f} de {largura:.0f} px da linha")
+        if abs(c["rotulo"]["x"] - barra["x"]) > 1 or abs(c["numero"]["d"] - barra["d"]) > 1:
+            falhas.append(f"{onde}: o rótulo não fica à esquerda e o número à direita")
+        centros = [(c[k]["y"] + c[k]["b"]) / 2 for k in ("rotulo", "entrada", "numero")]
+        if max(centros) - min(centros) > 1.5 or not (
+                c["rotulo"]["d"] <= c["entrada"]["x"] + 0.5 <= c["numero"]["x"] + 1):
+            falhas.append(f"{onde}: o rótulo, o deslizante e o número não dividem uma linha só")
+        if abs(c["chave"]["d"] - cab["d"]) > 1:
+            falhas.append(f"{onde}: a chave não fica à direita da linha do nome")
+        sobra = c["chave"]["x"] - c["antes_da_chave"]["d"] - c["vao"]
+        if not c["nome_inteiro"] and sobra > 1:
+            falhas.append(f"{onde}: o nome se corta com {sobra:.0f} px sobrando na linha")
+        if c["alvo"] != "ap-4" and not c["nome_inteiro"]:
+            falhas.append(f"{onde}: o nome curto saiu cortado")
+        if not c["ordem"]:
+            falhas.append(f"{onde}: no DOM, a barra não vem depois do nome e da chave")
+        if c["parada"] != parada:
+            falhas.append(f"{onde}: a barra parada={c['parada']}, esperado {parada}")
+    return falhas
+
+
+def test_no_webkit_a_barra_tem_linha_propria_com_a_largura_do_cartao_e_o_nome_inteiro(
+        barras: Any, pagina_fresca: pathlib.Path) -> None:  # noqa: F811
+    """Num WebKit de verdade, nas duas vistas, na janela da forma da Lovense (a coluna «Agora» à
+    esquerda e dois cartões por fileira, a largura em que o nome saía cortado): a barra numa linha
+    abaixo da linha do nome, da borda esquerda à direita do conteúdo do cartão, o rótulo à
+    esquerda e o número à direita; o nome curto inteiro, e o comprido só se corta sem espaço
+    sobrando; a chave à direita. Vale também com a chave da extensão desligada (a barra parada)."""
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    _, instalar, abrir = barras
+    pecas = pecas_da_lovense()
+    pecas["aparelhos_acoes"]["barra"] = {**TETO, "id": "limite"}  # (noqa-acento)
+    instalar(mod_id=MOD, **pecas)
+    html = abrir(_Ponte({**VIVO_COM_O_TETO, "aparelhos": NA_TELA}),
+                 mod_id=MOD)["blocos"]["#mod-janela"]
+    assert html.count(f'data-v="{MOD}:limite:') == 4, "a janela da Lovense sem a barra"
+    parada = exp.aparelhos_geridos_html(_gestao(BARRA, NA_TELA, desligada=True))
+    passos: list[list[Any]] = [["js", hefesto_vivo.BOOTSTRAP],
+                               ["js", _ABRIR_A_ABA % (json.dumps(ENDERECO), json.dumps(html))],
+                               ["espera", 0.3], ["js", _MEDIR_OS_CARTOES],
+                               ["js", _PINTAR_OS_CARTOES % json.dumps(parada)],
+                               ["espera", 0.3], ["js", _MEDIR_OS_CARTOES]]
+    lidos = no_webkit(pagina_fresca, {f"{w}x{h}": (w, h, passos) for w, h in VISTAS})
+    print(json.dumps(lidos, ensure_ascii=False))
+    falhas: list[str] = []
+    for caso, (_, abriu, ligada, pintou, desligada) in lidos.items():
+        assert abriu == "ok" and pintou == "ok", (caso, abriu, pintou)
+        falhas += _falhas_da_geometria(caso, json.loads(ligada), parada=False)
+        falhas += _falhas_da_geometria(f"{caso} desligada", json.loads(desligada), parada=True)
+    assert not falhas, "\n".join(falhas)
+
