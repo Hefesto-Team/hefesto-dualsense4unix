@@ -11,7 +11,7 @@ existir: o rascunho aceita arquivo trocado (`--clobber`), a publicada não aceit
 OS PASSOS, na ordem, e a saída 1 em qualquer um deles não deixa nada público:
   1. a pasta confere com o `SHA256SUMS` (o `sums.py conferir`), e tem um arquivo de cada `--exigir`;
   2. a release da tag: não existe -> nasce como rascunho (`--verify-tag`: a tag já tem de existir), com
-     as notas do arquivo e as que o GitHub gera pelos rótulos de `.github/release.yml`; é rascunho -> segue;
+     só com as notas do arquivo (o GitHub não gera nota nenhuma); é rascunho -> segue;
      já é pública -> se os arquivos são os mesmos, nada a fazer; se não, recusa (uma versão publicada
      nunca se reescreve: a correção é a próxima versão);
   3. sobe cada arquivo (e o `SHA256SUMS`) com `--clobber`, que só existe para o rascunho;
@@ -90,7 +90,7 @@ def principal(a: argparse.Namespace) -> int:
         return 1
     if existente is None:
         gh("release", "create", a.tag, "--repo", a.repo, "--draft", "--verify-tag",
-           "--title", a.titulo or f"Hefesto - DualSense4Unix {a.tag}", "--notes-file", str(notas), "--generate-notes")
+           "--title", a.titulo or f"Hefesto - DualSense4Unix {a.tag}", "--notes-file", str(notas))
     gh("release", "upload", a.tag, "--repo", a.repo, "--clobber", *[str(pasta / n) for n in locais])
     depois = release_do_servidor(a.repo, a.tag)
     assert depois is not None

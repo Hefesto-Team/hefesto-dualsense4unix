@@ -6,6 +6,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -154,3 +155,52 @@ def test_um_nome_da_lista_que_sumiu_reprova_na_arvore_do_projeto(
     monkeypatch.setattr(modulo, "ARQUIVOS", (*modulo.ARQUIVOS, "NAO-EXISTE.md"))
     assert modulo.main([]) == 1
     assert "NAO-EXISTE.md: está na lista do que se varre e não existe" in capsys.readouterr().out
+
+
+PUBLICO = RAIZ / "scripts" / "release" / "publico.py"
+
+
+def _publico() -> Any:
+    spec = importlib.util.spec_from_file_location("publico_do_morde", PUBLICO)
+    assert spec and spec.loader
+    modulo = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = modulo
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def _bloco(**campos: str) -> dict[str, str]:
+    base = {
+        "titulo": "A janela abre",
+        "tipo": "corrigido",
+        "muda": "A janela abre sem piscar.",
+        "pronto": "Abra a janela e veja.",
+    }
+    return {**base, **campos}
+
+
+@pytest.mark.parametrize(
+    ("muda", "trecho"),
+    [
+        ("Nada muda para quem usa o produto: o código sai.", "diz que nada muda"),
+        ("Corrige a leitura. Nada muda para você.", "diz que nada muda"),
+        ("A catraca deixa de reprovar o arquivo.", "«catraca»"),
+        ("O fecho passa a conferir o arquivo.", "«fecho»"),
+        ("O portão do CI passa a conferir isto.", "«portão»"),
+        ("A suíte inteira roda mais rápido.", "«suíte»"),
+        ("A costura junta os arquivos.", "«costura»"),
+        ("A roupa do botão muda de cor.", "«roupa»"),
+        ("Na aba Lançadores, o botão abre o jogo.", "aba «Lançadores»"),
+        ("Nas abas Jogar, Gatilhos e Acessibilidade, o botão abre.", "aba «Acessibilidade»"),
+    ],
+)
+def test_o_bloco_que_nao_diz_o_que_muda_para_quem_usa_reprova(muda: str, trecho: str) -> None:
+    """D-2511-A-NOTA-DE-VERSAO-DIZ-SO-O-QUE-MUDA-PARA-QUEM-USA: o texto que não serve."""
+    erros = _publico().validar(_bloco(muda=muda), RAIZ, autoria=False)
+    assert any(trecho in erro for erro in erros), (muda, erros)
+
+
+def test_o_bloco_que_diz_o_que_muda_e_cita_aba_que_existe_passa() -> None:
+    """D-2511-A-NOTA-DE-VERSAO-DIZ-SO-O-QUE-MUDA-PARA-QUEM-USA: o texto de produto passa."""
+    muda = "Na aba Conexões e na aba Jogar, o teclado vira botões; nada mais muda nas outras abas."
+    assert _publico().validar(_bloco(muda=muda), RAIZ, autoria=False) == []

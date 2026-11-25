@@ -7,9 +7,14 @@
 O QUE ENTRA na seção, nesta ordem e sem repetir linha (nem uma que uma versão anterior já tenha):
   1. o que estiver escrito à mão em `## [Unreleased]` (a seção passa a ficar vazia);
   2. o bloco `publico` de cada sprint fechada (`estado: feita`) desde a data da última tag da série; o
-     formato e a régua são do `publico.py`. Sprint fechada sem o bloco não entra, e a saída a avisa;
+     formato e a régua são do `publico.py`. Sprint fechada sem o bloco não entra, e a saída a avisa; a que
+     declara `# publico: em-casa` fica fora sem aviso;
   3. o título dos PRs que entraram desde a última tag (os commits `feat`, `fix` e `perf` que terminam em
      `(#N)`), na mesma régua. Título com palavra da casa não entra, e a saída o avisa.
+
+Os itens saem agrupados pela `area` do bloco (sem área, em «Outras mudanças»), e a seção abre com o resumo de
+três a cinco linhas que quem fecha a versão escreve em `## [Unreleased]`, antes do primeiro `###`. Sem o
+resumo, `montar` recusa. Os títulos das áreas são os de `.github/release.yml`.
 
 Quem lê as sprints é a máquina de quem mantém o projeto: as sprints moram em `docs/process/sprints/` (e `arquivados/`),
 que não viaja ao GitHub. Sem essa pasta, entram só as duas outras fontes. A série e a última tag são as do
@@ -18,7 +23,8 @@ que não viaja ao GitHub. Sem essa pasta, entram só as duas outras fontes. A s�
 
 O CONTRATO: idempotente, `--conferir` (diz o que mudaria; sai 1 se mudaria), resumo numa linha, detalhe depois
 ou em `--detalhe ARQ`. Saída: 0 feito ou já feito; 1 `--conferir` com o que fazer; 2 uso; 3 a seção não existe
-(`notas`); 4 não há nada a dizer da versão (`montar`).
+(`notas`); 4 não há nada a dizer da versão (`montar`); 1 também quando falta o resumo ou ele não tem de três
+a cinco linhas.
 """
 from __future__ import annotations
 
@@ -33,10 +39,26 @@ import _comum
 import publico
 
 GRUPOS = ("Adicionado", "Mudado", "Removido", "Corrigido")
-DO_TIPO = {"adicionado": "Adicionado", "mudado": "Mudado", "removido": "Removido", "corrigido": "Corrigido"}
+OUTRAS = "Outras mudanças"
+LINHAS_DO_RESUMO = (3, 5)
+TITULO_DA_AREA = re.compile(r'title:\s*"([^"]+)"\s*\n\s*labels:\s*\["área: ([^"]+)"\]')
+OS_ARQUIVOS = """### Os arquivos desta versão
+
+- `.whl` e `.tar.gz`: o pacote Python (para o `pip`) e o código-fonte.
+- `.AppImage`: roda sem instalar; baixe, dê permissão de execução e abra.
+- `.deb`: um para cada versão do Ubuntu (22.04 e 24.04); instale o da sua com o `apt`.
+- `.flatpak`: o pacote Flatpak, com tudo o que o Hefesto precisa dentro.
+- `xgameruntime.dll` e `gameinput.dll`: as duas peças que fazem os jogos do Xbox para PC (GDK) falarem com o
+  controle no Wine e no Proton; o instalador e o atualizador as põem no lugar, e quem usa o pacote não as abre.
+- `sonda-gdk.exe` e `sonda-gameinput.exe`: programas de prova das duas peças, usados para conferir a versão; não
+  servem para abrir no dia a dia.
+- `LICENCA-DA-ORIGEM.txt`: o aviso de licença das duas peças.
+- `SHA256SUMS`: a soma de cada arquivo acima, para conferir o que se baixa.
+"""
 PR = re.compile(r"^(?P<tipo>feat|fix|perf)(?:\([^)]*\))?!?:\s+(?P<titulo>.+?)\s+\(#(?P<numero>\d+)\)$")
 CABECALHO = re.compile(r"^##\s*\[(?P<numero>[^\]]+)\](?:\s*[—-]\s*(?P<data>\d{4}-\d{2}-\d{2}))?\s*$")
 FECHADA = re.compile(r"^#\s*fechada\s+(\d{2})/(\d{2})/(\d{4})")
+EM_CASA = re.compile(r"^#\s*publico:\s*em-casa\b", re.MULTILINE)
 EM_CICLO = re.compile(r"^#\s*ciclo:\s*feita\b.*\bem=(\d{2})/(\d{2})/(\d{4})")
 
 
@@ -69,9 +91,34 @@ def itens(corpo: list[str]) -> dict[str, list[str]]:
     return grupos
 
 
-def corpo_de(grupos: dict[str, list[str]]) -> list[str]:
-    ordem = [g for g in GRUPOS if grupos.get(g)] + [g for g in grupos if g not in GRUPOS and grupos[g]]
+def resumo_de(corpo: list[str]) -> list[str]:
+    """As linhas de texto da seção antes do primeiro `###` (o resumo), sem as em branco das pontas."""
+    antes: list[str] = []
+    for ln in corpo:
+        if ln.startswith("### "):
+            break
+        antes.append(ln.rstrip())
+    while antes and not antes[0]:
+        antes.pop(0)
+    while antes and not antes[-1]:
+        antes.pop()
+    return antes
+
+
+def titulos_das_areas(raiz: Path) -> dict[str, str]:
+    """área -> título do grupo na nota: o de `.github/release.yml`, ou o nome da área com a inicial maiúscula."""
+    arq = raiz / ".github" / "release.yml"
+    do_arquivo = {a: t for t, a in TITULO_DA_AREA.findall(arq.read_text(encoding="utf-8"))} if arq.is_file() else {}
+    return {a: do_arquivo.get(a, a[:1].upper() + a[1:]) for a in publico.areas_do_arquivo(raiz)}
+
+
+def corpo_de(grupos: dict[str, list[str]], areas: list[str] | None = None, resumo: list[str] | None = None) -> list[str]:
+    fixos = [*GRUPOS, *(areas or [])]
+    ordem = ([g for g in fixos if grupos.get(g)] + [g for g in grupos if g not in fixos and g != OUTRAS and grupos[g]]
+             + ([OUTRAS] if grupos.get(OUTRAS) else []))
     linhas: list[str] = [""]
+    if resumo:
+        linhas += [*resumo, ""]
     for g in ordem:
         linhas += [f"### {g}", "", *"\n".join(grupos[g]).split("\n"), ""]
     return linhas
@@ -108,7 +155,8 @@ def frontmatter_diz(texto: str, chave: str) -> str | None:
 
 
 def do_sprints(raiz: Path, desde: dt.date | None, avisos: list[str]) -> list[tuple[str, str]]:
-    """[(grupo, texto)] dos blocos `publico` das sprints fechadas desde `desde`."""
+    """[(grupo, texto)] dos blocos `publico` das sprints fechadas desde `desde`, o grupo sendo o título da área."""
+    titulos = titulos_das_areas(raiz)
     achados: list[tuple[str, str]] = []
     pasta = raiz / "docs" / "process" / "sprints"
     arquivos = sorted([*pasta.glob("*.md"), *(pasta / "arquivados").glob("*.md")]) if pasta.is_dir() else []
@@ -121,6 +169,8 @@ def do_sprints(raiz: Path, desde: dt.date | None, avisos: list[str]) -> list[tup
             continue
         ident = frontmatter_diz(texto, "sprint") or arq.stem
         bloco = publico.extrair(texto)
+        if bloco is None and EM_CASA.search(texto.split("---", 2)[1]):
+            continue
         if bloco is None:
             avisos.append(f"aviso: {ident} fechou em {quando:%d/%m/%Y} sem bloco `publico`; a sprint não entra no CHANGELOG")
             continue
@@ -128,7 +178,7 @@ def do_sprints(raiz: Path, desde: dt.date | None, avisos: list[str]) -> list[tup
         if erros:
             avisos.append(f"aviso: o bloco `publico` de {ident} não entra ({erros[0]})")
             continue
-        achados.append((DO_TIPO[bloco["tipo"]], f"- {bloco['muda']}"))
+        achados.append((titulos.get(bloco.get("area", ""), OUTRAS), f"- {bloco['muda']}"))
     return achados
 
 
@@ -146,8 +196,25 @@ def do_prs(raiz: Path, tag: str | None, avisos: list[str]) -> list[tuple[str, st
         if erros:
             avisos.append(f"aviso: o título do PR #{m.group('numero')} não entra ({erros[0]})")
             continue
-        achados.append(("Adicionado" if m.group("tipo") == "feat" else "Corrigido" if m.group("tipo") == "fix" else "Mudado", f"- {titulo}"))
+        achados.append((OUTRAS, f"- {titulo}"))
     return achados
+
+
+class ResumoRecusado(Exception):
+    """A seção da versão não tem o resumo que a abre, ou ele não serve."""
+
+
+def conferir_o_resumo(resumo: list[str], raiz: Path, numero: str) -> None:
+    menos, mais = LINHAS_DO_RESUMO
+    if not resumo:
+        raise ResumoRecusado(
+            f"a {numero} não tem resumo: escreva de {menos} a {mais} linhas sob `## [Unreleased]`, antes do primeiro `###`, "
+            "e rode de novo")
+    if not menos <= len(resumo) <= mais:
+        raise ResumoRecusado(f"o resumo da {numero} tem {len(resumo)} linha(s) e deve ter de {menos} a {mais}")
+    erros = publico.erros_de_texto("\n".join(resumo), raiz)
+    if erros:
+        raise ResumoRecusado(f"o resumo da {numero} não serve: {erros[0]}")
 
 
 def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple[str, list[str]]:
@@ -165,8 +232,10 @@ def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple
     desde = data_da_tag(raiz, tag)
 
     novas: list[tuple[str, str, str]] = []
+    resumo_novo: list[str] = []
     indice_nao_lancado = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("numero") == "Unreleased"), None)
     if indice_nao_lancado is not None:
+        resumo_novo = resumo_de(secoes[indice_nao_lancado][1])
         for grupo, lista in itens(secoes[indice_nao_lancado][1]).items():
             novas += [(grupo, i, "o que estava em Unreleased") for i in lista]
     novas += [(g, i, "sprint") for g, i in do_sprints(raiz, desde, avisos)]
@@ -175,9 +244,11 @@ def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple
     indice_versao = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("numero") == numero), None)
     if indice_versao is not None:
         existente = itens(secoes[indice_versao][1])
+        resumo_antigo = resumo_de(secoes[indice_versao][1])
         cab_versao = secoes[indice_versao][0]
     else:
         existente = {}
+        resumo_antigo = []
         cab_versao = f"## [{numero}] — {data}"
     ja = {normal(i) for lista in existente.values() for i in lista}
     adicionadas: list[str] = []
@@ -191,7 +262,11 @@ def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple
 
     if indice_versao is None and not existente:
         return texto, []
-    topo: list[tuple[str, list[str]]] = [("## [Unreleased]", [""]), (cab_versao, corpo_de(existente))]
+    resumo = resumo_novo or resumo_antigo
+    if adicionadas or resumo_novo or indice_versao is None:
+        conferir_o_resumo(resumo, raiz, numero)
+    areas = list(titulos_das_areas(raiz).values())
+    topo: list[tuple[str, list[str]]] = [("## [Unreleased]", [""]), (cab_versao, corpo_de(existente, areas, resumo))]
     resto = [(c, b) for c, b in secoes if not ((m := CABECALHO.match(c)) and m.group("numero") in ("Unreleased", numero))]
     saida = cabeca.rstrip("\n") + "\n\n"
     for cab, corpo in topo + resto:
@@ -208,7 +283,10 @@ def cmd_montar(a: argparse.Namespace, raiz: Path) -> int:
     avisos: list[str] = []
     arq = raiz / "CHANGELOG.md"
     antes = arq.read_text(encoding="utf-8")
-    novo, adicionadas = montar_texto(raiz, numero, data, avisos)
+    try:
+        novo, adicionadas = montar_texto(raiz, numero, data, avisos)
+    except ResumoRecusado as erro:
+        return _comum.encerrar("changelog", raiz, 1, f"changelog.py montar: {erro}", avisos, a.detalhe)
     detalhe = avisos + [f"entrou ({o})" for o in adicionadas]
     if novo == antes:
         existe = any((m := CABECALHO.match(c)) and m.group("numero") == numero for c, _b in partir(antes)[1])
@@ -242,7 +320,7 @@ def notas_de(raiz: Path, numero: str, repo: str | None) -> str | None:
     onde = f" --repo {repo}" if repo else ""
     return (
         "\n".join(corpo)
-        + "\n\n### Como conferir o que você baixou\n\n"
+        + f"\n\n{OS_ARQUIVOS}\n### Como conferir o que você baixou\n\n"
         "Baixe o `SHA256SUMS` junto com os arquivos e rode, na mesma pasta:\n\n"
         "```\nsha256sum -c SHA256SUMS --ignore-missing\n```\n\n"
         "Cada arquivo também traz um atestado de procedência, que diz de qual commit e de qual fluxo ele saiu:\n\n"

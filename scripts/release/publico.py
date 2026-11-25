@@ -17,11 +17,15 @@ bloco, um trecho cercado no corpo da sprint:
 continua o campo anterior. `muda` vira a linha do CHANGELOG e o corpo da issue; `pronto` é o critério da issue.
 
 A RÉGUA: todo campo passa pelas palavras que o texto público não pode ter (as de `check_texto_publico.py`,
-mais as do trabalho em equipe: mesa, agente, leva, worktree), pelo VAZAMENTO (`vazamentos`: endereço de
+mais as do trabalho em equipe: mesa, agente, leva, worktree, catraca, fecho, suíte, costura, roupa), pelo VAZAMENTO (`vazamentos`: endereço de
 rádio pela forma, caminho da máquina de quem desenvolve e rastro de ferramenta) e, quando o
 `check_autoria.py` existe na árvore, pelo `check_autoria.py texto`, que nunca imprime o termo que casou. Sem a
 lista de termos, ele sai «não medido» e o bloco é reprovado: o que não se mediu não se publica. O vazamento
 não depende de lista de fora da árvore: ele vale no clone limpo e diz só o tipo do que vazou, nunca o trecho.
+
+O `muda` que diz que nada muda para quem usa não é texto público: a sprint que não muda nada para quem usa leva
+`# publico: em-casa` no frontmatter, em vez do bloco. O nome de aba que o texto cita («Na aba Conexões») tem de ser
+um dos nomes da tira de abas das páginas publicadas.
 
     publico.py ARQUIVO...          confere o bloco de cada sprint (saída 1 se algum reprova)
 """
@@ -57,7 +61,15 @@ DA_CASA = (
     ("agente", re.compile(r"\bagentes?\b", re.IGNORECASE)),
     ("leva", re.compile(r"\blevas?\b", re.IGNORECASE)),
     ("worktree", re.compile(r"\bworktrees?\b", re.IGNORECASE)),
+    ("catraca", re.compile(r"\bcatracas?\b", re.IGNORECASE)),
+    ("fecho", re.compile(r"\bfechos?\b", re.IGNORECASE)),
+    ("suíte", re.compile(r"\bsu[ií]tes?\b", re.IGNORECASE)),
+    ("costura", re.compile(r"\bcosturas?\b", re.IGNORECASE)),
+    ("roupa", re.compile(r"\broupas?\b", re.IGNORECASE)),
 )
+NADA_MUDA = re.compile(r"(?:^|[.;!?]\s+)nada\s+(?:muda|mudou|mudar[áa])\b", re.IGNORECASE)
+ABA_CITADA = re.compile(r"\b[Aa]bas?\s+((?:[A-ZÀ-Ý][\wÀ-ÿ]*)(?:(?:,\s*|\s+e\s+)[A-ZÀ-Ý][\wÀ-ÿ]*)*)")
+ABA_DA_TIRA = re.compile(r'<a class="aba[^"]*" href="[^"]+">([^<]+)</a>')
 
 
 def vazamentos(texto: str) -> list[str]:
@@ -67,6 +79,24 @@ def vazamentos(texto: str) -> list[str]:
         if padrao.search(texto):
             achados.append(nome)
     return achados
+
+
+def abas_das_paginas(raiz: Path) -> set[str]:
+    """Os nomes da tira de abas das páginas publicadas (vazio onde não há página)."""
+    pasta = raiz / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
+    nomes: set[str] = set()
+    for pagina in sorted(pasta.glob("*.html")) if pasta.is_dir() else []:
+        nomes.update(ABA_DA_TIRA.findall(pagina.read_text(encoding="utf-8")))
+    return nomes
+
+
+def abas_que_nao_existem(texto: str, raiz: Path) -> list[str]:
+    """Os nomes de aba que o texto cita e a tira das páginas publicadas não tem."""
+    existentes = abas_das_paginas(raiz)
+    if not existentes:
+        return []
+    citadas = [n for lista in ABA_CITADA.findall(texto) for n in re.split(r",\s*|\s+e\s+", lista)]
+    return sorted({n for n in citadas if n not in existentes})
 
 
 def extrair(texto: str) -> dict[str, str] | None:
@@ -184,6 +214,14 @@ def validar(bloco: dict[str, str], raiz: Path, autoria: bool = True) -> list[str
     marcos = marcos_do_arquivo(raiz)
     if bloco.get("marco") and marcos and bloco["marco"] not in marcos:
         erros.append(f"`marco` é um destes (os `milestones` do repositório): {', '.join(marcos)}")
+    if NADA_MUDA.search(bloco.get("muda", "")):
+        erros.append(
+            "`muda` diz que nada muda para quem usa: a sprint que não muda nada fica em casa, com "
+            "`# publico: em-casa motivo=processo` no frontmatter e sem o bloco"
+        )
+    for campo in CAMPOS:
+        for nome in abas_que_nao_existem(bloco.get(campo, ""), raiz):
+            erros.append(f"`{campo}` cita a aba «{nome}», que a janela não tem: use o nome da tira de abas")
     for campo, limite in LIMITES.items():
         if len(bloco.get(campo, "")) > limite:
             erros.append(f"`{campo}` passa de {limite} caracteres")

@@ -17,7 +17,11 @@ A série (`0.9.5`, ou `4` para seguir do `v4.0.0`) é a linha `release.serie` de
 sobem o mesmo número, o primeiro depois da série (0.9.5 -> 0.9.5.1 -> 0.9.5.2). Nenhum número
 é escolhido à mão, e `docs`, `test` e `chore` sozinhos não lançam nada.
 
-O que entra na seção do CHANGELOG, sem repetir linha:
+Antes do `montar`, quem fecha a versão escreve o resumo: de três a cinco linhas sob `## [Unreleased]`, antes do
+primeiro `###`. Sem ele a montagem recusa (saída 1). O resumo abre a seção e a nota da release.
+
+O que entra na seção do CHANGELOG, sem repetir linha, agrupado pela `area` de cada sprint (os títulos são os de
+`.github/release.yml`; sem área, «Outras mudanças»):
 
 1. o que estiver escrito à mão em `## [Unreleased]` (a seção passa a ficar vazia);
 2. o bloco `publico` de cada sprint fechada desde a última tag (o formato está em `publico.py`);

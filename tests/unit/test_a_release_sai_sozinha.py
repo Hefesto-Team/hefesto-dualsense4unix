@@ -57,6 +57,10 @@ CHANGELOG_DO_BRINQUEDO = """# Changelog
 
 ## [Unreleased]
 
+Esta versão traz o microfone de cada controle.
+O botão liga e desliga só o microfone do controle em uso.
+Quem usa um controle de cada vez nota a diferença na hora.
+
 ### Corrigido
 
 - Item escrito à mão.
@@ -572,14 +576,14 @@ def test_o_changelog_nasce_do_que_estava_escrito_das_sprints_fechadas_e_dos_prs(
     assert r.returncode == 0, r.stdout
     texto = (brinquedo / "CHANGELOG.md").read_text(encoding="utf-8")
     secao = texto.split("## [0.9.5] — 2026-10-07")[1].split("## [0.9.4.5]")[0]
+    assert secao.strip().startswith("Esta versão traz o microfone"), "o resumo abre a seção"
     assert "- Item escrito à mão." in secao, "o que estava em Unreleased entra"
     assert "- O botão do microfone liga só o microfone daquele controle." in secao
     assert "- Um controle no cabo volta sozinho depois do erro de USB." in secao
     assert "- A aba nova abre mais rápido" in secao and "- O microfone voltava mudo" in secao
     assert "sem número de PR" not in secao
-    assert secao.index("### Adicionado") < secao.index("### Corrigido"), (
-        "a ordem é a do Keep a Changelog"
-    )
+    ordem = [secao.index(f"### {g}") for g in ("Corrigido", "Som", "Outras mudanças")]
+    assert ordem == sorted(ordem), "primeiro o escrito à mão, depois a área, por último o sem área"
     assert texto.split("## [Unreleased]")[1].split("## [0.9.5]")[0].strip() == ""
     assert "## [0.9.4.5] — 2026-08-20\n\n### Adicionado\n\n- Item antigo." in texto
 
@@ -678,6 +682,63 @@ def test_sem_nada_a_dizer_a_secao_nao_nasce_vazia(brinquedo: Path) -> None:
     r = rodar(CHANGELOG, "montar", "0.9.5", raiz=brinquedo)
     assert r.returncode == 4 and "nada a dizer" in primeira_linha(r)
     assert "## [0.9.5]" not in (brinquedo / "CHANGELOG.md").read_text(encoding="utf-8")
+
+
+def _em_casa(arq: Path) -> None:
+    texto = arq.read_text(encoding="utf-8")
+    arq.write_text(
+        texto.replace("ensaio: false", "# publico: em-casa motivo=processo\nensaio: false", 1),
+        encoding="utf-8",
+    )
+
+
+def test_a_nota_so_diz_o_que_muda_para_quem_usa_sob_a_area_e_abaixo_do_resumo(
+    brinquedo: Path, tmp_path: Path
+) -> None:
+    """D-2511-A-NOTA-DE-VERSAO-DIZ-SO-O-QUE-MUDA-PARA-QUEM-USA: só o de produto entra."""
+    _em_casa(sprint(brinquedo, "SO-DE-CASA-01", muda=None))
+    nada = "Nada muda para quem usa; o fecho deixa de reprovar a catraca."
+    sprint(brinquedo, "NADA-MUDA-01", muda=nada)
+    sprint(brinquedo, "DE-PRODUTO-01", muda="O microfone de cada controle liga sozinho.")
+    detalhe = tmp_path / "detalhe.txt"
+    montar = ("montar", "0.9.5", "--data", "2026-10-07", "--detalhe", str(detalhe))
+    r = rodar(CHANGELOG, *montar, raiz=brinquedo)
+    assert r.returncode == 0, r.stdout
+    avisos = detalhe.read_text(encoding="utf-8")
+    assert "o bloco `publico` de NADA-MUDA-01 não entra" in avisos and "nada muda" in avisos
+    assert "SO-DE-CASA-01" not in avisos, "a sprint em casa não é defeito: sai calada"
+    notas = rodar(CHANGELOG, "notas", "0.9.5", raiz=brinquedo).stdout
+    assert "O microfone de cada controle liga sozinho." in notas
+    assert "fecho" not in notas and "catraca" not in notas
+    assert notas.index("Esta versão traz o microfone") < notas.index("### Som") < notas.index(
+        "- O microfone de cada controle liga sozinho."
+    )
+    assert "### Os arquivos desta versão" in notas and "`gameinput.dll`" in notas
+    assert notas.index("### Os arquivos desta versão") < notas.index("### Como conferir")
+
+
+@pytest.mark.parametrize(
+    ("resumo", "motivo"),
+    [
+        ("", "não tem resumo"),
+        ("Uma linha só.\nDuas linhas.\n", "tem 2 linha(s)"),
+        ("Uma.\nDuas.\nTrês.\nQuatro.\nCinco.\nSeis.\n", "tem 6 linha(s)"),
+        ("Uma.\nA catraca da leva.\nTrês.\n", "não serve"),
+    ],
+)
+def test_sem_resumo_de_tres_a_cinco_linhas_a_montagem_recusa(
+    brinquedo: Path, resumo: str, motivo: str
+) -> None:
+    """D-2511-A-NOTA-DE-VERSAO-DIZ-SO-O-QUE-MUDA-PARA-QUEM-USA: sem resumo, recusa."""
+    arq = brinquedo / "CHANGELOG.md"
+    texto = arq.read_text(encoding="utf-8")
+    antigo = texto.split("## [Unreleased]\n\n")[1].split("### Corrigido")[0]
+    arq.write_text(texto.replace(antigo, resumo + ("\n" if resumo else ""), 1), encoding="utf-8")
+    antes = arq.read_text(encoding="utf-8")
+    sprint(brinquedo, "UMA-SPRINT-01")
+    r = rodar(CHANGELOG, "montar", "0.9.5", "--data", "2026-10-07", raiz=brinquedo)
+    assert r.returncode == 1 and motivo in primeira_linha(r), r.stdout
+    assert arq.read_text(encoding="utf-8") == antes, "recusou: não escreveu nada"
 
 
 def test_as_notas_trazem_a_secao_e_como_conferir_o_que_se_baixa(brinquedo: Path) -> None:
@@ -874,7 +935,7 @@ def test_a_release_nasce_rascunho_recebe_os_arquivos_e_so_entao_e_publicada(
     assert (
         "--draft" in criar["b"]["flags"]
         and "--verify-tag" in criar["b"]["flags"]
-        and "--generate-notes" in criar["b"]["flags"]
+        and "--generate-notes" not in criar["b"]["flags"]
     )
     subir = next(c for c in gh.chamadas() if c["m"] == "release upload")
     assert "--clobber" in subir["b"]["flags"]
