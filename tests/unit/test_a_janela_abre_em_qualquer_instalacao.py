@@ -1,7 +1,9 @@
 """D-2511-A-JANELA-ABRE-EM-QUALQUER-INSTALACAO: a janela abre com só o pacote e o `share/` do wheel.
 
 Copia só o pacote para uma pasta sem `docs/` nem `assets/` ao lado, monta o `share/` a partir do
-`shared-data` do `pyproject.toml` (o que o wheel leva) e abre a janela num processo próprio.
+`shared-data` do `pyproject.toml` sob um `sys.prefix` de mentira (onde o wheel o põe) e abre a
+janela num processo próprio. O `sys.prefix` do Python que roda a suíte fica de fora: o `pip
+install -e` da casa e do CI já pôs ali o `share/` da árvore, que responderia no lugar da cópia.
 """
 from __future__ import annotations
 
@@ -31,6 +33,8 @@ DADOS_DA_JANELA = (
 CONSULTAS = """
 import json, pathlib, sys
 
+sys.prefix = PREFIXO
+
 fora = {}
 
 
@@ -46,7 +50,7 @@ def abre():
     return "ok" if "/lib/hefesto_dualsense4unix/" in vivo.__file__ else "FALHOU: " + vivo.__file__
 
 
-from hefesto_dualsense4unix.interface import abrir, controle_vivo, mapa, mesa_viva, monta
+from hefesto_dualsense4unix.interface import abrir, calibrar, controle_vivo, mapa, mesa_viva, monta
 from hefesto_dualsense4unix.utils import repo_files
 
 if ABRE_A_JANELA:
@@ -58,6 +62,7 @@ tenta("glifo_aceso", lambda: "ok" if monta.glifo("cross", ativo=True).startswith
       else "FALHOU: sem svg")
 tenta("mapa_desenhado", lambda: "ok" if "<svg" in controle_vivo.molde_svg() else "FALHOU: sem svg")
 tenta("icone", lambda: "ok" if abrir.achar_o_icone() is not None else "FALHOU: sem ícone")
+tenta("calibrar", lambda: "ok" if calibrar.nome_do_botao("cross") else "FALHOU: sem nome")
 fora["achado_em"] = str(repo_files.encontrar_arquivo_do_repo("docs/data/mapa-controles.csv"))
 print("RESULTADO=" + json.dumps(fora))
 """
@@ -69,29 +74,29 @@ def _shared_data() -> dict[str, str]:
 
 
 def _instalar_sem(tmp_path: Path, sem: str | None) -> tuple[Path, Path]:
-    """`(lib, data)`: o pacote copiado e o `share/` do wheel, tirando o arquivo `sem`."""
+    """`(lib, prefixo)`: o pacote copiado e o `share/` do wheel no prefixo, sem o arquivo `sem`."""
     lib = tmp_path / "lib"
     shutil.copytree(
         RAIZ / "src" / NOME.replace("-", "_"), lib / NOME.replace("-", "_"),
         ignore=shutil.ignore_patterns("__pycache__"))
-    data = tmp_path / "data"
+    prefixo = tmp_path / "prefixo"
     for origem, destino in _shared_data().items():
         if origem == sem:
             continue
-        alvo = data / Path(destino).relative_to("share")
+        alvo = prefixo / destino
         alvo.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(RAIZ / origem, alvo)
-    return lib, data
+    return lib, prefixo
 
 
 def _abrir(tmp_path: Path, sem: str | None, janela: bool) -> dict[str, str]:
-    lib, data = _instalar_sem(tmp_path, sem)
+    lib, prefixo = _instalar_sem(tmp_path, sem)
     casa = tmp_path / "casa"
     casa.mkdir()
     env = {
         "PATH": "/usr/bin:/bin",
         "HOME": str(casa),
-        "XDG_DATA_HOME": str(data),
+        "XDG_DATA_HOME": str(casa / "data"),
         "XDG_CONFIG_HOME": str(casa / "config"),
         "XDG_CACHE_HOME": str(casa / "cache"),
         "XDG_STATE_HOME": str(casa / "state"),
@@ -99,7 +104,7 @@ def _abrir(tmp_path: Path, sem: str | None, janela: bool) -> dict[str, str]:
         "PYTHONPATH": str(lib),
         "HEFESTO_NA_TELA": "0",
     }
-    codigo = f"ABRE_A_JANELA = {janela!r}\n{CONSULTAS}"
+    codigo = f"ABRE_A_JANELA = {janela!r}\nPREFIXO = {str(prefixo)!r}\n{CONSULTAS}"
     proc = subprocess.run(
         [sys.executable, "-c", codigo], cwd=str(tmp_path), env=env,
         capture_output=True, text=True, timeout=180)
@@ -112,8 +117,8 @@ def test_o_pacote_com_o_share_do_wheel_abre_a_janela_sem_a_arvore(tmp_path: Path
     pytest.importorskip("gi")
     assert not (tmp_path / "docs").exists() and not (tmp_path / "assets").exists()
     visto = _abrir(tmp_path, None, janela=True)
-    assert visto.pop("achado_em").startswith(str(tmp_path / "data")), visto
-    assert visto == {nome: "ok" for nome in visto} and len(visto) == 7, visto
+    assert visto.pop("achado_em").startswith(str(tmp_path / "prefixo" / "share")), visto
+    assert visto == {nome: "ok" for nome in visto} and len(visto) == 8, visto
 
 
 @pytest.mark.parametrize("sem", DADOS_DA_JANELA)

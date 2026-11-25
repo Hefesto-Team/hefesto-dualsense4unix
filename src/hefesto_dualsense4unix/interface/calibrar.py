@@ -70,6 +70,7 @@ import caixa_da_janela
 from hefesto_dualsense4unix.core.roteador_de_movimento import (
     SEGUNDOS_DO_ZERO,
 )
+from hefesto_dualsense4unix.utils.repo_files import ler_arquivo_do_repo
 
 SEGUNDOS = f"{SEGUNDOS_DO_ZERO:g}"
 
@@ -161,11 +162,11 @@ _PECA_DO_BOTAO = {"l3": "stick_l", "r3": "stick_r", "create": "share"}
 
 
 def _pecas() -> dict:
-    """O mapa das peças (`docs/data/pecas-do-dualsense.csv`), por id."""
+    """O mapa das peças (`docs/data/pecas-do-dualsense.csv` desta instalação), por id."""
     import csv
 
-    linhas = [x for x in (monta.DADOS_DO_REPO / "pecas-do-dualsense.csv")
-              .read_text(encoding="utf-8").splitlines() if x and not x.startswith("#")]
+    linhas = [x for x in (ler_arquivo_do_repo("docs/data/pecas-do-dualsense.csv") or "")
+              .splitlines() if x and not x.startswith("#")]
     return {p["id"]: p for p in csv.DictReader(linhas)}
 
 
