@@ -303,9 +303,13 @@ def _perfil_ativo_no_disco() -> None:
                                 origem="regua")
 
 
-@pytest.fixture(scope="module")
-def medido() -> dict:
-    """Abre o piloto DE VERDADE, oculto, e roda o roteiro — marco a marco, por condição."""
+@pytest.fixture(scope="module", params=["no-relogio", "antes-do-bootstrap"])
+def medido(request: pytest.FixtureRequest) -> dict:
+    """Abre o piloto DE VERDADE, oculto, e roda o roteiro — marco a marco, por condição.
+
+    A variante ``antes-do-bootstrap`` começa o roteiro no instante em que a página confirma
+    e o BOOTSTRAP ainda não respondeu, que é a janela em que o CI caía.
+    """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -398,13 +402,17 @@ def medido() -> dict:
         perguntar()
 
     def comecar() -> bool:
+        esperar("carga", "true", lambda _v: True if piloto.pronto else None, abrir,
+                "o BOOTSTRAP da primeira carga responder", teto_s=TETO_DA_PAGINA_S)
+        return False
+
+    def abrir() -> None:
         piloto._ir(args.abre)
         esperar("vigia", VIGIAR_O_BOTAO,
                 lambda v: v if v == "vigiando" and piloto.pronto else None,
                 o_sucesso_calado,
                 "a página 02 de pé, com a ponte do piloto e o «Padrão» do p1",
                 teto_s=TETO_DA_PAGINA_S)
-        return False
 
     def o_sucesso_calado() -> None:
         piloto.ponte.perguntar(LER_A_TELA, ler("antes"))
@@ -490,7 +498,17 @@ def medido() -> dict:
         fora["deposito"] = sorted(getattr(piloto, "_recados", {}))
         Gtk.main_quit()
 
-    GLib.timeout_add(400, comecar)
+    if request.param == "antes-do-bootstrap":
+        confirmou = piloto.tela._ao_carregar
+
+        def confirmou_e_comecou() -> None:
+            confirmou()
+            piloto.tela._ao_carregar = confirmou
+            comecar()
+
+        piloto.tela._ao_carregar = confirmou_e_comecou
+    else:
+        GLib.timeout_add(400, comecar)
     guarda = GLib.timeout_add(int(TETO_DO_ROTEIRO_S * 1000), Gtk.main_quit)
     try:
         limite = _time.monotonic() + TETO_DO_ROTEIRO_S
