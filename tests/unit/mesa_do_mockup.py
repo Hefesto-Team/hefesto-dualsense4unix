@@ -41,6 +41,8 @@ APARELHOS: tuple[Aparelho, ...] = (
     Aparelho("hub", "Hub", "TP-Link UH700", "hub"),
 )
 
+ALTURA_DO_EXEMPLO = "abaixo"
+
 FACES: tuple[Face, ...] = (
     Face(
         nome="Frente do gabinete", regiao="pc", perto=True,
@@ -61,7 +63,7 @@ FACES: tuple[Face, ...] = (
         ),
     ),
     Face(
-        nome="Hub, no alto do rack", regiao="hub", alto=True,
+        nome="Hub na Entrada 4", regiao="hub", alto=True,
         entradas=(
             Entrada("9", usb=3, onde="hub", pos=1, par="10"),
             Entrada("10", usb=3, onde="hub", pos=2, par="9"),
@@ -116,6 +118,7 @@ def mesa(
     leitura: Leitura | None = None,
     aparelhos: tuple[Aparelho, ...] | None = None,
     faces: tuple[Face, ...] | None = None,
+    altura: str | None = ALTURA_DO_EXEMPLO,
 ) -> Mesa:
     """A mesa do mockup, com o que você quiser trocar."""
     return Mesa(
@@ -123,6 +126,7 @@ def mesa(
         faces=FACES if faces is None else faces,
         mapa=MAPA if mapa is None else mapa,
         leitura=LEITURA_AGORA if leitura is None else leitura,
+        altura=altura,
     )
 
 

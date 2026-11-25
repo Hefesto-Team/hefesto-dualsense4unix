@@ -95,11 +95,11 @@ def test_o_bonus_de_ficar_parado_so_desempata() -> None:
 
 
 def test_arrancado_o_bonus_mexendo_o_minimo_manda_mexer_em_mais() -> None:
-    """A MORDIDA: 4 movimentos viram 6, e os dois a mais são trabalho puro."""
+    """A MORDIDA: 3 movimentos viram 6, e os três a mais são trabalho puro."""
     mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
     com = movimentos(mesa, POUCOS)
     sem = movimentos(mesa, motor.Opcoes(bonus_parado=0, proibir=POUCOS.proibir))
-    assert len(com) == 4, com
+    assert len(com) == 3, com
     assert len(sem) == 6, sem
     webcam = "Webcam → Entrada 2"
     assert webcam in sem

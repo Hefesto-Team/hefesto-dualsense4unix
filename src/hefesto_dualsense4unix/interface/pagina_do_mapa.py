@@ -52,6 +52,7 @@ import pathlib
 import sys
 from typing import Any, NamedTuple
 
+from hefesto_dualsense4unix.integrations.arranjo_da_mesa import FRASE_DA_ALTURA, FRASE_SEM_ALTURA
 from hefesto_dualsense4unix.integrations.entrada_a_entrada import LUGARES_DA_PORTA
 from hefesto_dualsense4unix.interface import caixa_da_janela, onde
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
@@ -83,8 +84,11 @@ class Edicao(NamedTuple):
 
 QUANDO_DO_EXEMPLO = "leitura de exemplo · 24/08/2026"
 
+ALTURA_DO_EXEMPLO = "abaixo"
+
 CENSO_DE_EXEMPLO: dict[str, Any] = {
     "quando": QUANDO_DO_EXEMPLO,
+    "altura": ALTURA_DO_EXEMPLO,
     "aparelhos": [
         {"id": "bt-a", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth",
          "sementeDoCaminho": "3-1.2", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
@@ -114,7 +118,7 @@ CENSO_DE_EXEMPLO: dict[str, Any] = {
                     {"n": "6", "usb": 3, "onde": "pc", "par": "5"},
                     {"n": "7", "usb": 2, "onde": "pc", "par": "8"},
                     {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
-        {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": True, "regiao": "hub",
+        {"nome": "Hub na Entrada 4", "forma": "fileira", "alto": True, "regiao": "hub",
          "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"},
                     {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"},
                     {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"},
@@ -129,7 +133,7 @@ CENSO_DE_EXEMPLO: dict[str, Any] = {
          "semLugar": True, "portas": [{"n": "16", "usb": 3, "onde": "pc"}]},
     ],
     "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4",
-             "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4", "16": "1-4"},
+             "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
     "leituras": {
         "antes": {"rotulo": "20h15 — antes de você mexer",
                   "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4",
@@ -238,6 +242,7 @@ ABRE_A_PORTA = """\
     MAPA = f.mapa;
     MAPA_ORIGINAL = Object.assign({}, MAPA);
     LEITURAS = f.leituras;
+    ALTURA = f.altura || null;
     leituraAtual = "agora";
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
@@ -5676,6 +5681,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DA_LETRA_DA_CASA,
     *EDICOES_DO_PAINEL_DA_ENTRADA,
     *EDICOES_DO_NOME_DO_APARELHO,
+    *EDICOES_DO_ARRANJO_PELA_RESPOSTA,
 )
 
 
@@ -6526,6 +6532,156 @@ EDICOES_DO_NOME_DO_APARELHO: tuple[Edicao, ...] = (
             '25/11/2026, O-NOME-DO-APARELHO-ENTRA-ESCAPADO-NO-MAPA-DAS-PORTAS-01 (des'
             'enho A): a frase de divergência da face traz o nome dado à entrada: vai '
             'escapada.'
+        ),
+    ),
+)
+
+EDICOES_DO_ARRANJO_PELA_RESPOSTA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '      { n: 60, quando: function (p) { return p.onde === '
+            '"hub"; }, selo: "derivado",\n'
+            '        txt: "no alto do rack, com a antena acima da lin'
+            'ha das cabeças" },\n'
+        ),
+        depois=(
+            '      { n: 60, quando: function (p, ctx) { return ctx.al'
+            'tura === "acima"; }, selo: "derivado",\n'
+            '        txt: FRASE_DA_ALTURA.acima },\n'
+        ),
+        porque=(
+            '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
+            'senho A): o bônus de altura do dongle segue a resposta de quem usa, e nã'
+            'o o hub do barramento.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var ctx = { perto: !!face.perto, vizinhoRadio: !!(vz'
+            ' && ehRadio(vz)),\n'
+        ),
+        depois=(
+            '    var ctx = { perto: !!face.perto, vizinhoRadio: !!(vz'
+            ' && ehRadio(vz)), altura: ALTURA,\n'
+        ),
+        porque=(
+            '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
+            'senho A): o contexto da nota leva a altura respondida.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (noHub) return { v: "melhor", txt: "Melhor luga'
+            'r", porque: "no alto do rack, com a antena acima das cab'
+            'eças" };\n'
+            '      return { v: "serve", txt: "Serve", porque: "entrad'
+            'a direta, mas na altura da escrivaninha" };\n'
+        ),
+        depois=(
+            '      return vereditoDaAltura();\n'
+        ),
+        porque=(
+            '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
+            'senho A): o veredito do dongle sem outro motivo diz a altura respondida.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function julgar(porta) {\n'
+        ),
+        depois=(
+            '  function vereditoDaAltura() {\n'
+            '    if (ALTURA === "acima") return { v: "melhor", txt: "'
+            'Melhor lugar", porque: FRASE_DA_ALTURA.acima };\n'
+            '    return { v: "serve", txt: "Serve", porque: FRASE_DA_'
+            'ALTURA[ALTURA] || FRASE_SEM_ALTURA };\n'
+            '  }\n'
+            '  function julgar(porta) {\n'
+        ),
+        porque=(
+            '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
+            'senho A): a função que diz a altura respondida.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var noAlto = bts.filter(function (p) { return p.onde'
+            ' === "hub"; }).length;\n'
+            '    if (bts.length && noAlto === 0) out.push("os dongles'
+            ' ficam na altura da escrivaninha, não no alto do rack");'
+            '\n'
+            '    else if (noAlto < bts.length) out.push((bts.length -'
+            ' noAlto) + " dongle(s) fora do alto");\n'
+        ),
+        depois=(
+            '    if (bts.length && ALTURA === "abaixo") out.push("os '
+            'dongles ficam abaixo da cabeça");\n'
+        ),
+        porque=(
+            '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
+            'senho A): o que se perde conta a altura pela resposta.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        if (pd && pd.onde === "hub" && a.classe === "wif'
+            'i")\n'
+            '          linhas.push({ s: "medido", t: "Hoje ele está n'
+            'o hub, e os dois chips do hub enumeram a <b>5000M</b> (<'
+            'code>4-1</code>, <code>4-1.1</code>): o enlace SuperSpee'
+            'd fica treinado, e é o <b>tráfego</b> dele que irradia."'
+            ' });\n'
+            '        else if (pd && pd.onde === "hub" && a.classe ==='
+            ' "teclado")\n'
+            '          linhas.push({ s: "medido", t: "Hoje ele está p'
+            'endurado no hub (<code>" + caminhoDe(a.id) + "</code>)."'
+            ' });\n'
+            '        else\n'
+            '          linhas.push({ s: "medido", t: "Hoje ele está n'
+            'a <b>" + naFraseDe(de) + "</b> (<code>" + caminhoDe(a.id'
+            ') + "</code>)." });\n'
+        ),
+        depois=(
+            '        if (pd && pd.onde === "hub" && a.classe === "wif'
+            'i")\n'
+            '          linhas.push(caminhoDe(a.id)\n'
+            '            ? { s: "medido", t: "Hoje ele está no hub (<'
+            'code>" + emAtributo(caminhoDe(a.id)) + "</code>), e é o '
+            '<b>tráfego</b> dele que irradia." }\n'
+            '            : { s: "derivado", t: "Hoje ele está no hub,'
+            ' e é o <b>tráfego</b> dele que irradia." });\n'
+            '        else if (pd && pd.onde === "hub" && a.classe ==='
+            ' "teclado")\n'
+            '          linhas.push({ s: "medido", t: "Hoje ele está p'
+            'endurado no hub (<code>" + emAtributo(caminhoDe(a.id)) +'
+            ' "</code>)." });\n'
+            '        else\n'
+            '          linhas.push({ s: "medido", t: "Hoje ele está n'
+            'a <b>" + naFraseDe(de) + "</b> (<code>" + emAtributo(cam'
+            'inhoDe(a.id)) + "</code>)." });\n'
+        ),
+        porque=(
+            '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
+            'senho A): a linha do Wi-Fi no hub usa o caminho lido e perde os números '
+            'da máquina de teste; os caminhos vão escapados.'
+        ),
+    ),
+    Edicao(
+        antes="  var fonte = EXEMPLO;\n",
+        depois=(
+            "  var fonte = EXEMPLO;\n"
+            "  var ALTURA = EXEMPLO.altura || null;\n"
+            "  var FRASE_DA_ALTURA = "
+            + json.dumps(dict(FRASE_DA_ALTURA), ensure_ascii=False)
+            + ";\n"
+            "  var FRASE_SEM_ALTURA = "
+            + json.dumps(FRASE_SEM_ALTURA, ensure_ascii=False)
+            + ";\n"
+        ),
+        porque=(
+            "25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (desenho A): a "
+            "altura respondida e as frases da altura moram no motor do arranjo, e a página as "
+            "recebe dele."
         ),
     ),
 )

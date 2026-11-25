@@ -49,7 +49,7 @@ O QUE SE PERDE SAI EM PALAVRA, NUNCA EM PONTOS
 -----------------------------------------------
 
 ``consequencias()`` devolve frases. *"437 pontos pior"* não diz nada a ninguém;
-*"os dongles ficam na altura da escrivaninha, não no alto do rack"* diz.
+*"os dongles ficam abaixo da cabeça"* diz.
 ``qualidade()`` existe só para ordenar variantes entre si e **não vai para a
 tela**.
 
@@ -90,6 +90,12 @@ SELO_DERIVADO = "derivado"
 SELO_ESPEC = "espec"
 
 CLASSES_DE_RADIO = frozenset({"bt", "wifi", "teclado", "mouse"})
+
+FRASE_DA_ALTURA: Mapping[str, str] = {
+    "acima": "acima da cabeça, como você disse",
+    "abaixo": "abaixo da cabeça, como você disse",
+}
+FRASE_SEM_ALTURA = "entrada direta"
 
 ORDEM_DE_DECISAO = ("hub", "teclado", "wifi", "bt", "mouse", "webcam")
 
@@ -137,6 +143,7 @@ class Mesa:
     mapa: Mapa
     leitura: Leitura
     nomes: Mapping[str, str] = field(default_factory=dict)
+    altura: str | None = None
 
     def na_frase(self, numero: str | None) -> str:
         """A entrada no meio da frase, pelo dono: «Entrada 3», ou «entrada Meio» com nome."""
@@ -166,6 +173,7 @@ class Contexto:
     perto: bool
     vizinho_radio: bool
     superspeed_no_hub: bool
+    altura: str | None = None
 
 
 @dataclass(frozen=True)
@@ -443,8 +451,8 @@ REGRAS: Mapping[str, tuple[Regra, ...]] = {
               texto="sem outro rádio colado"),
     ),
     "bt": (
-        Regra(60, lambda p, c: p.onde == "hub", SELO_DERIVADO,
-              texto="no alto do rack, com a antena acima da linha das cabeças"),
+        Regra(60, lambda p, c: c.altura == "acima", SELO_DERIVADO,
+              texto=FRASE_DA_ALTURA["acima"]),
         Regra(25, lambda p, c: p.esticada, SELO_DERIVADO,
               texto="na ponta do extensor: a antena que fica mais longe das outras"),
         Regra(-120, lambda p, c: p.onde == "hub" and c.superspeed_no_hub, SELO_ESPEC,
@@ -519,6 +527,7 @@ def nota_de(
         perto=bool(face is not None and face.perto),
         vizinho_radio=eh_radio(vizinho),
         superspeed_no_hub=_superspeed_no_hub(mesa, plano, aloc),
+        altura=mesa.altura,
     )
 
     regras = REGRAS.get(aparelho.classe, ())
@@ -819,10 +828,12 @@ def _linha_de_hoje(mesa: Mesa, aparelho: Aparelho, de: str | None) -> Linha:
     entrada = por_num(mesa.faces, de)
     no_hub = entrada is not None and entrada.onde == "hub"
     if no_hub and aparelho.classe == "wifi":
+        if not caminho:
+            return Linha(SELO_DERIVADO,
+                         "Hoje ele está no hub, e é o <b>tráfego</b> dele que irradia.")
         return Linha(SELO_MEDIDO,
-                     "Hoje ele está no hub, e os dois chips do hub enumeram a <b>5000M</b>"
-                     " (<code>4-1</code>, <code>4-1.1</code>): o enlace SuperSpeed fica"
-                     " treinado, e é o <b>tráfego</b> dele que irradia.")
+                     f"Hoje ele está no hub (<code>{caminho}</code>),"
+                     " e é o <b>tráfego</b> dele que irradia.")
     if no_hub and aparelho.classe == "teclado":
         return Linha(SELO_MEDIDO, f"Hoje ele está pendurado no hub (<code>{caminho}</code>).")
     onde = com_artigo(f"<b>{mesa.na_frase(de)}</b>", em=True)
@@ -882,10 +893,7 @@ def julgar(
         if entrada.esticada:
             return Veredito("melhor", "Melhor lugar",
                             "na ponta do extensor: a antena mais longe das outras")
-        if no_hub:
-            return Veredito("melhor", "Melhor lugar",
-                            "no alto do rack, com a antena acima das cabeças")
-        return Veredito("serve", "Serve", "entrada direta, mas na altura da escrivaninha")
+        return _veredito_da_altura(mesa.altura)
 
     if na_mao == "wifi":
         if no_hub:
@@ -921,6 +929,13 @@ def julgar(
         return Veredito("melhor", "Melhor lugar", "entrada preta, que é o que a webcam pede")
 
     return None
+
+
+def _veredito_da_altura(altura: str | None) -> Veredito:
+    """O dongle sem outro motivo: a altura que a pessoa respondeu, ou a entrada direta."""
+    if altura == "acima":
+        return Veredito("melhor", "Melhor lugar", FRASE_DA_ALTURA[altura])
+    return Veredito("serve", "Serve", FRASE_DA_ALTURA.get(altura or "", FRASE_SEM_ALTURA))
 
 
 VARIANTES: tuple[Variante, ...] = (
@@ -959,11 +974,8 @@ def consequencias(mesa: Mesa, op: Opcoes | None = None) -> list[str]:
             for a in mesa.aparelhos if a.classe == "bt"
         ) if e is not None
     ]
-    no_alto = sum(1 for e in bts if e.onde == "hub")
-    if bts and no_alto == 0:
-        fora.append("os dongles ficam na altura da escrivaninha, não no alto do rack")
-    elif no_alto < len(bts):
-        fora.append(f"{len(bts) - no_alto} dongle(s) fora do alto")
+    if bts and mesa.altura == "abaixo":
+        fora.append("os dongles ficam abaixo da cabeça")
     if not any(e.esticada for e in bts):
         fora.append("o extensor não é usado")
 

@@ -42,14 +42,14 @@ _JS = r"""
   r.lugarComLugar = campo('1', 'lugar-da-entrada');
   r.moverComLugar = campo('1', 'mover-para');
 
-  const de = rotulo('1'), para = rotulo('16');
-  r.rotulosDiferem = de !== para;
+  const de = rotulo('1');
+  r.rotulosDiferem = de !== rotulo('16');
   let arrastou = 0;
   document.addEventListener('dragstart', () => { arrastou++; }, true);
   const seletor = document.querySelector('#edita select.mover-para[data-entrada="1"]');
   seletor.value = '16';
   seletor.dispatchEvent(new Event('change', { bubbles: true }));
-  r.trocou = rotulo('1') === para && rotulo('16') === de;
+  r.trocou = rotulo('16') === de && rotulo('1') !== de;
   r.arrastou = arrastou;
   return JSON.stringify(r);
 })()

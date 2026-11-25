@@ -103,7 +103,8 @@ def _ler_a_maquina(
             return None
         censo = (ler_o_barramento or _ler)()
         tipos = mapa_das_portas.tipos_declarados(documento)
-        ensaio = mapa_das_portas.mesa_do_motor(declarado, censo, tipos)
+        ensaio = mapa_das_portas.mesa_do_motor(
+            declarado, censo, tipos, mapa_das_portas.altura_declarada(documento))
         conectados = censo.conectados()
         ids = identidades(
             conectados, ler_o_serial or mapa_das_portas.serial_do_no, antes,
@@ -152,6 +153,7 @@ def _ler_a_maquina(
             for a in mesa.aparelhos
         ],
         "faces": faces,
+        "altura": mesa.altura,
         "mapa": dict(mesa.mapa),
         "leituras": {
             "agora": {"rotulo": ROTULO_DE_AGORA, "caminho": caminhos},

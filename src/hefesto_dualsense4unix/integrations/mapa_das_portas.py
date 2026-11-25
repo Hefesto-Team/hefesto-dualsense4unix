@@ -181,13 +181,18 @@ class Ensaio:
 
 
 def mesa_do_motor(
-    mapa: MapaDaMesa, censo: Censo, tipos: Mapping[str, str] | None = None
+    mapa: MapaDaMesa,
+    censo: Censo,
+    tipos: Mapping[str, str] | None = None,
+    altura: str | None = None,
 ) -> Ensaio:
     """O desenho do usuário mais a leitura de agora, na forma que o motor entende.
 
     ``tipos`` é o que o usuário declarou de cada modelo (``vid:pid`` → tipo, o ``mesa.radios`` do
     ``maquina.json``): pesa quando a máquina não mede a classe do aparelho
     (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, passo 2 absorvido da O-WIFI-E-TODO-DISPOSITIVO).
+    ``altura`` é a resposta de quem usa sobre a altura da antena (``altura_declarada``): sem
+    resposta o motor não afirma altura.
     """
     controladores = controladores_do_censo(censo)
     leitura, fora = _leitura_pelas_entradas(mapa, censo.conectados(), controladores)
@@ -280,6 +285,7 @@ def mesa_do_motor(
             mapa=declarado,
             leitura=leitura,
             nomes={numero: porta.nome for numero, porta in mapa.portas.items() if porta.nome},
+            altura=altura,
         ),
         lacunas=tuple(sorted(lacunas)),
         usb_de=origens,
@@ -363,6 +369,12 @@ def tipos_declarados(maquina: object) -> dict[str, str]:
     """``{vid:pid: tipo}`` do que o usuário declarou dos aparelhos (o ``mesa.radios`` do disco)."""
     radios = getattr(getattr(maquina, "mesa", None), "radios", None) or {}
     return {chave: radio.tipo for chave, radio in radios.items() if radio.tipo}
+
+
+def altura_declarada(maquina: object) -> str | None:
+    """``"acima"``, ``"abaixo"`` ou ``None``: o que quem usa respondeu sobre a antena."""
+    altura = getattr(getattr(maquina, "mesa", None), "altura_da_antena", None)
+    return altura if altura in ("acima", "abaixo") else None
 
 
 def _leitura_pelas_entradas(
@@ -778,6 +790,7 @@ __all__ = [
     "USB_PELO_APARELHO",
     "Ensaio",
     "FatosDoBuraco",
+    "altura_declarada",
     "aparelho_usb3_na_entrada",
     "caminho_de",
     "entradas_sem_lugar",

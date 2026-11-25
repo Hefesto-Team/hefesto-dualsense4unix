@@ -148,10 +148,6 @@
    "bt-a": {
     "razoes": [
      {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -171,10 +167,6 @@
    },
    "bt-b": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "derivado",
       "txt": "na ponta do extensor: a antena que fica mais longe das outras"
@@ -199,10 +191,6 @@
    },
    "bt-c": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
@@ -270,16 +258,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -363,8 +351,10 @@
    ]
   }
  ],
- "consequencias/melhor": [],
- "qualidade/melhor": 647,
+ "consequencias/melhor": [
+  "os dongles ficam abaixo da cabeça"
+ ],
+ "qualidade/melhor": 467,
  "planejar/poucos": {
   "plano": {
    "1": "teclado",
@@ -436,10 +426,6 @@
    "bt-a": {
     "razoes": [
      {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -459,10 +445,6 @@
    },
    "bt-b": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "derivado",
       "txt": "na ponta do extensor: a antena que fica mais longe das outras"
@@ -487,10 +469,6 @@
    },
    "bt-c": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
@@ -558,16 +536,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -651,8 +629,10 @@
    ]
   }
  ],
- "consequencias/poucos": [],
- "qualidade/poucos": 647,
+ "consequencias/poucos": [
+  "os dongles ficam abaixo da cabeça"
+ ],
+ "qualidade/poucos": 467,
  "planejar/sem-ext": {
   "plano": {
    "1": "teclado",
@@ -724,10 +704,6 @@
    "bt-a": {
     "razoes": [
      {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -752,10 +728,6 @@
       "txt": "esta opção não usa a Entrada 15a, onde ele está hoje"
      },
      {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -775,10 +747,6 @@
    },
    "bt-c": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
@@ -850,12 +818,12 @@
      "t": "Esta opção não usa a Entrada 15a, onde ele está hoje."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
-     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
     }
    ]
   },
@@ -869,16 +837,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 3 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -963,9 +931,10 @@
   }
  ],
  "consequencias/sem-ext": [
+  "os dongles ficam abaixo da cabeça",
   "o extensor não é usado"
  ],
- "qualidade/sem-ext": 616,
+ "qualidade/sem-ext": 436,
  "planejar/so-pc": {
   "plano": {
    "1": "teclado",
@@ -1243,7 +1212,7 @@
   }
  ],
  "consequencias/so-pc": [
-  "os dongles ficam na altura da escrivaninha, não no alto do rack",
+  "os dongles ficam abaixo da cabeça",
   "o extensor não é usado",
   "2 par(es) de rádio ficam colados"
  ],
@@ -1259,16 +1228,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -1450,10 +1419,6 @@
    "bt-a": {
     "razoes": [
      {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -1473,10 +1438,6 @@
    },
    "bt-b": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "derivado",
       "txt": "na ponta do extensor: a antena que fica mais longe das outras"
@@ -1501,10 +1462,6 @@
    },
    "bt-c": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
@@ -1700,7 +1657,7 @@
  "julgar/3/bt": {
   "v": "serve",
   "txt": "Serve",
-  "porque": "entrada direta, mas na altura da escrivaninha"
+  "porque": "abaixo da cabeça, como você disse"
  },
  "julgar/3/wifi": {
   "v": "melhor",
@@ -1726,7 +1683,7 @@
  "julgar/7/bt": {
   "v": "serve",
   "txt": "Serve",
-  "porque": "entrada direta, mas na altura da escrivaninha"
+  "porque": "abaixo da cabeça, como você disse"
  },
  "julgar/7/wifi": {
   "v": "evite",
@@ -1806,9 +1763,9 @@
  },
  "julgar/10/null": null,
  "julgar/13/bt": {
-  "v": "melhor",
-  "txt": "Melhor lugar",
-  "porque": "no alto do rack, com a antena acima das cabeças"
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "abaixo da cabeça, como você disse"
  },
  "julgar/13/wifi": {
   "v": "ruim",
@@ -1912,9 +1869,9 @@
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar-ponta-livre/15/bt": {
-  "v": "melhor",
-  "txt": "Melhor lugar",
-  "porque": "no alto do rack, com a antena acima das cabeças"
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "abaixo da cabeça, como você disse"
  },
  "julgar-ponta-livre/15/wifi": {
   "v": "ruim",
@@ -1974,16 +1931,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -2078,16 +2035,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -2186,12 +2143,12 @@
      "t": "Esta opção não usa a entrada Ponta, onde ele está hoje."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
-     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
     }
    ]
   },
@@ -2205,16 +2162,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 3 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -2881,10 +2838,6 @@
     "razoes": [
      {
       "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
-      "selo": "derivado",
       "txt": "na ponta do extensor: a antena que fica mais longe das outras"
      },
      {
@@ -2908,10 +2861,6 @@
    "bt-b": {
     "razoes": [
      {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
-     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -2931,10 +2880,6 @@
    },
    "bt-c": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "no alto do rack, com a antena acima da linha das cabeças"
-     },
      {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
@@ -3003,15 +2948,15 @@
     },
     {
      "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
-     "s": "derivado",
      "t": "Na ponta do extensor: a antena que fica mais longe das outras."
     },
     {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
     }
    ]
   },
@@ -3025,16 +2970,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -3048,16 +2993,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -3206,15 +3151,15 @@
     },
     {
      "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
-     "s": "derivado",
      "t": "Na ponta do extensor: a antena que fica mais longe das outras."
     },
     {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
     }
    ]
   },
@@ -3228,16 +3173,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -3251,16 +3196,16 @@
      "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
     },
     {
-     "s": "derivado",
-     "t": "No alto do rack, com a antena acima da linha das cabeças."
-    },
-    {
      "s": "espec",
      "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
     },
     {
      "s": "espec",
      "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
     }
    ]
   },
@@ -3543,5 +3488,904 @@
   "destino": {},
   "cabe": false,
   "sobra": 0
+ },
+ "altura/acima/planejar": {
+  "plano": {
+   "1": "teclado",
+   "3": "wifi",
+   "4": "hub",
+   "7": "mouse",
+   "8": "webcam",
+   "9": "bt-a",
+   "13": "bt-c",
+   "15a": "bt-b"
+  },
+  "motivo": {
+   "hub": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada direta do PC — o hub não pode pendurar em si mesmo"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada azul, para o hub entregar o que ele oferece"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
+   },
+   "teclado": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "entrada direta do PC: hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS"
+     },
+     {
+      "selo": "derivado",
+      "txt": "na frente, que é a mais perto de você"
+     },
+     {
+      "selo": "espec",
+      "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
+   },
+   "wifi": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada azul, para ele manter a velocidade"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio colado"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "bt-a": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "acima da cabeça, como você disse"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 24,
+    "forcado": false,
+    "essencial": false
+   },
+   "bt-b": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "acima da cabeça, como você disse"
+     },
+     {
+      "selo": "derivado",
+      "txt": "na ponta do extensor: a antena que fica mais longe das outras"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 24,
+    "forcado": false,
+    "essencial": false
+   },
+   "bt-c": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "acima da cabeça, como você disse"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "mouse": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada direta do PC"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada preta, sem gastar a azul que ele não usa"
+     },
+     {
+      "selo": "espec",
+      "txt": "longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "webcam": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa"
+     },
+     {
+      "selo": "derivado",
+      "txt": "direta do PC, sem gastar entrada do hub"
+     }
+    ],
+    "peso": "melhora",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": false
+   }
+  }
+ },
+ "altura/acima/receita": [
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Bluetooth → Entrada 13",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Acima da cabeça, como você disse."
+    },
+    {
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Wi-Fi → Entrada 3",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "espec",
+     "t": "Fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada azul, para ele manter a velocidade."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio colado."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mouse → Entrada 7",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada direta do PC."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada preta, sem gastar a azul que ele não usa."
+    },
+    {
+     "s": "espec",
+     "t": "Longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham."
+    }
+   ]
+  },
+  {
+   "essencial": false,
+   "ganho": "Infinity",
+   "titulo": "Webcam → Entrada 8",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa."
+    },
+    {
+     "s": "derivado",
+     "t": "Direta do PC, sem gastar entrada do hub."
+    }
+   ]
+  },
+  {
+   "titulo": "O que muda quando você terminar",
+   "semNumero": true,
+   "linhas": [
+    {
+     "s": "derivado",
+     "t": "Os dongles ficam no alto e separados, com o Wi-Fi fora do hub deles."
+    },
+    {
+     "s": "derivado",
+     "t": "<b>Quanto isso melhora o seu Bluetooth não foi medido nesta máquina.</b> O ensaio que responde conta os quadros que chegam e confere se vieram inteiros — antes e depois da mudança."
+    }
+   ]
+  }
+ ],
+ "altura/acima/consequencias": [],
+ "altura/acima/julgar/3": {
+  "v": "melhor",
+  "txt": "Melhor lugar",
+  "porque": "acima da cabeça, como você disse"
+ },
+ "altura/acima/julgar/5": {
+  "v": "melhor",
+  "txt": "Melhor lugar",
+  "porque": "acima da cabeça, como você disse"
+ },
+ "altura/acima/julgar/11": {
+  "v": "melhor",
+  "txt": "Melhor lugar",
+  "porque": "acima da cabeça, como você disse"
+ },
+ "altura/acima/julgar/13": {
+  "v": "melhor",
+  "txt": "Melhor lugar",
+  "porque": "acima da cabeça, como você disse"
+ },
+ "altura/abaixo/planejar": {
+  "plano": {
+   "1": "teclado",
+   "3": "wifi",
+   "4": "hub",
+   "7": "mouse",
+   "8": "webcam",
+   "9": "bt-a",
+   "13": "bt-c",
+   "15a": "bt-b"
+  },
+  "motivo": {
+   "hub": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada direta do PC — o hub não pode pendurar em si mesmo"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada azul, para o hub entregar o que ele oferece"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
+   },
+   "teclado": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "entrada direta do PC: hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS"
+     },
+     {
+      "selo": "derivado",
+      "txt": "na frente, que é a mais perto de você"
+     },
+     {
+      "selo": "espec",
+      "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
+   },
+   "wifi": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada azul, para ele manter a velocidade"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio colado"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "bt-a": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 24,
+    "forcado": false,
+    "essencial": false
+   },
+   "bt-b": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "na ponta do extensor: a antena que fica mais longe das outras"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 24,
+    "forcado": false,
+    "essencial": false
+   },
+   "bt-c": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "mouse": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada direta do PC"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada preta, sem gastar a azul que ele não usa"
+     },
+     {
+      "selo": "espec",
+      "txt": "longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "webcam": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa"
+     },
+     {
+      "selo": "derivado",
+      "txt": "direta do PC, sem gastar entrada do hub"
+     }
+    ],
+    "peso": "melhora",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": false
+   }
+  }
+ },
+ "altura/abaixo/receita": [
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Bluetooth → Entrada 13",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Wi-Fi → Entrada 3",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "espec",
+     "t": "Fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada azul, para ele manter a velocidade."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio colado."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mouse → Entrada 7",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada direta do PC."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada preta, sem gastar a azul que ele não usa."
+    },
+    {
+     "s": "espec",
+     "t": "Longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham."
+    }
+   ]
+  },
+  {
+   "essencial": false,
+   "ganho": "Infinity",
+   "titulo": "Webcam → Entrada 8",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa."
+    },
+    {
+     "s": "derivado",
+     "t": "Direta do PC, sem gastar entrada do hub."
+    }
+   ]
+  },
+  {
+   "titulo": "O que muda quando você terminar",
+   "semNumero": true,
+   "linhas": [
+    {
+     "s": "derivado",
+     "t": "Os dongles ficam no alto e separados, com o Wi-Fi fora do hub deles."
+    },
+    {
+     "s": "derivado",
+     "t": "<b>Quanto isso melhora o seu Bluetooth não foi medido nesta máquina.</b> O ensaio que responde conta os quadros que chegam e confere se vieram inteiros — antes e depois da mudança."
+    }
+   ]
+  }
+ ],
+ "altura/abaixo/consequencias": [
+  "os dongles ficam abaixo da cabeça"
+ ],
+ "altura/abaixo/julgar/3": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "abaixo da cabeça, como você disse"
+ },
+ "altura/abaixo/julgar/5": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "abaixo da cabeça, como você disse"
+ },
+ "altura/abaixo/julgar/11": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "abaixo da cabeça, como você disse"
+ },
+ "altura/abaixo/julgar/13": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "abaixo da cabeça, como você disse"
+ },
+ "altura/null/planejar": {
+  "plano": {
+   "1": "teclado",
+   "3": "wifi",
+   "4": "hub",
+   "7": "mouse",
+   "8": "webcam",
+   "9": "bt-a",
+   "13": "bt-c",
+   "15a": "bt-b"
+  },
+  "motivo": {
+   "hub": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada direta do PC — o hub não pode pendurar em si mesmo"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada azul, para o hub entregar o que ele oferece"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
+   },
+   "teclado": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "entrada direta do PC: hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS"
+     },
+     {
+      "selo": "derivado",
+      "txt": "na frente, que é a mais perto de você"
+     },
+     {
+      "selo": "espec",
+      "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
+   },
+   "wifi": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada azul, para ele manter a velocidade"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio colado"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "bt-a": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 24,
+    "forcado": false,
+    "essencial": false
+   },
+   "bt-b": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "na ponta do extensor: a antena que fica mais longe das outras"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": 24,
+    "forcado": false,
+    "essencial": false
+   },
+   "bt-c": {
+    "razoes": [
+     {
+      "selo": "espec",
+      "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
+     },
+     {
+      "selo": "espec",
+      "txt": "sem outro rádio de 2,4 GHz na entrada colada"
+     },
+     {
+      "selo": "espec",
+      "txt": "com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "mouse": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada direta do PC"
+     },
+     {
+      "selo": "derivado",
+      "txt": "entrada preta, sem gastar a azul que ele não usa"
+     },
+     {
+      "selo": "espec",
+      "txt": "longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham"
+     }
+    ],
+    "peso": "essencial",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": true
+   },
+   "webcam": {
+    "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa"
+     },
+     {
+      "selo": "derivado",
+      "txt": "direta do PC, sem gastar entrada do hub"
+     }
+    ],
+    "peso": "melhora",
+    "ganho": "Infinity",
+    "forcado": false,
+    "essencial": false
+   }
+  }
+ },
+ "altura/null/receita": [
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Bluetooth → Entrada 13",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    },
+    {
+     "s": "espec",
+     "t": "Com 4 posições de folga até o dongle mais próximo — dois rádios colados se atrapalham."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Wi-Fi → Entrada 3",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "espec",
+     "t": "Fora do hub: o tráfego dele em 5 Gbps é o que vira ruído em 2,4 GHz para os dongles do mesmo hub."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada azul, para ele manter a velocidade."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio colado."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mouse → Entrada 7",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada direta do PC."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada preta, sem gastar a azul que ele não usa."
+    },
+    {
+     "s": "espec",
+     "t": "Longe do receptor do teclado — dois rádios de 2,4 GHz encostados se atrapalham."
+    }
+   ]
+  },
+  {
+   "essencial": false,
+   "ganho": "Infinity",
+   "titulo": "Webcam → Entrada 8",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Ele apareceu no sistema e ainda não tem lugar no mapa."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa."
+    },
+    {
+     "s": "derivado",
+     "t": "Direta do PC, sem gastar entrada do hub."
+    }
+   ]
+  },
+  {
+   "titulo": "O que muda quando você terminar",
+   "semNumero": true,
+   "linhas": [
+    {
+     "s": "derivado",
+     "t": "Os dongles ficam no alto e separados, com o Wi-Fi fora do hub deles."
+    },
+    {
+     "s": "derivado",
+     "t": "<b>Quanto isso melhora o seu Bluetooth não foi medido nesta máquina.</b> O ensaio que responde conta os quadros que chegam e confere se vieram inteiros — antes e depois da mudança."
+    }
+   ]
+  }
+ ],
+ "altura/null/consequencias": [],
+ "altura/null/julgar/3": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "entrada direta"
+ },
+ "altura/null/julgar/5": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "entrada direta"
+ },
+ "altura/null/julgar/11": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "entrada direta"
+ },
+ "altura/null/julgar/13": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "entrada direta"
  }
 }

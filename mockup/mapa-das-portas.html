@@ -608,6 +608,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   var EXEMPLO = {
     "quando": "leitura de exemplo · 24/08/2026",
+    "altura": "abaixo",
     "aparelhos": [
       {"id": "bt-a", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth", "sementeDoCaminho": "3-1.2", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
       {"id": "bt-b", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth", "sementeDoCaminho": "3-1.1.4", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
@@ -621,10 +622,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     "faces": [
       {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 3, "onde": "pc", "par": "2"}, {"n": "2", "usb": 3, "onde": "pc", "par": "1"}]},
       {"nome": "Traseira", "forma": "grade-tras", "regiao": "pc", "donaDaFaixaPc": true, "portas": [{"n": "3", "usb": 3, "onde": "pc", "par": "4"}, {"n": "4", "usb": 3, "onde": "pc", "par": "3"}, {"n": "5", "usb": 3, "onde": "pc", "par": "6"}, {"n": "6", "usb": 3, "onde": "pc", "par": "5"}, {"n": "7", "usb": 2, "onde": "pc", "par": "8"}, {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
-      {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "Extensor de 1 m"}}]},
+      {"nome": "Hub na Entrada 4", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "Extensor de 1 m"}}]},
       {"nome": "Sem Lugar", "titulo": "Sem Lugar", "forma": "coluna", "regiao": "pc", "semLugar": true, "portas": [{"n": "16", "usb": 3, "onde": "pc"}]}
     ],
-    "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4", "16": "1-4"},
+    "mapa": {"1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4", "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"},
     "leituras": {"antes": {"rotulo": "20h15 — antes de você mexer", "caminho": {"mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4", "bt-a": "3-1.2", "wifi": "4-1.1.2", "teclado": "3-1.4", "bt-b": "3-1.1.4"}}, "agora": {"rotulo": "22h50 — depois dos seus movimentos", "caminho": {"teclado": "1-3", "webcam": "1-4", "mouse": "1-6", "hub": "3-1", "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2"}}},
     "controles": [
       {"nome": "Jogador 1", "mic": true, "onde": "bt-a"},
@@ -636,6 +637,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   var CAMPOS_DO_ARRANJO = ["quando", "aparelhos", "faces", "mapa", "leituras"];
   var fonte = EXEMPLO;
+  var ALTURA = EXEMPLO.altura || null;
+  var FRASE_DA_ALTURA = {"acima": "acima da cabeça, como você disse", "abaixo": "abaixo da cabeça, como você disse"};
+  var FRASE_SEM_ALTURA = "entrada direta";
   var APARELHOS = fonte.aparelhos;
 
   var FACES = fonte.faces;
@@ -762,8 +766,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         txt: "sem outro rádio colado" }
     ],
     bt: [
-      { n: 60, quando: function (p) { return p.onde === "hub"; }, selo: "derivado",
-        txt: "no alto do rack, com a antena acima da linha das cabeças" },
+      { n: 60, quando: function (p, ctx) { return ctx.altura === "acima"; }, selo: "derivado",
+        txt: FRASE_DA_ALTURA.acima },
       { n: 25, quando: function (p) { return !!p.esticada; }, selo: "derivado",
         txt: "na ponta do extensor: a antena que fica mais longe das outras" },
       { n: -120, quando: function (p, ctx) { return p.onde === "hub" && ctx.superspeedNoHub; }, peso: "essencial", selo: "espec",
@@ -803,7 +807,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   function notaDe(ap, porta, plano, jaPostos) {
     var face = FACES.filter(function (f) { return f.portas.some(function (x) { return x.n === porta.n || (x.filho && x.filho.n === porta.n); }); })[0] || {};
     var vz = porta.par ? classeDe(plano[porta.par] || alocacao[porta.par]) : null;
-    var ctx = { perto: !!face.perto, vizinhoRadio: !!(vz && ehRadio(vz)),
+    var ctx = { perto: !!face.perto, vizinhoRadio: !!(vz && ehRadio(vz)), altura: ALTURA,
                 superspeedNoHub: (function () { var w = portaDeEm(plano, "wifi") || portaDe("wifi"); var pw = w && porNum(w); return !!(pw && pw.onde === "hub"); })() };
     var n = 0, razoes = [], peso = "melhora";
     (REGRAS[ap.classe] || []).forEach(function (r) {
@@ -961,11 +965,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       if (de) {
         var pd = porNum(de);
         if (pd && pd.onde === "hub" && a.classe === "wifi")
-          linhas.push({ s: "medido", t: "Hoje ele está no hub, e os dois chips do hub enumeram a <b>5000M</b> (<code>4-1</code>, <code>4-1.1</code>): o enlace SuperSpeed fica treinado, e é o <b>tráfego</b> dele que irradia." });
+          linhas.push(caminhoDe(a.id)
+            ? { s: "medido", t: "Hoje ele está no hub (<code>" + emAtributo(caminhoDe(a.id)) + "</code>), e é o <b>tráfego</b> dele que irradia." }
+            : { s: "derivado", t: "Hoje ele está no hub, e é o <b>tráfego</b> dele que irradia." });
         else if (pd && pd.onde === "hub" && a.classe === "teclado")
-          linhas.push({ s: "medido", t: "Hoje ele está pendurado no hub (<code>" + caminhoDe(a.id) + "</code>)." });
+          linhas.push({ s: "medido", t: "Hoje ele está pendurado no hub (<code>" + emAtributo(caminhoDe(a.id)) + "</code>)." });
         else
-          linhas.push({ s: "medido", t: "Hoje ele está na <b>" + naFraseDe(de) + "</b> (<code>" + caminhoDe(a.id) + "</code>)." });
+          linhas.push({ s: "medido", t: "Hoje ele está na <b>" + naFraseDe(de) + "</b> (<code>" + emAtributo(caminhoDe(a.id)) + "</code>)." });
       } else {
         linhas.push({ s: "medido", t: "Ele apareceu no sistema e ainda não tem lugar no mapa." });
       }
@@ -1006,6 +1012,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return !!(pp && pp.onde === "hub");
   }
   function frase1(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function vereditoDaAltura() {
+    if (ALTURA === "acima") return { v: "melhor", txt: "Melhor lugar", porque: FRASE_DA_ALTURA.acima };
+    return { v: "serve", txt: "Serve", porque: FRASE_DA_ALTURA[ALTURA] || FRASE_SEM_ALTURA };
+  }
   function julgar(porta) {
     var oc = alocacao[porta.n];
     if (oc) { var a = acha(oc); return { v: "cheia", txt: "Ocupada", porque: a.tipo + " — clique para tirar" }; }
@@ -1026,8 +1036,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       if (noHub && superspeedNoHub()) return { v: "ruim", txt: "Evite", porque: "o Wi-Fi usa o SuperSpeed deste mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };
       if (vzRadio) return { v: "evite", txt: "Vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
       if (porta.esticada) return { v: "melhor", txt: "Melhor lugar", porque: "na ponta do extensor: a antena mais longe das outras" };
-      if (noHub) return { v: "melhor", txt: "Melhor lugar", porque: "no alto do rack, com a antena acima das cabeças" };
-      return { v: "serve", txt: "Serve", porque: "entrada direta, mas na altura da escrivaninha" };
+      return vereditoDaAltura();
     }
     if (naMao === "wifi") {
       if (noHub) return { v: "ruim", txt: "Evite", porque: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle" };
@@ -1072,9 +1081,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     var pl = planejar(op).plano, out = [];
     var bts = APARELHOS.filter(function (a) { return a.classe === "bt"; })
       .map(function (a) { return porNum(portaDeEm(pl, a.id)); }).filter(Boolean);
-    var noAlto = bts.filter(function (p) { return p.onde === "hub"; }).length;
-    if (bts.length && noAlto === 0) out.push("os dongles ficam na altura da escrivaninha, não no alto do rack");
-    else if (noAlto < bts.length) out.push((bts.length - noAlto) + " dongle(s) fora do alto");
+    if (bts.length && ALTURA === "abaixo") out.push("os dongles ficam abaixo da cabeça");
     if (!bts.some(function (p) { return p.esticada; })) out.push("o extensor não é usado");
     var poss = bts.map(function (p) { return p.pos; }).filter(function (x) { return x !== undefined; }).sort(function (a, b) { return a - b; });
     var minVao = poss.length > 1 ? Math.min.apply(null, poss.slice(1).map(function (v, i) { return v - poss[i]; })) : null;
@@ -2119,6 +2126,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     MAPA = f.mapa;
     MAPA_ORIGINAL = Object.assign({}, MAPA);
     LEITURAS = f.leituras;
+    ALTURA = f.altura || null;
     leituraAtual = "agora";
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);

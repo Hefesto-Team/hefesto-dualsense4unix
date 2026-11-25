@@ -826,11 +826,13 @@ V_EVITAR = "Vale evitar"
 V_MELHOR = "Melhor lugar"
 P_TIRAR = "clique para tirar"
 P_EXTENSOR = "Com o extensor"
-P_SERVE = "entrada direta, mas na altura da escrivaninha"
+P_SERVE = _motor.FRASE_SEM_ALTURA
 P_MELHOR = "na ponta do extensor: a antena mais longe das outras"
 _confere_no_produto(_JULGAR, [
     f'"{V_OCUPADA}", f"{{tipo}} — {P_TIRAR}"',
-    f'"{P_EXTENSOR}"', f'Veredito("serve", "{V_SERVE}", "{P_SERVE}")',
+    f'"{P_EXTENSOR}"',
+    f'Veredito("serve", "{V_SERVE}", '
+    'FRASE_DA_ALTURA.get(altura or "", FRASE_SEM_ALTURA))',
     f'"{V_EVITAR}", colada', f'"{V_MELHOR}"', f'"{P_MELHOR}"',
 ])
 

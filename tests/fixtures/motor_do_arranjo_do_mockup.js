@@ -28,6 +28,8 @@ var motor = fonte + "\n" + [
   "    get CONTROLES(){ return CONTROLES; },",
   "    set quantos(v){ quantos = v; },",
   "    set DECLARADO(v){ DECLARADO = v; },",
+  "    set ALTURA(v){ ALTURA = v; },",
+  "    get ALTURA(){ return ALTURA; },",
   "    VARIANTES: VARIANTES,",
   "    FACES: FACES,",
   "    alocacao: function(){ return alocacaoDerivada(); },",
@@ -54,11 +56,16 @@ global.document = { getElementById: function () { return null; },
 eval(motor);
 var m = global.__motor;
 
+for (var f = m.FACES.length - 1; f >= 0; f--) {
+  if (m.FACES[f].semLugar) m.FACES.splice(f, 1);
+}
+
 var copia = function (x) { return JSON.parse(JSON.stringify(x)); };
 var APARELHOS_PADRAO = copia(m.APARELHOS);
 var MAPA_PADRAO = copia(m.MAPA);
 var LEITURAS_PADRAO = copia(m.LEITURAS);
 var CONTROLES_PADRAO = copia(m.CONTROLES);
+var ALTURA_PADRAO = m.ALTURA;
 
 function reset() {
   m.APARELHOS = copia(APARELHOS_PADRAO);
@@ -70,6 +77,7 @@ function reset() {
   m.segurando = null;
   m.quantos = 4;
   m.DECLARADO = {};
+  m.ALTURA = ALTURA_PADRAO;
 }
 
 var SEM_HUB_APARELHOS = [
@@ -207,6 +215,20 @@ out["sem-hub/planejar"] = m.planejar({});
 out["sem-hub/receita"] = m.receita({});
 out["sem-hub/consequencias"] = m.consequencias({});
 out["sem-hub/controles"] = m.planoDosControles();
+
+["acima", "abaixo", null].forEach(function (altura) {
+  reset();
+  m.ALTURA = altura;
+  out["altura/" + altura + "/planejar"] = m.planejar({});
+  out["altura/" + altura + "/receita"] = m.receita({});
+  out["altura/" + altura + "/consequencias"] = m.consequencias({});
+  ["3", "5", "11", "13"].forEach(function (n) {
+    reset();
+    m.ALTURA = altura;
+    m.naMao = "bt";
+    out["altura/" + altura + "/julgar/" + n] = m.julgar(n);
+  });
+});
 
 function serializar(_k, v) {
   if (v === Infinity) return "Infinity";

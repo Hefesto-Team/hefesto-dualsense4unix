@@ -252,9 +252,11 @@ def ensaio_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.En
     """A mesa do motor montada a partir do RASCUNHO — não do disco."""
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
+    maquina = carregar_maquina()
     return mapa_das_portas.mesa_do_motor(
         MapaDaMesa.model_validate(logica.como_documento()), censo,
-        mapa_das_portas.tipos_declarados(carregar_maquina()),
+        mapa_das_portas.tipos_declarados(maquina),
+        mapa_das_portas.altura_declarada(maquina),
     )
 
 
