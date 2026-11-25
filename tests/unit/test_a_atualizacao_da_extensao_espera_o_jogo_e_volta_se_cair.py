@@ -12,7 +12,10 @@ MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
 - a volta tirada do ``_cuidar`` reprova
   ``test_a_versao_nova_que_cai_ao_abrir_volta_para_a_anterior``;
 - a prova tirada do ``dar_por_provada`` reprova
-  ``test_a_versao_que_ficou_estavel_nao_volta_quando_cai_depois``.
+  ``test_a_versao_que_ficou_estavel_nao_volta_quando_cai_depois``;
+- o aceite de antes tirado do ``voltar_para_a_anterior`` reprova
+  ``test_a_volta_devolve_o_aceite_que_valia_na_versao_guardada``; essa limpeza tirada do
+  ``dar_por_provada`` reprova ``test_a_versao_provada_solta_o_aceite_de_antes``.
 """
 from __future__ import annotations
 
@@ -23,6 +26,7 @@ from hefesto_dualsense4unix.mods import instalador
 from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
     commit_novo,
+    gravar_registro,
     conferir_remocao,
     ler_registro,
     manifesto_instalado,
@@ -154,6 +158,54 @@ def test_a_versao_que_ficou_estavel_nao_volta_quando_cai_depois(
             await sup.parar()
 
     asyncio.run(corrida())
+
+
+_ACEITE_DA_NOVA = {
+    "ref": "v0.2.0",
+    "permissoes_aceitas": ["bluetooth", "rede"],
+    "aparelhos_aceitos": ["aa:bb:cc:00:00:01"],
+    "alcances_aceitos": ["rede:servidor.exemplo"],
+    "aviso_aceito": "o aviso da 0.2.0",
+    "preparo_aceito": ["pip install exemplo"],
+}
+
+
+def _atualizar_e_dar_o_sim_a_nova(
+    lar: Lugares, remoto: Path
+) -> tuple[dict[str, object], str]:
+    """Troca para a 0.2.0 e grava um aceite mais largo: o aceite da 0.1.0 e o commit novo."""
+    _instalar_ligada(lar, remoto, ligada=False)
+    antes = ler_registro(lar.registro)["exemplo"].model_dump()
+    nova = _publicar(remoto, "0.2.0")
+    instalador.atualizar("exemplo", lugares=lar)
+    registro = ler_registro(lar.registro)
+    for campo, valor in _ACEITE_DA_NOVA.items():
+        setattr(registro["exemplo"], campo, valor)
+    gravar_registro(lar.registro, registro)
+    return {campo: antes[campo] for campo in _ACEITE_DA_NOVA}, nova
+
+
+def test_a_volta_devolve_o_aceite_que_valia_na_versao_guardada(
+    lar: Lugares, remoto: Path
+) -> None:
+    """D-2511-A-ATUALIZACAO-DA-EXTENSAO-ESPERA-O-JOGO-E-VOLTA-SE-CAIR: o aceite volta junto."""
+    de_antes, nova = _atualizar_e_dar_o_sim_a_nova(lar, remoto)
+    assert de_antes != _ACEITE_DA_NOVA
+    devolvida = instalador.voltar_para_a_anterior(lar, "exemplo", nova)
+    assert devolvida is not None and devolvida.versao == "0.1.0"
+    gravada = ler_registro(lar.registro)["exemplo"]
+    assert {campo: getattr(gravada, campo) for campo in _ACEITE_DA_NOVA} == de_antes
+    assert gravada.aceite_anterior is None
+
+
+def test_a_versao_provada_solta_o_aceite_de_antes(lar: Lugares, remoto: Path) -> None:
+    """D-2511-A-ATUALIZACAO-DA-EXTENSAO-ESPERA-O-JOGO-E-VOLTA-SE-CAIR: a estável o solta."""
+    _de_antes, nova = _atualizar_e_dar_o_sim_a_nova(lar, remoto)
+    assert ler_registro(lar.registro)["exemplo"].aceite_anterior is not None
+    instalador.dar_por_provada(lar, "exemplo", nova)
+    gravada = ler_registro(lar.registro)["exemplo"]
+    assert gravada.aceite_anterior is None
+    assert {campo: getattr(gravada, campo) for campo in _ACEITE_DA_NOVA} == _ACEITE_DA_NOVA
 
 
 def test_a_guarda_e_uma_so_e_sai_com_a_remocao(lar: Lugares, remoto: Path) -> None:

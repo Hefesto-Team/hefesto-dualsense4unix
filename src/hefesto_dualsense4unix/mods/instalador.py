@@ -259,6 +259,20 @@ class Lugares:
         return self.dados / PASTA_DOS_DIARIOS / mod_id
 
 
+class Aceite(BaseModel):
+    """O que valia de aceite numa versão: a ``ref``, as permissões, os aparelhos, os alcances, o
+    aviso e o preparo. É o que a volta para a versão guardada devolve junto do código."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    ref: str | None = None
+    permissoes_aceitas: list[str] = []
+    aparelhos_aceitos: list[str] | None = None
+    alcances_aceitos: list[str] | None = None
+    aviso_aceito: str = ""
+    preparo_aceito: list[str] = []
+
+
 class Entrada(BaseModel):
     """A linha de uma modificação no registro."""
 
@@ -291,6 +305,7 @@ class Entrada(BaseModel):
     espera_o_sim: bool = False
     versao_anterior: str = ""
     commit_anterior: str = ""
+    aceite_anterior: Aceite | None = None
     em_prova: bool = False
 
 
@@ -928,6 +943,7 @@ def instalar(
             entrada.sem_caixa = anterior.sem_caixa
             entrada.versao_anterior = anterior.versao
             entrada.commit_anterior = anterior.commit
+            entrada.aceite_anterior = Aceite.model_validate(anterior.model_dump())
             entrada.em_prova = True
         if prepara_agora:
             _rodar_o_preparo(lg, manifesto, entrada)
@@ -1182,15 +1198,18 @@ def dar_por_provada(lg: Lugares, mod_id: str, commit: str) -> None:
     entrada = registro.get(mod_id)
     if entrada is not None and entrada.em_prova and entrada.commit == commit:
         entrada.em_prova = False
+        entrada.aceite_anterior = None
         gravar_registro(lg.registro, registro)
 
 
 def voltar_para_a_anterior(lg: Lugares, mod_id: str, commit: str) -> Entrada | None:
     """A versão de ``commit``, recém-trocada, caiu até parar: devolve a guardada, com o registro.
 
-    O código de antes volta ao lugar, o commit que caiu fica esperando (a conferência não o
-    oferece de novo) e o motivo diz o que houve. ``None`` quando não há o que devolver: outra
-    versão no lugar, a que já ficou estável, a guarda que sumiu ou uma troca em curso.
+    O código de antes volta ao lugar com o aceite da versão guardada (o que a versão que caiu
+    recebeu de permissão, aparelho, alcance, aviso e preparo não fica), o commit que caiu fica
+    esperando (a conferência não o oferece de novo) e o motivo diz o que houve. ``None`` quando
+    não há o que devolver: outra versão no lugar, a que já ficou estável, a guarda que sumiu ou
+    uma troca em curso.
     """
     registro = ler_registro(lg.registro)
     entrada = registro.get(mod_id)
@@ -1214,6 +1233,10 @@ def voltar_para_a_anterior(lg: Lugares, mod_id: str, commit: str) -> Entrada | N
         f"A versão {entrada.versao} caiu ao abrir; voltou para a {entrada.versao_anterior}.")
     entrada.versao, entrada.commit = entrada.versao_anterior, entrada.commit_anterior
     entrada.versao_anterior = entrada.commit_anterior = ""
+    if entrada.aceite_anterior is not None:
+        for campo, valor in entrada.aceite_anterior.model_dump().items():
+            setattr(entrada, campo, valor)
+        entrada.aceite_anterior = None
     entrada.em_prova = False
     entrada.instalada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     with contextlib.suppress(ManifestoRecusadoError):
