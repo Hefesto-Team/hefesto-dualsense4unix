@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1326479,
+      "piso": 1326131,
       "por_item": {
-        "docs": 108024,
-        "scripts": 117307,
-        "src": 333778,
-        "tests": 767370
+        "docs": 108019,
+        "scripts": 122921,
+        "src": 327883,
+        "tests": 767308
       },
-      "razao": "tamanho: +1076 linhas (1325403 -> 1326479), pagas por Origem: D-2511-A-ATUALIZACAO-DA-EXTENSAO-ESPERA-O-JOGO-E-VOLTA-SE-CAIR, D-2511-A-EXTENSAO-TEM-TETO-E-CAI-SOZINHA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ; registrado no fecho, topo 68e96b944f31",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2604,7 +2604,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3705
+      "universo": 3703
     }
   }
 }
