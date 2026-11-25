@@ -47,7 +47,8 @@ def _tag_do_atraso(paradas: int, vida_s: float | None) -> str:
 
 def test_as_paradas_da_subida_nao_acusam_e_sem_a_vida_so_informa() -> None:
     assert _tag_do_atraso(4, 2 * MINUTO) == "[ OK ]"
-    assert _tag_do_atraso(626, None) == "[ OK ]"
+    assert _tag_do_atraso(626, None) == "[INFO]"
+    assert _tag_do_atraso(0, None) == "[ OK ]"
 
 
 def test_as_esperas_da_fila_contam_na_taxa() -> None:
@@ -121,8 +122,10 @@ def test_a_vida_ilegivel_diz_o_motivo_e_nao_acusa(monkeypatch: pytest.MonkeyPatc
     )
     monkeypatch.setattr(cmd_doctor, "_vida_do_servico_s", _sem_systemctl)
     linhas = asyncio.run(cmd_doctor._daemon_checks())
-    assert ("[INFO]", "vida do serviço ilegível (FileNotFoundError): sem taxa") in linhas
-    assert [t for t, m in linhas if m.startswith("atraso do serviço")] == ["[ OK ]"]
+    assert ("[INFO]", "vida do serviço ilegível (FileNotFoundError)") in linhas
+    do_atraso = [(t, m) for t, m in linhas if m.startswith("atraso do serviço")]
+    assert do_atraso == [("[INFO]", do_atraso[0][1])], linhas
+    assert do_atraso[0][1].endswith("sem a vida do serviço, sem taxa")
 
 
 def _o_sh_de_mentira(pasta: Path, falhas: int, avisos: int, rc: int) -> Path:
@@ -174,6 +177,7 @@ def _linhas(saida: str) -> list[str]:
 def test_o_veredito_e_uma_linha_so_no_fim_e_soma_o_script_e_os_blocos(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """D-2511-O-DOCTOR-DA-UM-VEREDITO-SO: uma linha só, a última, com o total e o código."""
     r = _o_doctor_com(
         monkeypatch, tmp_path, do_script=(0, 12, 0), do_daemon=[("[WARN]", "um aviso do bloco")]
     )
@@ -201,6 +205,24 @@ def test_aviso_so_do_script_entra_na_conta_e_nao_muda_o_codigo(
     assert r.exit_code == 0
     ultima = _linhas(r.output)[-1]
     assert ultima.startswith("Diagnóstico: 2 avisos, nenhuma falha. Código de saída 0")
+
+
+def test_aviso_so_dos_perfis_nao_e_dito_como_do_script(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    r = _o_doctor_com(monkeypatch, tmp_path, do_script=(0, 0, 0), do_daemon=[("[ OK ]", "x")])
+    assert r.exit_code == 0
+
+    def _perfis_com_aviso() -> bool:
+        cmd_doctor._bloco("perfis", [("[WARN]", "perfil sem jogo")])
+        return False
+
+    monkeypatch.setattr(cmd_doctor, "_print_bloco_perfis", _perfis_com_aviso)
+    r = CliRunner().invoke(app, ["doctor"])
+    assert r.exit_code == 0
+    assert _linhas(r.output)[-1] == (
+        "Diagnóstico: 1 aviso, nenhuma falha. Código de saída 0: esses avisos não mudam o código."
+    )
 
 
 def test_falha_do_script_e_do_bloco_somam_e_o_codigo_e_dois(

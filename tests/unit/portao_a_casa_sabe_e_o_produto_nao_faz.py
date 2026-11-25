@@ -195,6 +195,13 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "a lê; nenhuma feature se liga pela chave. Viraria promessa se o produto passasse "
         "a ler a chave do próprio ambiente."
     ),
+    "HEFESTO_DOCTOR_CONTAGEM": (
+        "25/11/2026 — o contrato que o comando `doctor` passa ao `scripts/doctor.sh`: "
+        "`src/hefesto_dualsense4unix/cli/cmd_doctor.py:714` (`HEFESTO_DOCTOR_CONTAGEM`); "
+        "o script anota as falhas e os avisos no arquivo e cala o veredito dele, para o "
+        "comando fechar com uma linha só. O produto escreve a chave no ambiente do filho e "
+        "não a lê; nenhuma feature se liga pela chave."
+    ),
     "HEFESTO_DONO_DO_P1": (
         "28/10/2026 — a memória do dono do posto do P1 "
         "(`daemon/subsystems/gamepad._arquivo_do_dono_do_p1`), que mora em "

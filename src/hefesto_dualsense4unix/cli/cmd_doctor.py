@@ -301,7 +301,7 @@ def _linha_do_atraso(counters: Any, vida_s: float | None = None) -> tuple[str, s
     estes contadores são os que ainda valem depois de jogar. Com a ``vida_s`` do serviço, as
     paradas por minuto acima de ``_PARADAS_POR_MINUTO_QUE_AVISAM`` viram ``[WARN]`` (a vida conta
     ao menos ``_VIDA_MINIMA_DA_TAXA_MIN`` minutos, para as paradas da subida não acusarem).
-    Sem a vida não há taxa, e a linha só informa.
+    Sem a vida não há taxa, e a linha com parada é ``[INFO]``: o «não sei» nunca sai ``[ OK ]``.
     """
     if not isinstance(counters, dict) or "poll.laco.lentas" not in counters:
         return None
@@ -326,7 +326,7 @@ def _linha_do_atraso(counters: Any, vida_s: float | None = None) -> tuple[str, s
         partes.append(f"{filas} {palavra} na fila do controle{detalhe}")
     texto = "atraso do serviço: " + "; ".join(partes)
     if vida_s is None:
-        return ("[ OK ]", texto)
+        return ("[INFO]", f"{texto}; sem a vida do serviço, sem taxa")
     taxa = (int(lentas) + int(filas)) / max(vida_s / 60, _VIDA_MINIMA_DA_TAXA_MIN)
     if taxa < _PARADAS_POR_MINUTO_QUE_AVISAM:
         return ("[ OK ]", texto)
@@ -489,9 +489,7 @@ async def _daemon_checks() -> list[tuple[str, str]]:
                 try:
                     vida_s = _vida_do_servico_s()
                 except (OSError, subprocess.SubprocessError) as exc:
-                    rows.append(
-                        ("[INFO]", f"vida do serviço ilegível ({type(exc).__name__}): sem taxa")
-                    )
+                    rows.append(("[INFO]", f"vida do serviço ilegível ({type(exc).__name__})"))
             linha_do_atraso = _linha_do_atraso(contadores, vida_s)
             if linha_do_atraso is not None:
                 rows.append(linha_do_atraso)
@@ -733,8 +731,8 @@ def _a_contagem_do_script(arquivo: Path) -> tuple[int, int]:
 def _o_veredito(codigo: int) -> str:
     """A linha única que fecha o doctor: o total do script e dos blocos, e o código de saída.
 
-    Os avisos do ``doctor.sh`` entram na conta e não mudam o código
-    (D-0810-A-OPCAO-QUE-A-STEAM-DESFAZ-E-AVISO-DO-DOCTOR).
+    Os avisos do ``doctor.sh`` e os do bloco de perfis entram na conta e não mudam o código
+    (D-0810-A-OPCAO-QUE-A-STEAM-DESFAZ-E-AVISO-DO-DOCTOR, D-1310-O-RC-DO-DOCTOR-E-O-PIOR-VEREDITO).
     """
     avisos = _SAIDA.avisos
     falhas = max(_SAIDA.falhas, 1 if codigo == _GRAVIDADE_FAIL else 0)
@@ -747,7 +745,7 @@ def _o_veredito(codigo: int) -> str:
     if avisos:
         return (
             f"Diagnóstico: {ha}, nenhuma falha. "
-            "Código de saída 0: os avisos do script não mudam o código."
+            "Código de saída 0: esses avisos não mudam o código."
         )
     return "Diagnóstico: nenhum aviso e nenhuma falha. Código de saída 0."
 

@@ -594,9 +594,9 @@ def test_o_doctor_diz_o_atraso_e_quem_prendeu() -> None:
         "poll.pool.lentas": 2, "poll.pool.ocupante.segura_o_fio": 300_000,
     })
 
-    assert linha == ("[ OK ]", "atraso do serviço: 3 paradas acima de 100 ms, a pior 1234,0 ms em "
+    assert linha == ("[INFO]", "atraso do serviço: 3 paradas acima de 100 ms, a pior 1234,0 ms em "
                      "«poll_loop»; 2 esperas na fila do controle, a pior 300,0 ms atrás de "
-                     "«segura_o_fio»")
+                     "«segura_o_fio»; sem a vida do serviço, sem taxa")
 
 
 def test_o_doctor_sem_amostra_diz_a_parada_sem_inventar_nome() -> None:
@@ -605,7 +605,10 @@ def test_o_doctor_sem_amostra_diz_a_parada_sem_inventar_nome() -> None:
         "poll.laco.lentas": 1, f"poll.laco.lenta.{vl.SEM_AMOSTRA}": 150_000,
     })
 
-    assert linha == ("[ OK ]", "atraso do serviço: 1 parada acima de 100 ms, a pior 150,0 ms")
+    assert linha == (
+        "[INFO]", "atraso do serviço: 1 parada acima de 100 ms, a pior 150,0 ms; sem a vida do "
+        "serviço, sem taxa"
+    )
 
 
 def test_o_doctor_sem_parada_diz_que_nao_houve_e_sem_medida_cala() -> None:
