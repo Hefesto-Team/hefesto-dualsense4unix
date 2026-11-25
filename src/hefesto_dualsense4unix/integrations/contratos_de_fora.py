@@ -770,10 +770,12 @@ CONTRATOS: tuple[Contrato, ...] = (
         dono="steam",
         promessa=(
             "o localconfig.vdf da Steam abre com a raiz UserLocalConfigStore e guarda o wrapper "
-            "e as opções por jogo que o Hefesto aplicou"
+            "e as opções por jogo que o Hefesto aplicou, e o shortcuts.vdf dos jogos de fora "
+            "abre inteiro, com nome e executável em cada entrada"
         ),
         conferir=(
             "head -c 200 ~/.steam/steam/userdata/*/config/localconfig.vdf; "
+            "head -c 64 ~/.steam/steam/userdata/*/config/shortcuts.vdf; "
             "grep -c hefesto-launch ~/.steam/steam/userdata/*/config/localconfig.vdf; "
             "python3 -m hefesto_dualsense4unix.integrations.opcoes_por_jogo --conferir"
         ),
