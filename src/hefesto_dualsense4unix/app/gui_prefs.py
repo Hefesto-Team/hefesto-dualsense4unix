@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.utils import xdg_paths
+from hefesto_dualsense4unix.utils.escrita_inteira import escrever_inteiro
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -46,40 +49,81 @@ def _defaults() -> dict[str, Any]:
             for k, v in _DEFAULTS.items()}
 
 
+def _copia_boa() -> Path:
+    arquivo = _prefs_file()
+    return arquivo.with_name(arquivo.name + ".bak")
+
+
+def _ler(arquivo: Path) -> dict[str, Any] | None:
+    """O dicionário do arquivo, ou `None` se ele não existe, não abre ou não é um objeto JSON."""
+    try:
+        data = json.loads(arquivo.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _por_o_torto_de_lado(arquivo: Path) -> None:
+    """Tira o arquivo ilegível do caminho, com a data no nome: o que ele guardava não se perde."""
+    destino = arquivo.with_name(f"{arquivo.name}.corrompido-{time.strftime('%Y%m%d-%H%M%S')}")
+    try:
+        os.replace(arquivo, destino)
+    except OSError as exc:
+        logger.warning("gui_prefs: o arquivo ilegível não saiu do lugar", erro=str(exc))
+        return
+    logger.warning("gui_prefs: arquivo ilegivel guardado ao lado", destino=destino.name)
+
+
 def load_gui_prefs() -> dict[str, Any]:
-    """Carrega preferências da GUI."""
+    """Carrega preferências da GUI.
+
+    Com o arquivo ilegível, o torto vai para o lado (sufixo de data) e vale a última cópia boa,
+    que também volta ao lugar; sem cópia, valem os padrões.
+    """
     prefs_file = _prefs_file()
     if not prefs_file.exists():
         return _defaults()
-    try:
-        raw = prefs_file.read_text(encoding="utf-8")
-        data: dict[str, Any] = json.loads(raw)
-        prefs = _defaults()
-        prefs.update(data)
-        return prefs
-    except (json.JSONDecodeError, OSError) as exc:
-        logger.warning("gui_prefs: falha ao carregar preferencias, usando defaults", erro=str(exc))
-        return _defaults()
+    data = _ler(prefs_file)
+    if data is None:
+        _por_o_torto_de_lado(prefs_file)
+        data = _ler(_copia_boa())
+        if data is None:
+            return _defaults()
+        _escrever(prefs_file, data)
+    prefs = _defaults()
+    prefs.update(data)
+    return prefs
+
+
+def _escrever(arquivo: Path, prefs: dict[str, Any]) -> None:
+    escrever_inteiro(arquivo, json.dumps(prefs, indent=2, ensure_ascii=False))
 
 
 def save_gui_prefs(prefs: dict[str, Any]) -> None:
-    """Persiste preferências da GUI em disco."""
-    try:
-        prefs_file = _prefs_file()
-        prefs_file.parent.mkdir(parents=True, exist_ok=True)
-        prefs_file.write_text(
-            json.dumps(prefs, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-    except OSError as exc:
-        logger.warning("gui_prefs: falha ao salvar preferencias", erro=str(exc))
+    """Persiste preferências da GUI em disco, inteiras ou nada, e levanta `OSError` se falhar.
+
+    O arquivo novo entra por troca atômica (`escrever_inteiro`) e a última versão boa fica numa
+    cópia ao lado. Um arquivo ilegível que ainda esteja no lugar vai para o lado antes.
+    """
+    prefs_file = _prefs_file()
+    if prefs_file.exists() and _ler(prefs_file) is None:
+        _por_o_torto_de_lado(prefs_file)
+    _escrever(prefs_file, prefs)
+    _escrever(_copia_boa(), prefs)
 
 
 def set_pref(key: str, value: Any) -> None:
-    """Atalho: carrega, atualiza uma chave e salva."""
+    """Atalho: carrega, atualiza uma chave e salva.
+
+    Quem chama é a memória da rota de som, uma conveniência: a gravação que falha fica no diário
+    e não derruba a troca de saída.
+    """
     prefs = load_gui_prefs()
     prefs[key] = value
-    save_gui_prefs(prefs)
+    try:
+        save_gui_prefs(prefs)
+    except OSError as exc:
+        logger.warning("gui_prefs: falha ao salvar preferencias", erro=str(exc))
 
 
 _TABELAS = "tabelas"
