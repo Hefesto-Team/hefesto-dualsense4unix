@@ -156,24 +156,33 @@ def atalhos_do_arquivo(arquivo: Path) -> list[AtalhoDeFora]:
 
 
 def os_que_nao_abrem(raiz: Path) -> list[str]:
-    """O motivo de cada arquivo de jogos de fora sob ``raiz`` que o produto não lê como precisa.
+    """O motivo de cada arquivo de jogos de fora sob ``raiz`` que o produto não lê inteiro.
 
-    Não lê inteiro (cortado, ou bytes que não são VDF binário), ou lê com entrada sem nome ou sem
-    executável: os dois campos que o catálogo e o pino usam. Arquivo ausente não é quebra.
+    Cortado, ou bytes que não são VDF binário, ou ilegível. Arquivo ausente não é quebra; o arquivo
+    que abre com entrada sem nome ou sem executável é de :func:`entradas_sem_nome_ou_executavel`.
     """
     motivos: list[str] = []
     for arquivo in sorted((raiz / "userdata").glob(f"*/config/{NOME_DO_ARQUIVO}")):
         try:
-            atalhos = atalhos_do_bruto(arquivo.read_bytes())
+            atalhos_do_bruto(arquivo.read_bytes())
         except OSError as erro:
             motivos.append(str(erro.strerror))
         except ValueError as erro:
             motivos.append(str(erro))
-        else:
-            vazias = sum(1 for atalho in atalhos if not atalho.nome or not atalho.exe)
-            if vazias:
-                motivos.append(f"{vazias} entrada(s) sem nome ou sem executável")
     return motivos
+
+
+def entradas_sem_nome_ou_executavel(raiz: Path) -> int:
+    """Quantas entradas, nos arquivos de jogos de fora que ABREM inteiros sob ``raiz``, não têm nome
+    ou não têm executável: os dois campos que o catálogo e o pino usam."""
+    total = 0
+    for arquivo in sorted((raiz / "userdata").glob(f"*/config/{NOME_DO_ARQUIVO}")):
+        try:
+            atalhos = atalhos_do_bruto(arquivo.read_bytes())
+        except (OSError, ValueError):
+            continue
+        total += sum(1 for atalho in atalhos if not atalho.nome or not atalho.exe)
+    return total
 
 
 def com_as_opcoes(bruto: bytes, appid: str, opcoes: str) -> bytes:

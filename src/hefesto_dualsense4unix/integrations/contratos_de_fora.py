@@ -256,6 +256,7 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
     perderam: list[str] = []
     opcoes: list[str] = []
     de_fora: list[str] = []
+    vazias = 0
     for raiz in raizes:
         confs = sorted((raiz / "userdata").glob("*/config/localconfig.vdf"))
         opcoes += _opcoes_desfeitas(amb, confs) if confs else []
@@ -269,13 +270,20 @@ def _sonda_steam(amb: Ambiente) -> Resultado:
                 abriu = True
                 perderam += _perderam_o_wrapper(amb, conf)
         de_fora += atalhos_da_steam.os_que_nao_abrem(raiz)
-    if abriu and (perderam or opcoes or de_fora):
+        vazias += atalhos_da_steam.entradas_sem_nome_ou_executavel(raiz)
+    if abriu and (perderam or opcoes or de_fora or vazias):
         partes = []
         if de_fora:
             partes.append(
                 f"{len(de_fora)} {atalhos_da_steam.NOME_DO_ARQUIVO} dos jogos de fora não abre(m) "
                 "inteiro(s): os jogos de fora deixam de ser achados e de receber o atalho "
                 f"({'; '.join(de_fora[:3])})"
+            )
+        if vazias:
+            partes.append(
+                f"{vazias} entrada(s) sem nome ou sem executável no "
+                f"{atalhos_da_steam.NOME_DO_ARQUIVO} dos jogos de fora: ficam de fora do catálogo "
+                "e do atalho"
             )
         if perderam:
             mostrados = ", ".join(sorted(set(perderam))[:5])

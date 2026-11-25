@@ -13,14 +13,16 @@ byte a byte, appid da faixa fictícia (9900000 em diante) e título inventado:
 2. com o arquivo válido (um jogo de fora do Windows e um nativo) a sonda diz `OK`;
 3. com o arquivo cortado no meio de uma entrada, com bytes que não são VDF binário e com uma entrada
    sem nome ou sem executável, a sonda diz que quebrou, com o nome do arquivo e sem o caminho da
-   conta;
+   conta; o arquivo que não abre diz «não abre inteiro», o que abre com entrada vazia diz a contagem
+   das entradas e nunca «não abre», e com os dois a linha diz os dois;
 4. com duas contas, uma boa e uma quebrada, a sonda quebra pela quebrada;
 5. o contrato cobre o arquivo, a promessa e o `conferir` o dizem, e o portão
    `scripts/check_os_contratos_de_fora.py` fica verde.
 
 MORDIDAS (25/11/2026): a sonda sem a pergunta do `shortcuts.vdf` reprova os casos do arquivo
-quebrado; o `cobre` sem o alvo reprova o portão; o `os_que_nao_abrem` sem a conta das entradas sem
-campos reprova o caso da entrada vazia.
+quebrado; o `cobre` sem o alvo reprova o portão; o `entradas_sem_nome_ou_executavel` sem a conta
+das entradas sem campos reprova o caso da entrada vazia; com a frase única de volta (a entrada vazia
+na lista do que não abre), o caso da entrada vazia reprova (25/11/2026).
 """
 
 from __future__ import annotations
@@ -103,12 +105,40 @@ def test_os_bytes_que_nao_sao_vdf_quebram(tmp_path: Path) -> None:
     assert tag == "[WARN]" and "shortcuts.vdf" in msg
 
 
-def test_a_entrada_sem_nome_e_sem_executavel_quebra(tmp_path: Path) -> None:
+def test_a_entrada_sem_nome_e_sem_executavel_quebra_sem_dizer_que_o_arquivo_nao_abre(
+    tmp_path: Path,
+) -> None:
+    """D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM (nota de 25/11/2026)."""
     vazia = _arquivo(_entrada(0, appid=WINDOWS, nome="", exe="", opcoes=""))
     _conta(tmp_path, "1000", vazia)
     tag, msg = _linha(tmp_path)
     assert tag == "[WARN]"
-    assert "shortcuts.vdf" in msg and "sem nome ou sem executável" in msg
+    assert "1 entrada(s) sem nome ou sem executável" in msg and "shortcuts.vdf" in msg
+    assert "não abre" not in msg and "inteiro" not in msg.split("Prometia")[0]
+
+
+def test_o_arquivo_cortado_nao_diz_que_ha_entrada_vazia(tmp_path: Path) -> None:
+    """D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM (nota de 25/11/2026)."""
+    bruto = _validos()
+    _conta(tmp_path, "1000", bruto[: len(bruto) * 6 // 10])
+    _tag, msg = _linha(tmp_path)
+    assert "1 shortcuts.vdf dos jogos de fora não abre(m) inteiro(s)" in msg
+    assert "sem nome ou sem executável" not in msg.split("Prometia")[0]
+
+
+def test_com_um_arquivo_cortado_e_outro_com_entrada_vazia_a_linha_diz_os_dois(
+    tmp_path: Path,
+) -> None:
+    """D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM (nota de 25/11/2026)."""
+    vazia = _arquivo(_entrada(0, appid=WINDOWS, nome="", exe="", opcoes=""),
+                     _entrada(1, appid=NATIVO, nome="", exe="/usr/bin/x", opcoes=""))
+    _conta(tmp_path, "1000", vazia)
+    _conta(tmp_path, "2000", _validos()[:40])
+    tag, msg = _linha(tmp_path)
+    dito = msg.split("Prometia")[0]
+    assert tag == "[WARN]"
+    assert "1 shortcuts.vdf dos jogos de fora não abre(m) inteiro(s)" in dito
+    assert "2 entrada(s) sem nome ou sem executável" in dito
 
 
 def test_com_duas_contas_a_quebrada_derruba_a_linha(tmp_path: Path) -> None:
