@@ -712,6 +712,7 @@ class Daemon:
     _stop_event: asyncio.Event | None = field(default_factory=asyncio.Event)
     _executor: ThreadPoolExecutor | None = None
     _external_executor: ThreadPoolExecutor | None = None
+    _tick_executor: ThreadPoolExecutor | None = None
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
     _ipc_server: Any = None
     _udp_server: Any = None
@@ -4378,7 +4379,7 @@ class Daemon:
                     break
                 continue
             try:
-                state = await self._run_blocking(self.controller.read_state)
+                state = await self._run_tick_blocking(self.controller.read_state)
             except Exception as exc:
                 if passos.falhou("leitura", exc):
                     registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
@@ -4634,6 +4635,19 @@ class Daemon:
         )
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._external_executor, fn, *args)
+
+    async def _run_tick_blocking(self, fn: Callable[..., Any], *args: Any) -> Any:
+        """Como `_run_blocking`, mas no fio DEDICADO `hefesto-tique`, de um pedido por vez.
+
+        A leitura do tique não entra na fila do pool das varreduras e das conexões
+        (D-2511-O-TIQUE-LE-O-CONTROLE-NUM-FIO-SO-DELE). O fio nasce no primeiro pedido.
+        """
+        if self._tick_executor is None:
+            self._tick_executor = ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="hefesto-tique"
+            )
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._tick_executor, fn, *args)
 
     def _is_stopping(self) -> bool:
         return self._stop_event is not None and self._stop_event.is_set()
@@ -5170,8 +5184,9 @@ class _MedidorDoTique:
     ``poll.tique.medidos`` e ``estouros`` (acima de 16,7 ms) somam a cada tique; ``p99_us``,
     ``pior_us`` e ``relogio.<nome>`` valem a última janela. O corpo não vê o laço parado: quem
     vê é o atraso (``atraso_p99_us`` e ``atraso_pior_us``, o acordar real contra o previsto),
-    o maior intervalo entre tiques (``intervalo_pior_us``) e a maior fila do pool
-    (``espera_pool_pior_us``, a mesma do ``read_state``). A janela esquece; o que vale desde
+    o maior intervalo entre tiques (``intervalo_pior_us``) e a maior fila do pool das
+    varreduras (``espera_pool_pior_us``; a leitura do tique corre fora dessa fila, no fio
+    ``hefesto-tique``). A janela esquece; o que vale desde
     a subida é ``poll.laco.*`` e ``poll.pool.*``.
     """
 

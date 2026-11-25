@@ -84,11 +84,13 @@ class _DaemonDeLaco:
         self._emulation_suppressed = False
         self._emu_calada_motivo: Any = None
         self._executor = ThreadPoolExecutor(max_workers=2)
+        self._tick_executor: Any = None
         self._coop_manager = co.CoopManager.__new__(co.CoopManager)
         self._coop_manager._players = {}
         self._coop_manager._daemon = self  # type: ignore[assignment]
         self._poll_loop = Daemon._poll_loop.__get__(self)
         self._run_blocking = MethodType(Daemon._run_blocking, self)
+        self._run_tick_blocking = MethodType(Daemon._run_tick_blocking, self)
         self._sync_game_signal = MethodType(Daemon._sync_game_signal, self)
         self._evdev_buttons_once: Callable[[], frozenset[str]] = frozenset
         self._restantes = tiques
@@ -155,6 +157,8 @@ class _DaemonDeLaco:
                 await asyncio.gather(tarefa, return_exceptions=True)
         finally:
             self._executor.shutdown(wait=True)
+            if self._tick_executor is not None:
+                self._tick_executor.shutdown(wait=True)
 
 
 def _uma_so_fase(monkeypatch: pytest.MonkeyPatch, *relogios: tuple[str, float, float]) -> None:

@@ -30,6 +30,7 @@ class DaemonProtocol(Protocol):
     _stop_event: asyncio.Event | None
     _executor: ThreadPoolExecutor | None
     _external_executor: ThreadPoolExecutor | None
+    _tick_executor: ThreadPoolExecutor | None
     _tasks: list[asyncio.Task[Any]]
     _reconnect_task: asyncio.Task[Any] | None
 

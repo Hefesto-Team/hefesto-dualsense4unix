@@ -106,6 +106,7 @@ class _Laco:
         self._emulation_suppressed = False
         self._emu_calada_motivo: Any = None
         self._executor = vl.PoolQueDizQuem(max_workers=2)
+        self._tick_executor: Any = None
         gerente = co.CoopManager.__new__(co.CoopManager)
         gerente._players = {}
         gerente._daemon = self  # type: ignore[assignment]
@@ -119,6 +120,7 @@ class _Laco:
         self._coop_manager = gerente
         self._poll_loop = Daemon._poll_loop.__get__(self)
         self._run_blocking = MethodType(Daemon._run_blocking, self)
+        self._run_tick_blocking = MethodType(Daemon._run_tick_blocking, self)
         self._restantes = JANELA
 
     def _is_stopping(self) -> bool:
@@ -154,6 +156,8 @@ class _Laco:
             await self._poll_loop()
         finally:
             self._executor.shutdown(wait=True)
+            if self._tick_executor is not None:
+                self._tick_executor.shutdown(wait=True)
 
     def contadores(self) -> dict[str, int]:
         return self.store.snapshot().counters
@@ -277,16 +281,28 @@ def _segurar_os_fios(daemon: _Laco, fios: int, ditos: list[threading.Event]) -> 
         daemon._executor.submit(segura_o_fio)
 
 
-def test_os_dois_fios_presos_dizem_quem_os_ocupou() -> None:
-    """Pool cheio não é laço parado: a fila sobe, sai o nome, e o laço segue limpo.
+def _pedir_a_vez(daemon: _Laco) -> None:
+    def espera_a_vez() -> None: ...
 
+    daemon._executor.submit(espera_a_vez)
+
+
+def test_os_dois_fios_presos_dizem_quem_os_ocupou() -> None:
+    """Pool cheio não é laço parado: a fila sobe, sai o nome de quem esperou e de quem ocupava.
+
+    Quem espera aqui é um pedido das varreduras: a leitura do tique corre em fio próprio
+    (D-2511-O-TIQUE-LE-O-CONTROLE-NUM-FIO-SO-DELE) e não entra nesta fila.
     MORDIDA: em `_medir_a_fila`, ignore `ocupantes`, e o nome some.
     """
     daemon = _Laco(("usb", "bt", "usb", "bt"))
     ditos: list[tuple[str, dict[str, Any]]] = []
     eventos: list[threading.Event] = []
 
-    _rodar_vigiado(daemon, lambda: _segurar_os_fios(daemon, 2, eventos), ditos=ditos)
+    def encher() -> None:
+        _segurar_os_fios(daemon, 2, eventos)
+        _pedir_a_vez(daemon)
+
+    _rodar_vigiado(daemon, encher, ditos=ditos)
 
     c = daemon.contadores()
     assert c["poll.tique.espera_pool_pior_us"] >= 250_000, c
@@ -294,9 +310,8 @@ def test_os_dois_fios_presos_dizem_quem_os_ocupou() -> None:
     nome = next(k for k in c if k.startswith("poll.pool.ocupante."))
     assert nome.endswith("segura_o_fio"), c
     assert c["poll.laco.lentas"] == 0, c
-    assert c["poll.tique.pior_us"] >= 250_000, "o corpo vê o pool: é o caso oposto ao do laço"
     linhas = [campos for evento, campos in ditos if evento == "pool_lento"]
-    assert linhas and linhas[0]["esperou"].endswith("read_state"), ditos
+    assert linhas and linhas[0]["esperou"].endswith("espera_a_vez"), ditos
     assert linhas[0]["ocupado_por"][0].endswith("segura_o_fio"), linhas
 
 

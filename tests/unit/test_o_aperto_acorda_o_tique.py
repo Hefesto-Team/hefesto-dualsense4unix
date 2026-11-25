@@ -158,6 +158,9 @@ class _LacoNaMesa(_LacoForaDaMesa):
     async def _run_blocking(self, fn: Callable[..., Any], *args: Any) -> Any:
         return fn(*args)
 
+    async def _run_tick_blocking(self, fn: Callable[..., Any], *args: Any) -> Any:
+        return fn(*args)
+
     def _reassert_rumble(self, _agora: float) -> None: ...
     def _jogo_no_controle_do_desktop(self) -> None:
         return None

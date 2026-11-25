@@ -1692,6 +1692,9 @@ async def soltar_o_controle(daemon: DaemonProtocol) -> None:
     if daemon._external_executor is not None:
         daemon._external_executor.shutdown(wait=False, cancel_futures=True)
         daemon._external_executor = None
+    if daemon._tick_executor is not None:
+        daemon._tick_executor.shutdown(wait=False, cancel_futures=True)
+        daemon._tick_executor = None
     daemon._tasks.clear()
 
 

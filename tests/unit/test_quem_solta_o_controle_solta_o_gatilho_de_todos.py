@@ -200,6 +200,7 @@ def _daemon_que_para(ctl: bp.PyDualSenseController, diario: _Diario, *, nativo: 
         _run_blocking=_no_executor,
         _executor=None,
         _external_executor=None,
+        _tick_executor=None,
         _tasks=[],
         is_native_mode=lambda: nativo,
     )
