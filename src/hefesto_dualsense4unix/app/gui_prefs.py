@@ -58,7 +58,9 @@ def _ler(arquivo: Path) -> dict[str, Any] | None:
     """O dicionário do arquivo, ou `None` se ele não existe, não abre ou não é um objeto JSON."""
     try:
         data = json.loads(arquivo.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
+    except (ValueError, OSError) as exc:
+        logger.warning("gui_prefs: o arquivo não abriu como JSON", arquivo=arquivo.name,
+                       erro=str(exc))
         return None
     return data if isinstance(data, dict) else None
 
@@ -86,7 +88,7 @@ def load_gui_prefs() -> dict[str, Any]:
     data = _ler(prefs_file)
     if data is None:
         _por_o_torto_de_lado(prefs_file)
-        data = _ler(_copia_boa())
+        data = _ler(_copia_boa()) if _copia_boa().exists() else None
         if data is None:
             return _defaults()
         _escrever(prefs_file, data)
