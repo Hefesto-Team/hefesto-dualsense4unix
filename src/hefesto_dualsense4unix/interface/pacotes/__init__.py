@@ -92,6 +92,8 @@ GESTOS: dict[tuple[str, str], Gesto] = {}
 
 GESTOS_QUE_MEXEM: dict[tuple[str, str], str] = {}
 
+UM_POR_VEZ: set[tuple[str, str]] = set()
+
 
 AO_ABRIR: dict[str, Callable[[], None]] = {}
 
@@ -115,7 +117,7 @@ def a_aba_abriu(pagina: str) -> None:
 
 
 def gesto(pagina: str | tuple[str, ...], nome: str, *,
-          grava: str = "") -> Callable[[Gesto], Gesto]:
+          grava: str = "", um_por_vez: bool = False) -> Callable[[Gesto], Gesto]:
     """Decorador: `@gesto("04-iluminacao.html", "cor")` liga um botão.
 
     A função recebe `(ctx, o, ipc)`:
@@ -167,6 +169,8 @@ def gesto(pagina: str | tuple[str, ...], nome: str, *,
             GESTOS[(uma, nome)] = guardado
             if limpo:
                 GESTOS_QUE_MEXEM[(uma, nome)] = limpo
+            if um_por_vez:
+                UM_POR_VEZ.add((uma, nome))
         return guardados[0]
     return dentro
 

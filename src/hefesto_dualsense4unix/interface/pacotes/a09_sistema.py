@@ -1851,7 +1851,7 @@ def _systemctl(verbo: str, motivo: str = "") -> None:
     _LENTO.clear()
 
 
-@gesto("09-sistema.html", "autostart", grava="_systemctl")
+@gesto("09-sistema.html", "autostart", grava="_systemctl", um_por_vez=True)
 def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O ligável «Iniciar com o sistema». `systemctl --user enable|disable`.
 
@@ -1885,7 +1885,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _systemctl("disable" if ligado else "enable")
 
 
-@gesto("09-sistema.html", "reiniciar", grava="_systemctl")
+@gesto("09-sistema.html", "reiniciar", grava="_systemctl", um_por_vez=True)
 def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Reiniciar o serviço". `systemctl --user restart`, `reset-failed` e a marca do reinício.
 
@@ -2113,7 +2113,7 @@ def _confirmado(o: dict[str, Any], gesto_: str,
     return False
 
 
-@gesto("09-sistema.html", DESLIGAR, grava="_systemctl")
+@gesto("09-sistema.html", DESLIGAR, grava="_systemctl", um_por_vez=True)
 def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O PAR que o usuário pediu, num botão só: **Parar o serviço** e **Ativar o serviço**.
 
@@ -2338,7 +2338,7 @@ DICA_DO_IMPROVISADO_SEM_UNIT = (
     "Parar desliga e pergunta antes.")
 
 
-@gesto("09-sistema.html", "corrigir-modo", grava="_systemctl")
+@gesto("09-sistema.html", "corrigir-modo", grava="_systemctl", um_por_vez=True)
 def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Corrigir o serviço" — a saída de quem caiu no modo improvisado.
 

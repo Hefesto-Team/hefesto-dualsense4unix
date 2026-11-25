@@ -999,6 +999,34 @@ O_QUE_O_MENU_MEXE = {
 }
 
 
+def o_pedido_de_um_por_vez(pagina: str, nome: str, alvo: str) -> tuple[str, str, str] | None:
+    """O pedido que o clique faz, se o gesto dele é de `pacotes.UM_POR_VEZ`; senão `None`.
+
+    Declara `um_por_vez=True` no registro o gesto cujo pedido, repetido antes da resposta, é o
+    mesmo pedido; fica de fora aquele em que cada clique conta. O item do menu do botão direito
+    é levado ao gesto da aba que ele chama: o botão e o item do menu fazem o mesmo pedido.
+    """
+    if nome in ITENS_DO_MENU_NA_SISTEMA:
+        pagina, nome = "09-sistema.html", ITENS_DO_MENU_NA_SISTEMA[nome]
+    elif nome in ITENS_DO_MENU_NA_JOGAR:
+        pagina, nome = "01-jogar.html", ITENS_DO_MENU_NA_JOGAR[nome]
+    if (pagina, nome) not in pacotes.UM_POR_VEZ:
+        return None
+    return (pagina, nome, alvo)
+
+
+def pousar_o_pedido(piloto: Any, pedido: tuple[str, str, str] | None, voo: str,
+                    certo: bool | None) -> bool:
+    """Pousa o botão do gesto e os dos cliques do mesmo pedido que chegaram enquanto ele voava."""
+    juntos: list[str] = []
+    if pedido is not None:
+        juntos = vars(piloto).get("_pedidos_no_ar", {}).pop(pedido, [])
+    piloto._pousou(voo, certo)
+    for outro in juntos:
+        piloto._pousou(outro, certo)
+    return False
+
+
 def _gesto_do_menu(nome_na_aba: str, aba: str = "09-sistema.html",
                    ) -> Callable[[Any, dict[str, Any], Any], Any]:
     """O gesto do menu que chama o de uma aba, procurado na hora (a tabela se enche ao importar)."""
@@ -1990,6 +2018,15 @@ class Piloto:
             return
         o = self._com_uniq(o)
         alvo = norm_mac(str(o.get("uniq") or "")) or ""
+        pedido = o_pedido_de_um_por_vez(pagina, nome, alvo)
+        no_ar: dict[tuple[str, str, str], list[str]] = vars(self).setdefault("_pedidos_no_ar", {})
+        if pedido is not None and pedido in no_ar:
+            no_ar[pedido].append(voo)
+            print(f"[gesto repetido] {pagina} · {nome}: o mesmo pedido ainda não respondeu; "
+                  f"este clique pousa com ele", file=sys.stderr)
+            return
+        if pedido is not None:
+            no_ar[pedido] = []
 
         def trabalhar() -> None:
             desta_vez: tuple[str, str] = ("", "")
@@ -2013,9 +2050,14 @@ class Piloto:
                 gesto_de_agora.reset(marca_do_gesto)
                 certo: bool | None = (None if so_armou
                                       else desta_vez[0] == "aplicou")
-                GLib.idle_add(lambda v=voo, c=certo: self._pousou(v, c))
+                GLib.idle_add(lambda v=voo, c=certo: pousar_o_pedido(self, pedido, v, c))
 
-        pacotes.despachar(pagina, nome, o, trabalhar)
+        try:
+            pacotes.despachar(pagina, nome, o, trabalhar)
+        except BaseException:
+            if pedido is not None:
+                no_ar.pop(pedido, None)
+            raise
 
     def _a_janela_mudou(self, escondida: bool) -> None:
         """A página disse se alguém pode vê-la. Escondida, a janela não trabalha."""
