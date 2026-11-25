@@ -167,14 +167,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Dá para instalar uma modificação a partir de um endereço git ou de uma pasta. A modificação roda separada do serviço, só faz o que as permissões mostradas permitem e pode ser desligada ou removida sem deixar resto.
 - Cada botão pode passar a alternar em vez de segurar, repetir enquanto segurado, ou dar outra ação no toque longo e no toque duplo, por jogador e em todo jogo.
 - O cursor do controle pode ir devagar enquanto um botão está apertado, clicar sozinho quando para, e prender o clique para arrastar sem segurar; a zona morta e a curva passam a se ajustar.
-- A aba Vibração mostra a vibração pelos seus toques e pelo touchpad em cada perfil. A engrenagem de cada extensão abre as opções por cliques, e a janela dos acessórios mantém à vista o nível e o botão «Parar tudo».
+- Cada perfil guarda a vibração pelos seus toques e pelo touchpad. A engrenagem de cada extensão abre as opções por cliques, e a janela dos acessórios mantém à vista o nível e o botão «Parar tudo».
 - quem usa o Hefesto sem a janela liga o Freestyle, escolhe a intensidade da vibração, liga o microfone e troca a máscara pela linha de comando
 - Uma modificação pode trocar as cores da interface. O tema só troca cores, não esconde botão nem busca nada na rede, e é recusado se o texto ficar ilegível.
-- Na aba Vibração, o touchpad pode virar fonte de vibração: o lado tocado vibra o motor daquele lado, e a altura do dedo dá a força; no modo de mistura, deslizar faz a vibração atravessar o controle.
+- O touchpad pode virar fonte de vibração, guardada no perfil: o lado tocado vibra o motor daquele lado, e a altura do dedo dá a força; no modo de mistura, deslizar faz a vibração atravessar o controle.
 - Cada botão pode ignorar aperto repetido rápido demais ou curto demais, e um botão pode travar até o próximo, para fazer combinações e gestos sem apertar dois ao mesmo tempo.
 - Cada jogador pode ajustar a zona morta, a curva e a sensibilidade dos analógicos e dos gatilhos, inverter cada eixo, trocar os dois analógicos e escolher uma predefinição para jogar com uma mão.
 - Com a modificação dos acessórios ligada, segurar o PS e tocar o R2 liga e sobe a intensidade, o L2 desce e, até o fundo, para tudo; o R1 e o L1 trocam o perfil de vibração. O jogo não recebe esses toques.
-- Na aba Vibração, cada perfil escolhe se o controle vibra só pelo jogo, pelo jogo e pelos seus toques, ou só pelos seus toques; o analógico, os botões, os gatilhos e o chacoalhar ganham uma vibração fina, e o jogo nunca fica mais fraco.
+- Cada perfil guarda se o controle vibra só pelo jogo, pelo jogo e pelos seus toques, ou só pelos seus toques; o analógico, os botões, os gatilhos e o chacoalhar ganham uma vibração fina, e o jogo nunca fica mais fraco.
 - Cada aparelho USB ganha tipo e nome (o que ele diz de si e o que o sistema sabe dele); um hub de dois lados conta como um só; um aparelho que sabe 5 Gb/s e ficou a 480 Mb/s é apontado; e o que entra, sai, volta ou muda de velocidade fica registrado com a hora.
 - O registro da janela passa a dizer por que a janela fechou, o tamanho e o monitor a cada mudança, e quando a tela está mostrando o último estado conhecido porque o serviço não respondeu. Isso ajuda a achar a causa de uma janela que some ou que mostra dado velho.
 - O diagnóstico agora mostra a versão do firmware de cada controle e avisa quando a versão é antiga, dizendo onde atualizar com segurança. O Hefesto não atualiza firmware.
@@ -434,7 +434,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Sem perfil ativo, a luz e o efeito do gatilho deixam de ficar parados no último perfil e seguem o que o computador está fazendo.
 - Quando o sistema tem uma atualização interrompida, o instalador diz só isso e não acrescenta uma causa errada para o GTK ou o wlrctl.
 - O jogo deixa de fechar com a janela de erro do Unreal no meio da partida.
-- As três seções da aba Acessibilidade passam a valer no controle de verdade, e o toque segue a mão escolhida.
+- As três seções da Acessibilidade passam a valer no controle pelo que o perfil guarda, e o toque segue a mão escolhida.
 - Cursor e Rolagem aparecem só nas linhas dos analógicos, e as teclas soltas só nas linhas de botão.
 - Remover o gesto atribuído ao botão PS deixa o botão sem ação, em vez de devolvê-lo ao PS do jogo sem aviso.
 - Se o sistema tem uma atualização a meio, como um kernel novo cujo driver de vídeo não compilou, o instalador avisa, mostra o comando que conserta o sistema e segue, em vez de tentar reconfigurar o que não é dele.

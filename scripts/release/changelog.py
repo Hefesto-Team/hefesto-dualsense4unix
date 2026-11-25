@@ -8,7 +8,8 @@ O QUE ENTRA na seção, nesta ordem e sem repetir linha (nem uma que uma versão
   1. o que estiver escrito à mão em `## [Unreleased]` (a seção passa a ficar vazia);
   2. o bloco `publico` de cada sprint fechada (`estado: feita`) desde a data da última tag da série; o
      formato e a régua são do `publico.py`. Sprint fechada sem o bloco não entra, e a saída a avisa; a que
-     declara `# publico: em-casa` fica fora sem aviso;
+     declara `# publico: em-casa` fica fora sem aviso; a que nomeia uma aba e fechou «sem tela» ou «sem
+     cartão» fica fora, e a saída a avisa (a tela chega em outra sprint, e essa é que a anuncia);
   3. o título dos PRs que entraram desde a última tag (os commits `feat`, `fix` e `perf` que terminam em
      `(#N)`), na mesma régua. Título com palavra da casa não entra, e a saída o avisa.
 
@@ -59,6 +60,8 @@ PR = re.compile(r"^(?P<tipo>feat|fix|perf)(?:\([^)]*\))?!?:\s+(?P<titulo>.+?)\s+
 CABECALHO = re.compile(r"^##\s*\[(?P<numero>[^\]]+)\](?:\s*[—-]\s*(?P<data>\d{4}-\d{2}-\d{2}))?\s*$")
 FECHADA = re.compile(r"^#\s*fechada\s+(\d{2})/(\d{2})/(\d{4})")
 EM_CASA = re.compile(r"^#\s*publico:\s*em-casa\b", re.MULTILINE)
+O_QUE_FOI_FEITO = re.compile(r"^##\s+O que foi feito\b.*?(?=^##\s|\Z)", re.MULTILINE | re.DOTALL)
+SEM_TELA = re.compile(r"\bsem\s+(?:tela|cart[ãa]o)\b", re.IGNORECASE)
 EM_CICLO = re.compile(r"^#\s*ciclo:\s*feita\b.*\bem=(\d{2})/(\d{2})/(\d{4})")
 
 
@@ -154,6 +157,14 @@ def frontmatter_diz(texto: str, chave: str) -> str | None:
     return None
 
 
+def promete_tela_que_nao_veio(texto: str, bloco: dict[str, str]) -> bool:
+    """O `publico` nomeia uma aba e o relato do que foi feito diz «sem tela» ou «sem cartão»."""
+    feito = O_QUE_FOI_FEITO.search(texto)
+    if feito is None or not SEM_TELA.search(feito.group(0)):
+        return False
+    return any(publico.ABA_CITADA.search(bloco.get(campo, "")) for campo in ("titulo", "muda", "pronto"))
+
+
 def do_sprints(raiz: Path, desde: dt.date | None, avisos: list[str]) -> list[tuple[str, str]]:
     """[(grupo, texto)] dos blocos `publico` das sprints fechadas desde `desde`, o grupo sendo o título da área."""
     titulos = titulos_das_areas(raiz)
@@ -177,6 +188,9 @@ def do_sprints(raiz: Path, desde: dt.date | None, avisos: list[str]) -> list[tup
         erros = publico.validar(bloco, raiz)
         if erros:
             avisos.append(f"aviso: o bloco `publico` de {ident} não entra ({erros[0]})")
+            continue
+        if promete_tela_que_nao_veio(texto, bloco):
+            avisos.append(f"aviso: o bloco `publico` de {ident} não entra (nomeia uma aba e a sprint fechou sem tela)")
             continue
         achados.append((titulos.get(bloco.get("area", ""), OUTRAS), f"- {bloco['muda']}"))
     return achados
