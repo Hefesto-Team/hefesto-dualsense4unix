@@ -11,6 +11,8 @@ filtro do `SEM_ATENDENTE` as reprova com «Escolher um programa…».
 """
 from __future__ import annotations
 
+import asyncio
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -23,9 +25,14 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     TOKEN_TOGGLE_OSK,
     is_virtual_token,
 )
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon import lifecycle
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import keyboard
-from hefesto_dualsense4unix.integrations import steam_launcher
+from hefesto_dualsense4unix.integrations import desktop_notifications, steam_launcher
 from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
+from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.utils import session
 
 _DO_TECLADO_NA_TELA = (TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK)
 
@@ -160,3 +167,90 @@ def test_o_teclado_do_desktop_usa_o_mesmo_atendente(monkeypatch: pytest.MonkeyPa
     assert keyboard.start_keyboard_emulation(daemon)  # type: ignore[arg-type]
     criado[0].virtual_token_callback(acoes.TOKEN_SAIR_DO_JOGO, "press")
     assert criado[1:] == [("sair", False)]
+
+
+PRAZO_S = 30.0
+
+
+class _TecladoComLigacoesFixas(UinputKeyboardDevice):
+    """O perfil que o laço aplica na subida não troca as ligações do ensaio."""
+
+    def set_bindings(self, bindings: dict[str, Any]) -> None:
+        pass
+
+
+async def _laco_suprimido(
+    monkeypatch: pytest.MonkeyPatch, transporte: str, apertados: frozenset[str],
+    ligacoes: dict[str, tuple[str, ...]],
+) -> tuple[Daemon, _Fio]:
+    """O laço de produção com a emulação suprimida pelo gesto e o teclado virtual de mentira."""
+    monkeypatch.setattr(session, "load_paused_state", lambda: False)
+    monkeypatch.setattr(lifecycle, "INPUT_GRACE_SEC", 0.0)
+    monkeypatch.setattr(desktop_notifications, "notify_emulation_suppressed", lambda _s: True)
+    estados = [
+        ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport=transporte)
+        for _ in range(2000)
+    ]
+    daemon = Daemon(
+        controller=FakeController(transport=transporte, states=estados),  # type: ignore[arg-type]
+        config=DaemonConfig(
+            poll_hz=200, ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+            mouse_emulation_enabled=False, keyboard_emulation_enabled=False,
+        ),
+    )
+    fio = _Fio()
+    teclado = _TecladoComLigacoesFixas(bindings=ligacoes)
+    teclado._device = fio
+    teclado._uinput_mod = _Uinput()
+    teclado.virtual_token_callback = keyboard.atendente_do_teclado_na_tela(daemon)
+    daemon._keyboard_device = teclado  # type: ignore[assignment]
+    daemon._evdev_buttons_once = lambda: apertados  # type: ignore[method-assign]
+    daemon._emulation_suppressed = True
+    return daemon, fio
+
+
+async def _tiques(daemon: Daemon, quantos: int) -> None:
+    limite = time.monotonic() + PRAZO_S
+    while daemon.store.snapshot().counters.get("poll.tick", 0) < quantos:
+        assert time.monotonic() < limite, "o laço não andou"
+        await asyncio.sleep(0.01)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_o_sair_do_modo_jogo_age_com_a_supressao_ligada_pelo_gesto(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    """Com a supressão ligada pelo gesto, o botão de «Sair do modo jogo» sai do modo jogo."""
+    daemon, _fio = await _laco_suprimido(
+        monkeypatch, transporte, frozenset({"circle"}),
+        {"circle": (acoes.TOKEN_SAIR_DO_JOGO,), "cross": ("KEY_A",)},
+    )
+    tarefa = asyncio.create_task(daemon.run())
+    try:
+        limite = time.monotonic() + PRAZO_S
+        while daemon._emulation_suppressed:
+            assert time.monotonic() < limite, "o botão não saiu do modo jogo"
+            await asyncio.sleep(0.01)
+    finally:
+        daemon.stop()
+        await tarefa
+
+
+@pytest.mark.asyncio
+async def test_as_outras_acoes_seguem_descartadas_na_supressao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Na supressão, a tecla comum não sai e a supressão fica."""
+    daemon, fio = await _laco_suprimido(
+        monkeypatch, "usb", frozenset({"cross"}),
+        {"circle": (acoes.TOKEN_SAIR_DO_JOGO,), "cross": ("KEY_A",)},
+    )
+    tarefa = asyncio.create_task(daemon.run())
+    try:
+        await _tiques(daemon, 30)
+        assert daemon._emulation_suppressed is True
+        assert fio.saiu == []
+    finally:
+        daemon.stop()
+        await tarefa

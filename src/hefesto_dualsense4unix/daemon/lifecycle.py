@@ -3388,6 +3388,24 @@ class Daemon:
 
         dispatch_keyboard(self, buttons_pressed)
 
+    def _dispatch_so_a_saida_do_modo_jogo(self, buttons_pressed: frozenset[str]) -> None:
+        """Com a emulação suprimida, só o botão de «Sair do modo jogo» chega ao teclado virtual.
+
+        O teclado recebe o conjunto já filtrado: a borda dele aperta a saída uma vez, e toda outra
+        tecla segue calada (e solta, se estava apertada).
+        """
+        from hefesto_dualsense4unix.core.acoes_de_botao import TOKEN_SAIR_DO_JOGO
+        from hefesto_dualsense4unix.daemon.subsystems.keyboard import _combine_with_touchpad
+
+        device = self._keyboard_device
+        if device is None:
+            return
+        saida = (TOKEN_SAIR_DO_JOGO,)
+        device.dispatch(frozenset(
+            botao for botao in _combine_with_touchpad(self, buttons_pressed)
+            if tuple(device.bindings.get(botao, ())) == saida
+        ))
+
     def _prime_keyboard_emulation(self, buttons_pressed: frozenset[str]) -> None:
         """Thin wrapper — semeia o edge-tracker do teclado sem apertar."""
         from hefesto_dualsense4unix.daemon.subsystems.keyboard import prime_keyboard
@@ -4550,9 +4568,11 @@ class Daemon:
 
                     teclas_do_analogico_no_desktop(self, state)
 
-                if self._keyboard_device is not None and emu_active:
+                if self._keyboard_device is not None:
                     with passos.isolado("teclado"):
-                        if self._teclado_so_no_jogo:
+                        if not emu_active:
+                            self._dispatch_so_a_saida_do_modo_jogo(emu_buttons)
+                        elif self._teclado_so_no_jogo:
                             self._prime_keyboard_emulation(emu_buttons)
                         else:
                             self._dispatch_keyboard_emulation(emu_buttons)
