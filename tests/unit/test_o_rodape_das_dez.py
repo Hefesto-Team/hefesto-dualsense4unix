@@ -48,8 +48,9 @@ def casa(tmp_path, monkeypatch):
     """Uma pasta de perfis de mentira, e o leitor apontado para a pasta."""
     from pacotes import perfil
 
-    pasta = tmp_path / "profiles"
-    pasta.mkdir(parents=True)
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    pasta = profiles_dir(ensure=True)
     monkeypatch.setattr(perfil, "pasta", lambda: pasta)
     return pasta
 
@@ -82,7 +83,7 @@ def test_os_quatro_do_rodape_valem_em_qualquer_aba():
 
 
 def test_importar_nao_sobrescreve_perfil_do_usuario(casa, ctx, tmp_path):
-    """Nome repetido vira `nome-2`."""
+    """Nome repetido vira «Nome 2», no nome e no arquivo."""
     (casa / "importado.json").write_text('{"ja": "estava aqui"}', encoding="utf-8")
     vindo = tmp_path / "de-fora.json"
     vindo.write_text(json.dumps(PERFIL), encoding="utf-8")
@@ -91,8 +92,8 @@ def test_importar_nao_sobrescreve_perfil_do_usuario(casa, ctx, tmp_path):
 
     assert (casa / "importado.json").read_text(encoding="utf-8") == '{"ja": "estava aqui"}', (
         "o perfil que já estava lá foi SOBRESCRITO")
-    assert (casa / "importado-2.json").exists(), "o novo devia entrar como -2"
-    assert json.loads((casa / "importado-2.json").read_text())["priority"] == 42
+    novo = json.loads((casa / "importado_2.json").read_text(encoding="utf-8"))
+    assert novo["priority"] == 42 and novo["name"] == "Importado 2"
 
 
 def test_importar_e_exportar_nao_levam_o_comando_do_evento(casa, ctx, tmp_path):
@@ -101,7 +102,8 @@ def test_importar_e_exportar_nao_levam_o_comando_do_evento(casa, ctx, tmp_path):
     vindo.write_text(json.dumps({**PERFIL, "evento_comando": "bash -c 'id'"}), encoding="utf-8")
     _g("importar")(ctx, {}, PonteDeMentira(escolhe=str(vindo)))
     gravado = json.loads((casa / "importado.json").read_text(encoding="utf-8"))
-    assert gravado == PERFIL, "o importado entrou com o comando que veio de fora"
+    assert "evento_comando" not in gravado, "o importado entrou com o comando que veio de fora"
+    assert gravado["name"] == "Importado" and gravado["priority"] == 42
 
     (casa / "importado.json").write_text(
         json.dumps({**PERFIL, "evento_comando": "true"}), encoding="utf-8")

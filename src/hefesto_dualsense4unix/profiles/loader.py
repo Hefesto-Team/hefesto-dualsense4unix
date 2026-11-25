@@ -27,7 +27,7 @@ import sys
 import tempfile
 import threading
 import time
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -650,6 +650,71 @@ def _relatar_migracao_aposentada(migracao: str, arquivo: str) -> None:
     )
 
 
+def nome_livre(base: str, todos: Iterable[Any] | None = None) -> str:
+    """`base`, ou `base 2`, `base 3`…: o primeiro nome que nenhum perfil nem arquivo ocupa.
+
+    O dono único da pergunta «este nome está livre?»: a aba Perfis (duplicar, novo) e o
+    «Importar» do rodapé chamam esta. Ocupa o nome o slug de um perfil lido e o de um arquivo
+    da pasta, lido ou não, para o novo nunca cair sobre o que ficou ilegível. `todos` é a leitura
+    já feita pelo chamador; sem `todos`, lê o disco.
+    """
+    perfis = load_all_profiles() if todos is None else todos
+    usados = {slugify(x.name) for x in perfis} | {p.stem for p in profiles_dir().glob("*.json")}
+    if slugify(base) not in usados:
+        return base
+    n = 2
+    while slugify(f"{base} {n}") in usados:
+        n += 1
+    return f"{base} {n}"
+
+
+_GEMEO_DE_ARQUIVO = re.compile(r"-\d+$")
+
+
+def os_gemeos_ganham_nome_proprio(dest_dir: Path | None = None) -> list[str]:
+    """Um perfil gravado como `<slug>-N.json` com o `name` de outro ganha nome próprio.
+
+    O «Importar» antigo gravava o repetido assim, e o resto do produto acha o perfil pelo slug
+    do `name`: a lista tinha dois «Corrida» e o editor, o «Remover» e o `profile.switch` iam a
+    arquivos diferentes. O gêmeo passa a `<nome livre>.json` com o nome dentro e o resto do arquivo
+    como estava, o antigo sai, e a passada seguinte não acha mais nada. Devolve os nomes novos.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    novos: list[str] = []
+    for path in sorted(directory.glob("*.json")):
+        if not _GEMEO_DE_ARQUIVO.search(path.stem):
+            continue
+        try:
+            dados = json.loads(path.read_text(encoding="utf-8"))
+            perfil = perfil_do_cru(dados)
+            slug = slugify(perfil.name)
+        except (OSError, ValueError) as erro:
+            logger.warning("gemeo_ilegivel", arquivo=path.name, err=str(erro))
+            continue
+        if slug == path.stem:
+            continue
+        todos = _ler_todos_os_perfis(copiar=False)
+        if not (directory / f"{slug}.json").is_file() and sum(
+                slugify(x.name) == slug for x in todos) < 2:
+            continue
+        nome = nome_livre(perfil.name, todos)
+        novo = directory / f"{slugify(nome)}.json"
+        try:
+            with FileLock(str(_lock_path(novo))):
+                escrever_inteiro(novo, json.dumps({**dados, "name": nome}, ensure_ascii=False,
+                                                  indent=2) + "\n")
+            trava = _lock_path(path)
+            with FileLock(str(trava)):
+                path.unlink(missing_ok=True)
+            trava.unlink(missing_ok=True)
+        except OSError as erro:
+            logger.warning("gemeo_sem_nome_proprio", arquivo=path.name, err=str(erro))
+            continue
+        logger.info("gemeo_ganha_nome_proprio", era=perfil.name, nome=nome, arquivo=path.name)
+        novos.append(nome)
+    return novos
+
+
 def migrate_coop_local_match(dest_dir: Path | None = None) -> list[str]:
     """One-shot: dá um `match` alcançável ao coop_local que veio VAZIO de fábrica."""
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
@@ -1246,6 +1311,7 @@ def _maybe_seed_presets() -> None:
 
             migrar_a_escolha_do_usuario()
         seed_default_presets()
+        os_gemeos_ganham_nome_proprio()
         with contextlib.suppress(Exception):
             migrate_coop_local_match()
         with contextlib.suppress(Exception):
@@ -3016,11 +3082,13 @@ __all__ = [
     "migrar_os_comandos_dos_eventos",
     "migrate_coop_local_match",
     "migrate_default_profile_name",
+    "nome_livre",
     "o_carimbo_da_escolha_ganha_o_nome_novo",
     "o_freestyle_de_fabrica_nasce_ligado",
     "o_mudo_do_microfone_vai_para_o_controle",
     "o_perfil_de_fora_do_jogo",
     "o_personalizado_vira_freestyle",
+    "os_gemeos_ganham_nome_proprio",
     "perfil_do_cru",
     "perfil_do_molde",
     "perfis_de_jogo_semeados",

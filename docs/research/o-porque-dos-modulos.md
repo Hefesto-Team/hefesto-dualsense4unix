@@ -2303,3 +2303,13 @@ D-1911-O-NO-DA-MESA-ESPERA-A-PORTA-PARA-SE-ADOTAR): na subida com o jogo aberto,
 ainda não montou, e derrubar o nó destruía o sink em que o jogo escrevia (28 de 33 subidas em
 três dias, nenhuma adoção); o ``iniciar`` o adota quando a porta monta (D-0810). A âncora
 emprestada e a porta de outro aparelho seguem caindo, porque nunca se adotam (D-1410).
+
+O «Importar» do rodapé (docstring de `rodape.importar`, levada para cá em 25/11/2026). O seletor é do
+sistema e por isso vem injetado: o WebView não abre `FileChooserDialog` e a página não alcança o disco; quem o
+abre é o piloto, que é GTK, o pacote segue puro e a régua o prova com um dublê. A validação é a do produto, o
+mesmo esquema pydantic que o `footer_actions.on_import_profile` usa: o JSON que não é perfil é recusado antes de
+tocar a pasta, com o erro do pydantic na frase. O conflito de nome não sobrescreve; até 25/11/2026 o novo entrava
+como `nome-2.json` com o mesmo `name` dentro, e o resto do produto, que acha o perfil pelo slug do `name`, ia ao
+arquivo errado (D-1911-O-IMPORTADO-DE-NOME-REPETIDO-GANHA-NOME-PROPRIO): hoje o `name` muda junto, pelo
+`loader.nome_livre`. Depois de gravar, a volta (`perfil.a_volta_do_perfil`, 02/10/2026) é a do «Salvar»: todo botão
+do rodapé que grava perfil termina igual (resposta 44 da O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).

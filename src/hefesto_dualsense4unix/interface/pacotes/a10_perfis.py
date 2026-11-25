@@ -1340,16 +1340,16 @@ def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
 
 
 def _nome_livre(base: str, todos: Any) -> str:
-    """`base`, ou `base 2`, `base 3`… — o primeiro que não colide por SLUG."""
-    from hefesto_dualsense4unix.profiles.slug import slugify
+    """`base`, ou `base 2`, `base 3`…: o dono é `profiles.loader.nome_livre`."""
+    from hefesto_dualsense4unix.profiles.loader import nome_livre
 
-    usados = {slugify(x.name) for x in todos}
-    if slugify(base) not in usados:
-        return base
-    n = 2
-    while slugify(f"{base} {n}") in usados:
-        n += 1
-    return f"{base} {n}"
+    return nome_livre(base, todos)
+
+
+def abrir_no_editor(nome: str) -> None:
+    """O perfil `nome` passa a ser o aberto no editor (o «Importar» do rodapé o chama)."""
+    global _ESCOLHIDO
+    _ESCOLHIDO = nome
 
 
 def _nomes_dos_jogos() -> dict[str, str]:

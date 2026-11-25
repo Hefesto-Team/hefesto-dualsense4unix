@@ -293,24 +293,13 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "importar")
 def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Carrega um perfil de um `.json` que o usuário escolhe.
+    """Carrega um perfil de um `.json` que o usuário escolhe, pelo seletor injetado do sistema.
 
-    O SELETOR É DO SISTEMA, e por isso vem INJETADO: o WebView não abre
-    `FileChooserDialog` e a página não alcança o disco. Quem o abre é o piloto,
-    que é GTK; o pacote continua puro, e a régua o prova com um dublê.
-
-    A VALIDAÇÃO É A DO PRODUTO — `Profile.model_validate`, o mesmo esquema
-    pydantic que o `footer_actions.on_import_profile` usa. Um JSON que não é
-    perfil é recusado ANTES de tocar a pasta do usuário, com o erro do pydantic na
-    frase: nada de arquivo meio copiado.
-
-    O CONFLITO DE NOME NÃO SOBRESCREVE. A janela estável "resolve conflito de
-    nome se necessário"; aqui o novo entra como `nome-2`, `nome-3`… Perder um
-    perfil do usuário por um clique de importação é o estrago que esta linha impede.
-
-    DEPOIS DE GRAVAR, A VOLTA (:func:`perfil.a_volta_do_perfil`, 02/10/2026),
-    como o «Salvar»: todo botão do rodapé que grava perfil termina igual (a
-    resposta 44 na O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).
+    A validação é a do produto (`Profile.model_validate`) e vem ANTES de tocar a pasta. O conflito
+    de nome não sobrescreve: o `name` muda junto (`loader.nome_livre`, «Corrida 2») e a gravação é
+    a do `save_profile`; o importado vira o aberto no editor da aba Perfis. Depois de gravar vem a
+    volta (:func:`perfil.a_volta_do_perfil`), como no «Salvar». O porquê de cada peça mora em
+    `docs/research/o-porque-dos-modulos.md`.
     """
     caminho = p.escolher_arquivo("Escolha o perfil para importar", padrao="*.json")
     if not caminho:
@@ -319,7 +308,7 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     perfil._com_o_src()
     import json as _json
 
-    from hefesto_dualsense4unix.profiles.schema import CHAVE_DO_COMANDO_NO_ARQUIVO, Profile
+    from hefesto_dualsense4unix.profiles.schema import Profile
 
     origem = pathlib.Path(caminho)
     try:
@@ -328,22 +317,14 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     except Exception as erro:
         raise ValueError(f"{origem.name} não é um perfil do Hefesto: {erro}") from erro
 
-    pasta = perfil.pasta()
-    if pasta is None:
-        raise RuntimeError("importar: não achei a pasta de perfis.")
-    pasta.mkdir(parents=True, exist_ok=True)
+    from hefesto_dualsense4unix.profiles import loader
 
-    from hefesto_dualsense4unix.profiles.slug import slugify
+    nome = loader.nome_livre(novo.name)
+    destino = loader.save_profile(novo.model_copy(update={"name": nome}), origem="importar")
+    print(f"[importar] {nome!r} → {destino}")
+    from . import a10_perfis
 
-    base = slugify(novo.name)
-    destino, n = pasta / f"{base}.json", 1
-    while destino.exists():
-        n += 1
-        destino = pasta / f"{base}-{n}.json"
-    sem_o_comando = {k: v for k, v in dados.items() if k != CHAVE_DO_COMANDO_NO_ARQUIVO}
-    destino.write_text(_json.dumps(sem_o_comando, ensure_ascii=False, indent=2),
-                       encoding="utf-8")
-    print(f"[importar] {novo.name!r} → {destino}")
+    a10_perfis.abrir_no_editor(nome)
     perfil.a_volta_do_perfil(ctx, p)
     _recado(perfil.com_a_carona())
     return None
