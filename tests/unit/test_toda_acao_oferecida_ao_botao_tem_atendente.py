@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import time
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -180,7 +180,8 @@ class _TecladoComLigacoesFixas(UinputKeyboardDevice):
 
 
 async def _laco_suprimido(
-    monkeypatch: pytest.MonkeyPatch, transporte: str, apertados: frozenset[str],
+    monkeypatch: pytest.MonkeyPatch, transporte: Literal["usb", "bt"],
+    apertados: frozenset[str],
     ligacoes: dict[str, tuple[str, ...]],
 ) -> tuple[Daemon, _Fio]:
     """O laço de produção com a emulação suprimida pelo gesto e o teclado virtual de mentira."""
@@ -192,7 +193,7 @@ async def _laco_suprimido(
         for _ in range(2000)
     ]
     daemon = Daemon(
-        controller=FakeController(transport=transporte, states=estados),  # type: ignore[arg-type]
+        controller=FakeController(transport=transporte, states=estados),
         config=DaemonConfig(
             poll_hz=200, ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
             mouse_emulation_enabled=False, keyboard_emulation_enabled=False,
@@ -203,7 +204,7 @@ async def _laco_suprimido(
     teclado._device = fio
     teclado._uinput_mod = _Uinput()
     teclado.virtual_token_callback = keyboard.atendente_do_teclado_na_tela(daemon)
-    daemon._keyboard_device = teclado  # type: ignore[assignment]
+    daemon._keyboard_device = teclado
     daemon._evdev_buttons_once = lambda: apertados  # type: ignore[method-assign]
     daemon._emulation_suppressed = True
     return daemon, fio
@@ -219,7 +220,7 @@ async def _tiques(daemon: Daemon, quantos: int) -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 async def test_o_sair_do_modo_jogo_age_com_a_supressao_ligada_pelo_gesto(
-    monkeypatch: pytest.MonkeyPatch, transporte: str
+    monkeypatch: pytest.MonkeyPatch, transporte: Literal["usb", "bt"]
 ) -> None:
     """Com a supressão ligada pelo gesto, o botão de «Sair do modo jogo» sai do modo jogo."""
     daemon, _fio = await _laco_suprimido(
