@@ -73,7 +73,7 @@ def _por_o_torto_de_lado(arquivo: Path) -> None:
     except OSError as exc:
         logger.warning("gui_prefs: o arquivo ilegível não saiu do lugar", erro=str(exc))
         return
-    logger.warning("gui_prefs: arquivo ilegivel guardado ao lado", destino=destino.name)
+    logger.warning("gui_prefs: arquivo ilegível guardado ao lado", destino=destino.name)
 
 
 def load_gui_prefs() -> dict[str, Any]:
