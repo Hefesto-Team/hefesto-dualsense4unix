@@ -1351,6 +1351,9 @@ class Porta:
         self._conexoes.add(con)
         try:
             par = credencial_do_par(writer.get_extra_info("socket"))
+            from hefesto_dualsense4unix.daemon.ipc_handlers import Chamador, chamador_de_agora
+
+            chamador_de_agora.set(Chamador(pid=par[0] if par and par[0] > 0 else None))
             while True:
                 try:
                     cru = await reader.readline()

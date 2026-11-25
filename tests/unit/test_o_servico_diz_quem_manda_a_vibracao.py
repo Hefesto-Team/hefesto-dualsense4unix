@@ -6,6 +6,7 @@ pedido.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from pathlib import Path
@@ -17,11 +18,16 @@ from structlog.testing import capture_logs
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon import ipc_handlers, ipc_server
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.mods.porta import Porta
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
+from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
+
+curto = _base.curto
 
 CABO = "aa:bb:cc:dd:ee:01"
 RADIO = "aa:bb:cc:dd:ee:02"
@@ -169,8 +175,37 @@ async def test_o_par_de_verdade_do_soquete_e_este_processo(servidor: IpcServer) 
     assert linha["chamador"] != "desconhecido"
 
 
+async def test_a_extensao_pela_porta_sai_com_o_pid_do_par(
+    servidor: IpcServer, curto: Path
+) -> None:
+    """D-2511-O-SERVICO-DIZ-QUEM-MANDA-A-VIBRACAO: a extensão pede a vibração pela porta das
+    modificações, que chama o handler em processo; o diário nomeia a extensão pelo PID do par
+    da conexão da extensão na porta, nunca «interno»."""
+
+    async def escritor(metodo: str, pedido: dict[str, Any]) -> Any:
+        return await servidor._handlers[metodo](pedido)
+
+    porta = Porta(curto / "mods.sock", EventBus(), escritor=escritor,
+                  o_jogo_escreve=lambda uniq, canal: False, uniq_do_posto=lambda: CABO)
+    await porta.iniciar()
+    porta.registrar("ficha", "lanc", os.getpid(), ["escrever:vibracao"])
+    cliente = _base._Cliente(curto / "mods.sock")
+    try:
+        with capture_logs() as diario:
+            await asyncio.to_thread(cliente.pedir, "mod.ola", {"ficha": "ficha"})
+            feito = await asyncio.to_thread(
+                cliente.pedir, "vibracao.set", {"uniq": RADIO, "fraco": 0, "forte": 0})
+    finally:
+        cliente.fechar()
+        await porta.parar()
+    assert "error" not in feito, feito
+    (linha,) = [e for e in _linhas_de_vibracao(diario) if e["event"] == "vibracao_pedida_por"]
+    assert linha["pid"] == os.getpid()
+    assert linha["chamador"] == ipc_handlers.nome_do_processo(os.getpid()) != "interno"
+
+
 async def test_o_pedido_de_dentro_do_servico_se_chama_interno(servidor: IpcServer) -> None:
-    """A porta das modificações chama o handler em processo, sem conexão: «interno»."""
+    """O handler chamado em processo, fora de toda conexão (sem par nenhum): «interno»."""
     with capture_logs() as diario:
         await servidor._handlers["rumble.set"]({"weak": 0, "strong": 0, "uniq": RADIO})
     (linha,) = _linhas_de_vibracao(diario)
@@ -186,3 +221,16 @@ def test_o_nome_do_interpretador_e_o_script_ou_o_modulo(
     assert ipc_handlers.nome_do_processo(4010) == "hefesto_dualsense4unix.cli.app"
     assert ipc_handlers.nome_do_processo(None) == "desconhecido"
     assert ipc_handlers.nome_do_processo(31_999_999) == "desconhecido"
+
+
+def test_o_par_do_soquete_ilegivel_vale_none_sem_levantar() -> None:
+    """Sem soquete no transporte, ou com o soquete já fechado, o par é None e nada levanta."""
+    import socket
+    from types import SimpleNamespace
+
+    sem_soquete = SimpleNamespace(get_extra_info=lambda _chave: None)
+    assert ipc_server._o_par_do_soquete(sem_soquete) is None
+    fechado = socket.socket(socket.AF_UNIX)
+    fechado.close()
+    com_fechado = SimpleNamespace(get_extra_info=lambda _chave: fechado)
+    assert ipc_server._o_par_do_soquete(com_fechado) is None
