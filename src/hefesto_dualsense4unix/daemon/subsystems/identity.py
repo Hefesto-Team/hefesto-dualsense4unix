@@ -14,13 +14,15 @@ import contextlib
 import json
 import os
 import re
-import tempfile
 import threading
 from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hefesto_dualsense4unix.utils.escrita_inteira import gravar_sem_parar_o_laco
+from hefesto_dualsense4unix.utils.escrita_inteira import (
+    escrever_inteiro,
+    gravar_sem_parar_o_laco,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -1483,7 +1485,7 @@ class ControllerIdentityRegistry:
             logger.debug("identity_save_falhou", err=str(erro))
 
     def _gravar_a_fila(self, ordem: dict[str, int], geracao: int) -> None:
-        """Grava ``ordem`` no ``controllers.json`` (mkstemp + os.replace); a falha levanta.
+        """Grava ``ordem`` no ``controllers.json`` por :func:`escrever_inteiro`; a falha levanta.
 
         A geração mais velha que a última gravada não grava: o arquivo fica com a mais nova.
         """
@@ -1499,19 +1501,7 @@ class ControllerIdentityRegistry:
             payload["version"] = CONTROLLERS_SCHEMA_VERSION
             payload["boot_id"] = _session_anchor()
             payload[ORDER_FIELD] = merged_order_payload(existente, KIND_DUALSENSE, ordem)
-            data = json.dumps(payload, ensure_ascii=False)
-            fd, tmp = tempfile.mkstemp(
-                dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
-            )
-            try:
-                try:
-                    os.write(fd, data.encode())
-                finally:
-                    os.close(fd)
-                os.replace(tmp, path)
-            except BaseException:
-                Path(tmp).unlink(missing_ok=True)
-                raise
+            escrever_inteiro(path, json.dumps(payload, ensure_ascii=False))
             self._geracao_gravada = geracao
             logger.debug("identity_fila_salva", ordem=payload[ORDER_FIELD])
 

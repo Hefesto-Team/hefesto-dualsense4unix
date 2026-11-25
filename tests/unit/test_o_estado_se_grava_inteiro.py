@@ -13,6 +13,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import keyboard
 from hefesto_dualsense4unix.daemon.subsystems.external_identity import ExternalIdentityRegistry
+from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.utils import maquina, session, xdg_paths
@@ -26,6 +27,12 @@ def _perfil(prioridade: int) -> None:
 
 def _fila(posicao: int) -> None:
     registro = ExternalIdentityRegistry()
+    registro._ordem = {"aabbcc000001": posicao, "aabbcc000002": posicao + 1}
+    registro._save_locked()
+
+
+def _fila_dos_dualsense(posicao: int) -> None:
+    registro = ControllerIdentityRegistry()
     registro._ordem = {"aabbcc000001": posicao, "aabbcc000002": posicao + 1}
     registro._save_locked()
 
@@ -49,6 +56,9 @@ ESCRITORES: dict[str, tuple[Callable[[int], Any], Callable[[], Path]]] = {
     "zeros": (lambda n: session.gravar_os_zeros({"aabbcc000001": [n, n, n]}),
               lambda: xdg_paths.config_dir() / "zeros-dos-sensores.json"),
     "teclado-na-tela": (_osk, lambda: xdg_paths.runtime_dir() / keyboard._OSK_SESSAO_ARQUIVO),
+    "fila-dos-dualsense": (
+        _fila_dos_dualsense, lambda: xdg_paths.config_dir() / "controllers.json"
+    ),
     "fila-dos-externos": (_fila, lambda: xdg_paths.config_dir() / "controllers.json"),
 }
 

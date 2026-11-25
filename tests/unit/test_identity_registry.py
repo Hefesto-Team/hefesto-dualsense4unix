@@ -343,7 +343,7 @@ class TestPersistencia:
         assert data[identity.ORDER_FIELD] == [
             {"addr": UNIQ_A, "kind": identity.KIND_DUALSENSE, "rank": 1}
         ]
-        sobras = [p.name for p in isolated_config.iterdir() if p.name.startswith(".controllers_")]
+        sobras = [p.name for p in isolated_config.iterdir() if p.name.startswith(".controllers")]
         assert sobras == []
 
     def test_arquivo_de_outro_boot_restaura_os_mesmos_numeros(
