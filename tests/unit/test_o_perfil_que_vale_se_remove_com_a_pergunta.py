@@ -211,9 +211,12 @@ def corrida(tmp_path_factory: pytest.TempPathFactory) -> SimpleNamespace:
 
             def resultado(metodo: str, *_a: Any, **kw: Any) -> dict[str, Any]:
                 fora.ponte.chamadas.append("resultado")
-                if metodo == "profile.switch" and kw.get("name") == loader.NOME_DO_PADRAO:
+                if metodo != "profile.switch":
+                    return {}
+                if kw.get("name") == loader.NOME_DO_PADRAO:
                     marcos["trocas"].append(kw["name"])
-                return {}
+                fora.estado.base["active_profile"] = kw.get("name")
+                return {"active_profile": kw.get("name")}
 
             fora.ponte.resultado = resultado
             fora.estado.base["active_profile"] = "Sackboy"
