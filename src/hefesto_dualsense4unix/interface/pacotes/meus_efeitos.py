@@ -48,8 +48,8 @@ def _chave(feature: str) -> str:
 def meus_efeitos(feature: str = "gatilhos") -> dict[str, Any]:
     """Os efeitos que a pessoa guardou naquela feature, do disco. `{}` quando não há nenhum.
 
-    NUNCA LEVANTA por causa do arquivo: `load_gui_prefs` engole `JSONDecodeError` e `OSError` e
-    devolve os padrões. Um arquivo corrompido não pode derrubar a pintura da aba inteira.
+    NUNCA LEVANTA por causa do arquivo: com ele ilegível, `load_gui_prefs` devolve a última cópia
+    boa (ou os padrões). Um arquivo corrompido não pode derrubar a pintura da aba inteira.
     """
     chave = _chave(feature)
     try:

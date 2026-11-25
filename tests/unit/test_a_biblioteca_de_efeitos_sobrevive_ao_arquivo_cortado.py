@@ -111,6 +111,19 @@ def test_pasta_so_de_leitura_levanta_e_deixa_o_arquivo_de_antes(pasta: Path) -> 
     assert sorted(p.name for p in pasta.iterdir() if p.name.endswith(".tmp")) == []
 
 
+def test_ler_o_torto_na_pasta_so_de_leitura_devolve_a_copia_sem_levantar(pasta: Path) -> None:
+    """D-1911-O-ESTADO-SE-GRAVA-INTEIRO: a cópia boa vale mesmo quando não volta ao lugar."""
+    _guardar_a_biblioteca()
+    _cortar(pasta / "gui_preferences.json")
+    pasta.chmod(0o500)
+    try:
+        if os.access(pasta, os.W_OK):
+            pytest.skip("a pasta continua gravável (usuário sem restrição de permissão)")
+        assert len(gui_prefs.load_gui_prefs()["imersao_meus_efeitos"]) == 6
+    finally:
+        pasta.chmod(0o700)
+
+
 def test_a_memoria_da_rota_de_som_nao_derruba_a_troca_de_saida(pasta: Path) -> None:
     """D-1911-O-ESTADO-SE-GRAVA-INTEIRO: `set_pref` segue sem levantar para a rota de som."""
     pasta.mkdir(parents=True)

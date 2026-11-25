@@ -80,7 +80,8 @@ def load_gui_prefs() -> dict[str, Any]:
     """Carrega preferências da GUI.
 
     Com o arquivo ilegível, o torto vai para o lado (sufixo de data) e vale a última cópia boa,
-    que também volta ao lugar; sem cópia, valem os padrões.
+    que também volta ao lugar; sem cópia, valem os padrões. Ler não levanta: a cópia que não
+    volta ao lugar fica no diário e vale assim mesmo.
     """
     prefs_file = _prefs_file()
     if not prefs_file.exists():
@@ -91,7 +92,10 @@ def load_gui_prefs() -> dict[str, Any]:
         data = _ler(_copia_boa()) if _copia_boa().exists() else None
         if data is None:
             return _defaults()
-        _escrever(prefs_file, data)
+        try:
+            _escrever(prefs_file, data)
+        except OSError as exc:
+            logger.warning("gui_prefs: a cópia boa não voltou ao lugar", erro=str(exc))
     prefs = _defaults()
     prefs.update(data)
     return prefs
