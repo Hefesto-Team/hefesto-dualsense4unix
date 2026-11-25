@@ -1145,7 +1145,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 if not self.ds_thread:
                     self._descartados_depois_do_sinal += len(lidos)
                     break
-                if lidos:
+                if _o_buraco_da_volta(self, lidos):
                     self._consumir_lote(lidos)
                 else:
                     self._registrar_leitura_vazia()
@@ -6942,3 +6942,70 @@ def _hidraws_da_sony() -> list[_NoHid]:
         no_hid = _NoHid(produto, caminho, uevent.get("HID_UNIQ", ""))
         achados.append((no_do_sys.split("/"), numero, no_hid))
     return [no_hid for _ordem, _numero, no_hid in sorted(achados, key=lambda a: (a[0], a[1]))]
+
+
+BURACO_DA_ENTRADA_PISO_SEC: float = 0.05
+
+BURACO_DA_ENTRADA_JANELA_SEC: float = 60.0
+
+
+@dataclass
+class _BuracoDaEntrada:
+    """A conta dos silêncios da entrada de UM leitor, na janela de um minuto."""
+
+    janela_em: float | None = None
+    mudo_desde: float | None = None
+    voltas: int = 0
+    vezes: int = 0
+    pior_sec: float = 0.0
+    pior_voltas: int = 0
+
+
+def _o_buraco_da_volta(leitor: Any, lidos: list[Any]) -> list[Any]:
+    """Mede o silêncio da entrada numa volta do leitor; devolve os próprios ``lidos``.
+
+    D-2511-O-DIARIO-MEDE-O-BURACO-DA-ENTRADA-POR-CONTROLE: a volta vazia abre (ou alonga) o
+    silêncio, a volta com relatório o fecha e o guarda se passou do piso. O pior da janela
+    leva quantas voltas vazias o leitor deu dentro dele: muitas, o leitor rodava e o aparelho
+    calou (o enlace); uma só, quem parou foi o leitor. Uma linha por janela que teve silêncio
+    acima do piso, com o transporte; a janela limpa não escreve nada.
+    """
+    conta = getattr(leitor, "_buraco_da_entrada", None)
+    if not isinstance(conta, _BuracoDaEntrada):
+        conta = leitor._buraco_da_entrada = _BuracoDaEntrada()
+    agora = time.monotonic()
+    if conta.janela_em is None:
+        conta.janela_em = agora
+    if not lidos:
+        conta.voltas += 1
+        if conta.mudo_desde is None:
+            conta.mudo_desde = agora
+    elif conta.mudo_desde is not None:
+        mudo_por = agora - conta.mudo_desde
+        voltas, conta.voltas, conta.mudo_desde = conta.voltas, 0, None
+        if mudo_por >= BURACO_DA_ENTRADA_PISO_SEC:
+            conta.vezes += 1
+            if mudo_por > conta.pior_sec:
+                conta.pior_sec, conta.pior_voltas = mudo_por, voltas
+    if agora - conta.janela_em >= BURACO_DA_ENTRADA_JANELA_SEC:
+        _fechar_a_janela_do_buraco(leitor, conta, agora)
+    return lidos
+
+
+def _fechar_a_janela_do_buraco(leitor: Any, conta: _BuracoDaEntrada, agora: float) -> None:
+    desde = conta.janela_em if conta.janela_em is not None else agora
+    vezes, pior, voltas = conta.vezes, conta.pior_sec, conta.pior_voltas
+    conta.janela_em = agora
+    conta.vezes = conta.pior_voltas = 0
+    conta.pior_sec = 0.0
+    if not vezes:
+        return
+    logger.info(
+        "entrada_buraco_minuto",
+        path=getattr(leitor, "_pinned_path", None),
+        transporte="bt" if getattr(leitor, "conType", None) == ConnectionType.BT else "usb",
+        vezes=vezes,
+        pior_ms=round(pior * 1000),
+        voltas_vazias_no_pior=voltas,
+        janela_s=round(agora - desde),
+    )
