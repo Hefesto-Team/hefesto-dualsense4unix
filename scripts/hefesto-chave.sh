@@ -32,6 +32,19 @@ existe_unit() {
     systemctl --user cat "$1" >/dev/null 2>&1
 }
 
+anotar_o_pedido_ao_servico() {
+    local verbo="$1" quem="$2" motivo="${3:-}" pasta arquivo
+    pasta="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/${SLUG}"
+    arquivo="${pasta}/pedido-ao-servico"
+    motivo="${motivo//$'\t'/ }"
+    {
+        mkdir -p "${pasta}" \
+            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" "${verbo}" "${quem}" "$$" "${motivo}" \
+                > "${arquivo}.$$.tmp" \
+            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
+    } 2>/dev/null || true
+}
+
 estado() {
     local chave="${CONFIG}/DESLIGADO-pela-chave.flag"
 
@@ -84,6 +97,7 @@ desligar() {
             printf '  %-42s (não instalada, pulei)\n' "$u"
             continue
         fi
+        [[ "$u" != "${SLUG}.service" ]] || anotar_o_pedido_ao_servico stop hefesto-chave "hefesto-chave off"
         systemctl --user stop "$u" >/dev/null 2>&1 || true
         systemctl --user disable "$u" >/dev/null 2>&1 || true
         systemctl --user mask "$u" >/dev/null 2>&1 || true
@@ -146,6 +160,7 @@ religar() {
             continue
         fi
         systemctl --user enable "$u" >/dev/null 2>&1 || true
+        [[ "$u" != "${SLUG}.service" ]] || anotar_o_pedido_ao_servico start hefesto-chave "hefesto-chave on"
         systemctl --user start "$u" >/dev/null 2>&1 || true
         printf '  %-42s desmascarada, habilitada e no ar\n' "$u"
     done

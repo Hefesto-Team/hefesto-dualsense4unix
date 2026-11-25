@@ -17,7 +17,10 @@ Medido em 22/11/2026: dez paradas e subidas do serviço entre 01h58 e 05h31 e o 
    anotação recente), na subida `daemon_subiu_depois_de`, e a leitura roda fora do fio de quem
    parou: a parada não espera pela leitura;
 5. uma régua por AST e por grep: nenhum pedido de `start`, `stop`, `restart` ou `try-restart` da
-   unidade em `src/` e nos três scripts sem a anotação na mesma função.
+   unidade em `src/`, no `o_basico` e nos scripts de shell que mexem no serviço (`doctor`,
+   `dsx_recover`, `hefesto-chave`, `install` e `uninstall`) sem a anotação antes, no mesmo bloco;
+6. o `dsx_recover`, que roda como root, grava a anotação como o usuário e nunca muda o dono de
+   arquivo na pasta dele.
 
 MORDIDAS (22/11/2026): tirar a chamada à anotação de qualquer um dos pontos reprova a régua do
 ponto e o caso dele; tirar `dizer_quem_pediu_a_parada` do `Daemon.stop` reprova o caso do diário
@@ -169,6 +172,30 @@ def test_a_aba_sistema_anota_antes_de_pedir_ao_systemd(a09: ModuleType) -> None:
     lido.clear()
     a09._systemctl("enable")
     assert lido == []
+
+
+def test_desligar_o_servico_avulso_anota_antes_do_sinal(
+    a09: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hefesto_dualsense4unix.utils import single_instance
+
+    falso = 2_000_000_001
+    lido: list[Any] = []
+    sinais: list[tuple[int, int]] = []
+
+    def _sinal(pid: int, sinal: int) -> None:
+        sinais.append((pid, sinal))
+        lido.append(pedido.ler(30.0))
+
+    monkeypatch.setattr(single_instance, "is_alive", lambda pid: pid == falso)
+    monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process",
+                        lambda pid: pid == falso)
+    monkeypatch.setattr(single_instance, "quem_segura_a_vez", lambda _papel: None)
+    monkeypatch.setattr(os, "kill", _sinal)
+    assert a09._o_avulso_saiu(falso)
+    assert [pid for pid, _s in sinais] == [falso]
+    assert lido and lido[0] is not None
+    assert (lido[0].quem, lido[0].verbo) == ("aba-sistema", "stop")
 
 
 def test_o_reinicio_que_passou_do_prazo_anota_o_start(
@@ -512,33 +539,84 @@ def test_a_regua_do_python_enxerga_cada_ponto_quando_a_anotacao_sai() -> None:
 
 
 COMANDO_DO_SERVICO = re.compile(
-    r'^\s*systemctl --user (try-restart|restart|stop|start) "\$\{APP_ID\}\.service"')
+    r'systemctl --user (try-restart|restart|stop|start) (--no-block )?'
+    r'("\$\{APP_ID\}\.service"|"\$\{DAEMON_UNIT_NAME\}"|"\$u"|hefesto-dualsense4unix\.service\b)')
+FRASE_E_NAO_COMANDO = re.compile(r"^\s*(printf|echo|warn|info|fail|log|_faria|_nao_faria|#)\b")
+FIM_DO_BLOCO = re.compile(r"^(\s*(else|elif|fi|done)\b|[a-z_]+\(\) \{|\}\s*$)")
+SCRIPTS_DO_SHELL = {
+    "doctor.sh": SCRIPTS / "doctor.sh",
+    "dsx_recover.sh": SCRIPTS / "dsx_recover.sh",
+    "hefesto-chave.sh": SCRIPTS / "hefesto-chave.sh",
+    "install.sh": RAIZ / "install.sh",
+    "uninstall.sh": RAIZ / "uninstall.sh",
+}
+PEDIDOS_DO_SHELL = 8
+
+
+def _e_anotacao(linha: str) -> bool:
+    return "anotar_o_pedido" in linha and "() {" not in linha
+
+
+def _comandos_do_servico(linhas: list[str]) -> list[int]:
+    return [i for i, ln in enumerate(linhas)
+            if COMANDO_DO_SERVICO.search(ln) and not FRASE_E_NAO_COMANDO.match(ln)]
 
 
 def _scripts_sem_anotacao(texto: str, nome: str) -> list[str]:
+    """O pedido ao systemd sem a anotação antes dele, no mesmo bloco: `arquivo:linha`."""
     linhas = texto.splitlines()
     faltam: list[str] = []
-    for i, linha in enumerate(linhas):
-        if not COMANDO_DO_SERVICO.match(linha):
-            continue
-        inicio = max(j for j in range(i + 1) if re.match(r"^[a-z_]+\(\) \{", linhas[j]))
-        if not any(linhas[j].strip().startswith("anotar_o_pedido")
-                   for j in range(inicio + 1, i)):
+    for i in _comandos_do_servico(linhas):
+        anotado = False
+        for j in range(i - 1, max(-1, i - 13), -1):
+            if _e_anotacao(linhas[j]):
+                anotado = True
+                break
+            if FIM_DO_BLOCO.match(linhas[j]):
+                break
+        if not anotado:
             faltam.append(f"{nome}:{i + 1}")
     return faltam
 
 
 def test_nenhum_pedido_de_shell_ao_systemd_fica_sem_anotacao() -> None:
     achados = 0
-    for nome in ("doctor.sh", "dsx_recover.sh"):
-        texto = (SCRIPTS / nome).read_text(encoding="utf-8")
-        achados += len([ln for ln in texto.splitlines() if COMANDO_DO_SERVICO.match(ln)])
+    for nome, caminho in SCRIPTS_DO_SHELL.items():
+        texto = caminho.read_text(encoding="utf-8")
+        achados += len(_comandos_do_servico(texto.splitlines()))
         assert not _scripts_sem_anotacao(texto, nome), nome
-    assert achados == 2, "a régua deixou de enxergar os pedidos do shell"
+    assert achados == PEDIDOS_DO_SHELL, "a régua deixou de enxergar os pedidos do shell"
+
+
+def _sem_as_anotacoes(texto: str) -> str:
+    return "\n".join(
+        ln[:ln.index("anotar_o_pedido")] + "true" if _e_anotacao(ln) else ln
+        for ln in texto.splitlines())
 
 
 def test_a_regua_do_shell_enxerga_cada_ponto_quando_a_anotacao_sai() -> None:
-    for nome in ("doctor.sh", "dsx_recover.sh"):
-        texto = (SCRIPTS / nome).read_text(encoding="utf-8")
-        mordido = re.sub(r"^(\s*)anotar_o_pedido\w*\b.*$", r"\1true", texto, flags=re.M)
-        assert _scripts_sem_anotacao(mordido, nome), f"{nome}: a régua não reprovou"
+    for nome, caminho in SCRIPTS_DO_SHELL.items():
+        texto = caminho.read_text(encoding="utf-8")
+        mordido = _sem_as_anotacoes(texto)
+        assert len(_scripts_sem_anotacao(mordido, nome)) == len(
+            _comandos_do_servico(texto.splitlines())), f"{nome}: a régua não reprovou cada pedido"
+
+
+def test_cada_script_grava_a_linha_que_o_python_le(tmp_path: Path) -> None:
+    for nome in ("doctor.sh", "hefesto-chave.sh", "install.sh", "uninstall.sh"):
+        corpo = _funcao_do_shell(SCRIPTS_DO_SHELL[nome], "anotar_o_pedido_ao_servico")
+        subprocess.run(
+            ["bash", "-c", f"APP_ID=hefesto-dualsense4unix\nSLUG=hefesto-dualsense4unix\n{corpo}\n"
+             f'anotar_o_pedido_ao_servico restart "{nome}" "o motivo\tcom tabulação"'],
+            check=True, env={**os.environ, "XDG_RUNTIME_DIR": str(tmp_path)})
+        lido = pedido.ler(30.0)
+        assert lido is not None, nome
+        assert (lido.verbo, lido.quem) == ("restart", nome)
+        assert "\t" not in lido.motivo and lido.motivo.startswith("o motivo"), nome
+        pedido.arquivo().unlink()
+
+
+def test_o_recover_de_root_grava_como_o_usuario_e_nunca_muda_o_dono() -> None:
+    corpo = _funcao_do_shell(SCRIPTS / "dsx_recover.sh", "anotar_o_pedido")
+    assert "chown" not in corpo, "root mudando o dono na pasta do usuário segue link simbólico"
+    assert 'runuser -u "${user}" -- bash -c' in corpo, "o root grava a anotação como o usuário"

@@ -57,17 +57,15 @@ rebind_dualsense() {
 }
 
 anotar_o_pedido() {
-    local uid="$1" user="$2" motivo="${3:-}" pasta arquivo
-    pasta="${RUNTIME_BASE:-/run/user}/${uid}/${APP_ID}"
-    arquivo="${pasta}/pedido-ao-servico"
+    local uid="$1" user="$2" motivo="${3:-}" linha
+    local gravar='mkdir -p "$1" && printf "%s\n" "$2" > "$1/pedido-ao-servico.$$.tmp" && mv -f "$1/pedido-ao-servico.$$.tmp" "$1/pedido-ao-servico"'
     motivo="${motivo//$'\t'/ }"
-    {
-        mkdir -p "${pasta}" \
-            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" restart dsx-recover "$$" "${motivo}" \
-                > "${arquivo}.$$.tmp" \
-            && { [[ "$(id -u)" != 0 ]] || chown "${user}" "${pasta}" "${arquivo}.$$.tmp"; } \
-            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
-    } 2>/dev/null || true
+    linha="$(printf '%s\t%s\t%s\t%s\t%s' "$(date +%s.%3N)" restart dsx-recover "$$" "${motivo}")"
+    if [[ "$(id -u)" == 0 ]]; then
+        runuser -u "${user}" -- bash -c "${gravar}" _ "${RUNTIME_BASE:-/run/user}/${uid}/${APP_ID}" "${linha}"
+    else
+        bash -c "${gravar}" _ "${RUNTIME_BASE:-/run/user}/${uid}/${APP_ID}" "${linha}"
+    fi 2>/dev/null || true
 }
 
 restart_daemon() {

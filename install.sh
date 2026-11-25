@@ -3408,8 +3408,22 @@ DAEMON_UNIT_TARGET="${DAEMON_USER_UNIT_DIR}/hefesto-dualsense4unix.service"
 DAEMON_UNIT_NAME="hefesto-dualsense4unix.service"
 PRAZO_DO_DAEMON_NO_AR_S=90
 
+anotar_o_pedido_ao_servico() {
+    local verbo="$1" quem="$2" motivo="${3:-}" pasta arquivo
+    pasta="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/${APP_ID}"
+    arquivo="${pasta}/pedido-ao-servico"
+    motivo="${motivo//$'\t'/ }"
+    {
+        mkdir -p "${pasta}" \
+            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" "${verbo}" "${quem}" "$$" "${motivo}" \
+                > "${arquivo}.$$.tmp" \
+            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
+    } 2>/dev/null || true
+}
+
 _devolver_o_daemon_ao_ar() {
     systemctl --user reset-failed "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 || true
+    anotar_o_pedido_ao_servico start install "o reinício do install não pegou"
     timeout "${PRAZO_DO_DAEMON_NO_AR_S}" systemctl --user start "${DAEMON_UNIT_NAME}" >/dev/null 2>&1
     systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"
 }
@@ -3470,6 +3484,7 @@ else
         printf '      com um jogo aberto, o daemon novo, a janela e a bandeja entram quando o jogo fechar\n'
     elif [[ "${enable_daemon}" -eq 1 ]]; then
         cumprir_a_troca daemon
+        anotar_o_pedido_ao_servico restart install "o install pôs o serviço novo"
         if systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
            && { timeout "${PRAZO_DO_DAEMON_NO_AR_S}" systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
                 || _devolver_o_daemon_ao_ar; }; then
@@ -3480,6 +3495,7 @@ else
     else
         if systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"; then
             cumprir_a_troca daemon
+            anotar_o_pedido_ao_servico restart install "o install pôs o serviço novo"
             timeout "${PRAZO_DO_DAEMON_NO_AR_S}" systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
                 || _devolver_o_daemon_ao_ar \
                 || warn "o daemon que estava no ar não voltou em ${PRAZO_DO_DAEMON_NO_AR_S} s — veja: journalctl --user -u hefesto-dualsense4unix.service -n 50"

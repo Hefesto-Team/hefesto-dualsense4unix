@@ -104,6 +104,20 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
+anotar_o_pedido_ao_servico() {
+    local verbo="$1" quem="$2" motivo="${3:-}" pasta arquivo
+    [[ "${DRY_RUN:-0}" -ne 1 ]] || return 0
+    pasta="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/${APP_ID}"
+    arquivo="${pasta}/pedido-ao-servico"
+    motivo="${motivo//$'\t'/ }"
+    {
+        mkdir -p "${pasta}" \
+            && printf '%s\t%s\t%s\t%s\t%s\n' "$(date +%s.%3N)" "${verbo}" "${quem}" "$$" "${motivo}" \
+                > "${arquivo}.$$.tmp" \
+            && mv -f "${arquivo}.$$.tmp" "${arquivo}"
+    } 2>/dev/null || true
+}
+
 if [[ "$(id -u)" -eq 0 && "${DRY_RUN}" -eq 0 && "${HEFESTO_INSTALL_EM_CONTEINER:-0}" != 1 ]]; then
     printf '[uninstall] não rode com sudo na frente: o HOME passaria a ser o do root, e o que o install deixou na sessão de quem usa o computador ficaria. Rode ./uninstall.sh sem sudo; ele pede a senha de administrador uma vez. Nada foi removido.\n' >&2
     exit 1
@@ -310,6 +324,7 @@ fi
 acquire_sudo
 
 log "parando daemon hefesto-dualsense4unix (se ativo)"
+anotar_o_pedido_ao_servico stop uninstall "o uninstall tira o serviço"
 timeout 5 systemctl --user stop hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 systemctl --user disable hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix.service"
