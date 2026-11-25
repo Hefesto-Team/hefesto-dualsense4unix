@@ -86,8 +86,9 @@ def _linhas_de_vibracao(diario: list[Any]) -> list[Mapping[str, Any]]:
 async def test_o_diario_diz_os_dois_chamadores_e_a_contagem_sem_crescer(
     servidor: IpcServer, proc_de_mentira: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Dois clientes pedem o zero de dois controles (cabo e rádio) por 200 pedidos (dez minutos
-    a cada 3 s): o diário diz os dois nomes e a contagem, e as linhas não crescem com os pedidos."""
+    """D-2511-O-SERVICO-DIZ-QUEM-MANDA-A-VIBRACAO: dois clientes pedem o zero de dois controles
+    (cabo e rádio) por 200 pedidos (dez minutos a cada 3 s): o diário diz os dois nomes e a
+    contagem, e as linhas não crescem com os pedidos."""
     monkeypatch.setattr(ipc_server, "_o_par_do_soquete", _pares_em_ordem([4001, 4002]))
     with capture_logs() as diario:
         async with (
