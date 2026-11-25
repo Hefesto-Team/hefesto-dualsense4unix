@@ -301,7 +301,7 @@ def test_apptray_cosmic_emite_notification_se_watcher_ausente(
     tray._probe_watcher_with_retries(apptray_mod._WATCHER_PROBE_RETRIES - 1)
 
     assert notify_calls
-    assert "Tray" in notify_calls[0]["body"]
+    assert "ícone da bandeja" in notify_calls[0]["body"]
     assert notify_calls[0]["once_key"] == "cosmic_tray_missing"
 
 

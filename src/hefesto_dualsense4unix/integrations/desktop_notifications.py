@@ -93,13 +93,17 @@ def reset_once_cache() -> None:
     _announced_once.clear()
 
 
-def statusnotifierwatcher_available() -> bool:
-    """Verifica via D-Bus se algum watcher de StatusNotifier está registrado."""
+def statusnotifierwatcher_available() -> bool | None:
+    """Há um watcher de StatusNotifier registrado no D-Bus da sessão?
+
+    ``None`` quando não dá para perguntar (sem o ``jeepney``, ou o D-Bus não respondeu): «não
+    sei» nunca vale como «não há», porque quem pergunta larga o ícone com um «não».
+    """
     try:
         from jeepney import DBusAddress, new_method_call
         from jeepney.io.blocking import open_dbus_connection
     except ImportError:
-        return False
+        return None
 
     addr = DBusAddress(
         "/org/freedesktop/DBus",
@@ -112,11 +116,13 @@ def statusnotifierwatcher_available() -> bool:
     try:
         conn = open_dbus_connection(bus="SESSION")
         reply = conn.send_and_get_reply(msg, timeout=_DBUS_TIMEOUT_SECONDS)
-        result: Any = reply.body[0] if reply.body else False
+        if not reply.body:
+            return None
+        result: Any = reply.body[0]
         return bool(result)
     except Exception as exc:
         logger.debug("statusnotifierwatcher_probe_failed", err=str(exc))
-        return False
+        return None
     finally:
         if conn is not None:
             with contextlib.suppress(Exception):

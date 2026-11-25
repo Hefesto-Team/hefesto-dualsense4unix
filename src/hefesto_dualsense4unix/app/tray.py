@@ -53,6 +53,32 @@ def _desktop_is_cosmic() -> bool:
     ).lower()
     return "cosmic" in desktops
 
+def _bandeja_xembed_de_pe() -> bool | None:
+    """A bandeja XEmbed do X11 mostra o ícone (o AppIndicator a usa sem o watcher)?
+
+    ``False`` fora do X11, onde não há XEmbed; ``None`` quando o servidor X não responde.
+    """
+    tela = Gdk.Display.get_default()
+    if tela is None or "X11" not in type(tela).__name__:
+        return False
+    try:
+        from Xlib import X
+        from Xlib import display as xdisplay
+
+        conexao = xdisplay.Display(tela.get_name())
+    except Exception as exc:
+        logger.debug("bandeja_xembed_sem_resposta", err=str(exc))
+        return None
+    try:
+        nome = f"_NET_SYSTEM_TRAY_S{conexao.get_default_screen()}"
+        return bool(conexao.get_selection_owner(conexao.intern_atom(nome)) != X.NONE)
+    except Exception as exc:
+        logger.debug("bandeja_xembed_sem_resposta", err=str(exc))
+        return None
+    finally:
+        conexao.close()
+
+
 ShowFn = Callable[[], None]
 def _painel_recolore_simbolico() -> bool:
     """O painel desta sessão sabe desenhar o ícone SIMBÓLICO em SVG?"""
@@ -199,10 +225,12 @@ class AppTray:
     def _probe_watcher_with_retries(self, attempt: int) -> bool:
         """Probe StatusNotifierWatcher com retries, em toda sessão.
 
-        Só avisa se TODAS falharem, e então diz a quem chamou (`on_sem_hospedeiro`) que o ícone
-        não tem onde aparecer.
+        Só avisa se TODAS falharem com a certeza de que o ícone não aparece, e então diz a quem
+        chamou (`on_sem_hospedeiro`). Não sabe quem não conseguiu perguntar ao D-Bus, e quem tem a
+        bandeja XEmbed do X11 mostra o ícone sem o watcher: nos dois, o ícone fica e nada se avisa.
         """
-        if statusnotifierwatcher_available():
+        ha_watcher = statusnotifierwatcher_available()
+        if ha_watcher:
             logger.debug("statusnotifierwatcher_disponivel_apos_retry", attempt=attempt)
             return False
         if attempt + 1 < _WATCHER_PROBE_RETRIES:
@@ -210,6 +238,13 @@ class AppTray:
                 _WATCHER_PROBE_RETRY_MS,
                 lambda: self._probe_watcher_with_retries(attempt + 1),
             )
+            return False
+        if ha_watcher is None:
+            logger.info("bandeja_sem_resposta_do_dbus")
+            return False
+        xembed = _bandeja_xembed_de_pe()
+        if xembed is not False:
+            logger.info("bandeja_sem_watcher_com_xembed", xembed=xembed)
             return False
         self._maybe_notify_tray_missing()
         if self.on_sem_hospedeiro is not None:

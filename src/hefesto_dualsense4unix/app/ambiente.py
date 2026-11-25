@@ -47,20 +47,20 @@ def ambiente_efetivo(*, variaveis: Mapping[str, str] | None = None) -> str:
 
 def aviso_da_bandeja_ausente(ambiente: str | None = None) -> str:
     """O aviso de quem não tem onde pôr o ícone da bandeja, com o que ligar neste ambiente."""
-    if (ambiente or ambiente_efetivo()) == "cosmic":
+    qual = ambiente or ambiente_efetivo()
+    if qual == "cosmic":
         return _(
-            "Tray icon indisponível no COSMIC. Habilite o applet «Área de status» no "
-            "cosmic-panel (Configurações > Painel) ou use a janela principal. "
-            "Este aviso só aparece uma vez."
+            "O ícone da bandeja não tem onde aparecer: ligue o applet «Área de status» "
+            "em Configurações > Painel, ou use a janela principal."
         )
-    if (ambiente or ambiente_efetivo()) == "gnome":
+    if qual == "gnome":
         return _(
-            "Tray icon indisponível no GNOME. Ative a extensão AppIndicator no GNOME "
-            "Shell ou use a janela principal. Este aviso só aparece uma vez."
+            "O ícone da bandeja não tem onde aparecer: ative a extensão AppIndicator do "
+            "GNOME, ou use a janela principal."
         )
     return _(
-        "Tray icon indisponível neste ambiente. Ative a bandeja do painel "
-        "(área de notificação) ou use a janela principal. Este aviso só aparece uma vez."
+        "O ícone da bandeja não tem onde aparecer: ative a bandeja do painel (área de "
+        "notificação), ou use a janela principal."
     )
 
 

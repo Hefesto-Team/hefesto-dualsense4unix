@@ -194,10 +194,10 @@ class TestNotify:
 class TestStatusNotifierWatcherAvailable:
     """Função statusnotifierwatcher_available()."""
 
-    def test_sem_jeepney_retorna_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_sem_jeepney_nao_sabe(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for name in ("jeepney", "jeepney.io", "jeepney.io.blocking"):
             monkeypatch.setitem(sys.modules, name, None)  # type: ignore[arg-type]
-        assert desktop_notifications.statusnotifierwatcher_available() is False
+        assert desktop_notifications.statusnotifierwatcher_available() is None
 
     def test_dbus_responde_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_fake_jeepney(monkeypatch, reply_body=(True,))
@@ -207,15 +207,15 @@ class TestStatusNotifierWatcherAvailable:
         _install_fake_jeepney(monkeypatch, reply_body=(False,))
         assert desktop_notifications.statusnotifierwatcher_available() is False
 
-    def test_dbus_excecao_retorna_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_dbus_excecao_nao_sabe(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_fake_jeepney(monkeypatch, raise_on_send=RuntimeError("x"))
-        assert desktop_notifications.statusnotifierwatcher_available() is False
+        assert desktop_notifications.statusnotifierwatcher_available() is None
 
-    def test_dbus_body_vazio_retorna_false(
+    def test_dbus_body_vazio_nao_sabe(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _install_fake_jeepney(monkeypatch, reply_body=())
-        assert desktop_notifications.statusnotifierwatcher_available() is False
+        assert desktop_notifications.statusnotifierwatcher_available() is None
 
     def test_dbus_args_corretos(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_fake_jeepney(monkeypatch, reply_body=(True,))

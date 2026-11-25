@@ -409,28 +409,27 @@ msgstr ""
 
 #: src/hefesto_dualsense4unix/app/ambiente.py:52
 msgid ""
-"Tray icon indisponível no COSMIC. Habilite o applet «Área de status» no "
-"cosmic-panel (Configurações > Painel) ou use a janela principal. "
-"Este aviso só aparece uma vez."
+"O ícone da bandeja não tem onde aparecer: ligue o applet «Área de status» "
+"em Configurações > Painel, ou use a janela principal."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/ambiente.py:58
+#: src/hefesto_dualsense4unix/app/ambiente.py:57
 msgid ""
-"Tray icon indisponível no GNOME. Ative a extensão AppIndicator no GNOME "
-"Shell ou use a janela principal. Este aviso só aparece uma vez."
+"O ícone da bandeja não tem onde aparecer: ative a extensão AppIndicator do "
+"GNOME, ou use a janela principal."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/ambiente.py:62
+#: src/hefesto_dualsense4unix/app/ambiente.py:61
 msgid ""
-"Tray icon indisponível neste ambiente. Ative a bandeja do painel "
-"(área de notificação) ou use a janela principal. Este aviso só aparece uma vez."
+"O ícone da bandeja não tem onde aparecer: ative a bandeja do painel (área de "
+"notificação), ou use a janela principal."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/tray.py:381
+#: src/hefesto_dualsense4unix/app/tray.py:416
 msgid "Não consegui parar o serviço: o ícone fica na bandeja."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/tray.py:435
+#: src/hefesto_dualsense4unix/app/tray.py:470
 #, python-brace-format
 msgid "Não consegui trocar para o perfil «{nome}»."
 msgstr ""

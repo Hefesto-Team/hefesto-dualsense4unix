@@ -68,7 +68,7 @@ def test_no_cosmic_o_aviso_segue_pedindo_o_applet_com_acento(
     tray = _sem_hospedeiro(gtk_de_mentira, monkeypatch, "COSMIC")
     tray._probe_watcher_with_retries(gtk_de_mentira._WATCHER_PROBE_RETRIES - 1)
     corpo = avisos[0]["body"]
-    assert "«Área de status»" in corpo and "indisponível" in corpo
+    assert "«Área de status»" in corpo and "não tem onde aparecer" in corpo
     assert "AppIndicator" not in corpo
 
 
@@ -98,6 +98,25 @@ def test_com_hospedeiro_nao_avisa_nem_larga_o_icone(
     monkeypatch.setattr(gtk_de_mentira, "statusnotifierwatcher_available", lambda: True)
     tray._probe_watcher_with_retries(0)
     assert avisos == [] and tray.chamadas == []
+
+
+@pytest.mark.parametrize("por_que", ["o D-Bus não respondeu", "a bandeja XEmbed do X11 mostra"])
+def test_sem_certeza_de_que_o_icone_sumiu_nada_avisa_e_o_icone_fica(
+        gtk_de_mentira: Any, avisos: list[dict[str, Any]],
+        monkeypatch: pytest.MonkeyPatch, por_que: str) -> None:
+    """MORDIDA: o «não sei» da sonda, ou o X11 com XEmbed, lidos como «não há» largam o ícone."""
+    tray = _sem_hospedeiro(gtk_de_mentira, monkeypatch, "XFCE")
+    if por_que.startswith("o D-Bus"):
+        monkeypatch.setattr(gtk_de_mentira, "statusnotifierwatcher_available", lambda: None)
+    else:
+        monkeypatch.setattr(gtk_de_mentira, "_bandeja_xembed_de_pe", lambda: True)
+    tray._probe_watcher_with_retries(gtk_de_mentira._WATCHER_PROBE_RETRIES - 1)
+    assert avisos == [] and tray.chamadas == []
+
+
+def test_a_bandeja_xembed_so_conta_no_x11(gtk_de_mentira: Any) -> None:
+    """No Wayland não há XEmbed: a tela que não é do X11 nunca conta como bandeja."""
+    assert gtk_de_mentira._bandeja_xembed_de_pe() is False
 
 
 def test_a_sonda_do_hospedeiro_e_agendada_em_toda_sessao(
