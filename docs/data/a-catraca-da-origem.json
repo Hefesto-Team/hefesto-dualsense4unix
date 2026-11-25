@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1321400,
+      "piso": 1321617,
       "por_item": {
         "docs": 108002,
         "scripts": 116862,
-        "src": 332727,
-        "tests": 763809
+        "src": 332736,
+        "tests": 764017
       },
-      "razao": "tamanho: +115 linhas (1321285 -> 1321400), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo e0598e108b85",
+      "razao": "tamanho: +217 linhas (1321400 -> 1321617), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo d6400976c7f2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2529,10 +2529,16 @@
           "de": 1321285,
           "para": 1321400,
           "razao": "tamanho: +115 linhas (1321285 -> 1321400), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO; registrado no fecho, topo e0598e108b85"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1321400,
+          "para": 1321617,
+          "razao": "tamanho: +217 linhas (1321400 -> 1321617), pagas por Origem: D-2211-O-DOCTOR-PERGUNTA-PELO-ARQUIVO-DOS-JOGOS-DE-FORA-DA-STEAM, D-2211-QUEM-PEDE-O-REINICIO-DEIXA-O-NOME-NO-DIARIO, D-2511-O-PROGRAMA-GRAVADO-NO-BOTAO-VIRA-NADA; registrado no fecho, topo d6400976c7f2"
         }
       ],
       "unidade": "linhas",
-      "universo": 3689
+      "universo": 3690
     }
   }
 }
