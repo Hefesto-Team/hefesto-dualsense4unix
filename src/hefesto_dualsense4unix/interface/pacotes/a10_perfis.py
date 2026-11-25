@@ -1481,7 +1481,6 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     from hefesto_dualsense4unix.profiles.loader import (
         delete_profile,
         load_all_profiles,
-        perfil_em_disco,
     )
     from hefesto_dualsense4unix.profiles.schema import recusa_do_nome_do_perfil
     from hefesto_dualsense4unix.profiles.slug import slugify
@@ -1515,8 +1514,7 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
                     f"nome — gravar este por cima apagaria o dele.")
     _gravar(prof.renomeado(novo), ctx, p, era=era)
     if troca_de_arquivo:
-        if perfil_em_disco(novo) is None:
-            raise RuntimeError(f"“{novo}” não pôde ser relido; “{era}” ficou como estava.")
+        _o_perfil_no_disco(novo)
         delete_profile(era)
     levar_o_perfil_renomeado(prof.name, novo)
     if era == do_editor:
