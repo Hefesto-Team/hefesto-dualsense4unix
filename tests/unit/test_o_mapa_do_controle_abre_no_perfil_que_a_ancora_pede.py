@@ -148,16 +148,25 @@ def test_o_trocar_sem_perfil_com_botao_proprio_abre_em_navegar(
     assert _mesa(_ctx(ativo=""))["ancora-trocar"] == a13.NAV
 
 
+RAIZES_DO_LAR = (
+    "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME",
+    "XDG_RUNTIME_DIR",
+)
+
+
 def _o_lar() -> dict[str, tuple[int, int, int, str]]:
-    """Cada arquivo do lar de mentira e o que o disco diz dele: inode, tamanho, hora e conteúdo."""
-    raiz = pathlib.Path(os.environ["HOME"])
+    """Cada arquivo do lar de mentira e o que o disco diz dele: inode, tamanho, hora e conteúdo.
+
+    O lar é o ``HOME`` e cada pasta ``XDG_*``, que no lar de mentira de cada caso moram fora dele.
+    """
     visto: dict[str, tuple[int, int, int, str]] = {}
-    for caminho in sorted(raiz.rglob("*")):
-        if caminho.is_file() and not caminho.is_symlink():
-            marca = caminho.stat()
-            visto[str(caminho.relative_to(raiz))] = (
-                marca.st_ino, marca.st_size, marca.st_mtime_ns,
-                hashlib.sha1(caminho.read_bytes()).hexdigest())
+    for raiz in sorted({pathlib.Path(os.environ[var]) for var in RAIZES_DO_LAR}):
+        for caminho in sorted(raiz.rglob("*")):
+            if caminho.is_file() and not caminho.is_symlink():
+                marca = caminho.stat()
+                visto[str(caminho)] = (
+                    marca.st_ino, marca.st_size, marca.st_mtime_ns,
+                    hashlib.sha1(caminho.read_bytes()).hexdigest())
     return visto
 
 
@@ -189,15 +198,17 @@ def _com_write_text(alvo: pathlib.Path) -> None:
     alvo.write_text("x", encoding="utf-8")
 
 
+@pytest.mark.parametrize("onde", RAIZES_DO_LAR)
 @pytest.mark.parametrize(
     "gravar", [_com_os_write, _com_open, _com_replace, _com_write_text],
     ids=["os.write", "open", "os.replace", "write_text"],
 )
-def test_a_regua_do_lar_ve_toda_forma_de_gravar(gravar: Any) -> None:
+def test_a_regua_do_lar_ve_toda_forma_de_gravar(gravar: Any, onde: str) -> None:
     """A régua das gravações olha o disco do lar de mentira, não a função que gravou."""
+    alvo = pathlib.Path(os.environ[onde]) / "gravado"
     antes = _o_lar()
-    gravar(pathlib.Path(os.environ["HOME"]) / "gravado")
-    assert _o_que_mudou(antes) == ["gravado"]
+    gravar(alvo)
+    assert _o_que_mudou(antes) == [str(alvo)]
 
 
 def test_abrir_pela_ancora_nao_grava_nada(monkeypatch: pytest.MonkeyPatch) -> None:

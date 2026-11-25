@@ -178,7 +178,7 @@ def test_a_falha_do_disco_deixa_o_arquivo_de_antes_inteiro_e_sem_temporario(
     asyncio.run(laco())
     assert ei.esperar_a_fila(5.0)
     assert (config / "controllers.json").read_bytes() == antes
-    assert [p.name for p in config.iterdir() if p.name.startswith(".controllers_")] == []
+    assert [p.name for p in config.iterdir() if p.name.startswith(".controllers")] == []
     assert "identity_save_falhou" in dito
 
 
