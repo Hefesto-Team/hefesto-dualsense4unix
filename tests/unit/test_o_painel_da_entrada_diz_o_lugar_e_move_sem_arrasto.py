@@ -128,6 +128,13 @@ _JS_DO_PRODUTO = r"""
   r.foraLugar = !!sel('5', 'lugar-da-entrada');
   r.foraMover = !!sel('5', 'mover-para');
   r.enviados = enviados;
+  dado.declarado = { "4": {} };
+  dado.mapa["16"] = dado.mapa["1"];
+  delete dado.mapa["1"];
+  window.hefestoArranjo(dado, false);
+  document.querySelector('.plug[data-porta="16"]').click();
+  r.abriuSemDono = !document.getElementById('edita').hidden;
+  r.semDono = !!sel('16', 'lugar-da-entrada') || !!sel('16', 'mover-para');
   return JSON.stringify(r);
 })()
 """
@@ -156,3 +163,4 @@ def test_no_produto_os_dois_mandam_o_gesto_ao_dono_e_so_onde_ele_grava(
     ], lido
     assert lido["ficouAte"], "a página trocou as entradas sem o dono gravar"
     assert not lido["foraLugar"] and not lido["foraMover"], lido
+    assert lido["abriuSemDono"] and not lido["semDono"], lido
