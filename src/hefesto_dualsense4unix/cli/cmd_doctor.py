@@ -692,6 +692,61 @@ def _print_bloco_registro() -> int:
     return _gravidade_das_linhas(linhas)
 
 
+JANELA_DOS_FIOS_S = 1.0
+FIOS_QUE_SE_MOSTRAM = 8
+
+
+def _pid_do_servico() -> int | None:
+    """O pid vivo do serviço pelo arquivo da instância única; ``None`` sem serviço de pé."""
+    from hefesto_dualsense4unix.daemon.main import single_instance_name
+    from hefesto_dualsense4unix.utils import single_instance
+
+    try:
+        pid = single_instance._read_existing_pid(single_instance._pid_file(single_instance_name()))
+    except (OSError, ValueError):
+        return None
+    if pid is None or not single_instance.is_alive(pid):
+        return None
+    if not single_instance._is_hefesto_dualsense4unix_process(pid):
+        return None
+    return pid
+
+
+def _linhas_dos_fios(pid: int | None, janela_s: float = JANELA_DOS_FIOS_S) -> list[tuple[str, str]]:
+    """O custo de cada fio do serviço numa janela: o total e os que mais gastam, pelo nome."""
+    from hefesto_dualsense4unix.utils.nome_do_fio import custo_dos_fios
+
+    if pid is None:
+        return [("[INFO]", "fios do serviço: o serviço não está de pé")]
+    try:
+        custos = custo_dos_fios(pid, janela_s)
+    except OSError as exc:
+        return [("[INFO]", f"fios do serviço: não deu para ler /proc/{pid}/task ({exc.strerror})")]
+    nucleo = sum(c.nucleo for c in custos)
+    acordadas = sum(c.acordadas_s for c in custos)
+    linhas = [("[INFO]", (
+        f"{len(custos)} fios em {formata_pt_br(janela_s)} s: "
+        f"{formata_pt_br(round(nucleo * 100, 1))}% de um núcleo, "
+        f"{round(acordadas)} acordadas/s"
+    ))]
+    linhas.extend(
+        ("[INFO]", (
+            f"fio {c.nome}: {formata_pt_br(round(c.nucleo * 100, 1))}% de um núcleo, "
+            f"{round(c.acordadas_s)} acordadas/s"
+        ))
+        for c in custos[:FIOS_QUE_SE_MOSTRAM]
+        if c.nucleo or c.acordadas_s
+    )
+    return linhas
+
+
+def _print_bloco_fios() -> int:
+    """O custo de cada fio do serviço, pelo nome que ele leva no kernel. Só informa."""
+    linhas = _linhas_dos_fios(_pid_do_servico())
+    _bloco("fios do serviço (custo em 1 s)", linhas, soft_wrap=True, highlight=False, markup=False)
+    return _gravidade_das_linhas(linhas)
+
+
 def _print_bloco_install() -> int:
     """O install que o fecho da janela soltou e parou com um motivo. Devolve a gravidade."""
     from hefesto_dualsense4unix.app.actions.versao_ao_abrir import pendencia_do_install
@@ -788,6 +843,7 @@ def _rodar_o_doctor(
 
     rc = max(rc, _print_bloco_registro())
     rc = max(rc, _print_bloco_install())
+    rc = max(rc, _print_bloco_fios())
 
     linhas_do_daemon = asyncio.run(_daemon_checks())
     _bloco("daemon (via IPC)", linhas_do_daemon)

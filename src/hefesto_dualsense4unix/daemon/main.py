@@ -72,6 +72,9 @@ def ajustar_a_vez_do_gil() -> None:
 
 
 def run_daemon(poll_hz: int | None = None) -> int:
+    from hefesto_dualsense4unix.utils import nome_do_fio
+
+    nome_do_fio.instalar()
     ligar_a_pilha_da_queda_nativa()
     ajustar_a_vez_do_gil()
     from hefesto_dualsense4unix.utils import sd_notify
