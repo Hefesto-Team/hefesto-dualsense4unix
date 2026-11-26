@@ -99,6 +99,44 @@
     e.trecho = [];
     aoSoltar(r.dataset.v, oModo(r));
   });
+  var busca = {chave: '', texto: ''};
+  function semAcento(t){ return String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
+  function aChaveDaBusca(caixa){
+    var t = caixa.querySelector('.tn-tit');
+    return t ? t.textContent : '';
+  }
+  function filtrarOsJogos(caixa){
+    var campo = caixa.querySelector('.cj-busca');
+    if (!campo) return;
+    var q = semAcento(campo.value);
+    caixa.querySelectorAll('.cj-lista li').forEach(function(li){
+      var n = li.querySelector('.cj-nome');
+      var casa = !q || semAcento(n ? n.textContent : li.textContent).indexOf(q) >= 0;
+      var quer = casa ? '' : 'none';
+      if (li.style.display !== quer) li.style.display = quer;
+    });
+  }
+  function aBuscaNoLugar(caixa){
+    var campo = caixa.querySelector('.cj-busca');
+    if (!campo) return;
+    var chave = aChaveDaBusca(caixa);
+    if (busca.chave !== chave) busca = {chave: chave, texto: ''};
+    if (campo.value !== busca.texto && campo !== document.activeElement) campo.value = busca.texto;
+    filtrarOsJogos(caixa);
+  }
+  document.addEventListener('input', function(ev){
+    var c = ev.target.closest ? ev.target.closest('.cj-busca') : null;
+    if (!c) return;
+    var caixa = c.closest('#lanc-escolha') || c.closest('.tn-cx') || document;
+    busca = {chave: aChaveDaBusca(caixa), texto: c.value};
+    filtrarOsJogos(caixa);
+  });
+  document.querySelectorAll('#lanc-escolha').forEach(function(caixa){
+    new MutationObserver(function(){ aBuscaNoLugar(caixa); }).observe(caixa, {childList:true, subtree:true});
+  });
+  addEventListener('hashchange', function(){
+    if (location.hash !== '#escolher-jogo') busca = {chave: '', texto: ''};
+  });
   var abertas = {};
   function asEscolhasNoLugar(){
     var vistas = {};
