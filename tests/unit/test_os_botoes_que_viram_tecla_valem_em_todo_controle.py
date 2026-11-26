@@ -14,7 +14,8 @@ que grava cada evento. Os quatro controles vêm das três fontes reais: o P1 do 
 o P2 do co-op (cabo) e o P3 e o P4 do leitor passivo do hub (rádio).
 
 MORDIDAS: devolver ao laço o `emu_buttons` só do primário (`no_teclado`), tirar a união do
-`despachar_no_jogo` e tirar o filtro do gesto do PS por controle reprovam.
+`despachar_no_jogo`, tirar o filtro do gesto do PS por controle e devolver ao `dispatch_mouse` só
+os botões do primário (as setas, o Enter e o Esc que o mouse virtual digita) reprovam.
 """
 from __future__ import annotations
 
@@ -305,3 +306,60 @@ def test_com_o_jogo_aberto_o_teclado_so_dentro_do_jogo_le_todo_controle(
         _dispatch_keyboard_emulation=lambda botoes: chamadas.append(frozenset(botoes)))
     sub_mouse.despachar_no_jogo(daemon, None, frozenset({"square"}), no_jogo=True)
     assert chamadas == [frozenset({"square", "cross", "circle"})]
+
+
+def _mouse_do_desktop(uinput: _Uinput, ligacoes: dict[str, str] | None = None) -> Any:
+    from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
+
+    mouse = UinputMouseDevice()
+    assert mouse.start()
+    if ligacoes is not None:
+        mouse.set_button_actions(ligacoes, frozenset())
+    uinput.saiu.clear()
+    return mouse
+
+
+def _despachar_o_mouse(daemon: Any, botoes_do_p1: frozenset[str]) -> None:
+    estado = types.SimpleNamespace(
+        raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128, l2_raw=0, r2_raw=0)
+    sub_mouse.dispatch_mouse(daemon, estado, botoes_do_p1)
+
+
+def test_a_seta_o_enter_e_o_esc_do_mouse_saem_de_todo_controle_e_o_clique_so_do_p1(
+    monkeypatch: pytest.MonkeyPatch, uinput: _Uinput,
+) -> None:
+    """Sem troca no perfil, o direcional, o Círculo e o Quadrado viram tecla no mouse virtual.
+
+    O P3 aperta Cima e Círculo e o P4 aperta Quadrado: as três teclas saem. O Cruz do P3 (o clique
+    esquerdo) não clica: o clique e o cursor seguem o P1.
+
+    MORDIDA: devolver ao `dispatch_mouse` só os botões do primário.
+    """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.poll.gatilhos_de_cada_controle",
+        lambda d: {P3: (frozenset({"dpad_up", "circle", "cross"}), 0, 0),
+                   P4: (frozenset({"square"}), 0, 0)})
+    mouse = _mouse_do_desktop(uinput)
+    daemon: Any = types.SimpleNamespace(
+        _mouse_device=mouse, store=None, _hotkey_manager=None, _navegacao_interna=None,
+        _touchpad_reader=None, config=types.SimpleNamespace(mouse_emulation_enabled=True))
+    _despachar_o_mouse(daemon, frozenset())
+    saiu = list(uinput.saiu)
+    for tecla in ("KEY_UP", "KEY_ENTER", "KEY_ESC"):
+        assert (tecla, 1) in saiu, f"{tecla} do outro controle não saiu: {saiu}"
+    assert ("BTN_LEFT", 1) not in saiu, "o Cruz do P3 clicou: o clique é do P1"
+
+
+def test_a_tecla_que_o_perfil_tirou_do_mouse_nao_sai_dele_pelo_outro_controle(
+    monkeypatch: pytest.MonkeyPatch, uinput: _Uinput,
+) -> None:
+    """O perfil que põe o Cima no clique tira a seta do mouse: o Cima do P3 não vira seta."""
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.poll.gatilhos_de_cada_controle",
+        lambda d: {P3: (frozenset({"dpad_up"}), 0, 0)})
+    mouse = _mouse_do_desktop(uinput, {"dpad_up": "BTN_LEFT"})
+    daemon: Any = types.SimpleNamespace(
+        _mouse_device=mouse, store=None, _hotkey_manager=None, _navegacao_interna=None,
+        _touchpad_reader=None, config=types.SimpleNamespace(mouse_emulation_enabled=True))
+    _despachar_o_mouse(daemon, frozenset())
+    assert uinput.saiu == [], uinput.saiu

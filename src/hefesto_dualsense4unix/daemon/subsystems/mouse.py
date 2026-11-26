@@ -139,7 +139,7 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
             ry=state.raw_ry,
             l2=state.l2_raw,
             r2=state.r2_raw,
-            buttons=buttons_pressed,
+            buttons=buttons_pressed | _teclas_dos_outros_no_mouse(daemon, device),
         )
     except Exception as exc:
         logger.warning("mouse_dispatch_failed", err=str(exc))
@@ -153,6 +153,23 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
         except Exception as exc:
             logger.warning("touchpad_move_dispatch_failed", err=str(exc))
     mover_o_cursor_pelo_giro(daemon, buttons_pressed)
+
+
+def _teclas_dos_outros_no_mouse(daemon: Any, device: Any) -> frozenset[str]:
+    """Dos controles que não são o P1, os botões que o mouse do desktop faz virar tecla.
+
+    As setas do direcional e o Enter e o Esc do toque saem do mouse virtual quando o perfil não
+    os troca; como no teclado, valem para todo controle. O clique, o cursor e os botões que o
+    ajuste prende ao cursor seguem só do P1. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations.uinput_mouse import botoes_do_cursor
+
+    teclas = frozenset(getattr(device, "_mapa_dpad", None) or ()) | frozenset(
+        getattr(device, "_mapa_tap", None) or ())
+    if not teclas:
+        return frozenset()
+    dos_outros = botoes_dos_outros_controles(daemon, mouse_ligado=_mouse_ligado(daemon))
+    return (dos_outros & teclas) - botoes_do_cursor(getattr(daemon, "store", None))
 
 
 def botoes_com_os_gatilhos(botoes: frozenset[str], l2: int, r2: int) -> frozenset[str]:
