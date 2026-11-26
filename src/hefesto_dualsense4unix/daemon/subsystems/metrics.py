@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import http.server
-import os
 import socketserver
 import threading
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.numero_do_ambiente import numero_do_ambiente
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
@@ -24,22 +24,7 @@ _LabeledSeries = list[tuple[dict[str, str], int | float]]
 
 def _porta_efetiva(porta_da_config: int) -> int:
     """A porta do endpoint, com a variável de ambiente vencendo a config."""
-    bruto = os.environ.get(ENV_METRICS_PORT)
-    if bruto is None:
-        return porta_da_config
-    try:
-        porta = int(bruto)
-    except ValueError:
-        logger.warning(
-            "metrics_port_env_invalida", valor=bruto, usando=porta_da_config
-        )
-        return porta_da_config
-    if not 1 <= porta <= 65535:
-        logger.warning(
-            "metrics_port_env_fora_da_faixa", valor=porta, usando=porta_da_config
-        )
-        return porta_da_config
-    return porta
+    return numero_do_ambiente(ENV_METRICS_PORT, porta_da_config, piso=1, teto=65535)
 
 
 def _format_counter(name: str, help_text: str, value: int | float) -> str:

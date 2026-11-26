@@ -196,8 +196,9 @@ ambiente, não uma:
   liga — mesma gramática dos plugins, de propósito.
 - `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta e vence o `metrics_port`
   do `DaemonConfig`. Valor inválido ou fora de 1–65535 loga
-  `metrics_port_env_invalida` / `metrics_port_env_fora_da_faixa` e cai na porta
-  da config, sem derrubar o daemon.
+  `variavel_numerica_ilegivel` / `variavel_numerica_fora_da_faixa` (o leitor único
+  `utils/numero_do_ambiente.py`, desde 26/11/2026) e cai na porta da config, sem
+  derrubar o daemon.
 
 Conferido rodando em 22/08/2026: `MetricsSubsystem.is_enabled(DaemonConfig())`
 devolve `True` com a variável em `1`, `False` com a variável em `true` e `False` sem

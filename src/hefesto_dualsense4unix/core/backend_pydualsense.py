@@ -64,6 +64,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.numero_do_ambiente import numero_do_ambiente
 
 logger = get_logger(__name__)
 DUALSENSE_EDGE_PID = 0x0DF2
@@ -572,7 +573,8 @@ def _is_virtual_hidraw(path: bytes) -> bool:
         bus=pad_usb.bus_do_hid_id(uevent.get("HID_ID", "")),
     )
 
-INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", "5"))
+INIT_TIMEOUT_SEC: float = numero_do_ambiente(
+    "HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", 5.0, piso=0.0)
 
 TETO_DA_ABERTURA_NA_VOLTA_SEC: float = 1.0
 JUNTA_AS_ABERTURAS_SEC: float = 0.1
@@ -625,9 +627,8 @@ def _porta_usb_do_no(path: bytes | str) -> str | None:
     return os.path.basename(pai) or None
 
 
-REPORT_THREAD_THROTTLE_SEC: float = float(
-    os.environ.get("HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC", "0.008")
-)
+REPORT_THREAD_THROTTLE_SEC: float = numero_do_ambiente(
+    "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC", 0.008, piso=0.0)
 
 REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 

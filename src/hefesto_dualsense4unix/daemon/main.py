@@ -13,6 +13,7 @@ from hefesto_dualsense4unix.utils.logging_config import (
     guardar_o_registro_do_servico,
     ligar_a_pilha_da_queda_nativa,
 )
+from hefesto_dualsense4unix.utils.numero_do_ambiente import numero_do_ambiente
 
 
 def build_controller() -> IController:
@@ -107,31 +108,15 @@ def run_daemon(poll_hz: int | None = None) -> int:
     if instancia == "daemon":
         guardar_o_registro_do_servico()
 
+    nice_level = numero_do_ambiente("HEFESTO_DUALSENSE4UNIX_NICE", 5, piso=-20, teto=19)
     try:
-        nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))
         if nice_level > 0:
             os.nice(nice_level)
-    except (OSError, ValueError):
+    except OSError:
         logger.warning("daemon_nice_unavailable")
 
-    from hefesto_dualsense4unix.utils import session
-    from hefesto_dualsense4unix.utils.maquina import servidor_dsu_declarado
-
     controller = build_controller()
-    servidor_dsu = servidor_dsu_declarado()
-    config = DaemonConfig(
-        poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
-        ps_long_press_ms=int(
-            os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
-        ),
-        keyboard_emulation_enabled=(
-            os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
-        ),
-        plugins_enabled=session.load_plugins_enabled(),
-        metrics_enabled=session.load_metrics_enabled(),
-    )
-    config.dsu_enabled = servidor_dsu.ligado
-    config.dsu_port = servidor_dsu.porta
+    config = montar_a_configuracao(poll_hz)
     daemon = Daemon(controller=controller, config=config)
 
     logger.info("daemon_main", fake=os.getenv("HEFESTO_DUALSENSE4UNIX_FAKE") == "1")
@@ -148,4 +133,32 @@ def run_daemon(poll_hz: int | None = None) -> int:
         return 130
 
 
-__all__ = ["ajustar_a_vez_do_gil", "build_controller", "run_daemon", "single_instance_name"]
+def montar_a_configuracao(poll_hz: int | None = None) -> DaemonConfig:
+    """A configuração do serviço, do ambiente e da sessão; número ilegível vale o padrão."""
+    from hefesto_dualsense4unix.utils import session
+    from hefesto_dualsense4unix.utils.maquina import servidor_dsu_declarado
+
+    servidor_dsu = servidor_dsu_declarado()
+    config = DaemonConfig(
+        poll_hz=poll_hz or numero_do_ambiente(
+            "HEFESTO_DUALSENSE4UNIX_POLL_HZ", 60, piso=1, teto=1000),
+        ps_long_press_ms=numero_do_ambiente(
+            "HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", 0, piso=0),
+        keyboard_emulation_enabled=(
+            os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
+        ),
+        plugins_enabled=session.load_plugins_enabled(),
+        metrics_enabled=session.load_metrics_enabled(),
+    )
+    config.dsu_enabled = servidor_dsu.ligado
+    config.dsu_port = servidor_dsu.porta
+    return config
+
+
+__all__ = [
+    "ajustar_a_vez_do_gil",
+    "build_controller",
+    "montar_a_configuracao",
+    "run_daemon",
+    "single_instance_name",
+]

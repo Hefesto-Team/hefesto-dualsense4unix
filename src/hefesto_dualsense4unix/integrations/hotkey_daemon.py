@@ -50,7 +50,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import os
 import time
 from collections.abc import Callable, Iterable, Mapping
 from contextvars import ContextVar
@@ -62,6 +61,7 @@ from hefesto_dualsense4unix.integrations.gestos_dos_acessorios import (
     Opcoes,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.numero_do_ambiente import numero_do_ambiente
 
 logger = get_logger(__name__)
 
@@ -76,18 +76,7 @@ ENV_PS_TOQUE_CURTO_TETO_MS = "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS"
 
 def _teto_do_toque_curto_do_ambiente() -> int:
     """Resolve o teto do toque curto: env var se legível, senão o default."""
-    bruto = os.getenv(ENV_PS_TOQUE_CURTO_TETO_MS)
-    if bruto is None:
-        return DEFAULT_PS_TOQUE_CURTO_TETO_MS
-    try:
-        return int(bruto)
-    except ValueError:
-        logger.warning(
-            "ps_toque_curto_teto_ms_ilegivel",
-            valor=bruto,
-            usando=DEFAULT_PS_TOQUE_CURTO_TETO_MS,
-        )
-        return DEFAULT_PS_TOQUE_CURTO_TETO_MS
+    return numero_do_ambiente(ENV_PS_TOQUE_CURTO_TETO_MS, DEFAULT_PS_TOQUE_CURTO_TETO_MS, piso=0)
 
 
 DEFAULT_COMBO_GAMEMODE = ("ps", "options")
