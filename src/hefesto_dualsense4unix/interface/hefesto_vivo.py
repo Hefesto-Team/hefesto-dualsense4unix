@@ -1807,6 +1807,16 @@ def _pintar_a_atualizacao(piloto: Any, ctx: Any) -> None:
         print(f"[atualizações] a caixa não pintou: {erro}", file=sys.stderr)
 
 
+MARCOS_DA_ABERTURA = ("committed", "abas", "carga", "bootstrap", "estado", "pintura")
+
+
+def _marcar_a_abertura(piloto: Any, marco: str) -> None:
+    """Anota o primeiro instante de `marco` na abertura do `piloto`; os seguintes não contam."""
+    abertura = vars(piloto).get("_abertura")
+    if marco and abertura is not None and marco not in abertura:
+        abertura[marco] = _agora(piloto)
+
+
 def _a_carga_na_hora(pagina: str, ctx: Any, para_pref: dict[str, str]) -> dict[str, Any] | None:
     """A carga da aba montada por quem chama; `None` quando não há o que pintar."""
     try:
@@ -1954,6 +1964,7 @@ class Piloto:
         self.view.connect("load-changed", self._carregou)
         self._abertura["janela"] = self._relogio()
         _importar_as_abas(self.tela)
+        self._abertura["abas"] = self._relogio()
         from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
         self._montagem = em_fundo.Montagem(avisar=self._a_carga_ficou_pronta)
@@ -1977,6 +1988,7 @@ class Piloto:
 
         ponte.escolher_arquivo = self._escolher_arquivo
         ponte.salvar_arquivo = self._salvar_arquivo
+        self._estado_vivo.comecar()
 
     def _dialogo(self, titulo: str, acao: Any, rotulo: str, *,
                  sugestao: str = "", padrao: str = "*") -> str | None:
@@ -2327,6 +2339,8 @@ class Piloto:
     def _carregou(self, _view: Any, evento: Any) -> None:
         from gi.repository import WebKit2
 
+        _marcar_a_abertura(self, {WebKit2.LoadEvent.COMMITTED: "committed",
+                                  WebKit2.LoadEvent.FINISHED: "carga"}.get(evento, ""))
         if evento != WebKit2.LoadEvent.FINISHED:
             return
         nova = _pagina_da_uri(self.view.get_uri())
@@ -2470,6 +2484,7 @@ class Piloto:
         if self._trocando:
             return
         self.pronto = True
+        _marcar_a_abertura(self, "bootstrap")
         self.ponte.perguntar(DICA_DA_CASA, self._dica_instalada)
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
@@ -2549,6 +2564,7 @@ class Piloto:
 
     def _a_primeira_resposta_chegou(self) -> None:
         """No fio do leitor: a primeira pintura vai ao laço do GTK, sem esperar o tique."""
+        _marcar_a_abertura(self, "estado")
         GLib.idle_add(lambda: self._tique() and False)
 
     def _a_carga_ficou_pronta(self) -> None:
@@ -2708,9 +2724,13 @@ class Piloto:
         janela = self._abertura.get("janela", piloto)
         total = vida if vida is not None else agora - piloto
         importar = max(0.0, total - (agora - piloto))
+        marcos = sorted((t, nome) for nome, t in self._abertura.items()
+                        if nome in MARCOS_DA_ABERTURA)
         print(f"[abertura] primeira pintura em {total * 1000:.0f} ms "
               f"(importar {importar * 1000:.0f} · janela {(janela - piloto) * 1000:.0f} "
-              f"· página {(agora - janela) * 1000:.0f})", file=sys.stderr)
+              f"· página {(agora - janela) * 1000:.0f}) · marcos: "
+              + " · ".join(f"{nome} {(t - piloto) * 1000:.0f}" for t, nome in marcos),
+              file=sys.stderr)
 
     def _contar_mutacoes(self) -> None:
         """Um passo do `--conta-mutacoes`, por tique. Fora dele, é um `if` falso."""
