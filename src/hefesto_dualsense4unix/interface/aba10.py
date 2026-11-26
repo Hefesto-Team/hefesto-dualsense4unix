@@ -542,7 +542,7 @@ ROTEIRO = """
       var abrindo = !campo.classList.contains('on');
       campo.classList.toggle('on', abrindo);
       b.classList.toggle('on', abrindo);
-      if(abrindo){ campo.focus(); return; }
+      if(abrindo){ window.__hefFocarSemDica(campo); return; }
       if(campo.value !== ''){
         campo.value = '';
         campo.dispatchEvent(new Event('input', {bubbles: true}));
@@ -616,7 +616,7 @@ ROTEIRO = """
       td.textContent = '';
       td.appendChild(guarda);
       td.appendChild(campo);
-      campo.focus();
+      window.__hefFocarSemDica(campo);
       campo.select();
       campo.addEventListener('keydown', function(e){
         e.stopPropagation();
@@ -640,7 +640,7 @@ ROTEIRO = """
           delete campo.dataset.enviado;
           classes.add('recusado');
           campo.setAttribute('aria-invalid', 'true');
-          campo.focus();
+          window.__hefFocarSemDica(campo);
           campo.select();
         } else if(classes.contains('hef-deu-certo')){
           pendente = false;

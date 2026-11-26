@@ -1929,7 +1929,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       }
       caixa.hidden = false;
       document.getElementById('rd-veu-pergunta').classList.add('aberto');
-      (sim.hidden ? outro : sim).focus();
+      window.__hefFocarSemDica(sim.hidden ? outro : sim);
       return true;
     }
     function fecharAPergunta(){
@@ -1938,7 +1938,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       caixa.hidden = true;
       document.getElementById('rd-veu-pergunta').classList.remove('aberto');
       todos('.radio .lugar.alvo').forEach(function(l){ l.classList.remove('alvo'); });
-      if(antesDaPergunta && document.contains(antesDaPergunta)) antesDaPergunta.focus();
+      if(antesDaPergunta && document.contains(antesDaPergunta)) window.__hefFocarSemDica(antesDaPergunta);
     }
     document.addEventListener('click', function(ev){
       if(perto(ev, '#rd-pergunta .btn') || perto(ev, '#rd-veu-pergunta')) fecharAPergunta();
@@ -1973,7 +1973,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       oPainelDeixaOsMenus(p);
       aSecaoCabeOPainel();
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
-      if(primeiro) primeiro.focus();
+      if(primeiro) window.__hefFocarSemDica(primeiro);
       return true;
     }
     function chaveDoNo(n){
@@ -2028,7 +2028,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(p.contains(document.activeElement)) document.activeElement.blur();
       p.classList.remove('aberto'); p.setAttribute('inert', ''); p.setAttribute('aria-hidden', 'true');
       aSecaoCabeOPainel();
-      if(quemAbriu && document.contains(quemAbriu)) quemAbriu.focus();
+      if(quemAbriu && document.contains(quemAbriu)) window.__hefFocarSemDica(quemAbriu);
       quemAbriu = null;
     }
     function aGavetaNaLinha(p){
@@ -2169,7 +2169,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         var t = um('.radio template.balao-molde[data-destino="' + aspas(b.dataset.alvo) + '"]');
         if(!t || b.classList.contains('apagado')){ balancar(b); return; }
         card.appendChild(t.content.cloneNode(true));
-        var ok = um('.balao .ok', card); if(ok) ok.focus();
+        var ok = um('.balao .ok', card); if(ok) window.__hefFocarSemDica(ok);
         return;
       }
       if((b = perto(ev, '.radio .balao .ok'))){

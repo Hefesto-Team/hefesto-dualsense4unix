@@ -136,7 +136,7 @@
     const a = e.target.closest && e.target.closest('a[href^="#"]');
     if (a && !a.closest('.tela-nova')) ultimo = a;
   }, true);
-  const focarSemDica = el => {
+  const focarSemDica = window.__hefFocarSemDica = el => {
     window.__hefFocoDoCodigo = el;
     try { el.focus(); } finally { window.__hefFocoDoCodigo = null; }
   };
