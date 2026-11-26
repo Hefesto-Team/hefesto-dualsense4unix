@@ -256,17 +256,17 @@
       "universo": 443
     },
     "tamanho": {
-      "data": "2026-11-25",
+      "data": "2026-11-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1330077,
+      "piso": 1330117,
       "por_item": {
-        "docs": 108050,
-        "scripts": 122925,
-        "src": 328934,
-        "tests": 770168
+        "docs": 108051,
+        "scripts": 122940,
+        "src": 328935,
+        "tests": 770191
       },
-      "razao": "tamanho: +708 linhas (1329369 -> 1330077), pagas por Origem: D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO, D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES, D-1911-O-ESTADO-SE-GRAVA-INTEIRO, D-1911-O-MODO-E-O-GATILHO-TEM-PADRAO-DO-COMPUTADOR; registrado no fecho, topo 106c09c922d3",
+      "razao": "tamanho: +40 linhas (1330077 -> 1330117), pagas por Origem: D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo c06775cd770c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2625,6 +2625,12 @@
           "de": 1329369,
           "para": 1330077,
           "razao": "tamanho: +708 linhas (1329369 -> 1330077), pagas por Origem: D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO, D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES, D-1911-O-ESTADO-SE-GRAVA-INTEIRO, D-1911-O-MODO-E-O-GATILHO-TEM-PADRAO-DO-COMPUTADOR; registrado no fecho, topo 106c09c922d3"
+        },
+        {
+          "data": "2026-11-26",
+          "de": 1330077,
+          "para": 1330117,
+          "razao": "tamanho: +40 linhas (1330077 -> 1330117), pagas por Origem: D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo c06775cd770c"
         }
       ],
       "unidade": "linhas",
