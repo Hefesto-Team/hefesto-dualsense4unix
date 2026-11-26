@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import Any
 
 import onde
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import encontrar_glifo, ler_arquivo_do_repo
 
 R = pathlib.Path(__file__).resolve().parent
@@ -651,12 +652,29 @@ def _degrau_do_transporte(c: dict[str, object]) -> str:
     return str(identidade_de({"transport": c.get("transporte", "")}) or "")
 
 
+GLIFOS_QUE_FALTARAM: set[str] = set()
+
+
+def _glifo_vazio(titulo: str, tam: int) -> str:
+    """O glifo sem desenho, com o título: ocupa o mesmo lugar e a página segue de pé."""
+    return (f'<svg class="gl" width="{tam}" height="{tam}" viewBox="0 0 32 32" '
+            f'aria-hidden="true"><title>{html.escape(titulo)}</title></svg>')
+
+
 def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:
-    """Os mesmos SVGs de glifo que a aba Status usa — 27 peças, com versão acesa."""
+    """Os mesmos SVGs de glifo que a aba Status usa — 27 peças, com versão acesa.
+
+    O SVG que a instalação não trouxe não derruba a página: sai o glifo vazio, com o título, e o
+    diário da interface diz qual arquivo faltou, uma vez por arquivo.
+    """
     titulo = nome_do_glifo(nome)
-    arq = encontrar_glifo(f"{nome}{'_active' if ativo else ''}.svg")
+    arquivo = f"{nome}{'_active' if ativo else ''}.svg"
+    arq = encontrar_glifo(arquivo)
     if arq is None:
-        raise SystemExit(f"ERRO em glifo({nome!r}): a instalação não trouxe o SVG do glifo")
+        if arquivo not in GLIFOS_QUE_FALTARAM:
+            GLIFOS_QUE_FALTARAM.add(arquivo)
+            get_logger(__name__).warning("glifo_ausente_da_instalacao", arquivo=arquivo)
+        return _glifo_vazio(titulo, tam)
     x = arq.read_text()
     x = re.sub(r'<\?xml[^>]*\?>\s*', '', x)
     x = re.sub(r'<!--.*?-->', '', x, flags=re.S)
