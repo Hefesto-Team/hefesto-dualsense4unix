@@ -137,11 +137,13 @@ def test_toda_janela_que_recebe_bloco_nasce_escondida_inteira(_pagina_com_a_folh
 
 def test_a_janela_escondida_nao_prende_o_teclado_e_leva_o_foco(
         _pagina_com_a_folha: Any) -> None:
-    """Sem resposta, o Tab segue pela página; com o carimbo, o foco entra na janela."""
+    """Sem resposta, o Tab segue pela página (o primeiro dá o foco à página); com o carimbo, o
+    foco entra na janela."""
     pg = _pagina_com_a_folha
     pg.evaluate("() => { document.activeElement.blur(); location.hash = 'lanc-conf'; }")
     pg.wait_for_timeout(100)
-    pg.keyboard.press("Tab")
+    for _ in range(2):
+        pg.keyboard.press("Tab")
     assert pg.evaluate("() => document.activeElement !== document.body"), "o Tab ficou preso"
     pg.evaluate("() => { document.getElementById('lanc-janela').dataset.hefReal = '1'; }")
     pg.wait_for_function(
