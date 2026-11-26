@@ -245,7 +245,7 @@ def test_o_doctor_traz_o_bloco_das_receitas_e_a_linha_diz_presente_no_clone():
     assert linhas and linhas[0][0] == "[ OK ]"
     assert "receitas de ambiente" in linhas[0][1]
     texto = (PACOTE / "cli" / "cmd_doctor.py").read_text(encoding="utf-8")
-    assert "_print_bloco_receitas()" in texto
+    assert "rc = max(rc, _print_bloco_receitas())" in texto
 
 
 @pytest.mark.parametrize("tabela_ruim", ["", "id,sinais\n"])
