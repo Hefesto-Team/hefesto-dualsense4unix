@@ -2116,7 +2116,25 @@ _O_RESGATE_POR_DENTRO: dict[str, Callable[[Any], Any]] = {
         if isinstance(gestos, Mapping) else None
     ),
     "computador": lambda computador: _o_computador_que_ainda_vale(computador),
+    "controles": lambda controles: _os_controles_que_ainda_valem(controles),
 }
+
+
+def _os_controles_que_ainda_valem(controles: Any) -> dict[str, Any] | None:
+    """Cada controle com os campos que passam sozinhos; ``None`` quando nenhum fica de pé.
+
+    O campo torto de um controle (um ``cor`` com caractere de controle) sai sozinho: o resto
+    daquele controle e os outros controles seguem declarados."""
+    if not isinstance(controles, Mapping):
+        return None
+    saida: dict[str, Any] = {}
+    for chave, entrada in controles.items():
+        if not isinstance(entrada, Mapping):
+            continue
+        campos = _so_os_campos_que_passam(ControleDeclarado, entrada)
+        if _campo_isolado_passa("controles", {chave: campos}):
+            saida[chave] = campos
+    return saida or None
 
 
 def _o_computador_que_ainda_vale(computador: Any) -> dict[str, Any] | None:

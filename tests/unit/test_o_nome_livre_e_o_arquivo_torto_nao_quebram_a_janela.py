@@ -7,7 +7,8 @@ validador de tamanho e de caracteres. As preferências da janela em JSON que nã
 padrão, e um `.json` que não é perfil na pasta não tira os outros da lista.
 
 Mordidas: tirar o `html.escape` de `monta.rotulo` (forma «curta») ou da dica do chip faz as
-réguas da fita reprovar; tirar o validador do `cor` faz a régua do `maquina.json` reprovar.
+réguas da fita reprovar; tirar o validador do `cor` faz a régua do `maquina.json` reprovar; tirar
+o resgate dos `controles` (`_os_controles_que_ainda_valem`) faz o `cor` torto apagar os outros.
 """
 from __future__ import annotations
 
@@ -116,3 +117,25 @@ def test_o_json_que_nao_e_perfil_nao_tira_os_outros_da_lista(
     (tmp_path / "texto.json").write_text('"só texto"')
     monkeypatch.setattr(perfil, "pasta", lambda: tmp_path)
     assert [x["nome"] for x in perfil.lista()] == ["Bom"]
+
+
+def test_o_cor_torto_sai_sozinho_e_os_outros_controles_ficam(tmp_path: pathlib.Path) -> None:
+    """Um `cor` com caractere de controle no `maquina.json`: sai só ele, na leitura e na gravação.
+
+    O resto do mesmo controle (o microfone, o nome) e os outros controles seguem declarados."""
+    from hefesto_dualsense4unix.utils import maquina
+
+    arquivo = maquina.caminho_da_maquina()
+    assert tmp_path in arquivo.parents, f"{arquivo} escapou do tmp do ensaio"
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    arquivo.write_text(json.dumps({"version": 1, "controles": {
+        "aabbcc000001": {"cor": "Azul\tTorto", "microfone": False, "nome": "Sala"},
+        "aabbcc000002": {"cor": "Cosmic Red", "modo": "xinput"}}}), encoding="utf-8")
+    lida = maquina.carregar_maquina().controles
+    assert lida["aabbcc000001"].cor is None and lida["aabbcc000001"].microfone is False
+    assert lida["aabbcc000001"].nome == "Sala"
+    assert lida["aabbcc000002"].cor == "Cosmic Red" and lida["aabbcc000002"].modo == "xinput"
+    assert maquina.gravar_maquina({"orcamento": {"teto": "max"}})
+    gravada = json.loads(arquivo.read_text(encoding="utf-8"))["controles"]
+    assert "cor" not in gravada["aabbcc000001"] and gravada["aabbcc000001"]["microfone"] is False
+    assert gravada["aabbcc000002"] == {"cor": "Cosmic Red", "modo": "xinput"}
