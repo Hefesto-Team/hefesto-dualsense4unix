@@ -168,7 +168,7 @@ from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 from hefesto_dualsense4unix.interface import desenho_da_janela_do_tema as dtema
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
-from . import Contexto, fios, perfil, registrar
+from . import Contexto, em_fundo, fios, perfil, registrar
 
 _LOG = logging.getLogger(__name__)
 
@@ -776,7 +776,9 @@ def _resposta(lida: desenho.Leitura | None,
 @registrar("07-lancadores.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """A aba inteira, e NÃO depende de controle nenhum."""
-    carga = _resposta(VIGIA.agora(), ctx.state)
+    with em_fundo.etapa("vigia"):
+        lida = VIGIA.agora()
+    carga = _resposta(lida, ctx.state)
     valores = carga["mesa"]
     fora: dict[str, Any] = dict(valores)
     fora["blocos"] = dict(carga["blocos"])
@@ -1214,7 +1216,8 @@ class _Registro:
         with self._trava:
             agora = time.monotonic()
             if agora - self._em >= TTL_DO_REGISTRO_S:
-                self._valor, self._em = _ler_as_instaladas(), agora
+                with em_fundo.etapa("registro"):
+                    self._valor, self._em = _ler_as_instaladas(), agora
             return self._valor
 
 
@@ -1716,7 +1719,8 @@ def _seguir_o_meu_css(instaladas: Sequence[_Instalada]) -> None:
     item = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
     if item is not None and item.manifesto is not None and (
             item.nota_do_css != _MEXIDA.nota_do_css or _pinta(item) != _MEXIDA.pinta):
-        _montar_a_janela_da_extensao(_MEXIDA.mod, item)
+        with em_fundo.etapa("janela"):
+            _montar_a_janela_da_extensao(_MEXIDA.mod, item)
 
 
 def _pinta(item: _Instalada) -> bool:
@@ -2717,12 +2721,14 @@ class _Viva:
     trecho que o «Repetir» toca em laço).
 
     O arrastar chega por gestos vivos, cada um na sua thread: a série do vivo e o carimbo do
-    evento descartam o que chega fora de ordem, e a chamada ao serviço sai dentro da trava, na
-    ordem em que foi aceita.
+    evento descartam o que chega fora de ordem, e a chamada ao serviço sai dentro da trava do
+    envio, na ordem em que foi aceita. A trava do estado nunca segura a chamada: o tique que lê
+    o que espera e o que se arrastou não espera o serviço.
     """
 
     def __init__(self) -> None:
         self._trava = threading.Lock()
+        self._envio = threading.Lock()
         self._zerar("")
 
     def _zerar(self, mod: str) -> None:
@@ -2809,24 +2815,25 @@ class _Viva:
         A ordem é a do carimbo do evento, e a série do vivo só desempata: a série recomeça em cada
         página que a janela carrega (medido em 28/10/2026: depois de trocar de aba, a faixa «Ao
         vivo» caía inteira como fora de ordem, até a série nova passar a antiga)."""
-        with self._trava:
-            self._da(mod)
-            if soltou:
-                self.solto_em = max(self.solto_em, carimbo)
-            elif (carimbo, vivo) <= self.ultimo_vivo or carimbo <= self.solto_em:
-                return None
-            else:
-                self.ultimo_vivo = (carimbo, vivo)
-            agora = time.monotonic()
-            self._assentar(agora)
-            if not soltou and self.laco is not None:
-                self.laco, self.trecho = None, []
-            self._anotar(agora, valor)
-            self.trecho.append((agora, valor))
-            if soltou:
-                self.ultimo, self.trecho = self.trecho, []
-                self._soltar_no_modo(agora, self.modo)
-            com_o_modo = {"modo": self.modo} if self.modo else {}
+        with self._envio:
+            with self._trava:
+                self._da(mod)
+                if soltou:
+                    self.solto_em = max(self.solto_em, carimbo)
+                elif (carimbo, vivo) <= self.ultimo_vivo or carimbo <= self.solto_em:
+                    return None
+                else:
+                    self.ultimo_vivo = (carimbo, vivo)
+                agora = time.monotonic()
+                self._assentar(agora)
+                if not soltou and self.laco is not None:
+                    self.laco, self.trecho = None, []
+                self._anotar(agora, valor)
+                self.trecho.append((agora, valor))
+                if soltou:
+                    self.ultimo, self.trecho = self.trecho, []
+                    self._soltar_no_modo(agora, self.modo)
+                com_o_modo = {"modo": self.modo} if self.modo else {}
             return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
                 METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=soltou, **com_o_modo)
 
@@ -2836,24 +2843,27 @@ class _Viva:
         arrastar, a extensão recebe o soltar com o valor de agora e o modo novo. ``None`` quando
         o modo não mudou ou nada foi arrastado nesta janela. O soltar que não chega à extensão
         (recusado, ou a extensão fora da porta) devolve a barra e o modo ao que eram."""
-        with self._trava:
-            self._da(mod)
-            if modo == self.modo:
-                return None
-            antes = (self.modo, self.valor, list(self.rastro), list(self.gravadas), self.laco,
-                     self.laco_ate)
-            self.modo = modo
-            if not self.rastro:
-                return None
-            agora = time.monotonic()
-            self._assentar(agora)
-            valor = self.valor
-            self._soltar_no_modo(agora, modo)
+        with self._envio:
+            with self._trava:
+                self._da(mod)
+                if modo == self.modo:
+                    return None
+                antes = (self.modo, self.valor, list(self.rastro), list(self.gravadas), self.laco,
+                         self.laco_ate)
+                self.modo = modo
+                if not self.rastro:
+                    return None
+                agora = time.monotonic()
+                self._assentar(agora)
+                valor = self.valor
+                self._soltar_no_modo(agora, modo)
             resposta: tuple[bool, str | None, Any] = ponte.chamar_com_o_corpo(
                 METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=True, modo=modo)
             if _a_recusa_do_soltar(resposta) is not None:
-                (self.modo, self.valor, self.rastro, self.gravadas, self.laco,
-                 self.laco_ate) = antes
+                with self._trava:
+                    if mod == self.mod:
+                        (self.modo, self.valor, self.rastro, self.gravadas, self.laco,
+                         self.laco_ate) = antes
             return resposta
 
     def sem_a_extensao(self, mod: str, modo: str) -> None:

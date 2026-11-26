@@ -10,9 +10,10 @@ a 08 nem o ``nome_do_jogador``: os dois o importam, e o ciclo (o import tardio) 
 """
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from . import fios, perfil
@@ -67,6 +68,32 @@ def lido(chave: str) -> Any:
     with _TRAVA_DO_FUNDO:
         visto = _FUNDO.get(chave)
     return None if visto is None else visto[1]
+
+
+_ETAPAS = threading.local()
+
+
+@contextlib.contextmanager
+def cronometro() -> Iterator[dict[str, float]]:
+    """A conta das etapas (ms por nome) da montagem que corre neste fio."""
+    conta: dict[str, float] = {}
+    _ETAPAS.conta = conta
+    try:
+        yield conta
+    finally:
+        _ETAPAS.conta = None
+
+
+@contextlib.contextmanager
+def etapa(nome: str) -> Iterator[None]:
+    """Soma o tempo do bloco a `nome` na conta do cronômetro deste fio; sem cronômetro, nada."""
+    conta = getattr(_ETAPAS, "conta", None)
+    t0 = time.perf_counter()
+    try:
+        yield
+    finally:
+        if conta is not None:
+            conta[nome] = conta.get(nome, 0.0) + (time.perf_counter() - t0) * 1000
 
 
 class Montagem:

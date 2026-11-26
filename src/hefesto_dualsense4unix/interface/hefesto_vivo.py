@@ -1843,11 +1843,13 @@ def _a_carga_montada_no_fundo(piloto: Any, ctx: Any,
 
     def montar() -> dict[str, Any] | None:
         t0 = time.perf_counter()
-        carga = _a_carga_na_hora(pagina, ctx, para_pref)
+        with em_fundo.cronometro() as etapas:
+            carga = _a_carga_na_hora(pagina, ctx, para_pref)
         ms = (time.perf_counter() - t0) * 1000
         if ms > TIQUE_MS:
-            print(f"[pacote lento] {pagina}: {ms:.0f} ms no fio do pacote, a janela seguiu",
-                  file=sys.stderr)
+            partes = "".join(f" · {nome} {gasto:.0f}" for nome, gasto in etapas.items())
+            print(f"[pacote lento] {pagina}: {ms:.0f} ms no fio do pacote{partes}, a janela "
+                  f"seguiu", file=sys.stderr)
         return carga
 
     pronta = montagem.pegar(pagina)
