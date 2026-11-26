@@ -776,7 +776,12 @@ def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
     _ligar_vendo("exemplo", lar)
+    from hefesto_dualsense4unix.utils import xdg_paths
+
     monkeypatch.delenv("XDG_RUNTIME_DIR")
+    monkeypatch.setattr(
+        type(xdg_paths._DIRS), "user_runtime_dir", property(lambda _: str(execucao)))
+    assert xdg_paths.runtime_dir() == execucao
 
     async def corrida() -> dict[str, Any]:
         supervisor = _supervisor(lar, porta=execucao / "mods.sock")
