@@ -152,7 +152,8 @@ def _quatro(mesa: list[_Peca], relogio: _Relogio, os_falso: _OsDoGadget) -> None
 def test_o_host_parado_de_um_jogador_nao_enche_a_fila_alem_da_idade(
     mesa: list[_Peca], os_falso: _OsDoGadget, parado: int, parada_s: float
 ) -> None:
-    """Com o host de um jogador parado, a fila dele guarda só o último décimo de segundo.
+    """D-2511-A-FILA-DO-GADGET-GUARDA-SO-O-ULTIMO-DECIMO-DE-SEGUNDO:
+    com o host de um jogador parado, a fila dele guarda só o último décimo de segundo.
 
     Os outros três seguem lendo a 1 kHz, sem poda; o do jogador parado nunca recusa o report
     novo, e na volta o jogo chega ao estado de agora em vez de ler segundos de estado velho.

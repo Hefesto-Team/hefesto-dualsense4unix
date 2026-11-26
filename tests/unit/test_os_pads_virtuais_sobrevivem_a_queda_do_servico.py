@@ -197,7 +197,8 @@ def _fechado(fd: int) -> bool:
 def test_o_servico_que_volta_readota_os_quatro_nos_sem_criar_de_novo(
     systemd: _Systemd, no_uhid: _Uhid
 ) -> None:
-    """P1 a P4 nascem e se guardam; o serviço cai; o que volta recebe os quatro e não abre o
+    """D-2511-O-DEPOSITO-DOS-NOS-VALE-NA-QUEDA-E-NO-REINICIO-E-SAI-NO-STOP:
+    P1 a P4 nascem e se guardam; o serviço cai; o que volta recebe os quatro e não abre o
     ``/dev/uhid`` nem manda ``UHID_CREATE2``: o report novo sai no MESMO canal do kernel."""
     antes = {n: _pad(n) for n in (1, 2, 3, 4)}
     for pad in antes.values():
