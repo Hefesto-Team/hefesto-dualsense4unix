@@ -402,10 +402,8 @@ def migrar_o_que_e_da_pessoa(lg: Lugares) -> list[str]:
     mudaram = [mod_id for mod_id in registro if _mudar_o_que_e_da_pessoa(lg, mod_id)]
     try:
         lg.da_pessoa.mkdir(mode=0o700, parents=True, exist_ok=True)
-        with open(marca, "xb", opener=abrir_sem_seguir):
+        with open(marca, "ab", opener=abrir_sem_seguir):
             pass
-    except FileExistsError:
-        pass
     except OSError as exc:
         logger.warning("mods_mudanca_da_pessoa_sem_marca", err=str(exc))
     return mudaram

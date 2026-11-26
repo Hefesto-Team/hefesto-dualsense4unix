@@ -342,7 +342,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME": (
         "Nome do socket de IPC (`IPC_SOCKET_ENV_VAR` em "
-        "`src/hefesto_dualsense4unix/utils/xdg_paths.py:23`). Isola "
+        "`src/hefesto_dualsense4unix/utils/xdg_paths.py:25`). Isola "
         "instâncias "
         "paralelas em teste. "
         "Ninguém a liga como feature. MEDIDO em 12/08/2026."
@@ -565,7 +565,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_WIREPLUMBER_SISTEMA": (
         "13/10/2026, as regras do som no WirePlumber da distro — desvia as pastas de sistema "
         "que decidem a forma do drop-in (`wireplumber_forma` em "
-        "`src/hefesto_dualsense4unix/utils/xdg_paths.py:141`; as "
+        "`src/hefesto_dualsense4unix/utils/xdg_paths.py:143`; as "
         "irmãs em shell são `_wp_forma` em `scripts/doctor.sh:1010` e "
         "`_wp_forma` em `scripts/fix_wireplumber_default_source.sh:6`). O comentário do dono "
         "escreve a "

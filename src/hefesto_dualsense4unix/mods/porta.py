@@ -1218,8 +1218,8 @@ def chave_dos_apelidos(caminho: Path) -> bytes:
         chave = caminho.read_bytes()
         if len(chave) == TAMANHO_DA_CHAVE_DOS_APELIDOS:
             return chave
-    except OSError:
-        pass
+    except OSError as exc:
+        logger.info("mods_chave_dos_apelidos_nova", motivo=type(exc).__name__)
     chave = secrets.token_bytes(TAMANHO_DA_CHAVE_DOS_APELIDOS)
     caminho.parent.mkdir(parents=True, exist_ok=True)
     fd, nome = tempfile.mkstemp(prefix=".chave-", dir=caminho.parent)
@@ -1264,9 +1264,11 @@ class Apelidos:
         if not apelido.startswith(PREFIXO_DO_APELIDO):
             return apelido
         if (mod_id, apelido) not in self._de_volta:
-            with contextlib.suppress(Exception):
+            try:
                 for uniq in self._controles():
                     self.de(mod_id, uniq)
+            except Exception as exc:
+                logger.debug("mods_apelido_sem_os_controles", err=str(exc))
         return self._de_volta.get((mod_id, apelido), apelido)
 
     def na_linha(self, mod_id: str, linha: bytes) -> bytes:

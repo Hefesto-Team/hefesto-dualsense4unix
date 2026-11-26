@@ -7,6 +7,7 @@ Centraliza config / data / cache / state / runtime paths. Com ``ensure=True`` ca
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import stat
 from pathlib import Path
@@ -15,6 +16,7 @@ from platformdirs import PlatformDirs
 
 from hefesto_dualsense4unix.utils import identidade
 
+_registro = logging.getLogger(__name__)
 _APP = identidade.atual().slug
 _DIRS = PlatformDirs(_APP)
 
@@ -111,8 +113,8 @@ def fechar_as_pastas_do_produto() -> list[Path]:
     for pasta in (config_dir, data_dir, cache_dir, state_dir, runtime_dir):
         try:
             pastas.append(_fechar(pasta()))
-        except OSError:
-            continue
+        except OSError as exc:
+            _registro.debug("pasta do produto sem caminho: %s", exc)
     return pastas
 
 
