@@ -3,7 +3,7 @@
 Obrigado por querer ajudar. Quem usa o Hefesto ajuda de três jeitos, do mais simples ao mais fundo:
 
 1. **Contando como foi.** Um problema, um jogo que não reconhece o controle ou uma ideia: abra uma [issue](https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues/new/choose) pelo formulário que combina. Uma dúvida de uso vai para as [Discussões](https://github.com/Hefesto-Team/hefesto-dualsense4unix/discussions/categories/q-a), e quem mostra o próprio setup ajuda quem está chegando.
-2. **Medindo.** Rodar `hefesto-dualsense4unix doctor` e colar a saída na issue já poupa uma ida e volta. Relato de outra distribuição, outro modelo de controle ou outro adaptador Bluetooth vale muito.
+2. **Medindo.** Rodar `hefesto-dualsense4unix doctor --para-colar` e colar a saída na issue já poupa uma ida e volta, e essa saída não traz o endereço do controle nem o nome da sua conta. Relato de outra distribuição, outro modelo de controle ou outro adaptador Bluetooth vale muito.
 3. **Mexendo no código.** Por enquanto o projeto não revisa pull request de quem ainda não contribuiu: converse antes numa issue ou numa discussão, e combinamos o caminho. Quem passar a contribuir entra no arquivo `.mailmap`, e a partir daí o pull request é revisado.
 
 As issues que cabem a quem está chegando levam o rótulo [good first issue](https://github.com/Hefesto-Team/hefesto-dualsense4unix/labels/good%20first%20issue).

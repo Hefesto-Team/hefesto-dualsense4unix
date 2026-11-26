@@ -118,7 +118,7 @@ rotulos:
     - {nome: "good first issue", cor: "7057ff", descrição: "Boa para quem está chegando"}
     - {nome: "help wanted", cor: "008672", descrição: "Ajuda é bem-vinda"}
     - {nome: "jogo ou emulador", cor: "1d76db", descrição: "Um jogo ou emulador que não reconhece o controle"}
-    - {nome: "precisa do doctor", cor: "fbca04", descrição: "Falta a saída do comando hefesto-dualsense4unix doctor"}
+    - {nome: "precisa do doctor", cor: "fbca04", descrição: "Falta a saída do comando hefesto-dualsense4unix doctor --para-colar"}
     - {nome: "aceito", cor: "0e8a16", descrição: "Quem mantém aceitou: entra na fila de trabalho"}
     - {nome: "dependências", cor: "0366d6", descrição: "Atualização de uma dependência"}
     - {nome: "área: tela", cor: "c5def5", descrição: "A janela e as dez abas"}
