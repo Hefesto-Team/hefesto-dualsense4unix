@@ -162,7 +162,10 @@ def _com_a_espera_de_producao(daemon: Any, durante: Any, como: str) -> None:
 
 @pytest.mark.parametrize("como", ["laco", "pool"])
 def test_o_aperto_de_p1_a_p4_chega_ao_pad_com_o_laco_preso(como: str) -> None:
-    """Laço preso 3 s, ou os dois fios presos 3 s: o X de cada jogador chega em menos de 20 ms."""
+    """Laço preso 3 s, ou os dois fios presos 3 s: o X de cada jogador chega em menos de 20 ms.
+
+    Prova da D-2611-A-ENTRADA-ANDA-NO-FIO-DA-ENTRADA-E-NAO-ESPERA-O-LACO.
+    """
     daemon, leitores, nos = _mesa()
     apertou: dict[int, float] = {}
 

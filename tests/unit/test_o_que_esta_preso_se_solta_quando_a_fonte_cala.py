@@ -114,7 +114,10 @@ def _volta_ligada_aos_gestos(g: _Gestos) -> tuple[VoltaDosAcessorios, list[Any]]
 @pytest.mark.parametrize("como", ["sem_aparelhos", "o_controle_saiu", "o_prazo_venceu"])
 def test_a_camada_que_cala_fecha_o_medidor_das_luzinhas(como: str) -> None:
     """Camada ligada, e a fonte cala (estado sem aparelhos, controle fora ou prazo vencido): o
-    medidor das luzinhas fecha e o número do jogador volta."""
+    medidor das luzinhas fecha e o número do jogador volta.
+
+    Prova da D-2611-A-CAMADA-QUE-VENCE-PELO-PRAZO-DIZ-CAMADA-ZERO.
+    """
     g = _Gestos(Opcoes(camada=True, camada_s=1.0))
     volta, escritas = _volta_ligada_aos_gestos(g)
     g.ler({"ps"})
