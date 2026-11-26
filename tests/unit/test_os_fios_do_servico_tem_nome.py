@@ -12,6 +12,7 @@ import time
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -96,16 +97,19 @@ class _InstalouError(Exception):
 
 
 def test_o_servico_instala_o_dono_antes_de_qualquer_fio(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O ``run_daemon`` para no primeiro passo de mentira: nunca chega à instância única."""
     ordem: list[str] = []
 
-    def _instalar() -> bool:
-        ordem.append("instalar")
-        raise _InstalouError
+    def _passo(nome: str) -> Any:
+        def _registrar() -> bool:
+            ordem.append(nome)
+            raise _InstalouError
 
-    monkeypatch.setattr(nome_do_fio, "instalar", _instalar)
-    monkeypatch.setattr(
-        daemon_main, "ligar_a_pilha_da_queda_nativa", lambda: ordem.append("pilha")
-    )
+        return _registrar
+
+    monkeypatch.setattr(nome_do_fio, "instalar", _passo("instalar"))
+    monkeypatch.setattr(daemon_main, "ligar_a_pilha_da_queda_nativa", _passo("pilha"))
+    monkeypatch.setattr(daemon_main, "ajustar_a_vez_do_gil", _passo("gil"))
     with pytest.raises(_InstalouError):
         daemon_main.run_daemon()
     assert ordem == ["instalar"]
