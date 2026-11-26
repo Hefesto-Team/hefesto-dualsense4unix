@@ -61,19 +61,49 @@ class TestAskYnHeadless:
 
 
 class TestAcquireSudoAskpass:
+    """O-UNINSTALL-TENTA-O-ASKPASS-DO-SUDO-CONF-01.
+
+    D-2611-O-UNINSTALL-TENTA-O-ASKPASS-DO-SUDO-CONF: o `acquire_sudo` do install e o do uninstall
+    tentam `sudo -A -v` sem depender de `SUDO_ASKPASS`, porque o askpass pode estar declarado só
+    no `sudo.conf`.
+    """
+
     @pytest.mark.parametrize("script_text", [INSTALL, UNINSTALL], ids=["install", "uninstall"])
     def test_acquire_sudo_suporta_askpass(self, script_text: str) -> None:
-        """O install tenta o askpass do `sudo.conf` sem depender da variável; o uninstall segue
-        guardado por `SUDO_ASKPASS` (A-NOTA-DO-INSTALL-PENDENTE-DIZ-O-QUE-FICOU-POR-FAZER-01)."""
+        """D-2611-O-UNINSTALL-TENTA-O-ASKPASS-DO-SUDO-CONF: os dois tentam o askpass."""
         fn = _extract_bash_function(script_text, "acquire_sudo")
         assert "sudo -A -v" in fn
-        if script_text is INSTALL:
-            assert "SUDO_ASKPASS" not in fn
-        else:
-            assert "SUDO_ASKPASS" in fn, (
-                "acquire_sudo precisa tentar `sudo -A -v` quando SUDO_ASKPASS "
-                "está setado (execução headless sem TTY)"
-            )
+        assert "SUDO_ASKPASS" not in fn, (
+            "acquire_sudo precisa tentar `sudo -A -v` mesmo sem SUDO_ASKPASS no ambiente "
+            "(o askpass pode vir do sudo.conf)"
+        )
+
+    @pytest.mark.parametrize("script_text", [INSTALL, UNINSTALL], ids=["install", "uninstall"])
+    def test_sem_a_variavel_e_sem_terminal_o_askpass_do_sudo_conf_vale(
+        self, script_text: str, tmp_path: Path
+    ) -> None:
+        """D-2611-O-UNINSTALL-TENTA-O-ASKPASS-DO-SUDO-CONF: com um `sudo` que só aceita `-A -v`
+        e sem `SUDO_ASKPASS`, o `acquire_sudo` segue com a credencial e não pede senha."""
+        chamadas = tmp_path / "chamadas.log"
+        fn = _extract_bash_function(script_text, "acquire_sudo")
+        script = (
+            "set -uo pipefail\n"
+            "EUID=1000\nDRY_RUN=0\n_NEEDS_SUDO=1\nunset SUDO_ASKPASS\n"
+            f'sudo() {{ echo "sudo $*" >> "{chamadas}"; [[ "$*" == "-A -v" ]]; }}\n'
+            '_start_sudo_keepalive() { echo "credencial-mantida"; }\n'
+            'log() { echo "log: $*"; }\nwarn() { echo "warn: $*"; }\n'
+            f"{fn}\n"
+            "acquire_sudo\n"
+        )
+        resultado = subprocess.run(
+            ["bash", "-c", script], stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            timeout=15, check=False,
+        )
+        assert resultado.returncode == 0, resultado
+        assert "credencial-mantida" in resultado.stdout, resultado
+        pedidas = chamadas.read_text(encoding="utf-8").splitlines()
+        assert "sudo -A -v" in pedidas, pedidas
+        assert "sudo -v" not in pedidas, pedidas
 
 
 if __name__ == "__main__":  # pragma: no cover

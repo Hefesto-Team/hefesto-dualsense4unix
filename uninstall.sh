@@ -142,7 +142,7 @@ acquire_sudo() {
         return 0
     fi
     [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0
-    if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -v 2>/dev/null; then
+    if sudo -A -v 2>/dev/null; then
         _start_sudo_keepalive
         return 0
     fi
