@@ -941,6 +941,7 @@ def instalar(
             entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
             entrada.preparo_aceito = list(anterior.preparo_aceito)
             entrada.sem_caixa = anterior.sem_caixa
+            entrada.ligada_em = anterior.ligada_em
             entrada.versao_anterior = anterior.versao
             entrada.commit_anterior = anterior.commit
             entrada.aceite_anterior = Aceite.model_validate(anterior.model_dump())

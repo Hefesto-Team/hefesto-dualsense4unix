@@ -94,8 +94,10 @@ def test_a_que_nasceu_desligada_pela_regra_velha_se_liga_uma_vez(
     lista = _como_a_regra_velha_deixou(lg, tmp_path)
     assert [f.o_que for f in fabrica.trazer(lugares=lg, arquivo=lista)] == ["ligada"]
     assert ler_registro(lg.registro)[NOVA].ligada
+    ligada_em = ler_registro(lg.registro)[NOVA].ligada_em
+    assert ligada_em
     instalador.atualizar(NOVA, lugares=lg)
-    assert ler_registro(lg.registro)[NOVA].ligada_em == ""
+    assert ler_registro(lg.registro)[NOVA].ligada_em == ligada_em
     instalador.desligar(NOVA, lugares=lg)
     assert [f.o_que for f in fabrica.trazer(lugares=lg, arquivo=lista)] == ["ja_estava"]
     assert not ler_registro(lg.registro)[NOVA].ligada
