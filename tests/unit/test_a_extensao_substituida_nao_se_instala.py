@@ -88,6 +88,30 @@ def test_a_recusa_vale_para_toda_extensao_e_so_para_o_id_nomeado(lg: Lugares,
     assert set(ler_registro(lg.registro)) == {SUBSTITUTA, OUTRA}
 
 
+def test_a_substituida_que_ja_estava_instalada_nao_se_atualiza_por_cima(lg: Lugares,
+                                                                       tmp_path: Path) -> None:
+    """D-2611-A-EXTENSAO-SUBSTITUIDA-NAO-SE-INSTALA:
+    a antiga que convive com a substituta recusa o «Atualizar», e o código e o registro ficam."""
+    autor = tmp_path / "autor"
+    instalador.instalar(str(_pasta(autor, ANTIGA)), lugares=lg)
+    instalador.instalar(str(_pasta(autor, SUBSTITUTA)), lugares=lg)
+    instalada = lg.codigo / SUBSTITUTA / "hefesto-mod.json"
+    manifesto = json.loads(instalada.read_text(encoding="utf-8"))
+    manifesto["substitui"] = [ANTIGA]
+    instalada.chmod(0o644)
+    instalada.write_text(json.dumps(manifesto), encoding="utf-8")
+    nova = json.loads((autor / ANTIGA / "hefesto-mod.json").read_text(encoding="utf-8"))
+    nova["versao"] = "1.0.1"  # (noqa-acento)
+    (autor / ANTIGA / "hefesto-mod.json").write_text(json.dumps(nova), encoding="utf-8")
+    antes = ler_registro(lg.registro)[ANTIGA].model_dump()
+    with pytest.raises(InstalacaoRecusadaError) as recusa:
+        instalador.atualizar(ANTIGA, lugares=lg)
+    assert "substituída por «A substituta»" in recusa.value.frase
+    assert ler_registro(lg.registro)[ANTIGA].model_dump() == antes
+    codigo = json.loads((lg.codigo / ANTIGA / "hefesto-mod.json").read_text(encoding="utf-8"))
+    assert codigo["versao"] == "1.0.0"  # (noqa-acento)
+
+
 def test_reinstalar_a_propria_substituta_segue_valendo(lg: Lugares, tmp_path: Path) -> None:
     """D-2611-A-EXTENSAO-SUBSTITUIDA-NAO-SE-INSTALA:
     a extensão nunca é recusada por causa do próprio ``substitui``."""

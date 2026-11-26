@@ -529,8 +529,8 @@ conexão não responde. A função `instalar(…, aviso_visto=…)` recusa com
 
 Cada extensão da casa mora no seu repositório, `Hefesto-Team/hefesto-mod-<nome>`, com o
 `hefesto-mod.json` (o `aviso` dentro), o código, os testes (`python3 -m pytest testes`, só a biblioteca
-padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` GPL-3.0-or-later (o texto da GPL-3, o mesmo do Hefesto) com os mesmos autores do Hefesto, o
-`licenca` do manifesto e a seção «Licença» do `README.md` com o mesmo identificador, e o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
+padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` com o texto da GPL-3 (o mesmo do Hefesto), o `licenca` do manifesto em `GPL-3.0-or-later`,
+a seção «Licença» do `README.md` com o mesmo identificador e os mesmos autores do Hefesto, e o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
 
 ## O preparo da extensão
 
