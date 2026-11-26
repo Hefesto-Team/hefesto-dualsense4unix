@@ -70,7 +70,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 > não). A medição no fio, o contraste de 98 contra 6 pacotes de
 > saída e a rota que vence (`hidraw` cru) estão em
 > [a pilha do Steam Input](pilha-steam-input-xpad-sdl.md), seção 6-bis; os
-> ensaios são `docs/data/ensaios.csv:41-51`, todos com o olho de quem confere.
+> ensaios são `docs/data/ensaios.csv:41-51` (`lightbar-probe-limpa`), todos com o olho de quem confere.
 >
 > **2. A vibração que o JOGO manda ao nó físico era cancelada pelo produto, nos
 > dois transportes.** Quando o jogo escreve força-feedback pelo `evdev` do
