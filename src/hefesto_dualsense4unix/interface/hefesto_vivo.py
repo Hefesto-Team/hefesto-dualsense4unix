@@ -1821,8 +1821,6 @@ def _a_carga_na_hora(pagina: str, ctx: Any, para_pref: dict[str, str]) -> dict[s
     """A carga da aba montada por quem chama; `None` quando não há o que pintar."""
     try:
         pacote = pacotes.pacote_da_pagina(pagina, ctx)
-    except pacotes.fios.AindaNaoChegou:
-        return None
     except Exception as e:
         print(f"[{pagina}] o pacote levantou: {e}", file=sys.stderr)
         return None
