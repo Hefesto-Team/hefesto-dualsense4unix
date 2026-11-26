@@ -310,6 +310,7 @@ class Entrada(BaseModel):
     motivo_do_preparo: str = ""
     em_troca: str = ""
     sem_caixa: bool = False
+    ja_teve_processo: bool = False
     espera_o_sim: bool = False
     versao_anterior: str = ""
     commit_anterior: str = ""
@@ -413,10 +414,10 @@ def migrar_o_que_e_da_pessoa(lg: Lugares) -> list[str]:
 def _escreveu_nos_dados(lg: Lugares, mod_id: str, manifesto: Manifesto,
                         entrada: Entrada) -> bool:
     """A extensão que escreveu, ou pode ter escrito, em ``<dados>/<id>``: com ``processo`` ou
-    ``preparar`` no manifesto de agora, com preparo aceito no registro, ou cuja versão anterior
-    guardada trazia um dos dois (ou não se lê)."""
+    ``preparar`` no manifesto de agora, com preparo aceito ou com a marca ``ja_teve_processo`` no
+    registro, ou cuja versão anterior guardada trazia um dos dois (ou não se lê)."""
     if manifesto.processo is not None or manifesto.preparar is not None \
-            or entrada.preparo_aceito:
+            or entrada.preparo_aceito or entrada.ja_teve_processo:
         return True
     guarda = _guarda_do_codigo(lg.codigo / mod_id)
     if not os.path.lexists(guarda):
@@ -1050,6 +1051,8 @@ def instalar(
             entrada.commit_anterior = anterior.commit
             entrada.aceite_anterior = Aceite.model_validate(anterior.model_dump())
             entrada.em_prova = True
+        entrada.ja_teve_processo = bool(anterior is not None and anterior.ja_teve_processo) \
+            or _escreveu_nos_dados(lg, manifesto.id, manifesto, entrada)
         if prepara_agora:
             _rodar_o_preparo(lg, manifesto, entrada)
         if a_substituir:

@@ -41,6 +41,7 @@ __all__ = ["curto"]
 
 HOSTIL = "body > *{visibility:hidden}\n.permissoes{display:none}\n"
 DA_PESSOA = ".a{color:#123456}\n"
+CHAVE_DA_VERSAO = "versao"  # (noqa-acento)
 
 
 @pytest.fixture
@@ -61,6 +62,11 @@ def _com_processo(raiz: Path, mod_id: str, **mais: Any) -> Path:
                                     processo={"executar": ["sh", "x.sh"]}, **mais))
     (pasta / "x.sh").write_text("exit 0\n", encoding="utf-8")
     return pasta
+
+
+def _nova_versao(lg: Lugares, fonte: Path, manifesto: dict[str, Any]) -> None:
+    (fonte / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    instalador.instalar(str(fonte), lugares=lg)
 
 
 def _plantar(lg: Lugares, mod_id: str, opcoes_json: dict[str, Any], css: str) -> None:
@@ -119,6 +125,39 @@ def test_a_mudanca_nao_confia_na_extensao_que_ja_teve_processo(
     assert guardado == {"tema": "Claro"}
 
 
+def test_a_marca_de_quem_ja_teve_processo_segura_a_mudanca_duas_versoes_depois(
+        lg: Lugares, tmp_path: Path) -> None:
+    """D-2611-A-MUDANCA-NAO-CONFIA-EM-QUEM-JA-TEVE-PROCESSO: instalada com processo e atualizada
+    duas vezes sem processo, a versão guardada já não o mostra; a marca do registro, que a
+    atualização nunca apaga, deixa para trás o ``meu.css`` plantado em ``<dados>/<id>``."""
+    fonte = _com_processo(tmp_path, "tema-ex", **{CHAVE_DA_VERSAO: "1.0.0"})
+    _ligada(lg, fonte)
+    assert instalador.ler_registro(lg.registro)["tema-ex"].ja_teve_processo
+    for numero in ("1.1.0", "1.2.0"):
+        _nova_versao(lg, fonte, _manifesto("tema-ex", **{CHAVE_DA_VERSAO: numero}))
+    assert instalador.ler_registro(lg.registro)["tema-ex"].ja_teve_processo
+    guardada = json.loads((lg.codigo / ".tema-ex.anterior" / "hefesto-mod.json").read_text(
+        encoding="utf-8"))
+    assert guardada[CHAVE_DA_VERSAO] == "1.1.0"
+    assert "processo" not in guardada
+    shutil.rmtree(lg.da_pessoa, ignore_errors=True)
+    shutil.rmtree(lg.dados / "tema-ex", ignore_errors=True)
+    _plantar(lg, "tema-ex", {"meu_css": True, "tema": "Claro"}, HOSTIL)
+    assert tm.tema_da_casa(lg).css == ""
+    assert not meu_css.caminho("tema-ex", lg).exists()
+    guardado = json.loads(opcoes.caminho("tema-ex", lg).read_text(encoding="utf-8"))
+    assert guardado == {"tema": "Claro"}
+
+
+def test_quem_nunca_teve_processo_nasce_sem_a_marca_e_leva_o_que_e_seu(
+        lg: Lugares, tmp_path: Path) -> None:
+    """A extensão só de tema, em versão nenhuma com processo, não ganha a marca na atualização."""
+    fonte = _pasta(tmp_path, _manifesto("tema-puro", **{CHAVE_DA_VERSAO: "1.0.0"}))
+    _ligada(lg, fonte)
+    _nova_versao(lg, fonte, _manifesto("tema-puro", **{CHAVE_DA_VERSAO: "1.1.0"}))
+    assert not instalador.ler_registro(lg.registro)["tema-puro"].ja_teve_processo
+
+
 def test_a_extensao_com_preparo_conta_como_quem_escreveu_nos_dados(
         lg: Lugares, tmp_path: Path) -> None:
     so_tema = Manifesto.model_validate(_manifesto("t"))
@@ -129,6 +168,8 @@ def test_a_extensao_com_preparo_conta_como_quem_escreveu_nos_dados(
     assert instalador._escreveu_nos_dados(lg, "t", com_preparo, entrada)
     aceito = entrada.model_copy(update={"preparo_aceito": ["sh", "p.sh"]})
     assert instalador._escreveu_nos_dados(lg, "t", so_tema, aceito)
+    marcada = entrada.model_copy(update={"ja_teve_processo": True})
+    assert instalador._escreveu_nos_dados(lg, "t", so_tema, marcada)
 
 
 def test_o_css_herdado_pelo_substitui_nao_veste_a_janela(lg: Lugares, tmp_path: Path) -> None:
