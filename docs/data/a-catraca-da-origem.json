@@ -259,14 +259,14 @@
       "data": "2026-11-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1330915,
+      "piso": 1332091,
       "por_item": {
-        "docs": 108052,
+        "docs": 108055,
         "scripts": 122940,
-        "src": 329100,
-        "tests": 770823
+        "src": 329266,
+        "tests": 771830
       },
-      "razao": "tamanho: +800 linhas (1330115 -> 1330915), pagas por Origem: D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo 7e3aac8772a8",
+      "razao": "tamanho: +1176 linhas (1330915 -> 1332091), pagas por Origem: D-2511-A-TECLA-DE-TODO-CONTROLE-CHEGA-AO-COMPUTADOR, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE, D-2511-O-NO-DO-TECLADO-TEM-TODA-TECLA-DO-KERNEL, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo 919106340432",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2637,10 +2637,16 @@
           "de": 1330115,
           "para": 1330915,
           "razao": "tamanho: +800 linhas (1330115 -> 1330915), pagas por Origem: D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo 7e3aac8772a8"
+        },
+        {
+          "data": "2026-11-26",
+          "de": 1330915,
+          "para": 1332091,
+          "razao": "tamanho: +1176 linhas (1330915 -> 1332091), pagas por Origem: D-2511-A-TECLA-DE-TODO-CONTROLE-CHEGA-AO-COMPUTADOR, D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE, D-2511-O-NO-DO-TECLADO-TEM-TODA-TECLA-DO-KERNEL, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo 919106340432"
         }
       ],
       "unidade": "linhas",
-      "universo": 3718
+      "universo": 3722
     }
   }
 }
