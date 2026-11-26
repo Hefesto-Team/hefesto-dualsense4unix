@@ -176,6 +176,26 @@ def test_apagar_a_copia_deixa_o_original_byte_a_byte(pasta: Path) -> None:
     assert original.read_bytes() == bruto
 
 
+def test_o_delete_nao_apaga_o_estilo_de_jogo_guardado_na_subpasta(pasta: Path) -> None:
+    """D-2611-O-PERFIL-ILEGIVEL-APARECE-COM-O-MOTIVO-E-SE-APAGA-PELO-ARQUIVO: só a pasta dos perfis.
+
+    O estilo de jogo que a migração dos gêneros guardou em ``estilos-de-jogo/`` não é perfil da
+    lista: o ``delete`` pelo nome dele diz que o perfil não existe e o arquivo fica.
+    """
+    estilos = pasta / loader_module.ESTILOS_DE_JOGO_DIR_NAME
+    estilos.mkdir()
+    estilo = estilos / "esportes.json"
+    estilo.write_text(json.dumps(_perfil("Esportes")), encoding="utf-8")
+    bruto = estilo.read_bytes()
+    res = runner.invoke(app, ["profile", "delete", "esportes", "--yes"])
+    _sem_traceback(res)
+    assert res.exit_code == 1, res.output
+    assert estilo.read_bytes() == bruto
+    with pytest.raises(FileNotFoundError):
+        loader_module.delete_profile("esportes")
+    assert estilo.read_bytes() == bruto
+
+
 def test_o_restore_cura_o_arquivo_cortado_pelo_historico(pasta: Path) -> None:
     """D-2611-O-PERFIL-ILEGIVEL-APARECE-COM-O-MOTIVO-E-SE-APAGA-PELO-ARQUIVO: a cura do doctor."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile

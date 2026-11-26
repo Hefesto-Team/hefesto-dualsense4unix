@@ -2987,12 +2987,15 @@ def delete_profile(identifier: str) -> Path:
 
     Aceita slug ou display name, e NÃO exige que o arquivo valide: o perfil ilegível se apaga
     pelo mesmo comando, com a cópia no histórico. O arquivo apagado é o pedido, nunca o do
-    ``name`` que o conteúdo diz (dois arquivos de mesmo nome interno não se confundem).
+    ``name`` que o conteúdo diz (dois arquivos de mesmo nome interno não se confundem). Só se
+    apaga arquivo da própria pasta dos perfis: o estilo de jogo guardado em ``estilos-de-jogo/``
+    não é perfil da lista e responde `FileNotFoundError`.
     O Freestyle se recusa com `OFreestyleNaoSeApagaError` (a linha de comando e a janela chamam
     esta mesma função): o botão «Modo Freestyle» pede o arquivo no disco.
     """
-    candidate = arquivo_do_perfil(identifier, profiles_dir(ensure=True))
-    if candidate is None:
+    pasta = profiles_dir(ensure=True)
+    candidate = arquivo_do_perfil(identifier, pasta)
+    if candidate is None or candidate.parent != pasta:
         raise FileNotFoundError(f"perfil não encontrado: {identifier}")
     nome = candidate.stem
     with contextlib.suppress(*_PROFILE_DECODE_ERRORS, PerfilDeVersaoMaisNovaError, OSError):
