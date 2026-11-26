@@ -1802,13 +1802,76 @@ def _conferir_a_resposta(corpo: Any, metodo: str) -> None:
     raise RuntimeError(str(corpo.get("motivo") or f"o Hefesto recusou: {corpo.get('status')}"))
 
 
+AC_JUNTOS: dict[str, tuple[str, ...]] = {
+    "ativacao": tuple(c.partition(".")[2] for c in AC_EXCLUSIVAS),  # (noqa-acento)
+    "analogicos": (AC_MAO.partition(".")[2], AC_TROCAR.partition(".")[2]),
+}
+
+AC_METODO_DA_SECAO = {"ativacao": "perfil.ativacao.set",  # (noqa-acento)
+                      "analogicos": "perfil.analogicos.set"}
+
+
+def _na_ordem_do_controle(valor: Any) -> Any:
+    from hefesto_dualsense4unix.core.ativacao_de_botao import ATIVAVEIS
+
+    if not isinstance(valor, list):
+        return valor
+    return [b for b in (*ATIVAVEIS, "lx", "ly", "rx", "ry") if b in valor]
+
+
+def _em_todo_perfil(ctx: Contexto, p: Any, mudou: dict[str, dict[str, Any]]) -> None:
+    """«Em todo perfil» aceso: o que mudou vai ao padrão do computador, que vale em todo perfil.
+
+    O perfil que não tem a seção herda do computador. O perfil ativo que já tem a seção dele (o
+    arquivo guarda a seção inteira, e a seção vence o computador) recebe os mesmos campos pelo
+    `perfil.<seção>.set`, para a mudança valer nele também. O serviço reaplica o perfil. Os campos
+    que se excluem (os três modos do botão, a mão e a troca) vão juntos, e a seção do computador é
+    conferida pelo modelo ANTES de gravar.
+    """
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileAnalogicosConfig,
+        ProfileAtivacaoConfig,
+    )
+
+    mostra = _o_que_a_janela_mostra(ctx)
+    do_computador = opc.o_computador().global_
+    secoes: dict[str, dict[str, Any]] = {}
+    for secao, modelo in (("ativacao", ProfileAtivacaoConfig),  # (noqa-acento)
+                          ("analogicos", ProfileAnalogicosConfig)):
+        campos = dict(mudou[secao])
+        if not campos:
+            continue
+        if any(c in campos for c in AC_JUNTOS[secao]):
+            for c in AC_JUNTOS[secao]:
+                campos.setdefault(c, _na_ordem_do_controle(mostra[f"{secao}.{c}"]))
+        ja = getattr(do_computador, secao, None)
+        _conferir_a_secao(modelo, ja.model_dump(mode="json", exclude_unset=True) if ja else {},
+                          campos)
+        secoes[secao] = campos
+    if not secoes:
+        return
+    opc._no_computador(secoes, None)
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if not nome:
+        return
+    cru = perfil._com_o_src().load_profile(nome)
+    for secao, campos in secoes.items():
+        if secao in cru.model_fields_set and getattr(cru, secao, None) is not None:
+            metodo = AC_METODO_DA_SECAO[secao]
+            _conferir_a_resposta(p.resultado(metodo, **campos), metodo)
+    perfil.reaplicar(nome, ctx, p)
+
+
 @gesto("06-navegacao.html", "ac-guarda", grava="perfil.ativacao.set")
 def ac_guarda(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Guardar»: o que o rascunho mudou vai ao perfil, em Em todo perfil ou no controle do «Para».
+    """«Guardar»: o que o rascunho mudou vai ao padrão do computador, ou ao controle do «Para».
 
-    Só a diferença sai: `perfil.ativacao.set`, `perfil.analogicos.set` e, para o giroscópio, o
-    `mira.set` do controle do «Para». Cada seção é validada pelo modelo do perfil ANTES de ir ao
-    Hefesto, para a recusa dizer o botão que está em dois modos. O rascunho só some quando tudo
+    Só a diferença sai. Com «Em todo perfil» aceso, as duas seções vão ao padrão do
+    computador (`_em_todo_perfil`); apagado, ao `perfil.ativacao.set` e ao
+    `perfil.analogicos.set` da peça do «Para» no perfil ativo. O giroscópio vai sempre ao
+    `mira.set` do controle do «Para». Cada seção é validada pelo modelo do perfil ANTES de
+    gravar, para a recusa dizer o botão que está em dois modos. O rascunho só some quando tudo
     foi guardado.
     """
     from hefesto_dualsense4unix.profiles.schema import (
@@ -1822,20 +1885,22 @@ def ac_guarda(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
     if (por_controle or mudou["giro"]) and not uniq:
         raise RuntimeError("não há controle ligado para guardar estes ajustes")
     vale = _o_que_vale_agora(ctx)
-    ao_perfil = {"uniq": uniq} if por_controle else {}
     for secao, modelo in (("ativacao", ProfileAtivacaoConfig),  # (noqa-acento)
                           ("analogicos", ProfileAnalogicosConfig)):
         campos = mudou[secao]
         if not campos:
             continue
         _conferir_a_secao(modelo, {c: vale[f"{secao}.{c}"] for c in modelo.model_fields}, campos)
-    if mudou["ativacao"]:  # (noqa-acento)
-        pedido = {**mudou["ativacao"], **ao_perfil}  # (noqa-acento)
-        corpo = p.resultado("perfil.ativacao.set", **pedido)
-        _conferir_a_resposta(corpo, "perfil.ativacao.set")
-    if mudou["analogicos"]:
-        corpo = p.resultado("perfil.analogicos.set", **mudou["analogicos"], **ao_perfil)
-        _conferir_a_resposta(corpo, "perfil.analogicos.set")
+    if not por_controle:
+        _em_todo_perfil(ctx, p, mudou)
+    else:
+        if mudou["ativacao"]:  # (noqa-acento)
+            pedido = {**mudou["ativacao"], "uniq": uniq}  # (noqa-acento)
+            corpo = p.resultado("perfil.ativacao.set", **pedido)
+            _conferir_a_resposta(corpo, "perfil.ativacao.set")
+        if mudou["analogicos"]:
+            corpo = p.resultado("perfil.analogicos.set", **mudou["analogicos"], uniq=uniq)
+            _conferir_a_resposta(corpo, "perfil.analogicos.set")
     giro = mudou["giro"]
     if giro:
         pedido_do_giro: dict[str, Any] = {"uniq": uniq}

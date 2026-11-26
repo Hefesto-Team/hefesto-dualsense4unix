@@ -88,8 +88,8 @@ ATOS: dict[Chave, str] = {
         "tela: a mão, a curva e o giroscópio da janela Acessibilidade só mexem no rascunho; "
         "quem grava é o «Guardar» (`ac-guarda`), que declara `grava=`",
     ("06-navegacao.html", "ac-escopo"):
-        "tela: a chave «Em todo perfil» só diz onde o «Guardar» escreve (no perfil ou no "
-        "controle do «Para»); nada se grava no clique",
+        "tela: a chave «Em todo perfil» só diz onde o «Guardar» escreve (no padrão do "
+        "computador ou no controle do «Para»); nada se grava no clique",
     ("06-navegacao.html", "ac-padrao"):
         "tela: o «Voltar ao padrão» da janela Acessibilidade enche o rascunho com o de "
         "fábrica; o que vale só muda no «Guardar» (`ac-guarda`)",

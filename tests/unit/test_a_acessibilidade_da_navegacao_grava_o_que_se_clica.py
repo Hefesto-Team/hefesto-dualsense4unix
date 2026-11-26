@@ -2,9 +2,10 @@
 
 A-ACESSIBILIDADE-DA-NAVEGACAO-GRAVA-O-QUE-SE-CLICA-01. A janela nasceu apagada (18 `inert`, 28
 `disabled`, nenhum gesto) com o motor e o IPC prontos. Agora cada linha que tem motor leva
-`data-gesto`; o clique mexe num rascunho que a tela pinta, e o «Guardar» manda o que mudou ao
-`perfil.ativacao.set`, ao `perfil.analogicos.set` e, para o giroscópio, ao `mira.set`. Só a linha
-«Trocar de lado com», que nenhum motor atende, segue apagada, com a dica.
+`data-gesto`; o clique mexe num rascunho que a tela pinta, e o «Guardar» grava o que mudou: com
+«Em todo perfil» aceso, no padrão do computador (e o serviço reaplica o perfil); apagado, no
+`perfil.ativacao.set` e no `perfil.analogicos.set` da peça do «Para»; o giroscópio, no `mira.set`.
+Só a linha «Trocar de lado com», que nenhum motor atende, segue apagada, com a dica.
 
 Estas provas usam o servidor do produto de verdade (o `IpcServer` com o `ProfileManager`), num
 diretório de perfis isolado: o que o gesto grava é lido de volta do disco.
@@ -65,6 +66,13 @@ class _Ponte:
             return {"status": "metodo_ausente"}
         return asyncio.run(self.servidor._handlers[metodo](dict(params)))
 
+    def profile_reaplicar(self, nome: str, **params: Any) -> Any:
+        return self.resultado("profile.reaplicar", name=nome, **params)
+
+    def chamar(self, metodo: str, **params: Any) -> Any:
+        self.chamadas.append((metodo, dict(params)))
+        return None
+
     def __getattr__(self, nome: str) -> Any:
         raise AssertionError(f"o gesto da Acessibilidade chamou `{nome}`, que não é do desenho")
 
@@ -90,10 +98,23 @@ def _servidor(tmp_path: pathlib.Path) -> Any:
     return servidor
 
 
-def _do_disco() -> Any:
+def _do_disco(nome: str = "Ensaio") -> Any:
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    return load_profile("Ensaio")
+    return load_profile(nome)
+
+
+def _vale(nome: str = "Ensaio") -> Any:
+    """O perfil como o serviço o aplica: o arquivo com o padrão do computador por baixo."""
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import carregar_o_que_vale
+
+    return carregar_o_que_vale(nome)
+
+
+def _do_computador(secao: str) -> Any:
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
+    return getattr(o_computador().global_, secao, None)
 
 
 class _Mesa:
@@ -175,10 +196,11 @@ def test_clicar_so_mexe_no_rascunho_e_o_guardar_grava_o_que_mudou(tmp_path: path
     assert m.ponte.chamadas == [], "um clique foi ao Hefesto antes do «Guardar»"
     assert _do_disco().ativacao is None
     m.clica("ac-guarda")
-    chamadas = dict(m.ponte.chamadas)
-    assert chamadas == {"perfil.ativacao.set": {"alternar": ["l1"], "repique_ms": 120}}, chamadas
-    ativacao = _do_disco().ativacao
+    metodos = [metodo for metodo, _ in m.ponte.chamadas]
+    assert "profile.reaplicar" in metodos and "perfil.ativacao.set" not in metodos, metodos
+    ativacao = _vale().ativacao
     assert ativacao.alternar == ["l1"] and ativacao.repique_ms == 120
+    assert _do_computador("ativacao").repique_ms == 120  # (noqa-acento)
     assert m.a06._AC_RASCUNHO == {}
     assert m.pintura()["ac-ativacao-alternar-l1"] == "sim"
 
@@ -202,7 +224,7 @@ def test_cada_controle_manda_o_campo_certo(tmp_path: pathlib.Path) -> None:
     m.liga("analogicos.inverter", "y")
     m.clica("ac-escolhe", ac="analogicos.mao", v="direita")
     m.clica("ac-guarda")
-    ativacao, analogicos = _do_disco().ativacao, _do_disco().analogicos
+    ativacao, analogicos = _vale().ativacao, _vale().analogicos
     assert ativacao.repetir == ["dpad_up", "dpad_down", "dpad_left", "dpad_right"]
     assert ativacao.travar == ["r2"]
     assert (ativacao.longo_ms, ativacao.duplo_ms, ativacao.repete_apos_ms) == (800, 200, 700)
@@ -225,7 +247,7 @@ def test_um_botao_um_modo_e_a_mao_e_a_troca_se_excluem(tmp_path: pathlib.Path) -
     assert m.pintura()["ac-ativacao-alternar-l1"] == ""
     assert m.pintura()["ac-ativacao-travar-l1"] == "sim"
     m.clica("ac-guarda")
-    ativacao = _do_disco().ativacao
+    ativacao = _vale().ativacao
     assert ativacao.alternar == [] and ativacao.travar == ["l1"]
     m.clica("ac-escolhe", ac="analogicos.mao", v="esquerda")
     m.liga("analogicos.trocar", "lados")
@@ -259,12 +281,14 @@ def test_voltar_ao_padrao_enche_o_rascunho_e_so_o_guardar_devolve_a_fabrica(
     m.liga("ativacao.alternar", "r1")
     m.passo("analogicos.zona_morta", "+", 3)
     m.clica("ac-guarda")
-    assert _do_disco().analogicos.zona_morta == 15
+    assert _vale().analogicos.zona_morta == 15
     m.clica("ac-padrao")
-    assert _do_disco().analogicos.zona_morta == 15, "o «Voltar ao padrão» gravou sem o «Guardar»"
+    assert _vale().analogicos.zona_morta == 15, "o «Voltar ao padrão» gravou sem o «Guardar»"
     assert m.pintura()["ac-analogicos-zona_morta"] == "0"
     m.clica("ac-guarda")
-    assert _do_disco().ativacao.alternar == [] and _do_disco().analogicos.zona_morta == 0
+    ativacao, analogicos = _vale().ativacao, _vale().analogicos
+    assert ativacao is None or ativacao.alternar == []
+    assert analogicos is None or analogicos.zona_morta == 0
 
 
 def test_cancelar_larga_o_rascunho(tmp_path: pathlib.Path) -> None:
@@ -277,25 +301,48 @@ def test_cancelar_larga_o_rascunho(tmp_path: pathlib.Path) -> None:
     m.clica("ac-cancela")
     assert m.pintura()["ac-ativacao-alternar-l2"] == ""
     assert m.ponte.chamadas == [] and _do_disco().ativacao is None
+    assert _do_computador("ativacao") is None  # (noqa-acento)
 
 
-def test_em_todo_perfil_apagado_grava_na_peca_do_para(tmp_path: pathlib.Path) -> None:
-    """D-2611-EM-TODO-PERFIL-GRAVA-NO-PERFIL-E-APAGADO-GRAVA-NA-PECA:
-    a chave escolhe onde o «Guardar» escreve.
+def test_em_todo_perfil_aceso_vale_em_todo_perfil_e_apagado_so_na_peca_do_para(
+    tmp_path: pathlib.Path,
+) -> None:
+    """D-2611-EM-TODO-PERFIL-GRAVA-NO-PADRAO-DO-COMPUTADOR:
+    aceso, o «Guardar» vale num perfil que a janela nunca viu; apagado, só na peça do «Para».
     """
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import (
+        MatchAny,
+        Profile,
+        ProfileAtivacaoConfig,
+    )
+
+    save_profile(Profile(name="Outro", match=MatchAny(type="any")))
     m = _Mesa(tmp_path)
     m.liga("ativacao.alternar", "l1")
     m.clica("ac-guarda")
-    assert _do_disco().ativacao.alternar == ["l1"] and not _do_disco().controllers
+    assert _vale("Outro").ativacao.alternar == ["l1"], "o «Em todo perfil» ficou só no ativo"
+    assert _vale().ativacao.alternar == ["l1"] and not _vale().controllers
     eco = m.clica("ac-escopo")
     assert eco["mesa"]["ac-todo-perfil"] == "" and eco["mesa"]["ac-todo-perfil-txt"] == "Não"
     m.liga("ativacao.alternar", "r1")
     m.clica("ac-guarda")
     assert m.ponte.chamadas[-1][1]["uniq"] == _P1
-    assert _do_disco().ativacao.alternar == ["l1"], "a escolha da peça vazou para o perfil"
+    assert _vale("Outro").ativacao.alternar == ["l1"], "a escolha da peça vazou para todo perfil"
     dele = (_do_disco().controllers or {})["aabbcc000001"]
     assert dele.ativacao.alternar == ["l1", "r1"]
     assert m.pintura()["ac-ativacao-alternar-r1"] == "sim"
+    ensaio = _do_disco()
+    propria = ProfileAtivacaoConfig(alternar=[], travar=["l2"])
+    save_profile(ensaio.model_copy(update={
+        "ativacao": propria, "controllers": None}))  # (noqa-acento)
+    m.clica("ac-escopo")
+    m.liga("ativacao.alternar", "l2")
+    m.clica("ac-guarda")
+    assert _vale().ativacao.alternar == ["l2"] and _vale().ativacao.travar == []
+    assert _vale("Outro").ativacao.alternar == ["l2"]
+    assert _do_disco().ativacao.alternar == ["l2"], "o perfil com a seção dele não recebeu"
+    assert "profile.reaplicar" in [metodo for metodo, _ in m.ponte.chamadas[-3:]]
 
 
 def test_o_giroscopio_vai_ao_mira_set_do_controle_do_para(tmp_path: pathlib.Path) -> None:
