@@ -531,6 +531,11 @@ BOOTSTRAP = r"""
         '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v],' +
         '.r-aplicar,.r-salvar,.r-importar,.r-exportar');
       if(!alvo) return;
+      if(ev.type === 'click'){
+        const barra = function(e){ return !!e && e.tagName === 'INPUT' && e.type === 'range'; };
+        const lista = function(e){ return !!e && e.tagName === 'SELECT'; };
+        if(lista(alvo) || barra(alvo) || lista(ev.target) || barra(ev.target)) return;
+      }
       const d = alvo.dataset;
       const doRodape = ((alvo.getAttribute('class') || '').match(/\br-([a-z]+)\b/) || [])[1];
       manda(carga_do_alvo(
@@ -568,6 +573,7 @@ BOOTSTRAP = r"""
         rotulo: (alvo.selectedOptions && alvo.selectedOptions[0]
                  ? alvo.selectedOptions[0].textContent.trim() : ''),
         tipo: (alvo.tagName || '').toLowerCase(),
+        entrada: (alvo.type || '').toLowerCase(),
         evento: ev.type,
         carimbo: (performance.timeOrigin || 0) + ev.timeStamp,
         forma: (function(){
@@ -2024,6 +2030,8 @@ class Piloto:
         if "gesto" not in o and o.get("visibilidade") in ("escondida", "vista"):
             self._a_janela_mudou(o.get("visibilidade") == "escondida")
             return
+        if _so_abre_a_lista(o):
+            return
         _esquecer_a_pintura(self)
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
@@ -3434,6 +3442,17 @@ def _a_diferenca_muda_a_forma(dif: dict[str, Any], moldes: frozenset[str]) -> bo
     """A diferença troca ou clona nós? A fita, os lugares, um bloco ou a lista de um molde."""
     return ("fita" in dif or "ocupados" in dif or "vazios" in dif or "blocos" in dif
             or any(k in moldes for k in (dif.get("mesa") or {})))
+
+
+def _so_abre_a_lista(o: dict[str, Any]) -> bool:
+    """O `click` de uma lista suspensa ou de uma barra só abre ou solta: o pedido é o `change`.
+
+    O dono da regra é o despachante do piloto, para as dez abas e todo gesto de lista ou de
+    barra, com ou sem a guarda do próprio gesto. O `click` de botão e de caixa de marcar passa."""
+    if str(o.get("evento") or "").lower() != "click":
+        return False
+    tipo = str(o.get("tipo") or "").lower()
+    return tipo == "select" or (tipo == "input" and str(o.get("entrada") or "").lower() == "range")
 
 
 def _esquecer_a_pintura(piloto: Any) -> None:
