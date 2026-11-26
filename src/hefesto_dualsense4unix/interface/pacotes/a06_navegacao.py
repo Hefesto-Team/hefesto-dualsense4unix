@@ -1627,7 +1627,9 @@ def _o_que_a_janela_mostra(ctx: Contexto) -> dict[str, Any]:
 
 
 def _em_segundos(ms: int) -> str:
-    return f"{ms / 1000:.1f}".replace(".", ",")
+    from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
+
+    return formata_pt_br(ms / 1000)
 
 
 def _pinta_acessibilidade(ctx: Contexto) -> dict[str, str]:
@@ -1766,7 +1768,7 @@ def _o_que_mudou_na_janela(ctx: Contexto) -> dict[str, dict[str, Any]]:
     from hefesto_dualsense4unix.core.ativacao_de_botao import ATIVAVEIS
 
     vale = _o_que_vale_agora(ctx)
-    por_secao: dict[str, dict[str, Any]] = {  # (noqa-acento)
+    por_secao: dict[str, dict[str, Any]] = {
         "ativacao": {}, "analogicos": {}, "giro": {}}  # (noqa-acento)
     for chave, novo in _AC_RASCUNHO.items():
         if chave not in vale:
