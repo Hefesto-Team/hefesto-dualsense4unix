@@ -127,7 +127,8 @@ _A_MOSTRA = """(p) => [...document.getElementById(p).querySelectorAll('*')]
 
 
 def test_toda_janela_que_recebe_bloco_nasce_escondida_inteira(_pagina_com_a_folha: Any) -> None:
-    """Aberta pelo ``href`` antes da resposta, a janela não mostra título nem botão de exemplo
+    """D-2611-A-JANELA-DA-EXPERIMENTAL-SO-APARECE-COM-O-DADO-REAL: aberta pelo ``href`` antes
+    da resposta, a janela não mostra título nem botão de exemplo
     (a 07 publicada traz «Configurar · Minha extensão» e o «Parar tudo»); com o carimbo, aparece.
     ``#novo-lancador``, estático, não recebe bloco e abre como sempre."""
     pg = _pagina_com_a_folha

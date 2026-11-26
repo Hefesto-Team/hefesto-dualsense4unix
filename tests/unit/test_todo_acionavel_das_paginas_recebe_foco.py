@@ -124,7 +124,8 @@ def test_a_regua_viu_os_acionaveis(medidas: dict[str, dict[str, Any]]) -> None:
 
 @pytest.mark.parametrize("falha", ["sem_parada", "sem_papel", "sem_nome"])
 def test_nenhuma_pagina_tem_acionavel(medidas: dict[str, dict[str, Any]], falha: str) -> None:
-    """Sem parada de foco, sem papel ou sem nome: zero, em toda página publicada."""
+    """D-2611-O-LEITOR-DE-TELA-NAO-NARRA-O-GESTO-QUE-DEU-CERTO: sem parada de foco, sem papel
+    ou sem nome, zero, em toda página publicada."""
     ruins = {n: m["falhas"][falha] for n, m in medidas.items() if m["falhas"][falha]}
     assert not ruins, f"acionáveis {falha.replace('_', ' ')}: {ruins}"
 
