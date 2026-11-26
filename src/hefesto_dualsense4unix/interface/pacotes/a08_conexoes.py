@@ -3348,7 +3348,7 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     le = _x(f"{nome_na_conexoes(ap) or rotulo}, {quem}")
     if arrasta:
         abre = (f'<div class="linha" data-id="{aid}" data-alvo="{aid}" draggable="true" '
-                f'tabindex="0" role="button" aria-label="{le} — Enter para mudar de adaptador">')
+                f'tabindex="0" role="group" aria-label="{le} — Enter para mudar de adaptador">')
     else:
         estado = (" esperando" if esperando else " nao-conectou" if ap.get("nao_conectou")
                   else " desligado no-cabo" if ap.get("desligado") and ap.get("usb")

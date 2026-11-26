@@ -194,3 +194,38 @@ def test_o_estado_acompanha_a_classe_e_o_que_nasce_depois(navegador: Any) -> Non
         assert ligado == "false"
     finally:
         pg.close()
+
+
+_DENTRO_DO_BOTAO = r"""() => [...document.querySelectorAll('[role=button]')].filter(
+  b => b.querySelector('a[href],button,input:not([type=hidden]),select,textarea,[data-gesto]')
+).map(b => b.className + '[' + (b.getAttribute('aria-label') || '') + ']')"""
+
+
+def _a_sala_viva() -> str:
+    """A sala do rádio como o produto a repinta: duas linhas que se arrastam, um adaptador."""
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
+
+    aps = [{"id": f"aa:bb:cc:00:00:0{n}", "nome": nome, "rotulo": "DualSense",
+            "tipo": "controle", "lugar": "L1"} for n, nome in ((1, ""), (2, "Sala"))]
+    cena = {"aparelhos": aps, "lugares": [{"id": "L1"}]}
+    linhas = "".join(a08.html_da_linha(ap, cena) for ap in aps)
+    return ('<!doctype html><meta charset="utf-8"><body><div class="radio">'
+            f"{linhas}</div><script>{BASE_JS}</script></body>")
+
+
+def test_a_linha_que_se_arrasta_nao_esconde_o_que_tem_dentro(navegador: Any) -> None:
+    """D-2611-A-LINHA-QUE-SE-ARRASTA-E-UM-GRUPO: a linha das Conexões que muda de adaptador é um
+    grupo com o mesmo nome, e não um botão; o campo e os botões de dentro seguem anunciados, e a
+    linha segue na ordem do Tab com o nome do Enter."""
+    pg = _abrir(navegador, "sala.html", _a_sala_viva())
+    try:
+        assert pg.evaluate(_DENTRO_DO_BOTAO) == []
+        linhas = pg.evaluate("""() => [...document.querySelectorAll('.linha[draggable=true]')].map(
+            l => [l.getAttribute('role'), l.getAttribute('tabindex'),
+                  l.getAttribute('aria-label') || '', l.querySelectorAll('input').length])""")
+        assert len(linhas) == 2, linhas
+        for papel, parada, nome, campos in linhas:
+            assert papel == "group" and parada == "0", linhas
+            assert "Enter para mudar de adaptador" in nome and campos >= 1, linhas
+    finally:
+        pg.close()
