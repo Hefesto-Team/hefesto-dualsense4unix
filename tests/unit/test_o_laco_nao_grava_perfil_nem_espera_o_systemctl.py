@@ -675,25 +675,131 @@ def test_o_volume_da_captura_nao_para_o_laco(
     _o_fio_do_laco_nao_rodou(definir)
 
 
+class _GravacaoPresa:
+    """O ``save_profile`` de verdade preso num evento até o teste soltar, nunca no fio do laço.
+
+    Fora do fio principal, espera ``solta`` (no máximo ``PRESA_NO_MAXIMO_S``, só para o teste não
+    pendurar) e anota se saiu sozinho. No fio principal, o do laço, grava na hora: o nome do fio
+    anotado é a prova de quem errou.
+    """
+
+    PRESA_NO_MAXIMO_S = 10.0
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from hefesto_dualsense4unix.profiles import manager
+
+        self.fios: list[str] = []
+        self.entrou = threading.Event()
+        self.solta = threading.Event()
+        self.saiu_sozinho = False
+        real = loader.save_profile
+
+        def presa(*args: Any, **kwargs: Any) -> Path:
+            self.fios.append(threading.current_thread().name)
+            self.entrou.set()
+            if threading.current_thread() is not threading.main_thread():
+                self.saiu_sozinho |= not self.solta.wait(self.PRESA_NO_MAXIMO_S)
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(loader, "save_profile", presa)
+        monkeypatch.setattr(manager, "save_profile", presa)
+
+    def prender(self) -> None:
+        self.entrou.clear()
+        self.solta.clear()
+
+
+class _CargaForjada:
+    """Fios Python que queimam CPU no próprio processo: o laço disputa o GIL com eles."""
+
+    def __init__(self, fios: int) -> None:
+        self._pare = threading.Event()
+        self._fios = [
+            threading.Thread(target=self._queimar, name=f"carga-{n}", daemon=True)
+            for n in range(fios)
+        ]
+
+    def _queimar(self) -> None:
+        x = 0
+        while not self._pare.is_set():
+            x = (x * 31 + 7) % 1_000_003
+
+    def __enter__(self) -> _CargaForjada:
+        for fio in self._fios:
+            fio.start()
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self._pare.set()
+        for fio in self._fios:
+            fio.join(timeout=2.0)
+
+
+VOLTAS_SOB_CARGA = 20
+
+
 @pytest.mark.parametrize(
-    ("chamada", "params"),
-    [
-        ("rumble.motores.set", {"uniq": _P1, "fraco_pct": 40}),
-        ("sensor.set", {"uniq": _P1, "giroscopio": False}),
-    ],
+    ("chamada", "campo"),
+    [("rumble.motores.set", "fraco_pct"), ("sensor.set", "giroscopio")],
 )
 def test_o_gesto_que_grava_nao_para_o_laco(
-    tmp_path: Path, gravacao_lenta: _GravacaoLenta, chamada: str, params: dict[str, Any],
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, chamada: str, campo: str,
 ) -> None:
-    """MORDIDA: chame o ``gravar_pelo_gesto`` direto no handler, e o status espera a gravação."""
+    """O status responde com a gravação de dois controles presa, 20 vezes sob carga forjada.
+
+    O-GESTO-QUE-GRAVA-NAO-PARA-O-LACO-NEM-SOB-CARGA-01. A régua de antes mirava o relógio de
+    parede (0,4 s) e reprovou sob carga com o status a 1,37 s. Medido em 25/11 com a gravação
+    presa num evento: o status respondeu com a gravação ainda presa em 20 de 20 voltas sem
+    carga e em 10 de 10 com três fios queimando CPU, e o status sozinho, sem gesto nenhum,
+    levou até 6,5 s com a mesma carga: o tempo era da carga, não da gravação. A prova é causal,
+    sem teto de relógio: P1 grava (presa) e P2 espera a trava do perfil; o ``daemon.status``
+    volta com os dois gestos em curso, a gravação nunca roda no fio do laço, e as duas chegam ao
+    disco.
+
+    MORDIDA: chame ``sob_a_trava_do_perfil`` direto no handler (sem ``asyncio.to_thread``), e a
+    gravação roda no fio do laço.
+    """
     servidor = _servidor(tmp_path)
-    gravacao_lenta.ligar()
+    presa = _GravacaoPresa(monkeypatch)
 
-    gasto, corria, _resposta = asyncio.run(
-        _o_status_durante(servidor, servidor._handlers[chamada](dict(params))))
+    def _valor(volta: int) -> Any:
+        return 30 + volta if campo == "fraco_pct" else bool((volta + 1) % 2)
 
-    assert gasto < TETO_IPC_S and corria, f"{chamada} parou o laço {gasto:.2f} s"
-    assert gravacao_lenta.fios and threading.main_thread().name not in gravacao_lenta.fios
+    async def _uma_volta(volta: int) -> bool:
+        presa.prender()
+        gestos = [
+            asyncio.ensure_future(
+                servidor._handlers[chamada]({"uniq": uniq, campo: _valor(volta)}))
+            for uniq in (_P1, _P2)
+        ]
+        prazo = time.monotonic() + presa.PRESA_NO_MAXIMO_S
+        while not presa.entrou.is_set() and not all(g.done() for g in gestos):
+            assert time.monotonic() < prazo, "a gravação do gesto nunca começou"
+            await asyncio.sleep(0.005)
+        await servidor._handlers["daemon.status"]({})
+        corria = not any(g.done() for g in gestos)
+        presa.solta.set()
+        await asyncio.gather(*gestos)
+        return corria
+
+    async def _voltas() -> list[bool]:
+        return [await _uma_volta(volta) for volta in range(VOLTAS_SOB_CARGA)]
+
+    with _CargaForjada(1):
+        voltas = asyncio.run(_voltas())
+
+    assert threading.main_thread().name not in presa.fios, (
+        f"{chamada}: a gravação rodou no fio do laço")
+    assert all(voltas), f"{chamada}: o status esperou a gravação em {voltas.count(False)} voltas"
+    assert not presa.saiu_sozinho, f"{chamada}: o laço esperou a gravação terminar"
+    controles = loader.load_profile("Ensaio").controllers
+    ultima = _valor(VOLTAS_SOB_CARGA - 1)
+    for uniq in (_P1, _P2):
+        dele = controles[uniq.replace(":", "")]
+        if campo == "fraco_pct":
+            assert dele.rumble is not None and dele.rumble.motor_fraco_pct == ultima, dele
+        else:
+            assert dele.sensores is not None and dele.sensores.giroscopio is ultima, dele
 
 
 def test_dois_gestos_no_mesmo_perfil_nao_perdem_um_ao_outro(
