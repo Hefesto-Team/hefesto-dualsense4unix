@@ -1254,19 +1254,19 @@ class Apelidos:
         if uniq in UNIQS_SEM_CONTROLE or uniq.startswith(PREFIXO_DO_APELIDO):
             return uniq
         marca = hmac.new(self._a_chave(), f"{mod_id}\0{uniq}".encode(), hashlib.sha256)
-        apelido = PREFIXO_DO_APELIDO + marca.hexdigest()[:20]
-        self._de_volta[(mod_id, apelido)] = uniq
-        return apelido
+        return PREFIXO_DO_APELIDO + marca.hexdigest()[:20]
 
     def uniq_de(self, mod_id: str, apelido: str) -> str:
-        """O ``uniq`` do apelido; o apelido de um controle ligado que esta porta ainda não deu
-        (a extensão o guardou antes do reinício) se acha pelos controles de agora."""
+        """O ``uniq`` do apelido, achado pelos controles de agora (o que a extensão guardou antes
+        do reinício também). Só os controles de verdade entram na volta: o texto que a extensão
+        põe num campo ``uniq`` não a faz crescer."""
         if not apelido.startswith(PREFIXO_DO_APELIDO):
             return apelido
         if (mod_id, apelido) not in self._de_volta:
             try:
                 for uniq in self._controles():
-                    self.de(mod_id, uniq)
+                    if isinstance(uniq, str) and uniq not in UNIQS_SEM_CONTROLE:
+                        self._de_volta[(mod_id, self.de(mod_id, uniq))] = uniq
             except Exception as exc:
                 logger.debug("mods_apelido_sem_os_controles", err=str(exc))
         return self._de_volta.get((mod_id, apelido), apelido)

@@ -133,6 +133,16 @@ def test_o_apelido_guardado_antes_do_reinicio_ainda_acha_o_controle(tmp_path: Pa
     assert depois.de("ext-a", "todos") == "todos" and depois.de("ext-a", "") == ""
 
 
+def test_o_texto_num_campo_uniq_nao_faz_a_volta_crescer(tmp_path: Path) -> None:
+    """O que uma extensão publica num ``uniq`` chega às outras pelo ``_enviar``: a volta guarda só
+    os controles de verdade, e o serviço não cresce com o que a extensão inventa."""
+    apelidos = Apelidos(lambda: chave_dos_apelidos(tmp_path / "chave"), lambda: [UM, DOIS])
+    for n in range(500):
+        apelidos.na_linha("ext-b", json.dumps({"uniq": f"inventado-{n}"}).encode())
+    assert apelidos.uniq_de("ext-b", apelidos.de("ext-b", DOIS)) == DOIS
+    assert len(apelidos._de_volta) == 2
+
+
 def test_a_porta_do_servico_da_apelidos(tmp_path: Path) -> None:
     lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
                  registro=tmp_path / "config" / "mods.json", estado=tmp_path / "estado.json")
