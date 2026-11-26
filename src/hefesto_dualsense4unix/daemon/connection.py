@@ -679,6 +679,31 @@ def perfil_que_o_boot_restaura(
         return None
 
 
+async def devolver_os_gatilhos_do_computador(daemon: DaemonProtocol) -> None:
+    """Sem escolha no boot, os gatilhos guardados no computador voltam aos controles.
+
+    O serviço que nasce, ou o controle que volta, não traz o efeito de memória: quem o leva ao
+    aparelho é a vista sem perfil (D-1810-A-LUZ-E-O-GATILHO-LEEM-O-COMPUTADOR-SEM-PERFIL-ATIVO).
+    No Nativo, ou com um perfil já valendo, não toca nada. Nunca levanta.
+    """
+    from functools import partial
+
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    store = getattr(daemon, "store", None)
+    if getattr(daemon, "_native_mode", False) or store is None:
+        return
+    if getattr(store, "active_profile", None):
+        return
+    try:
+        manager = ProfileManager(controller=daemon.controller, store=store)
+        await daemon._run_blocking(partial(manager.apply_gatilhos_do_computador))
+    except Exception as exc:
+        logger.warning("gatilhos_do_computador_no_boot_falharam", err=str(exc))
+        return
+    logger.info("gatilhos_do_computador_no_boot")
+
+
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
     """Reativa a escolha no boot e na reconexão; toda saída repõe o Point and click."""
     try:
@@ -704,6 +729,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         name = _o_nome_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
         if not name:
             logger.info("boot_sem_escolha")
+            await devolver_os_gatilhos_do_computador(daemon)
             return
         if appid_em_cena is not None:
             logger.info("boot_com_o_jogo_em_cena", appid=appid_em_cena, perfil=name)

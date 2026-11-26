@@ -659,6 +659,42 @@ class ProfileManager:
             for categoria in sorted(_SECOES_DA_SAIDA):
                 relatorio.setdefault(categoria, palavra)
 
+    def apply_gatilhos_do_computador(self) -> str:
+        """Os gatilhos que o computador guardou, aos controles, quando nenhum perfil vale.
+
+        D-1810-A-LUZ-E-O-GATILHO-LEEM-O-COMPUTADOR-SEM-PERFIL-ATIVO: o efeito de cada controle, a
+        intensidade e o modo global da vista sem perfil (:func:`o_perfil_sem_perfil_ativo`), pela
+        mesma economia e pela mesma camada do perfil da :meth:`apply`; nada de luz, de sessão nem
+        de escolha. Devolve ``"aplicado"``.
+        """
+        from hefesto_dualsense4unix.mods.porta import extensoes_vivas
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_perfil_sem_perfil_ativo,
+        )
+
+        vista = _perfil_na_economia(
+            perfil_no_modo(o_perfil_sem_perfil_ativo(), extensoes_vivas()),
+            economia_da_mesa(), controles_em_economia())
+        self.controller.apply_output_defaults(OutputSpec(
+            trigger_left=build_from_name(
+                vista.triggers.left.mode, vista.triggers.left.params),
+            trigger_right=build_from_name(
+                vista.triggers.right.mode, vista.triggers.right.params)))
+        so_gatilhos = {
+            uniq: OutputSpec(trigger_left=spec.trigger_left, trigger_right=spec.trigger_right)
+            for uniq, spec in _controllers_to_specs(vista.controllers, None).items()
+            if spec.trigger_left is not None or spec.trigger_right is not None}
+        publicar = getattr(self.controller, "reset_profile_overrides", None)
+        if callable(publicar):
+            _publicar_camada(publicar, so_gatilhos, {})
+        else:
+            for uniq, spec in so_gatilhos.items():
+                self.controller.apply_output_for(uniq, spec)
+        escalar_gatilho = getattr(self.controller, "set_trigger_scales", None)
+        if callable(escalar_gatilho):
+            escalar_gatilho(_controllers_to_trigger_scales(vista.controllers) or None)
+        return "aplicado"
+
     def _o_todos_das_luzes_vai_cru(self, profile: Profile) -> bool:
         """O «Todos» das luzes de número vai cru a todo controle nesta ativação?
 
