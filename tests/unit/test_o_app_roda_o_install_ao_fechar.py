@@ -69,6 +69,7 @@ class Casa:
         self.livro = base / "livro-do-install"
         self.livro_do_sudo = base / "livro-do-sudo"
         self.quebra = base / "o-install-quebra"
+        self.pulou = base / "o-install-pulou-o-root"
         self.dorme = base / "o-install-dorme"
         self.neto = base / "neto-do-install"
         self.fim = base / "o-trap-do-install-rodou"
@@ -86,6 +87,11 @@ class Casa:
             f'printf \'%s\\n\' "$*" >> {self.livro}\n'
             f'printf \'%s|%s\\n\' "${{VIRTUAL_ENV:-}}" "$PATH" > {self.ambiente}\n'
             "echo 'a saída do install'\n"
+            f"if [ -e {self.pulou} ]; then\n"
+            '  mkdir -p "${XDG_STATE_HOME}/hefesto-dualsense4unix"\n'
+            "  printf '%s\\n' 'sudo recusado — passo pulado' "
+            '> "${XDG_STATE_HOME}/hefesto-dualsense4unix/install-pulou-root"\n'
+            "fi\n"
             f"[ ! -e {self.quebra} ] || exit 7\n"
             f"[ ! -e {self.teimoso} ] || trap '' TERM\n"
             f"if [ -e {self.dorme} ]; then\n"
@@ -357,42 +363,132 @@ def test_sem_autorizacao_a_parte_do_usuario_roda_e_a_do_sistema_fica_pendente(
     casa: Casa, tmp_path: Path,
 ) -> None:
     _sudo_de_mentira(casa, tmp_path / "bin", aceita="nunca")
+    casa.pulou.touch()
     casa.anotar("a..b")
     _rodar_a_vigia(casa)
     assert casa.rodadas() == ["--yes"]
-    assert casa.chamadas_do_sudo() == ["-n true"]
+    assert casa.chamadas_do_sudo() == []
     assert casa.nota.read_text(encoding="utf-8") == f"a..b\nmotivo: {va.SEM_AUTORIZACAO}\n"
     linha = va.pendencia_do_install()
     assert linha is not None and va.SEM_AUTORIZACAO in linha[1]
 
 
-def test_sem_o_sudo_no_computador_e_sem_autorizacao(
-    casa: Casa, monkeypatch: pytest.MonkeyPatch,
+def test_o_install_que_falhou_diz_o_erro_real_mesmo_sem_autorizacao(
+    casa: Casa, tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(va.shutil, "which", lambda _n: None)
+    _sudo_de_mentira(casa, tmp_path / "bin", aceita="nunca")
+    casa.pulou.touch()
+    casa.quebra.touch()
+    casa.anotar("a..b")
+    _rodar_a_vigia(casa)
+    texto = casa.nota.read_text(encoding="utf-8")
+    assert texto == "a..b\nmotivo: o install saiu com o código 7\n", texto
+    assert va.SEM_AUTORIZACAO not in texto
+
+
+def test_o_install_sem_passo_de_root_pulado_nao_deixa_nota_sem_autorizacao(
+    casa: Casa, tmp_path: Path,
+) -> None:
+    _sudo_de_mentira(casa, tmp_path / "bin", aceita="nunca")
     casa.anotar("a..b")
     _rodar_a_vigia(casa)
     assert casa.rodadas() == ["--yes"]
-    assert casa.chamadas_do_sudo() == []
-    assert va.SEM_AUTORIZACAO in casa.nota.read_text(encoding="utf-8")
+    assert not casa.nota.exists()
+    assert va.pendencia_do_install() is None
 
 
-def test_o_askpass_de_quem_instala_vale_como_autorizacao(
-    casa: Casa, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _sudo_de_mentira(casa, tmp_path / "bin", aceita="'-A -v'")
-    monkeypatch.setenv("SUDO_ASKPASS", str(tmp_path / "askpass"))
+def test_o_pulo_de_um_install_antigo_nao_vale_para_o_install_de_agora(casa: Casa) -> None:
+    velho = state_dir(ensure=True) / va.PULOS_DE_ROOT_DO_INSTALL
+    velho.write_text("sudo recusado — passo de ontem\n", encoding="utf-8")
     casa.anotar("a..b")
     _rodar_a_vigia(casa)
-    assert casa.chamadas_do_sudo() == ["-n true", "-A -v"]
     assert not casa.nota.exists()
+
+
+def _o_install_de_verdade(corpo: str, home: Path, *, ensaio: bool = False) -> str:
+    fonte = (RAIZ / "install.sh").read_text(encoding="utf-8")
+    inicio = fonte.index("_PULOS_DE_ROOT=\"\"\n_anotar_o_pulo_de_root()")
+    fim = fonte.index("die()", inicio)
+    comeco = fonte.index('if [[ "${DRY_RUN:-0}" -eq 0 ]]; then\n    _PULOS_DE_ROOT=')
+    fim_do_comeco = fonte.index("\nfi\n", comeco) + 4
+    final = next(
+        linha for linha in fonte.splitlines()
+        if linha.startswith('[[ -z "${_PULOS_DE_ROOT}"'))
+    roteiro = (f"DRY_RUN={1 if ensaio else 0}\n{fonte[inicio:fim]}\n{fonte[comeco:fim_do_comeco]}\n"
+               f"{corpo}\n{final}\n")
+    ambiente = {"PATH": os.environ["PATH"], "HOME": str(home),
+                "XDG_STATE_HOME": str(home / "estado")}
+    return subprocess.run(["bash", "-c", roteiro], env=ambiente, capture_output=True, text=True,
+                          check=True, timeout=20).stdout
+
+
+def _os_pulos(home: Path) -> Path:
+    return home / "estado" / "hefesto-dualsense4unix" / va.PULOS_DE_ROOT_DO_INSTALL
+
+
+@pytest.mark.parametrize("aviso", [
+    "sudo recusado — passo do portal da casa pulado (re-execute ./install.sh)",
+    "sudo ausente — não consigo instalar pacote",
+    "sudo indisponível/recusado — a economia de energia do Wi-Fi NÃO foi desligada; re-execute:",
+    "sem o comando sudo: config do BlueZ e modprobe.d do btusb NÃO aplicados",
+])
+def test_o_install_grava_cada_passo_de_root_que_pulou(tmp_path: Path, aviso: str) -> None:
+    _o_install_de_verdade(f'warn "{aviso}"\nwarn "um aviso qualquer"', tmp_path)
+    assert _os_pulos(tmp_path).read_text(encoding="utf-8") == f"{aviso}\n"
+
+
+def test_o_install_que_nao_pulou_nada_nao_deixa_o_arquivo(tmp_path: Path) -> None:
+    _o_install_de_verdade('warn "o apt não leu a fonte — rode: sudo apt update"', tmp_path)
+    assert not _os_pulos(tmp_path).exists()
+
+
+def test_o_ensaio_nao_escreve_o_arquivo_dos_pulos(tmp_path: Path) -> None:
+    _o_install_de_verdade('warn "sudo recusado — passo pulado"', tmp_path, ensaio=True)
+    assert not (tmp_path / "estado").exists()
+
+
+def test_cada_pulo_por_sudo_do_install_cai_na_lista(tmp_path: Path) -> None:
+    """Todo aviso de passo de root pulado diz uma das quatro frases que o install anota."""
+    import re
+
+    frases = ("sudo recusado", "sudo ausente", "sudo indisponível", "sem o comando sudo")
+    avisos = []
+    for caminho in (RAIZ / "install.sh", *sorted((RAIZ / "scripts/lib").glob("*.sh"))):
+        for linha in caminho.read_text(encoding="utf-8").splitlines():
+            achado = re.search(r'warn "([^"]*)"', linha)
+            if achado and re.search(r"sudo (recusado|ausente|indisponível)|sem o comando sudo",
+                                    achado.group(1)):
+                avisos.append(achado.group(1))
+    assert len(avisos) > 40, "a régua perdeu os avisos de sudo do install"
+    fora = [a for a in avisos if not any(f in a for f in frases)]
+    assert fora == []
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="o install de root sai antes de pedir sudo")
+def test_o_askpass_do_sudo_conf_vale_sem_a_variavel(
+    casa: Casa, tmp_path: Path,
+) -> None:
+    """Sem ``SUDO_ASKPASS`` no ambiente, o install tenta ``sudo -A -v`` (o askpass que o
+    ``sudo.conf`` declara) antes de pedir a senha."""
+    _sudo_de_mentira(casa, tmp_path / "bin", aceita="'-A -v'")
+    fonte = (RAIZ / "install.sh").read_text(encoding="utf-8")
+    inicio = fonte.index("acquire_sudo() {")
+    fim = fonte.index("_cleanup_sudo_keepalive() {", inicio)
+    roteiro = ("DRY_RUN=0\n_NEEDS_SUDO=1\n_start_sudo_keepalive() { echo KEEPALIVE; }\n"
+               "warn() { echo \"AVISO $*\"; }\n"
+               f"{fonte[inicio:fim]}\nacquire_sudo\n")
+    ambiente = {"PATH": f"{tmp_path / 'bin'}:{os.environ['PATH']}"}
+    feito = subprocess.run(["bash", "-c", roteiro], env=ambiente, capture_output=True, text=True,
+                           timeout=20, check=True, stdin=subprocess.DEVNULL)
+    assert feito.stdout.strip() == "KEEPALIVE", feito.stdout
+    assert casa.chamadas_do_sudo() == ["-n true", "-A -v"]
 
 
 def test_o_install_nunca_leva_sudo_na_frente_nem_recebe_senha(casa: Casa) -> None:
     casa.anotar("a..b")
     _rodar_a_vigia(casa)
     assert casa.rodadas() == ["--yes"]
-    assert casa.chamadas_do_sudo() == ["-n true"]
+    assert casa.chamadas_do_sudo() == []
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/versao_ao_abrir.py").read_text(
         encoding="utf-8")
     assert '"-S"' not in fonte

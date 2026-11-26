@@ -34,6 +34,7 @@ RAMO = "dev"
 MARCA_DE_VOO = "hefesto-em-voo"
 ANOTACAO_DO_INSTALL = "install-pendente"
 ESCOLHAS_DO_INSTALL = "install-escolhas"
+PULOS_DE_ROOT_DO_INSTALL = "install-pulou-root"
 TETO_DO_GIT_S = 15.0
 TETO_DO_INSTALL_S = 3600.0
 FOLGA_DO_FIM_DO_INSTALL_S = 60.0
@@ -496,23 +497,18 @@ def _encerrar_o_install(processo: subprocess.Popen[str]) -> None:
     _encerrar(processo)
 
 
-def _sai_bem(*comando: str) -> bool:
-    try:
-        return subprocess.run(
-            comando, stdin=subprocess.DEVNULL, capture_output=True, check=False,
-            timeout=TETO_DO_GIT_S,
-        ).returncode == 0
-    except (OSError, subprocess.TimeoutExpired):
-        return False
+def _pulos_de_root() -> Path:
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    return state_dir() / PULOS_DE_ROOT_DO_INSTALL
 
 
-def _ha_autorizacao() -> bool:
-    """As duas portas do install que não pedem digitar nada: a credencial em cache e o askpass."""
-    if shutil.which("sudo") is None:
-        return False
-    if _sai_bem("sudo", "-n", "true"):
-        return True
-    return bool(os.environ.get("SUDO_ASKPASS")) and _sai_bem("sudo", "-A", "-v")
+def _o_install_pulou_o_root() -> bool:
+    """O ``install.sh`` é o único que sabe se um passo de administrador ficou por fazer: ele grava
+    cada pulo no state e apaga o arquivo se não pulou nenhum."""
+    with contextlib.suppress(OSError, ValueError):
+        return bool(_pulos_de_root().read_text(encoding="utf-8").strip())
+    return False
 
 
 def _escolhas_do_install() -> list[str]:
@@ -547,11 +543,16 @@ def _rodar_o_install(raiz: Path) -> str:
 
 
 def _instalar(raiz: Path, rodar: Callable[[Path], str]) -> None:
-    """Roda o install e devolve a nota, que ele apaga ao fim, se algo ficou por fazer."""
+    """Roda o install e devolve a nota, que ele apaga ao fim, se algo ficou por fazer.
+
+    O motivo é o erro real quando o install falhou, e só sem erro e com passo de root pulado é a
+    falta de autorização."""
     faixas = _faixas_da_nota()
-    autorizado = _ha_autorizacao()
-    saida = rodar(raiz)
-    motivo = saida if autorizado else SEM_AUTORIZACAO
+    with contextlib.suppress(OSError):
+        _pulos_de_root().unlink(missing_ok=True)
+    motivo = rodar(raiz)
+    if not motivo and _o_install_pulou_o_root():
+        motivo = SEM_AUTORIZACAO
     if not motivo:
         _dizer("o install terminou")
         return

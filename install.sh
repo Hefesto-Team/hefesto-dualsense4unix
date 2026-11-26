@@ -370,11 +370,25 @@ esac
 
 step()  { printf '\n[%s] %s\n' "$1" "$2"; }
 ok()    { printf '      ok\n'; }
-warn()  { printf '      aviso: %s\n' "$*"; }
+_PULOS_DE_ROOT=""
+_anotar_o_pulo_de_root() {
+    [[ -n "${_PULOS_DE_ROOT}" ]] || return 0
+    case "$1" in
+        *"sudo recusado"*|*"sudo ausente"*|*"sudo indisponível"*|*"sem o comando sudo"*)
+            printf '%s\n' "$1" >> "${_PULOS_DE_ROOT}" 2>/dev/null || true ;;
+    esac
+    return 0
+}
+warn()  { printf '      aviso: %s\n' "$*"; _anotar_o_pulo_de_root "$*"; }
 die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
 
 if [[ "$(id -u)" -eq 0 && "${DRY_RUN}" -eq 0 && "${HEFESTO_INSTALL_EM_CONTEINER:-0}" != 1 ]]; then
     die "não rode com sudo na frente: o HOME passaria a ser o do root, e nada chegaria à sessão de quem usa o computador. Rode ./install.sh sem sudo; ele pede a senha de administrador uma vez. Nada foi instalado."
+fi
+
+if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
+    _PULOS_DE_ROOT="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pulou-root"
+    { mkdir -p "${_PULOS_DE_ROOT%/*}" && : > "${_PULOS_DE_ROOT}"; } 2>/dev/null || _PULOS_DE_ROOT=""
 fi
 
 _sem_systemd_logind() {
@@ -998,7 +1012,7 @@ acquire_sudo() {
         return 0
     fi
     [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0
-    if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -v 2>/dev/null; then
+    if sudo -A -v 2>/dev/null; then
         _start_sudo_keepalive
         return 0
     fi
@@ -4078,6 +4092,7 @@ elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '─────────────────────────────────────────\n'
 fi
 [[ "${DRY_RUN:-0}" -eq 1 ]] || rm -f "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pendente"
+[[ -z "${_PULOS_DE_ROOT}" || -s "${_PULOS_DE_ROOT}" ]] || rm -f "${_PULOS_DE_ROOT}"
 [[ "${DRY_RUN:-0}" -ne 1 ]] || _faria "guardar as flags desta linha em ${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas (o install do fecho da janela repete as mesmas)"
 [[ "${DRY_RUN:-0}" -eq 1 ]] || { mkdir -p "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix" && printf '%s\n' "--format=${FORMAT:-native}" "$@" > "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas"; } 2>/dev/null || true
 dizer_as_regras_do_sudo
