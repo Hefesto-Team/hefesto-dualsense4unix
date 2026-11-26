@@ -17,11 +17,12 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from hefesto_dualsense4unix.integrations.diario_do_radio import PASTA_DO_ROOT
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
 
 logger = get_logger(__name__)
 
@@ -56,6 +57,14 @@ def _rodar(argv: Sequence[str]) -> str | None:
     return feito.stdout if feito.returncode == 0 else None
 
 
+def _pasta_dos_assets() -> Path:
+    """A pasta `assets/` desta instalação: a do clone ou a do `share/` que traz os BASELINE."""
+    achado = encontrar_arquivo_do_repo("assets/bluez-backport/BASELINE")
+    if achado is not None:
+        return achado.parent.parent
+    return Path(__file__).resolve().parents[3] / "assets"
+
+
 @dataclass(frozen=True)
 class Maquina:
     """Onde as perguntas leem. O lar de mentira desvia cada raiz e o executor dos comandos."""
@@ -65,7 +74,7 @@ class Maquina:
     preferencias_do_apt: Path = Path("/etc/apt/preferences.d")
     legivel: Path | None = None
     raiz: Path | None = None
-    assets: Path = Path(__file__).resolve().parents[3] / "assets"
+    assets: Path = field(default_factory=lambda: _pasta_dos_assets())
     cache: Path | None = None
     kernel: str = ""
     comando: Callable[[Sequence[str]], str | None] = _rodar

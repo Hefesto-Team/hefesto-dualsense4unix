@@ -66,6 +66,7 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
     CAMINHO_XBOX,
     caminho_resolvido,
 )
+from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
 
 EVENTO = "canal_sem_imu"
 
@@ -73,8 +74,11 @@ MASCARA_QUE_PROMETE = ESCADA[0].ponte.mascara
 
 PONTE_DAS_DEZ = ESCADA[0].ponte.chave
 
-_RAIZ = pathlib.Path(__file__).resolve().parents[3]
-MAPA = _RAIZ / "docs" / "data" / "mapa-controles.csv"
+CAMINHO_DO_MAPA = "docs/data/mapa-controles.csv"
+MAPA = (
+    encontrar_arquivo_do_repo(CAMINHO_DO_MAPA)
+    or pathlib.Path(__file__).resolve().parents[3] / CAMINHO_DO_MAPA
+)
 
 DEZ_LINHAS_CONGELADAS: tuple[str, ...] = (
     "audio.jack.deteccao",

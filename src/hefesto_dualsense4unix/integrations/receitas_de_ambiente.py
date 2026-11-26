@@ -25,8 +25,25 @@ except ImportError:  # pragma: no cover
     from api_de_entrada import escolher_executavel  # type: ignore[no-redef]
 
 _RAIZ = Path(__file__).resolve().parents[3]
-TABELA = _RAIZ / "docs" / "data" / "receitas-de-ambiente.csv"
-PINO_DA_PECA = _RAIZ / "assets" / "gdk-runtime" / "pino.txt"
+
+
+def _do_repo(relpath: str) -> Path:
+    """Onde ESTA instalação pôs o arquivo: o clone, o `share/` do prefixo, o Flatpak ou o usuário.
+
+    Sem o pacote do produto à vista (o módulo solto, como o prontuário o usa) ou sem o arquivo em
+    base nenhuma, devolve o caminho do clone, que não se abre e cai no ramo do arquivo ausente.
+    """
+    try:
+        from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+    except ImportError:  # pragma: no cover
+        return _RAIZ / relpath
+    return encontrar_arquivo_do_repo(relpath) or _RAIZ / relpath
+
+
+CAMINHO_DA_TABELA = "docs/data/receitas-de-ambiente.csv"
+CAMINHO_DO_PINO = "assets/gdk-runtime/pino.txt"
+TABELA = _do_repo(CAMINHO_DA_TABELA)
+PINO_DA_PECA = _do_repo(CAMINHO_DO_PINO)
 
 VARIAVEIS_DO_WRAPPER = frozenset({"WINEDLLOVERRIDES", "WINEDLLPATH"})
 
@@ -262,6 +279,40 @@ def carregar_tabela(caminho: Path | None = None) -> tuple[Receita, ...]:
     return tuple(achadas)
 
 
+def linhas_do_doctor(
+    tabela: Path | None = None, pino: Path | None = None
+) -> list[tuple[str, str]]:
+    """O que o `hefesto doctor` diz das receitas de ambiente desta instalação.
+
+    Tabela ou pino ausentes dizem que não vieram, nunca o silêncio de «nenhum jogo precisa».
+    """
+    alvo = tabela if tabela is not None else TABELA
+    peca = pino if pino is not None else PINO_DA_PECA
+    linhas: list[tuple[str, str]] = []
+    if not alvo.is_file():
+        linhas.append((
+            "[WARN]",
+            "as receitas de ambiente não vieram nesta instalação: o jogo que só abre com a "
+            f"variável da receita não a recebe ({alvo.name}); reinstale o Hefesto",
+        ))
+    else:
+        quantas = len(carregar_tabela(alvo))
+        if quantas:
+            linhas.append(("[ OK ]", f"receitas de ambiente: {quantas} presentes em {alvo}"))
+        else:
+            linhas.append((
+                "[WARN]",
+                f"as receitas de ambiente não se leem ({alvo}): nenhuma receita válida na tabela",
+            ))
+    if _sha256_do_pino(peca) is None:
+        linhas.append((
+            "[WARN]",
+            "o pino da peça GDK não veio nesta instalação: a peça do Hefesto não se confere "
+            f"({peca.name})",
+        ))
+    return linhas
+
+
 def _nomes_ao_lado_do_executavel(raiz: Path) -> frozenset[str]:
     """Os arquivos (minúsculos) da pasta do executável; vazio quando nenhum se lê.
 
@@ -382,6 +433,8 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
 
 
 __all__ = [
+    "CAMINHO_DA_TABELA",
+    "CAMINHO_DO_PINO",
     "CARREGADORES_DE_MOD",
     "MODOS_DO_OVERRIDE",
     "NOME_DA_PECA_DO_HEFESTO",
@@ -406,6 +459,7 @@ __all__ = [
     "gameinput_do_hefesto_instalado",
     "jogo_gdk_sem_ajudante",
     "ler_jogo",
+    "linhas_do_doctor",
     "override_do_carregador",
     "override_valido",
     "pasta_da_peca",

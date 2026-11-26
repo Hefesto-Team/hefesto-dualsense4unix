@@ -604,6 +604,15 @@ def _print_bloco_proton_fixado() -> int:
     return _gravidade_das_linhas(linhas)
 
 
+def _print_bloco_receitas() -> int:
+    """As receitas de ambiente dos jogos e o pino da peça GDK. Devolve a gravidade do bloco."""
+    from hefesto_dualsense4unix.integrations import receitas_de_ambiente
+
+    linhas = receitas_de_ambiente.linhas_do_doctor()
+    _bloco("receitas de ambiente dos jogos", linhas, soft_wrap=True, highlight=False)
+    return _gravidade_das_linhas(linhas)
+
+
 def _print_bloco_entrada() -> int:
     """A permissão de ler o teclado e o pedal do «Usar como botões de». Devolve a gravidade."""
     from hefesto_dualsense4unix.core.system_check import permissao_de_ler_a_entrada
@@ -772,6 +781,8 @@ def _rodar_o_doctor(
     rc = max(rc, _print_bloco_contratos())
 
     rc = max(rc, _print_bloco_proton_fixado())
+
+    rc = max(rc, _print_bloco_receitas())
 
     rc = max(rc, _print_bloco_entrada())
 
