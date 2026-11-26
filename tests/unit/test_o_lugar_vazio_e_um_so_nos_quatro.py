@@ -249,7 +249,7 @@ console.log(JSON.stringify(fora));
 def test_o_rotulo_igual_com_o_ponto_por_dentro_e_reescrito_uma_vez() -> None:
     """`P3 <span class="pt">•</span> Desconectado` vira texto uma vez, e só."""
     roteiro = _DOM_DO_ESCREVER.replace("__TRECHO__", _trecho(
-        "  function escrever(el, v){", "  function achar(raiz, chave){"))
+        "  function campo_em_edicao(bloco){", "  function achar(raiz, chave){"))
     casos = [
         {"texto": "P3 • Desconectado", "filhos": ["pt"]},
         {"texto": "USB • Navega o PC", "filhos": ["bolinha", "pt"]},

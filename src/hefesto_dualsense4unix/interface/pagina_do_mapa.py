@@ -6661,7 +6661,7 @@ EDICOES_DO_ARRANJO_PELA_RESPOSTA: tuple[Edicao, ...] = (
         porque=(
             '25/11/2026, O-ARRANJO-JULGA-PELO-QUE-ESTA-MAQUINA-LEU-E-RESPONDEU-01 (de'
             'senho A): a linha do Wi-Fi no hub usa o caminho lido e perde os números '
-            'da máquina de teste; os caminhos vão escapados.'
+            'cravados de uma leitura só; os caminhos vão escapados.'
         ),
     ),
     Edicao(
