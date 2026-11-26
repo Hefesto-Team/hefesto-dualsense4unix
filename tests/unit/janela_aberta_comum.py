@@ -521,14 +521,21 @@ def _a_escondida_nao_trabalha(fora: Any) -> None:
         "as ondas seguiram querendo nós com a janela escondida")
 
 
-def _o_coracao_bate_escondido(fora: Any) -> None:
+def _o_teste_para_escondido(fora: Any) -> None:
+    """Esconder larga o teste de motor: o coração bateu antes e não bate com a janela escondida.
+
+    O-TESTE-DE-VIBRACAO-PARA-QUANDO-A-JANELA-SE-ESCONDE-01 trocou a régua que cobrava o batimento
+    escondido («esconder não é largar», de 25/09/2026): o teste que ninguém vê não renova o teto."""
     _sem_fome(fora, "escondida")
     de, ate = _janela_escondida(fora)
+    antes = [x for x in fora.ticks if x.t < fora.marcos["esconde"]]
+    assert antes and antes[-1].batidas >= 1, (
+        "o coração nem bateu com a janela à vista: a régua não provaria nada")
     dentro = _entre(fora, de, ate)
     batidas = dentro[-1].batidas - dentro[0].batidas
-    assert batidas >= 2, (
-        f"{batidas} batida(s) do coração em {ate - de:.1f} s com a janela "
-        "escondida e um teste de motor em curso")
+    assert batidas == 0, (
+        f"{batidas} batida(s) do coração em {ate - de:.1f} s com a janela escondida: "
+        "o teste de motor seguiu renovando depois de esconder")
 
 
 def _com_carga(roteiro: Any, *, buraco_s: float = 0.0, lento_s: float = 0.0) -> Any:

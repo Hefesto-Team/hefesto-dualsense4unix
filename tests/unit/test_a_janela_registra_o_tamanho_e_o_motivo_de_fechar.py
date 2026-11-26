@@ -444,8 +444,10 @@ def test_a_janela_escondida_diz_quanto_tempo_ficou(
     estado = SimpleNamespace(
         pausar=lambda: None, retomar=lambda: None, ultimo=lambda: (None, None, 7)
     )
-    piloto = SimpleNamespace(_escondida=False, _estado_vivo=estado, _pintada=None)
+    piloto = SimpleNamespace(
+        _escondida=False, _estado_vivo=estado, _pintada=None, _mesa_de_agora=[])
     monkeypatch.setattr(hv, "_soltar_as_ondas", lambda: None)
+    monkeypatch.setattr(hv.pacotes, "largar_o_que_as_abas_seguram", lambda *a, **k: None)
     hv.Piloto._a_janela_mudou(piloto, True)  # type: ignore[arg-type]
     piloto._escondida_desde -= 12
     hv.Piloto._a_janela_mudou(piloto, False)  # type: ignore[arg-type]

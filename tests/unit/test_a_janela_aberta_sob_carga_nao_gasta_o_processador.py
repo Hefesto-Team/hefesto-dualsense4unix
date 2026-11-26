@@ -25,7 +25,7 @@ from tests.unit.janela_aberta_comum import (
     _entre,
     _janela_escondida,
     _nominal_s,
-    _o_coracao_bate_escondido,
+    _o_teste_para_escondido,
     _roteiro_esconde_e_volta,
     _roteiro_so_o_giro,
     _so_o_giro_vai,
@@ -55,10 +55,10 @@ def sob_carga(request: pytest.FixtureRequest,
 
 
 def test_r1_sob_carga_a_janela_escondida_mede_o_mesmo(sob_carga: Any) -> None:
-    """Com o laço do GTK parado ou lento, a R1 e o coração continuam verdes."""
+    """Com o laço do GTK parado ou lento, a R1 e a largada continuam verdes."""
     fora = sob_carga
     _a_escondida_nao_trabalha(fora)
-    _o_coracao_bate_escondido(fora)
+    _o_teste_para_escondido(fora)
     de, _ate = _janela_escondida(fora)
     relogio = _entre(fora, de, fora.marcos["esconde"] + _nominal_s(TIQUES_POR_FASE, fora))
     assert len(relogio) < 25, (

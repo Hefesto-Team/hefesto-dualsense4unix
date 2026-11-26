@@ -18,7 +18,7 @@ from tests.unit.janela_aberta_comum import (
     _a_aba_quieta_nao_e_muda,
     _a_escondida_nao_trabalha,
     _a_volta_leva_a_carga_inteira,
-    _o_coracao_bate_escondido,
+    _o_teste_para_escondido,
     _parada_pinta_so_as_cargas_inteiras,
     _trocar_de_aba_nao_e_esconder,
     cenarios_da,
@@ -48,9 +48,9 @@ def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> N
     _a_escondida_nao_trabalha(esconde_e_volta)
 
 
-def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
-    """Esconder não é largar: o teste de motor em curso segue batendo."""
-    _o_coracao_bate_escondido(esconde_e_volta)
+def test_r1_esconder_larga_o_teste_de_motor(esconde_e_volta: Any) -> None:
+    """Esconder larga o teste de motor em curso: o coração não bate escondido."""
+    _o_teste_para_escondido(esconde_e_volta)
 
 
 def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any) -> None:
