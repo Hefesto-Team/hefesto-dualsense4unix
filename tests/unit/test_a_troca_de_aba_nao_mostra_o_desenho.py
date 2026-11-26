@@ -1,4 +1,14 @@
-"""A troca de aba não mostra o desenho antes da pintura — 22/09/2026."""
+"""A troca de aba não mostra o desenho antes da pintura — 22/09/2026.
+
+Sprint AS-JANELAS-DA-EXPERIMENTAL-NAO-ABREM-COM-O-EXEMPLO-01 (25/11/2026): a folha escondia só o
+``.tn-corpo`` de três janelas da 07; ``#mod-janela`` e os títulos das outras seguiam à mostra
+(«Configurar · Minha extensão», o «Parar tudo» de exemplo). Agora uma regra por seletor esconde a
+``.tela-nova`` inteira até o carimbo, e o ``base-comum.js`` não prende o Tab na janela escondida.
+
+MORDIDA: tirar ``#mod-janela`` da regra (a lista de três de antes) reprova
+``test_toda_janela_que_recebe_bloco_nasce_escondida_inteira``; tirar o ``aparece`` do ``aberta`` do
+``base-comum.js`` reprova ``test_a_janela_escondida_nao_prende_o_teclado_e_leva_o_foco``.
+"""
 
 from __future__ import annotations
 
@@ -60,10 +70,82 @@ def test_o_aviso_diz_que_espera_e_a_pintura_o_apaga() -> None:
     assert f"remove('{CLASSE_DA_ESPERA}', '{CLASSE_SEM_RESPOSTA}')" in _corpo_do_pintar()
 
 
-@pytest.mark.parametrize("janela", ["#lanc-escolha", "#lanc-janela", "#imp-janela"])
-def test_a_janela_so_mostra_a_lista_que_a_pintura_trouxe(janela: str) -> None:
-    assert f"{janela}:not([data-hef-real]) .tn-corpo" in FOLHA_DA_CASA
+def test_a_janela_so_aparece_com_o_carimbo_que_a_pintura_poe() -> None:
+    """Uma regra só, por seletor e não por lista de janelas: a ``.tela-nova`` cuja caixa recebe
+    bloco (a que tem ``id``) fica escondida inteira, título incluído, até o carimbo."""
+    assert ".tela-nova:has(> .tn-cx[id]:not([data-hef-real])){visibility:hidden !important}" in (
+        FOLHA_DA_CASA)
+    assert ".tn-corpo{visibility:hidden" not in FOLHA_DA_CASA
     assert "alvo.dataset.hefReal = '1'" in _corpo_do_pintar()
+
+
+_PUBLICADA = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+              / "paginas" / "07-lancadores.html")  # (noqa-acento)
+_BASE_DA_ARVORE = (PILOTO.parent / "base-comum.js").read_text(encoding="utf-8")
+_JANELAS_COM_BLOCO = ("lanc-escolha", "imp-janela", "lanc-janela", "mod-janela")
+
+
+@pytest.fixture
+def _pagina_com_a_folha(tmp_path: pathlib.Path) -> Any:
+    """A 07 publicada, com a folha da casa e o ``base-comum.js`` desta árvore, num Chrome."""
+    chrome = pathlib.Path("/usr/bin/google-chrome")
+    if not chrome.exists():
+        pytest.skip("sem o Chrome do sistema: a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    html = _PUBLICADA.read_text(encoding="utf-8")
+    achou = re.search(r'(<script id="base-comum">)(.*?)(</script>)', html, re.S)
+    assert achou, "a 07 publicada não traz o `base-comum`"
+    html = html[:achou.start(2)] + _BASE_DA_ARVORE + html[achou.end(2):]
+    html = html.replace("</head>", f"<style>{FOLHA_DA_CASA}</style></head>", 1)
+    arq = tmp_path / "07.html"
+    arq.write_text(html, encoding="utf-8")
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(executable_path=str(chrome), args=["--no-sandbox"])
+        try:
+            pg = nav.new_page(viewport={"width": 1500, "height": 900})
+            pg.goto(arq.as_uri())
+            pg.wait_for_timeout(300)
+            yield pg
+        finally:
+            nav.close()
+
+
+_VISIVEL = ("(sel) => getComputedStyle(document.querySelector(sel)).visibility")
+
+
+def test_toda_janela_que_recebe_bloco_nasce_escondida_inteira(_pagina_com_a_folha: Any) -> None:
+    """Aberta pelo ``href`` antes da resposta, a janela não mostra título nem botão de exemplo
+    (a 07 publicada traz «Configurar · Minha extensão» e o «Parar tudo»); com o carimbo, aparece.
+    ``#novo-lancador``, estático, não recebe bloco e abre como sempre."""
+    pg = _pagina_com_a_folha
+    ids = pg.evaluate(
+        "() => [...document.querySelectorAll('.tela-nova > .tn-cx[id]')].map(e => e.id)")
+    assert set(_JANELAS_COM_BLOCO) <= set(ids), f"a 07 perdeu janela com bloco: {ids}"
+    for ident in ids:
+        pai = pg.evaluate("(i) => document.getElementById(i).parentElement.id", ident)
+        pg.evaluate("(p) => { location.hash = p; }", pai)
+        titulo = f"#{pai} .tn-tit"
+        assert pg.evaluate(_VISIVEL, titulo) == "hidden", f"{ident}: o título de exemplo aparece"
+        assert pg.evaluate(_VISIVEL, f"#{ident}") == "hidden", f"{ident}: a caixa aparece cedo"
+        pg.evaluate("(i) => { document.getElementById(i).dataset.hefReal = '1'; }", ident)
+        assert pg.evaluate(_VISIVEL, titulo) == "visible", f"{ident}: o carimbo não a mostra"
+        pg.evaluate("(i) => { delete document.getElementById(i).dataset.hefReal; }", ident)
+    pg.evaluate("() => { location.hash = 'novo-lancador'; }")
+    assert pg.evaluate(_VISIVEL, "#novo-lancador .tn-tit") == "visible"
+
+
+def test_a_janela_escondida_nao_prende_o_teclado_e_leva_o_foco(
+        _pagina_com_a_folha: Any) -> None:
+    """Sem resposta, o Tab segue pela página; com o carimbo, o foco entra na janela."""
+    pg = _pagina_com_a_folha
+    pg.evaluate("() => { document.activeElement.blur(); location.hash = 'lanc-conf'; }")
+    pg.wait_for_timeout(100)
+    pg.keyboard.press("Tab")
+    assert pg.evaluate("() => document.activeElement !== document.body"), "o Tab ficou preso"
+    pg.evaluate("() => { document.getElementById('lanc-janela').dataset.hefReal = '1'; }")
+    pg.wait_for_function(
+        "() => document.getElementById('lanc-janela').contains(document.activeElement)")
 
 
 def _corpo_do_pintar() -> str:

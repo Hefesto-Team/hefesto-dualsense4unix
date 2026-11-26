@@ -129,7 +129,7 @@
   prepararTelas();
   const PARADAS = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
   const paradasDe = caixa => Array.from(caixa.querySelectorAll(PARADAS)).filter(aparece);
-  const aberta = () => document.querySelector('.tela-nova:target');
+  const aberta = () => { const t = document.querySelector('.tela-nova:target'); return t && aparece(t) ? t : null; };
   let quemAbriu = null, ultimo = null, estavaAberta = false;
   document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
   document.addEventListener('click', e => {
@@ -154,6 +154,7 @@
     estavaAberta = !!tela;
   };
   addEventListener('hashchange', aoMudar);
+  new MutationObserver(aoMudar).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['data-hef-real']});
   addEventListener('DOMContentLoaded', aoMudar);
   addEventListener('load', aoMudar);
   aoMudar();
