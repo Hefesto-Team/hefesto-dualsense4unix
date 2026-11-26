@@ -56,7 +56,8 @@ def _linhas(monkeypatch: pytest.MonkeyPatch, caidas: tuple[str, ...]) -> list[di
 
 
 def test_com_as_curas_de_pe_a_linha_nao_existe(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Quatro curas de pé: os seis temas, nenhuma linha a mais, nenhum aviso no Serviço."""
+    """D-2611-A-LINHA-DAS-CURAS-SO-EXISTE-COM-UMA-CURA-CAIDA: quatro curas de pé dão os seis
+    temas, nenhuma linha a mais, nenhum aviso no Serviço."""
     linhas = _linhas(monkeypatch, ())
     assert [x["tema"] for x in linhas] == list(a09.TEMAS)
     assert all(x["cls"] != "aviso" for x in linhas)

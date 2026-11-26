@@ -163,7 +163,9 @@ def _quadro_topo_da_09() -> str:
 def test_as_notas_do_status_saem_em_tercos() -> None:
     """S1: o Status e o exame numa lista só, por igual nas três colunas, na ordem.
 
-    Prova da D-1610-AS-NOTAS-DO-STATUS-EM-TERCOS.
+    Prova da D-1610-AS-NOTAS-DO-STATUS-EM-TERCOS e da
+    D-2611-A-SETIMA-LINHA-DO-STATUS-SEGUE-OS-TERCOS (a linha da cura desfeita entra na mesma
+    conta: sete linhas viram 3, 2 e 2).
     """
     import pacotes
     from pacotes import a09_sistema as a09
