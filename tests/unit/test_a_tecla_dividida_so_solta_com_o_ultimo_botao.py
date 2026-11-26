@@ -95,12 +95,12 @@ def test_o_l1_tocado_com_o_r1_de_pe_nao_derruba_o_alt(fabrica: _Fabrica) -> None
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.dispatch(frozenset({"r1"}))
     assert 0 not in _de(g, "KEY_LEFTALT"), "o Alt caiu com o R1 de pé"
-    assert 0 not in _de(g, "KEY_TAB"), "o Tab caiu com o R1 de pé"
+    assert _de(g, "KEY_TAB") == [1, 0, 1], "o Tab não foi retocado pelo L1 com o R1 de pé"
     assert _de(g, "KEY_LEFTSHIFT") == [1, 0]
 
     dev.dispatch(frozenset())
     assert _de(g, "KEY_LEFTALT") == [1, 0]
-    assert _de(g, "KEY_TAB") == [1, 0]
+    assert _de(g, "KEY_TAB") == [1, 0, 1, 0]
     _balanceado(g)
 
 
@@ -110,7 +110,7 @@ def test_o_r1_solta_primeiro_e_o_l1_segue_segurando(fabrica: _Fabrica) -> None:
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.dispatch(frozenset({"l1"}))
     assert _de(g, "KEY_LEFTALT") == [1]
-    assert _de(g, "KEY_TAB") == [1]
+    assert _de(g, "KEY_TAB") == [1, 0, 1]
     dev.dispatch(frozenset())
     _balanceado(g)
 
@@ -119,8 +119,9 @@ def test_set_bindings_com_os_dois_apertados_solta_cada_tecla_uma_vez(fabrica: _F
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.set_bindings(dict(DEFAULT_BUTTON_BINDINGS))
-    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"):
+    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT"):
         assert _de(g, tecla) == [1, 0], tecla
+    assert _de(g, "KEY_TAB") == [1, 0, 1, 0]
     assert dev._quem_segura == {}
     dev.dispatch(frozenset())
     _balanceado(g)
@@ -130,8 +131,9 @@ def test_parar_solta_cada_tecla_uma_vez(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.stop()
-    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"):
+    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT"):
         assert _de(g, tecla) == [1, 0], tecla
+    assert _de(g, "KEY_TAB") == [1, 0, 1, 0]
 
 
 def test_o_teclado_da_tabela_do_jogo_nao_interfere_no_do_desktop(fabrica: _Fabrica) -> None:

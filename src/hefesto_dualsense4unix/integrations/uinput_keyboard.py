@@ -64,6 +64,12 @@ def _teclas_do_teclado() -> tuple[str, ...]:
 SUPPORTED_KEYS: tuple[str, ...] = _teclas_do_teclado()
 
 
+MODIFICADORES: frozenset[str] = frozenset({
+    "KEY_LEFTALT", "KEY_RIGHTALT", "KEY_LEFTCTRL", "KEY_RIGHTCTRL",
+    "KEY_LEFTSHIFT", "KEY_RIGHTSHIFT", "KEY_LEFTMETA", "KEY_RIGHTMETA",
+})
+
+
 def tecla_aceita(nome: str) -> bool:
     """O nó emite a tecla `nome`? Vale para `button_actions` e para `key_bindings`."""
     return nome in SUPPORTED_KEYS
@@ -222,6 +228,7 @@ class UinputKeyboardDevice:
         if self._delegate_virtual_tokens(button, seq, phase="press"):
             return
         any_emitted = False
+        final = seq[-1] if len(seq) > 1 and seq[-1] not in MODIFICADORES else None
         for key_name in seq:
             ev = self._evento(key_name)
             if ev is None:
@@ -232,6 +239,10 @@ class UinputKeyboardDevice:
             seguram = self._quem_segura.get(key_name, 0)
             self._quem_segura[key_name] = seguram + 1
             if seguram:
+                if key_name == final:
+                    self._device.emit(ev, 0)
+                    self._device.emit(ev, 1, syn=False)
+                    any_emitted = True
                 continue
             self._device.emit(ev, 1, syn=False)
             any_emitted = True
@@ -335,6 +346,7 @@ class UinputKeyboardDevice:
 __all__ = [
     "CODIGO_MAXIMO_DE_TECLA",
     "DEVICE_NAME",
+    "MODIFICADORES",
     "SUPPORTED_KEYS",
     "UinputKeyboardDevice",
     "tecla_aceita",
