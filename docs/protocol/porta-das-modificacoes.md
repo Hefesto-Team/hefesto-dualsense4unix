@@ -831,7 +831,10 @@ sem abas, fica abaixo das opções:
 - A página roda num `iframe` com `sandbox="allow-scripts"` (origem opaca: sem acesso ao DOM, aos cookies nem ao
   armazenamento do Hefesto) e com a CSP `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';
   img-src data:; font-src data:; media-src data:; form-action 'none'; base-uri 'none'`: sem rede, sem `fetch` e sem
-  arquivo de fora. Script, estilo, imagem e fonte vão dentro do próprio HTML.
+  arquivo de fora. Script, estilo, imagem e fonte vão dentro do próprio HTML. A CSP não cobre a navegação, e a
+  janela (`decidir_a_politica` em `interface/janela.py`) só deixa qualquer quadro ir a `about:srcdoc`, a
+  `about:blank` e aos arquivos da pasta das páginas, pelo caminho resolvido: `location`, `meta refresh`, âncora,
+  formulário, `window.open` e outro `file://` não saem do lugar.
 - A página recebe as cores da casa como variáveis CSS (`--app-bg`, `--panel`, `--elevated`, `--fg`, `--texto-suave`,
   `--texto-mudo`, `--comment`, `--linha`, `--border-sutil`, `--border-forte`, `--sel-bg`, `--purple`, `--pink`,
   `--cyan`, `--green`, `--orange`, `--red`, `--yellow`, `--fundo-da-pagina`) e o tema de agora em

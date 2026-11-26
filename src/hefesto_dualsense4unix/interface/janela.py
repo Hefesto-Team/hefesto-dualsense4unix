@@ -10,6 +10,7 @@ import sys
 import time
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 import gi
 
@@ -127,6 +128,47 @@ def e_pagina_da_casa(resposta: str | None, pasta: pathlib.Path) -> tuple[bool, s
     mora_aqui = (caminho.is_absolute() and caminho.is_file()
                  and caminho.resolve().parent == pasta.resolve())
     return bool(mora_aqui and lida.get("da_casa") is True), titulo
+
+DESTINOS_SEM_ARQUIVO = frozenset({"about:srcdoc", "about:blank"})
+
+
+def destino_da_janela(uri: str | None, pasta: pathlib.Path) -> bool:
+    """A janela navega, em qualquer quadro, só para :data:`DESTINOS_SEM_ARQUIVO` e para os
+    arquivos que existem na ``pasta`` das páginas, comparados pelo caminho resolvido. O resto
+    (http, https, data, blob e qualquer outro ``file://``) fica fora."""
+    if not uri:
+        return False
+    if uri in DESTINOS_SEM_ARQUIVO:
+        return True
+    partes = urlsplit(uri)
+    if partes.scheme != "file" or partes.netloc not in ("", "localhost"):
+        return False
+    try:
+        caminho = pathlib.Path(unquote(partes.path)).resolve()
+        return caminho.is_file() and caminho.parent == pasta.resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
+def decidir_a_politica(decisao: Any, tipo: Any, pasta: pathlib.Path) -> bool:
+    """O ``decide-policy`` da janela: a navegação e a janela nova só para
+    :func:`destino_da_janela`, e a resposta só no recurso principal do quadro de cima ou num
+    destino sem arquivo. Devolve ``True`` quando ignorou (o WebKit não segue)."""
+    tipos = WebKit2.PolicyDecisionType
+    if tipo in (tipos.NAVIGATION_ACTION, tipos.NEW_WINDOW_ACTION):
+        uri = decisao.get_navigation_action().get_request().get_uri()
+        if destino_da_janela(uri, pasta):
+            return False
+    elif tipo == tipos.RESPONSE:
+        principal = getattr(decisao, "is_main_frame_main_resource", None)
+        if principal is None or principal() or decisao.get_request().get_uri() in (
+                DESTINOS_SEM_ARQUIVO):
+            return False
+    else:
+        return False
+    decisao.ignore()
+    return True
+
 
 RECARGAS_SEGUIDAS = 3
 
@@ -834,6 +876,7 @@ class JanelaDaAba:
         self.view.connect("load-changed", self._carregou)
         self.view.connect("size-allocate", self._a_vista_mudou)
         self.view.connect("web-process-terminated", self._morreu_a_pagina)
+        self.view.connect("decide-policy", self._decidir_a_politica)
 
         if not oculta and janela_proibida_na_tela():
             print(
@@ -1239,6 +1282,9 @@ class JanelaDaAba:
 
         pergunta = "document.title" if self.titulo_esperado is not None else PERGUNTA_DA_PAGINA
         self.ponte.perguntar(pergunta, respondeu)
+
+    def _decidir_a_politica(self, _view: Any, decisao: Any, tipo: Any) -> bool:
+        return decidir_a_politica(decisao, tipo, self.arquivo.parent)
 
     def _morreu_a_pagina(self, _view: Any, motivo: Any) -> None:
         """O processo web do WebKit terminou. A janela RECARREGA — e diz."""
