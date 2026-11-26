@@ -24,9 +24,11 @@ prova a chave que o assinou, não a que assina o próximo.
 Com o Secure Boot ligado e a chave inscrita, falta ainda a chave privada para assinar: sem a
 privada o DKMS 3 gera um par novo por cima da pública (desde a 3.0.4) e assina com uma chave
 fora da MOK.
-`--sem-a-chave-privada [<kernelver>]` sai com 0 nesse caso, e por essa resposta o `dkms.conf`
-zera o `AUTOINSTALL`: do DKMS 3.0.4 ao 3.1.6 o build gera o par antes de ler o `--exclusivo`,
-que devolve o padrão que nenhum kernel casa. Nada se constrói, e o que estava instalado fica.
+`--sem-a-chave-privada [<kernelver>]` sai com 0 nesse caso, e o mesmo vale quando falta só o
+certificado (o DKMS gera o par novo por cima da privada inscrita): a saída de erro diz a peça que
+falta, e por essa resposta o `dkms.conf` zera o `AUTOINSTALL`: do DKMS 3.0.4 ao 3.1.6 o build
+gera o par antes de ler o `--exclusivo`, que devolve o padrão que nenhum kernel casa. Nada se
+constrói, e o que estava instalado fica.
 O DKMS só assina (e só gera par) quando o `.config` do kernel traz `CONFIG_MODULE_SIG_HASH=`: o
 kernel cujo `.config` se lê sem essa linha não assina, e a falta da chave privada não pesa nele.
 
@@ -772,22 +774,40 @@ def _kernel_assina(kver: str) -> bool | None:
     return any(linha.startswith("CONFIG_MODULE_SIG_HASH=") for linha in texto.splitlines())
 
 
-def _sem_a_chave_privada(kver: str = "") -> bool:
-    """Secure Boot ligado e a chave privada do DKMS não está onde se lê (ou está vazia).
-
-    O kernel que não assina módulo não pede a chave: o DKMS não assina nem gera par nele.
-    """
-    if not _secure_boot_ligado():
-        return False
-    if kver and _kernel_assina(kver) is False:
-        return False
-    privada = _chave_privada_do_dkms()
-    if privada.startswith("pkcs11:"):
-        return False
+def _vazio_ou_ausente(caminho: str) -> bool:
     try:
-        return Path(privada).stat().st_size == 0
+        return Path(caminho).stat().st_size == 0
     except OSError:
         return True
+
+
+def _peca_que_falta_do_par(kver: str = "") -> str:
+    """Com o Secure Boot ligado, a peça do par de chaves do DKMS que não está onde se lê (ou
+    está vazia): `a chave privada` ou `o certificado` (`a chave privada e o certificado` quando
+    faltam as duas); vazio quando o par está inteiro ou o DKMS não o pede.
+
+    O DKMS 3.0.4 a 3.1.6 gera um par novo quando falta qualquer uma das duas peças, e o par novo
+    nunca é o que a MOK conhece. O kernel que não assina módulo não pede o par: o DKMS não assina
+    nem gera par nele. A chave privada em `pkcs11:` está fora do disco, e o DKMS não gera par.
+    """
+    if not _secure_boot_ligado():
+        return ""
+    if kver and _kernel_assina(kver) is False:
+        return ""
+    privada = _chave_privada_do_dkms()
+    if privada.startswith("pkcs11:"):
+        return ""
+    faltam = []
+    if _vazio_ou_ausente(privada):
+        faltam.append("a chave privada")
+    if _vazio_ou_ausente(str(_chave_do_dkms())):
+        faltam.append("o certificado")
+    return " e ".join(faltam)
+
+
+def _sem_a_chave_privada(kver: str = "") -> bool:
+    """O par de chaves do DKMS não está inteiro: falta a chave privada ou o certificado."""
+    return bool(_peca_que_falta_do_par(kver))
 
 
 def _exclusivo(kver: str, ksrc: str, veredito: Path | None) -> str:
@@ -850,7 +870,11 @@ def main(argv: list[str]) -> int:
     if argv == ["--chave-nao-garantida"]:
         return 0 if _chave_nao_garantida() else 1
     if argv[:1] == ["--sem-a-chave-privada"] and len(argv) <= 2:
-        return 0 if _sem_a_chave_privada(argv[1] if len(argv) == 2 else "") else 1
+        falta = _peca_que_falta_do_par(argv[1] if len(argv) == 2 else "")
+        if falta:
+            print(f"Falta {falta} do DKMS: nada se constrói, para ele não gerar um par novo.",
+                  file=sys.stderr)
+        return 0 if falta else 1
     if argv == ["--estado-da-chave"]:
         print(_estado_da_chave(), end="")
         return 0
