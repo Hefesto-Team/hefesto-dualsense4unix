@@ -1505,11 +1505,16 @@ def _e_combinacao_de_teclas(acao: str) -> bool:
     partes = acao.split("+")
     if not partes or not all(_TECLA_RE.match(x) for x in partes):
         return False
+    return all(_tecla_que_o_no_emite(x) for x in partes)
+
+
+def _tecla_que_o_no_emite(nome: str) -> bool:
+    """A tecla está entre as que o nó do teclado virtual tem; sem o módulo, vale o nome."""
     try:
-        from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
+        from hefesto_dualsense4unix.integrations.uinput_keyboard import tecla_aceita
     except Exception:
         return True
-    return all(x in SUPPORTED_KEYS for x in partes)
+    return tecla_aceita(nome)
 
 
 PRIORIDADE_MINIMA = 0
@@ -1852,15 +1857,9 @@ class Profile(BaseModel):
     def _validate_key_bindings(
         cls, value: dict[str, list[str]] | None
     ) -> dict[str, list[str]] | None:
-        """Rejeita tokens fora do padrão ou KEY_* inexistentes em evdev.ecodes."""
+        """Rejeita tokens fora do padrão ou KEY_* que o teclado virtual não emite."""
         if value is None:
             return value
-        ecodes_ns: Any | None = None
-        try:
-            from evdev import ecodes as _ec
-            ecodes_ns = _ec
-        except Exception:
-            ecodes_ns = None
         for button, tokens in value.items():
             if not isinstance(tokens, list):
                 raise ValueError(
@@ -1878,14 +1877,10 @@ class Profile(BaseModel):
                         f"key_bindings[{button!r}][{idx}]={tok!r} não casa "
                         f"padrão 'KEY_*' ou '__TOKEN__'"
                     )
-                if (
-                    tok.startswith("KEY_")
-                    and ecodes_ns is not None
-                    and not hasattr(ecodes_ns, tok)
-                ):
+                if tok.startswith("KEY_") and not _tecla_que_o_no_emite(tok):
                     raise ValueError(
-                        f"key_bindings[{button!r}][{idx}]={tok!r} não existe "
-                        f"em evdev.ecodes"
+                        f"key_bindings[{button!r}][{idx}]={tok!r} não é uma tecla "
+                        f"que o teclado virtual emite"
                     )
         return value
 

@@ -42,32 +42,44 @@ logger = get_logger(__name__)
 
 DEVICE_NAME = "Hefesto - Dualsense4Unix Virtual Keyboard"
 
-SUPPORTED_KEYS: tuple[str, ...] = (
-    "KEY_LEFTALT", "KEY_RIGHTALT",
-    "KEY_LEFTCTRL", "KEY_RIGHTCTRL",
-    "KEY_LEFTSHIFT", "KEY_RIGHTSHIFT",
-    "KEY_LEFTMETA", "KEY_RIGHTMETA",
-    "KEY_BACKSPACE", "KEY_DELETE", "KEY_ENTER", "KEY_ESC",
-    "KEY_HOME", "KEY_END", "KEY_INSERT", "KEY_PAGEUP", "KEY_PAGEDOWN",
-    "KEY_SPACE", "KEY_TAB",
-    "KEY_SYSRQ",
-    "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
-    "KEY_A", "KEY_B", "KEY_C", "KEY_D", "KEY_E", "KEY_F", "KEY_G",
-    "KEY_H", "KEY_I", "KEY_J", "KEY_K", "KEY_L", "KEY_M", "KEY_N",
-    "KEY_O", "KEY_P", "KEY_Q", "KEY_R", "KEY_S", "KEY_T", "KEY_U",
-    "KEY_V", "KEY_W", "KEY_X", "KEY_Y", "KEY_Z",
-    "KEY_0", "KEY_1", "KEY_2", "KEY_3", "KEY_4",
-    "KEY_5", "KEY_6", "KEY_7", "KEY_8", "KEY_9",
-    "KEY_COMMA", "KEY_DOT",
-    "KEY_MINUS", "KEY_EQUAL", "KEY_SLASH", "KEY_SEMICOLON", "KEY_APOSTROPHE",
-    "KEY_LEFTBRACE", "KEY_RIGHTBRACE", "KEY_BACKSLASH", "KEY_GRAVE", "KEY_CAPSLOCK",
-    "KEY_KP0", "KEY_KP1", "KEY_KP2", "KEY_KP3", "KEY_KP4",
-    "KEY_KP5", "KEY_KP6", "KEY_KP7", "KEY_KP8", "KEY_KP9",
-    "KEY_KPDOT", "KEY_KPPLUS", "KEY_KPMINUS", "KEY_KPASTERISK", "KEY_KPSLASH", "KEY_KPENTER",
-    "KEY_F1", "KEY_F2", "KEY_F3", "KEY_F4", "KEY_F5", "KEY_F6",
-    "KEY_F7", "KEY_F8", "KEY_F9", "KEY_F10", "KEY_F11", "KEY_F12",
-    "KEY_VOLUMEUP", "KEY_VOLUMEDOWN", "KEY_MUTE",
-)
+CODIGO_MAXIMO_DE_TECLA = 255
+_NAO_E_TECLA = frozenset({"KEY_RESERVED", "KEY_UNKNOWN"})
+
+
+def _teclas_do_teclado() -> tuple[str, ...]:
+    """Toda tecla de teclado e de mídia que o `evdev.ecodes` nomeia, de `KEY_ESC` a `KEY_MICMUTE`.
+
+    É o dono único da lista: o nó nasce com todas, e o perfil só aceita as que ele emite.
+    """
+    from evdev import ecodes
+
+    codigos = {
+        nome: codigo for nome, codigo in ecodes.ecodes.items()
+        if nome.startswith("KEY_") and nome not in _NAO_E_TECLA
+        and isinstance(codigo, int) and 1 <= codigo <= CODIGO_MAXIMO_DE_TECLA
+    }
+    return tuple(sorted(codigos, key=lambda nome: (codigos[nome], nome)))
+
+
+SUPPORTED_KEYS: tuple[str, ...] = _teclas_do_teclado()
+
+
+def tecla_aceita(nome: str) -> bool:
+    """O nó emite a tecla `nome`? Vale para `button_actions` e para `key_bindings`."""
+    return nome in SUPPORTED_KEYS
+
+
+def _eventos_do_no(uinput: Any) -> dict[str, Any]:
+    """`{nome: evento}` de cada tecla do nó: o do módulo `uinput` ou o `EV_KEY` do código."""
+    from evdev import ecodes
+
+    eventos: dict[str, Any] = {}
+    for nome in SUPPORTED_KEYS:
+        ev = getattr(uinput, nome, None)
+        if ev is None:
+            ev = (ecodes.EV_KEY, ecodes.ecodes[nome])
+        eventos[nome] = ev
+    return eventos
 
 
 def _build_capabilities() -> list[Any]:
@@ -75,12 +87,9 @@ def _build_capabilities() -> list[Any]:
     import uinput
 
     caps: list[Any] = []
-    for key_name in SUPPORTED_KEYS:
-        ev = getattr(uinput, key_name, None)
-        if ev is None:
-            logger.warning("keyboard_capability_missing", key=key_name)
-            continue
-        caps.append(ev)
+    for ev in _eventos_do_no(uinput).values():
+        if ev not in caps:
+            caps.append(ev)
     return caps
 
 
@@ -96,6 +105,8 @@ class UinputKeyboardDevice:
 
     _device: Any = None
     _uinput_mod: Any = None
+    _eventos: dict[str, Any] = field(default_factory=dict)
+    _capacidades: frozenset[str] | None = None
     _pressed_buttons: frozenset[str] = field(default_factory=frozenset)
     _quem_segura: dict[str, int] = field(default_factory=dict)
     _virtual_token_warned: bool = False
@@ -112,8 +123,10 @@ class UinputKeyboardDevice:
             )
             return False
         try:
+            self._eventos = _eventos_do_no(uinput)
             caps = _build_capabilities()
             self._device = uinput.Device(caps, name=self.name)
+            self._capacidades = frozenset(self._eventos)
             self._uinput_mod = uinput
             logger.info("keyboard_emulator_opened", name=self.name)
             return True
@@ -129,6 +142,8 @@ class UinputKeyboardDevice:
             self._device.destroy()
         self._device = None
         self._uinput_mod = None
+        self._eventos = {}
+        self._capacidades = None
         self._pressed_buttons = frozenset()
         self._quem_segura = {}
 
@@ -179,14 +194,26 @@ class UinputKeyboardDevice:
             if any(is_virtual_token(tok) for tok in seq):
                 continue
             for key_name in seq:
-                if getattr(self._uinput_mod, key_name, None) is not None:
+                if self._evento(key_name) is not None:
                     self._quem_segura[key_name] = self._quem_segura.get(key_name, 0) + 1
         esquecidas = sorted(set(antes) - set(self._quem_segura))
         for key_name in esquecidas:
-            self._device.emit(getattr(self._uinput_mod, key_name), 0, syn=False)
+            ev = self._evento(key_name)
+            if ev is not None:
+                self._device.emit(ev, 0, syn=False)
         if esquecidas:
             self._device.syn()
 
+
+    def _evento(self, key_name: str) -> Any:
+        """O evento da tecla, ou None quando o nó não a tem entre as capacidades."""
+        capacidades = self._capacidades
+        if capacidades is not None and key_name not in capacidades:
+            return None
+        ev = self._eventos.get(key_name)
+        if ev is None:
+            ev = getattr(self._uinput_mod, key_name, None)
+        return ev
 
     def _emit_sequence_press(self, button: str) -> None:
         seq = self.bindings.get(button)
@@ -194,10 +221,9 @@ class UinputKeyboardDevice:
             return
         if self._delegate_virtual_tokens(button, seq, phase="press"):
             return
-        u = self._uinput_mod
         any_emitted = False
         for key_name in seq:
-            ev = getattr(u, key_name, None)
+            ev = self._evento(key_name)
             if ev is None:
                 logger.warning(
                     "keyboard_key_unknown", button=button, key=key_name
@@ -224,10 +250,9 @@ class UinputKeyboardDevice:
             return
         if self._delegate_virtual_tokens(button, seq, phase="release"):
             return
-        u = self._uinput_mod
         any_emitted = False
         for key_name in reversed(seq):
-            ev = getattr(u, key_name, None)
+            ev = self._evento(key_name)
             seguram = self._quem_segura.get(key_name, 0)
             if ev is None or seguram == 0:
                 continue
@@ -298,7 +323,7 @@ class UinputKeyboardDevice:
             self._emit_sequence_release(button)
         sobra = sorted(self._quem_segura)
         for key_name in sobra:
-            ev = getattr(self._uinput_mod, key_name, None)
+            ev = self._evento(key_name)
             if ev is not None:
                 self._device.emit(ev, 0, syn=False)
         if sobra:
@@ -308,8 +333,10 @@ class UinputKeyboardDevice:
 
 
 __all__ = [
+    "CODIGO_MAXIMO_DE_TECLA",
     "DEVICE_NAME",
     "SUPPORTED_KEYS",
     "UinputKeyboardDevice",
+    "tecla_aceita",
 ]
 

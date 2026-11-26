@@ -243,7 +243,7 @@ def test_a_combinacao_com_code_cru_traduz_cada_parte(mapa: Any, perfil_no_disco:
 
 
 @pytest.mark.parametrize("tecla,nome", [
-    ("Pause", "Pause"), ("IntlBackslash", "IntlBackslash"), ("KEY_PAUSE", "Pause"),
+    ("Pause", "Pause"), ("IntlBackslash", "IntlBackslash"), ("KEY_OK", "Ok"),
     ("KEY_LEFTCTRL+Pause", "Pause"),
 ])
 def test_a_tecla_que_o_motor_nao_emite_devolve_a_frase_da_recusa(

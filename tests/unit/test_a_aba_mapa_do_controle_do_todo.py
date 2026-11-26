@@ -143,7 +143,7 @@ def test_o_molde_so_usa_ficha_que_o_motor_executa() -> None:
 def test_o_schema_aceita_combinacao_de_teclas_do_motor_e_recusa_o_resto() -> None:
     aceito = Profile(name="x", match=_MATCH, button_actions={"l1": "KEY_LEFTCTRL+KEY_W"})
     assert aceito.button_actions == {"l1": "KEY_LEFTCTRL+KEY_W"}
-    for ruim in ("KEY_PAUSE", "KEY_LEFTCTRL+KEY_PAUSE", "CTRL+W", "KEY_W+", "KEY_W++KEY_E"):
+    for ruim in ("KEY_OK", "KEY_LEFTCTRL+KEY_OK", "CTRL+W", "KEY_W+", "KEY_W++KEY_E"):
         with pytest.raises(ValueError, match="não é uma ação conhecida"):
             Profile(name="x", match=_MATCH, button_actions={"l1": ruim})
 
@@ -197,7 +197,7 @@ def test_gravar_a_tecla_na_navegacao_guarda_o_atalho_e_recusa_a_que_o_motor_nao_
     assert mapa.mapa_gravar_tecla(
         ctx, {"tecla": "KEY_LEFTCTRL+KEY_W"}, None)["mesa"]["val-l1"] == "Ctrl + W"
     with pytest.raises(RuntimeError):
-        mapa.mapa_gravar_tecla(ctx, {"tecla": "KEY_PAUSE"}, None)
+        mapa.mapa_gravar_tecla(ctx, {"tecla": "KEY_OK"}, None)
 
 
 def test_a_troca_de_botao_se_confere_antes_de_valer_e_o_ps_nao_se_troca(mapa: Any) -> None:
