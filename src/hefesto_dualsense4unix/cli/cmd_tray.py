@@ -118,7 +118,7 @@ def tray_cmd() -> None:
     from hefesto_dualsense4unix.app.tray import AppTray, probe_gi_availability
 
     if bandeja_desligada_pela_escolha():
-        console.print("o ícone na bandeja está desligado nas configurações; nada a subir")
+        console.print("o «Ícone na bandeja» está desligado na aba Sistema; nada a subir")
         raise typer.Exit(code=0)
     ok, motivo = probe_gi_availability()
     if not ok:

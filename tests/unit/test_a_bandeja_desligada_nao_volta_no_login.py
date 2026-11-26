@@ -156,7 +156,8 @@ def test_o_gerador_do_systemd_respeita_o_arquivo_que_o_produto_grava(
 
 
 def test_a_bandeja_com_a_escolha_desligada_sai_sem_icone(
-        lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str]) -> None:
     from hefesto_dualsense4unix.app import tray
     from hefesto_dualsense4unix.cli.cmd_tray import tray_cmd
 
@@ -172,6 +173,7 @@ def test_a_bandeja_com_a_escolha_desligada_sai_sem_icone(
         tray_cmd()
     assert desligada.value.exit_code == 0
     assert sondas == [], "a bandeja desligada seguiu para subir o ícone"
+    assert "aba Sistema" in capsys.readouterr().out, "a recusa não diz onde se liga o ícone"
     ab.caminho_do_autostart().unlink()
     with pytest.raises(typer.Exit) as sem_escolha:
         tray_cmd()
