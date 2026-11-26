@@ -2593,12 +2593,33 @@ def _dizer_o_gatilho_do_jogo(
 
 
 def _esquecer_os_eventos_do_jogo(daemon: Any, target_uniq: str | None = None) -> None:
-    """O fim da sessão do pad (ou do jogo, sem ``target_uniq``): gatilho e envelope zeram."""
+    """O fim da sessão do pad (ou do jogo, sem ``target_uniq``): gatilho, envelope, limiar zeram."""
     from hefesto_dualsense4unix.daemon.subsystems.gatilho_do_jogo import esquecer_o_gatilho
     from hefesto_dualsense4unix.integrations.envelope_da_haptica import esquecer_o_envelope
 
     esquecer_o_gatilho(daemon, target_uniq)
     esquecer_o_envelope(daemon, target_uniq)
+    _esquecer_o_limiar_do_dsx(getattr(daemon, "store", None), target_uniq)
+
+
+def _esquecer_o_limiar_do_dsx(store: Any, target_uniq: str | None) -> None:
+    """O `TriggerThreshold` que o mod do jogo pediu sai com o jogo.
+
+    D-2511-O-LIMIAR-DO-DSX-VALE-SO-ENQUANTO-O-JOGO-ESTA-EM-CENA: com ``target_uniq`` só o limiar
+    daquele controle volta a zero; sem ele, o de todos. Nunca levanta.
+    """
+    try:
+        if target_uniq is None:
+            limpar = getattr(store, "clear_udp_trigger_thresholds", None)
+            if callable(limpar):
+                limpar()
+            return
+        gravar = getattr(store, "set_udp_trigger_threshold", None)
+        if callable(gravar):
+            for lado in ("left", "right"):
+                gravar(target_uniq, lado, 0)
+    except Exception as exc:
+        logger.debug("limiar_do_dsx_nao_saiu", err=str(exc))
 
 
 def _bater_os_eventos_do_jogo(daemon: Any) -> None:

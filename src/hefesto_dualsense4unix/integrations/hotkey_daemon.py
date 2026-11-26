@@ -300,7 +300,8 @@ class HotkeyManager:
                 continue
             aperto.first_seen_at.setdefault(combo, t)
             held_for = (t - aperto.first_seen_at[combo]) * 1000
-            if held_for < (0 if virtual else self.config.buffer_ms):
+            if held_for < (0 if virtual or self._o_ps_ja_estava(aperto, combo, t) else
+                           self.config.buffer_ms):
                 continue
             if aperto.last_fired is not None:
                 continue
@@ -324,6 +325,18 @@ class HotkeyManager:
         )
 
         return combo_fired or ps_event or da_janela or espera_vencida
+
+    def _o_ps_ja_estava(self, aperto: _Aperto, combo: frozenset[str], t: float) -> bool:
+        """O PS do combo estava segurado há `buffer_ms` ou mais: o segundo botão dispara na borda.
+
+        O amortecedor existe para dois botões que chegam juntos; com o PS segurado antes, o toque
+        curto no outro botão do atalho já é o gesto.
+        """
+        return (
+            PS_BUTTON in combo
+            and aperto.ps_pressed_at is not None
+            and (t - aperto.ps_pressed_at) * 1000 >= self.config.buffer_ms
+        )
 
     def _os_gestos_dos_acessorios(
         self,

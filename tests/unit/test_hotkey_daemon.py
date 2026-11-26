@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import sem_o_gesto_do_ps
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
@@ -183,3 +185,75 @@ def test_sem_de_o_aperto_e_o_de_sempre():
     mgr.observe(["ps", "r3"], now=0.0)
     mgr.observe(["ps", "r3"], now=0.2)
     assert fired == [None]
+
+
+def _o_toque(mgr: HotkeyManager, botao: str, *, ps_antes: float, toque_ms: int, de: str = UM,
+             passo: float = 0.02) -> float:
+    """O PS segurado por `ps_antes` segundos, o `botao` por `toque_ms` e a soltura de tudo."""
+    t = 0.0
+    while t < ps_antes:
+        mgr.observe(["ps"], now=t, de=de)
+        t += passo
+    fim = t + toque_ms / 1000
+    while t < fim - 1e-9:
+        mgr.observe(["ps", botao], now=t, de=de)
+        t += passo
+    mgr.observe(["ps"], now=t, de=de)
+    mgr.observe([], now=t + passo, de=de)
+    return t
+
+
+@pytest.mark.parametrize("toque_ms", [20, 60, 100, 140])
+def test_o_toque_curto_com_o_ps_segurado_troca(toque_ms):
+    """D-2511-O-ACORDE-DO-PS-DISPARA-NA-BORDA-DO-SEGUNDO-BOTAO: PS há 400 ms, toque rápido troca.
+
+    Medido antes de curar: o `buffer_ms` contava do tique em que os dois se juntam, e o toque de
+    60, 100 e 140 ms não fazia nada. MORDIDA: voltar a conta de `first_seen_at` reprova.
+    """
+    fired = []
+    mgr = HotkeyManager(on_next=lambda: fired.append("n"), on_ps_solo=lambda: fired.append("solo"))
+    _o_toque(mgr, "dpad_up", ps_antes=0.4, toque_ms=toque_ms)
+    assert fired == ["n"], f"toque de {toque_ms} ms com o PS segurado: {fired}"
+
+
+def test_o_toque_curto_com_o_ps_segurado_dispara_so_uma_vez_e_o_ps_nao_abre_a_steam():
+    fired = []
+    mgr = HotkeyManager(on_next=lambda: fired.append("n"), on_ps_solo=lambda: fired.append("solo"))
+    _o_toque(mgr, "dpad_up", ps_antes=0.4, toque_ms=140)
+    assert fired == ["n"]
+
+
+@pytest.mark.parametrize("toque_ms", [20, 60, 100, 140])
+def test_os_dois_que_chegam_juntos_seguem_amortecidos(toque_ms):
+    """O amortecedor fica para os dois que chegam juntos: o toque curto sem PS antes não dispara."""
+    fired = []
+    mgr = HotkeyManager(on_next=lambda: fired.append("n"))
+    _o_toque(mgr, "dpad_up", ps_antes=0.0, toque_ms=toque_ms)
+    assert fired == [], f"os dois juntos por {toque_ms} ms dispararam: {fired}"
+
+
+def test_o_ps_segurado_por_menos_que_o_buffer_ainda_amortece():
+    fired = []
+    mgr = HotkeyManager(on_next=lambda: fired.append("n"))
+    _o_toque(mgr, "dpad_up", ps_antes=0.1, toque_ms=60)
+    assert fired == []
+
+
+def test_o_ps_de_um_controle_nao_adianta_o_acorde_de_outro():
+    """Cada controle conta o PS dele: o PS longo de um não adianta o toque do outro."""
+    fired = []
+    mgr = HotkeyManager(on_next=lambda: fired.append(quem_faz_o_gesto()))
+    for t in (0.0, 0.2, 0.4):
+        mgr.observe(["ps"], now=t, de=UM)
+    mgr.observe(["dpad_up"], now=0.4, de=OUTRO)
+    mgr.observe(["ps", "dpad_up"], now=0.42, de=OUTRO)
+    mgr.observe([], now=0.46, de=OUTRO)
+    assert fired == []
+
+
+def test_o_toque_curto_troca_nos_dois_controles_cada_um_com_o_seu_ps():
+    fired = []
+    mgr = HotkeyManager(on_next=lambda: fired.append(quem_faz_o_gesto()))
+    for de in (UM, OUTRO):
+        _o_toque(mgr, "dpad_up", ps_antes=0.4, toque_ms=60, de=de)
+    assert fired == [UM, OUTRO]
