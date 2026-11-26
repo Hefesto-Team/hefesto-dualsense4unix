@@ -57,9 +57,17 @@ if ABRE_A_JANELA:
     tenta("abre", abre)
 tenta("mapa_de_canais", lambda: "ok" if len(mesa_viva.MAPA) > 0 else "FALHOU: o mapa veio vazio")
 tenta("pecas", lambda: "ok" if len(mapa.le_csv()) > 0 else "FALHOU: sem peças")
-tenta("glifo", lambda: "ok" if monta.glifo("cross").startswith("<svg") else "FALHOU: sem svg")
-tenta("glifo_aceso", lambda: "ok" if monta.glifo("cross", ativo=True).startswith("<svg")
-      else "FALHOU: sem svg")
+
+
+def glifo_desenhado(ativo):
+    arquivo = "cross_active.svg" if ativo else "cross.svg"
+    if not monta.glifo("cross", ativo=ativo).startswith("<svg"):
+        return "FALHOU: sem svg"
+    return "FALHOU: glifo vazio" if arquivo in monta.GLIFOS_QUE_FALTARAM else "ok"
+
+
+tenta("glifo", lambda: glifo_desenhado(False))
+tenta("glifo_aceso", lambda: glifo_desenhado(True))
 tenta("mapa_desenhado", lambda: "ok" if "<svg" in controle_vivo.molde_svg() else "FALHOU: sem svg")
 tenta("icone", lambda: "ok" if abrir.achar_o_icone() is not None else "FALHOU: sem ícone")
 tenta("calibrar", lambda: "ok" if calibrar.nome_do_botao("cross") else "FALHOU: sem nome")
