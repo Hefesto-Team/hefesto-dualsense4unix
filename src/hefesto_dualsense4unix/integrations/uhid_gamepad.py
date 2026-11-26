@@ -2326,6 +2326,16 @@ class _MacsDosVpadsVivos:
                 if dono() is pad or dono() is None:
                     del self._vestido_por[mac]
 
+    def pads(self) -> list[UhidDualSense]:
+        """Os pads vivos que vestem um MAC agora, sem repetição."""
+        with self._lock:
+            vivos = [dono() for dono in self._vestido_por.values()]
+        unicos: dict[int, UhidDualSense] = {}
+        for pad in vivos:
+            if pad is not None:
+                unicos[id(pad)] = pad
+        return list(unicos.values())
+
     def vestido_por(self, pad: UhidDualSense) -> str | None:
         """O MAC que `pad` veste agora, ou None (parado, ou nunca nasceu)."""
         with self._lock:
@@ -2391,7 +2401,7 @@ _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
 _GADGET_RETOMA_S = 10.0
 _GADGET_VIGIA_S = 0.25
-_GADGET_FILA_TETO = 1000
+_GADGET_FILA_IDADE_S = 0.1
 _GADGET_LEITURA = 512
 _GADGET_PERGUNTA_A_CADA = 8
 _GADGET_RAJADA_LONGA_S = 60.0
@@ -2420,8 +2430,11 @@ class _GadgetDoPad:
     leitura_erro: str = ""
     leitura_falhou_desde: float = 0.0
     a_caminho_s: float = _GADGET_A_CAMINHO_S
-    fila: collections.deque[bytes] = field(default_factory=collections.deque)
+    fila: collections.deque[tuple[float, bytes]] = field(default_factory=collections.deque)
     fila_cheia: int = 0
+    descartados: int = 0
+    maior_fundura: int = 0
+    maior_idade_s: float = 0.0
     par: tuple[int, int] = (DUALSENSE_VENDOR, VPAD_PRODUCT)
 
     def desmontar(self) -> None:
@@ -3231,36 +3244,90 @@ def _bombear_o_gadget(pad: UhidDualSense) -> None:
 
 
 def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
-    """Um input report no `/dev/hidgN`, sem esperar o endpoint e sem descartar.
+    """Um input report no `/dev/hidgN`, sem esperar o endpoint; o report novo nunca se recusa.
 
     O `f_hid` guarda UM em voo por vez: o report que o endpoint ainda não levou espera na
-    fila, pela ordem, e o fio do gadget a escoa no `POLLOUT`. A fila só recusa quando passa
-    de `_GADGET_FILA_TETO`, que é o host que parou de ler, e não a rajada do rádio.
+    fila, pela ordem, e o fio do gadget a escoa no `POLLOUT`. O teto é de idade
+    (`_GADGET_FILA_IDADE_S`, :func:`_podar_a_fila`): com o host parado, sai o report mais
+    velho que o teto, e a rajada do rádio, que o host leva em milissegundos, fica inteira.
     """
     with pad._lock:
         gadget, fd = pad._gadget, pad._fd
         if gadget is None or fd is None:
             return False
-        if len(gadget.fila) >= _GADGET_FILA_TETO:
-            if not gadget.fila_cheia:
-                logger.warning("pad_usb_fila_parada", player=pad.player,
-                               fila=len(gadget.fila))
-            gadget.fila_cheia += 1
-            pad._last_body = None
-            return False
-        gadget.fila.append(report)
+        gadget.fila.append((pad.time_fn(), report))
+        if len(gadget.fila) > gadget.maior_fundura:
+            gadget.maior_fundura = len(gadget.fila)
         if _escoar_a_fila(pad, gadget, fd):
             return True
         pad._last_body = None
         return False
 
 
+def _podar_a_fila(pad: UhidDualSense, gadget: _GadgetDoPad) -> None:
+    """Tira da frente da fila o report mais velho que `_GADGET_FILA_IDADE_S`.
+
+    O último report fica sempre: é o estado de agora do controle. A primeira poda do
+    episódio vira `pad_usb_fila_parada`; o fim dele, `pad_usb_fila_escoou`
+    (:func:`_escoar_a_fila`).
+    """
+    fila = gadget.fila
+    agora = pad.time_fn()
+    podados = 0
+    while len(fila) > 1 and agora - fila[0][0] > _GADGET_FILA_IDADE_S:
+        idade = agora - fila.popleft()[0]
+        podados += 1
+        if idade > gadget.maior_idade_s:
+            gadget.maior_idade_s = idade
+    if not podados:
+        return
+    if not gadget.fila_cheia:
+        logger.warning("pad_usb_fila_parada", player=pad.player, fila=len(fila) + podados,
+                       teto_s=_GADGET_FILA_IDADE_S)
+    gadget.fila_cheia += podados
+    gadget.descartados += podados
+
+
+def filas_dos_gadgets() -> list[dict[str, Any]]:
+    """A fila de cada pad vivo no gadget, para o `state_full`: a fundura e a idade.
+
+    ``fundura`` e ``idade_ms`` são as de agora (a idade do report mais velho que espera);
+    ``maior_fundura`` e ``maior_idade_ms`` são as maiores desde que o gadget subiu, e
+    ``descartados`` conta os reports que o teto de idade tirou. Lê sem trava: um número de
+    um tique atrás é aceitável, e a trava do pad não se disputa com o laço.
+    """
+    agora = time.monotonic()
+    filas: list[dict[str, Any]] = []
+    for pad in _MACS_DOS_VPADS_VIVOS.pads():
+        gadget = pad.__dict__.get("_gadget")
+        if not isinstance(gadget, _GadgetDoPad):
+            continue
+        cabeca: tuple[float, bytes] | None = None
+        with contextlib.suppress(IndexError):
+            cabeca = gadget.fila[0]
+        try:
+            relogio = pad.time_fn()
+        except Exception:
+            relogio = agora
+        idade = max(0.0, relogio - cabeca[0]) if cabeca is not None else 0.0
+        filas.append({
+            "player": pad.player,
+            "fundura": len(gadget.fila),
+            "idade_ms": round(idade * 1000.0, 1),
+            "maior_fundura": gadget.maior_fundura,
+            "maior_idade_ms": round(max(gadget.maior_idade_s, idade) * 1000.0, 1),
+            "descartados": gadget.descartados,
+        })
+    return sorted(filas, key=lambda f: f["player"] if isinstance(f["player"], int) else 0)
+
+
 def _escoar_a_fila(pad: UhidDualSense, gadget: _GadgetDoPad, fd: int) -> bool:
     """Escreve a fila do gadget pela ordem até o endpoint encher. False = a escrita falhou."""
     fila = gadget.fila
+    _podar_a_fila(pad, gadget)
     while fila:
         try:
-            os.write(fd, fila[0])
+            os.write(fd, fila[0][1])
         except BlockingIOError:
             _acordar_o_fio_do_gadget(pad)
             return True
@@ -3274,8 +3341,12 @@ def _escoar_a_fila(pad: UhidDualSense, gadget: _GadgetDoPad, fd: int) -> bool:
                 gadget.falhas_seguidas += 1
                 _o_gadget_caiu(pad, gadget)
             return False
-        fila.popleft()
+        idade = pad.time_fn() - fila.popleft()[0]
+        if idade > gadget.maior_idade_s:
+            gadget.maior_idade_s = idade
         gadget.falhas_seguidas = 0
+    if gadget.fila_cheia:
+        logger.info("pad_usb_fila_escoou", player=pad.player, descartados=gadget.fila_cheia)
     gadget.fila_cheia = 0
     return True
 

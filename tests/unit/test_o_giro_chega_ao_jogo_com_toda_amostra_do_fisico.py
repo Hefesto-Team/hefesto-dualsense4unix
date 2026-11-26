@@ -362,25 +362,30 @@ def test_a_rajada_que_o_leitor_le_junta_espera_na_fila_e_sai_inteira(
     assert peca.fila() == 0
 
 
-def test_o_host_que_parou_de_ler_enche_a_fila_ate_o_teto_e_a_fila_se_diz_parada(
+def test_o_host_que_parou_de_ler_guarda_so_o_teto_de_idade_e_a_fila_se_diz_parada(
     mesa: list[_Peca], os_do_gadget: _OsDoGadget
 ) -> None:
-    """Sem host, a fila para no teto e conta a recusa; com o host de volta, escoa pela ordem."""
+    """Sem host, a fila guarda só o teto de idade e conta a poda; na volta, escoa pela ordem.
+
+    A-FILA-DO-GADGET-TEM-TETO-DE-IDADE-E-MOSTRA-A-FUNDURA-01: o teto deixou de ser de contagem.
+    """
     relogio = _Relogio()
     peca = _Peca(1, _DUALSENSE, "gadget", relogio, os_do_gadget)
     mesa.append(peca)
     peca.assentar("cabo", relogio.agora)
-    total = uhid._GADGET_FILA_TETO + 1 + 5
+    guardados = int(uhid._GADGET_FILA_IDADE_S / 0.003) + 1
+    total = 1 + guardados + 5
     with structlog.testing.capture_logs() as registros:
         for i in range(total):
             peca.chega(_report("cabo", i, i, 7000 + 1250 * i), relogio.agora)
-            relogio.agora += 0.004
-    assert peca.fila() == uhid._GADGET_FILA_TETO
+            if i < total - 1:
+                relogio.agora += 0.003
+    assert peca.fila() == guardados
     assert peca.pad._gadget is not None and peca.pad._gadget.fila_cheia == 5
     assert [r["event"] for r in registros].count("pad_usb_fila_parada") == 1
-    for _ in range(uhid._GADGET_FILA_TETO + 1):
+    for _ in range(guardados + 1):
         peca.host_le()
-    esperados = [(7000 + 1250 * i).to_bytes(4, "little") for i in range(uhid._GADGET_FILA_TETO + 1)]
+    esperados = [(7000 + 1250 * i).to_bytes(4, "little") for i in (0, *range(6, total))]
     assert peca.no_jogo() == esperados
     assert peca.pad._gadget.fila_cheia == 0
 
