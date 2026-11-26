@@ -97,7 +97,7 @@ def _piloto() -> Any:
 
 
 def _carga(pagina: str, tag: str, entrada: str, gesto: str, evento: str) -> dict[str, Any]:
-    return {"gesto": gesto, "pagina": pagina, "tipo": tag, "entrada": entrada,  # (noqa-acento)
+    return {"gesto": gesto, "pagina": pagina, "tipo": tag, "tipoDoCampo": entrada,  # (noqa-acento)
             "evento": evento, "valor": "x", "controle": P1, "voo": ""}
 
 
@@ -137,7 +137,8 @@ def test_o_bootstrap_nao_manda_o_click_de_lista_nem_de_barra() -> None:
     texto = hv.BOOTSTRAP if hasattr(hv, "BOOTSTRAP") else ""
     assert "e.tagName === 'SELECT'" in texto
     assert "e.type === 'range'" in texto
-    assert "entrada: (alvo.type || '')" in texto
+    assert "tipoDoCampo: (alvo.type || '')" in texto
+    assert "entrada: (alvo.type" not in texto
 
 
 PAGINA_DO_CLIQUE = """<!doctype html><meta charset="utf-8"><body>

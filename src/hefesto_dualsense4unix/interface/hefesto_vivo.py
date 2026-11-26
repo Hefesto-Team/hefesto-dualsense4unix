@@ -573,7 +573,7 @@ BOOTSTRAP = r"""
         rotulo: (alvo.selectedOptions && alvo.selectedOptions[0]
                  ? alvo.selectedOptions[0].textContent.trim() : ''),
         tipo: (alvo.tagName || '').toLowerCase(),
-        entrada: (alvo.type || '').toLowerCase(),
+        tipoDoCampo: (alvo.type || '').toLowerCase(),
         evento: ev.type,
         carimbo: (performance.timeOrigin || 0) + ev.timeStamp,
         forma: (function(){
@@ -3462,7 +3462,8 @@ def _so_abre_a_lista(o: dict[str, Any]) -> bool:
     if str(o.get("evento") or "").lower() != "click":
         return False
     tipo = str(o.get("tipo") or "").lower()
-    return tipo == "select" or (tipo == "input" and str(o.get("entrada") or "").lower() == "range")
+    return tipo == "select" or (
+        tipo == "input" and str(o.get("tipoDoCampo") or "").lower() == "range")
 
 
 def _esquecer_a_pintura(piloto: Any) -> None:
