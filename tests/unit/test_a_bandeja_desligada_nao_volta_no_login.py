@@ -3,6 +3,10 @@
 A pílula «Ícone na bandeja» desligada gravava só `X-GNOME-Autostart-enabled=false`; o gerador de
 autostart do systemd (COSMIC, Plasma) só conhece `Hidden=true` e subia a bandeja no login seguinte.
 
+Decisão proposta (a validar): D-2611-A-BANDEJA-DESLIGADA-GRAVA-AS-DUAS-CHAVES-DO-AUTOSTART,
+a escolha «Ícone na bandeja» desligada vale em toda sessão porque o produto grava
+`X-GNOME-Autostart-enabled=false` e `Hidden=true` juntos, e lê desligada por qualquer uma.
+
 O que se mede, num lar de mentira:
 
 1. `escolher_a_bandeja` grava as duas chaves e `bandeja_ligada` lê as duas (qualquer uma desligando

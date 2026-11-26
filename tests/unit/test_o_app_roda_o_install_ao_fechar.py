@@ -3,6 +3,11 @@
 O clone é de mentira, o ``git`` é o real sem configuração global, e o dublê do install apaga a nota
 com a linha que o ``install.sh`` de verdade traz. O ``sudo`` dublado anota cada chamada, e assim um
 ``sudo`` na frente do install apareceria no livro dele, e não no do install.
+
+Decisão proposta (a validar):
+D-2611-A-NOTA-DO-INSTALL-NASCE-DO-PULO-DE-ROOT-QUE-O-INSTALL-GRAVA, o install é o único dono do
+que ficou sem root (grava ``install-pulou-root``), a nota diz o erro real quando ele falha e só
+diz «sem autorização» quando ele pulou um passo de administrador.
 """
 from __future__ import annotations
 
@@ -407,13 +412,13 @@ def test_o_pulo_de_um_install_antigo_nao_vale_para_o_install_de_agora(casa: Casa
 
 def _o_install_de_verdade(corpo: str, home: Path, *, ensaio: bool = False) -> str:
     fonte = (RAIZ / "install.sh").read_text(encoding="utf-8")
-    inicio = fonte.index("_PULOS_DE_ROOT=\"\"\n_anotar_o_pulo_de_root()")
+    inicio = fonte.index("_PULOS_DE_ROOT=\"\"\n_PULOS_COMECARAM=0")
     fim = fonte.index("die()", inicio)
     comeco = fonte.index('if [[ "${DRY_RUN:-0}" -eq 0 ]]; then\n    _PULOS_DE_ROOT=')
     fim_do_comeco = fonte.index("\nfi\n", comeco) + 4
     final = next(
         linha for linha in fonte.splitlines()
-        if linha.startswith('[[ -z "${_PULOS_DE_ROOT}"'))
+        if linha.startswith('[[ -z "${_PULOS_DE_ROOT:-}"'))
     roteiro = (f"DRY_RUN={1 if ensaio else 0}\n{fonte[inicio:fim]}\n{fonte[comeco:fim_do_comeco]}\n"
                f"{corpo}\n{final}\n")
     ambiente = {"PATH": os.environ["PATH"], "HOME": str(home),
@@ -440,6 +445,20 @@ def test_o_install_grava_cada_passo_de_root_que_pulou(tmp_path: Path, aviso: str
 def test_o_install_que_nao_pulou_nada_nao_deixa_o_arquivo(tmp_path: Path) -> None:
     _o_install_de_verdade('warn "o apt não leu a fonte — rode: sudo apt update"', tmp_path)
     assert not _os_pulos(tmp_path).exists()
+
+
+def test_o_install_sem_pulo_apaga_o_arquivo_do_install_anterior(tmp_path: Path) -> None:
+    _os_pulos(tmp_path).parent.mkdir(parents=True)
+    _os_pulos(tmp_path).write_text("sudo recusado — passo de ontem\n", encoding="utf-8")
+    _o_install_de_verdade('warn "um aviso qualquer"', tmp_path)
+    assert not _os_pulos(tmp_path).exists()
+
+
+def test_o_install_que_pulou_troca_o_arquivo_do_install_anterior(tmp_path: Path) -> None:
+    _os_pulos(tmp_path).parent.mkdir(parents=True)
+    _os_pulos(tmp_path).write_text("sudo recusado — passo de ontem\n", encoding="utf-8")
+    _o_install_de_verdade('warn "sudo recusado — passo de hoje"', tmp_path)
+    assert _os_pulos(tmp_path).read_text(encoding="utf-8") == "sudo recusado — passo de hoje\n"
 
 
 def test_o_ensaio_nao_escreve_o_arquivo_dos_pulos(tmp_path: Path) -> None:

@@ -63,12 +63,17 @@ class TestAskYnHeadless:
 class TestAcquireSudoAskpass:
     @pytest.mark.parametrize("script_text", [INSTALL, UNINSTALL], ids=["install", "uninstall"])
     def test_acquire_sudo_suporta_askpass(self, script_text: str) -> None:
+        """O install tenta o askpass do `sudo.conf` sem depender da variável; o uninstall segue
+        guardado por `SUDO_ASKPASS` (A-NOTA-DO-INSTALL-PENDENTE-DIZ-O-QUE-FICOU-POR-FAZER-01)."""
         fn = _extract_bash_function(script_text, "acquire_sudo")
-        assert "SUDO_ASKPASS" in fn, (
-            "acquire_sudo precisa tentar `sudo -A -v` quando SUDO_ASKPASS "
-            "está setado (execução headless sem TTY)"
-        )
         assert "sudo -A -v" in fn
+        if script_text is INSTALL:
+            assert "SUDO_ASKPASS" not in fn
+        else:
+            assert "SUDO_ASKPASS" in fn, (
+                "acquire_sudo precisa tentar `sudo -A -v` quando SUDO_ASKPASS "
+                "está setado (execução headless sem TTY)"
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover

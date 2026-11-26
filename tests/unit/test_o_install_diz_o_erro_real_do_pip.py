@@ -45,7 +45,7 @@ FRASES = {
 
 
 def _o_trecho() -> str:
-    inicio = FONTE.index('_ESTADO_DO_INSTALL="')
+    inicio = FONTE.index('_extras="emulation,cosmic"')
     fim = FONTE.index('step "3/11"', inicio)
     return FONTE[inicio:fim]
 

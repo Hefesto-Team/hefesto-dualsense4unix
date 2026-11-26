@@ -371,10 +371,15 @@ esac
 step()  { printf '\n[%s] %s\n' "$1" "$2"; }
 ok()    { printf '      ok\n'; }
 _PULOS_DE_ROOT=""
+_PULOS_COMECARAM=0
 _anotar_o_pulo_de_root() {
     [[ -n "${_PULOS_DE_ROOT}" ]] || return 0
     case "$1" in
         *"sudo recusado"*|*"sudo ausente"*|*"sudo indisponível"*|*"sem o comando sudo"*)
+            if [[ "${_PULOS_COMECARAM}" -eq 0 ]]; then
+                mkdir -p "${_PULOS_DE_ROOT%/*}" 2>/dev/null && : > "${_PULOS_DE_ROOT}" 2>/dev/null \
+                    && _PULOS_COMECARAM=1 || { _PULOS_DE_ROOT=""; return 0; }
+            fi
             printf '%s\n' "$1" >> "${_PULOS_DE_ROOT}" 2>/dev/null || true ;;
     esac
     return 0
@@ -388,7 +393,6 @@ fi
 
 if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
     _PULOS_DE_ROOT="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pulou-root"
-    { mkdir -p "${_PULOS_DE_ROOT%/*}" && : > "${_PULOS_DE_ROOT}"; } 2>/dev/null || _PULOS_DE_ROOT=""
 fi
 
 _sem_systemd_logind() {
@@ -1713,6 +1717,13 @@ if (( ${#_btmic_faltando[@]} )); then
 fi
 unset _btmic_faltando
 
+_extras="emulation,cosmic"
+if [[ "${WITH_DEV}" -eq 1 ]]; then _extras="${_extras},dev"; fi
+_travas=()
+[[ -r "${ROOT_DIR}/constraints.txt" ]] && _travas=(-c "${ROOT_DIR}/constraints.txt")
+_provadas="${XDG_CACHE_HOME:-${HOME}/.cache}/hefesto-dualsense4unix/atualizador/python-provado.txt"
+[[ -r "${_provadas}" ]] && _travas+=(-c "${_provadas}")
+
 _ESTADO_DO_INSTALL="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
 _PIP_REGISTRO="${_ESTADO_DO_INSTALL}/install-pip.log"
 
@@ -1760,12 +1771,6 @@ if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
     fi
 fi
 
-_extras="emulation,cosmic"
-if [[ "${WITH_DEV}" -eq 1 ]]; then _extras="${_extras},dev"; fi
-_travas=()
-[[ -r "${ROOT_DIR}/constraints.txt" ]] && _travas=(-c "${ROOT_DIR}/constraints.txt")
-_provadas="${XDG_CACHE_HOME:-${HOME}/.cache}/hefesto-dualsense4unix/atualizador/python-provado.txt"
-[[ -r "${_provadas}" ]] && _travas+=(-c "${_provadas}")
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "atualizar pip e packaging dentro de ${VENV_DIR}"
     _faria "instalar o pacote em modo editável no venv: pip install ${_travas[*]} -e '${ROOT_DIR}[${_extras}]'"
@@ -2091,7 +2096,9 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
     step "3e" "cmdline do kernel (usbcore.autosuspend + usbcore.quirks com merge)"
     _cmdline_bateria=0
     if _desempenho_tem_bateria; then _cmdline_bateria=1; fi
-    _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_bateria}" <<'PYEOF'
+    _cmdline_log=/dev/null
+    [[ "${DRY_RUN:-0}" -eq 1 ]] || { mkdir -p "${_ESTADO_DO_INSTALL}" 2>/dev/null && _cmdline_log="${_ESTADO_DO_INSTALL}/install-cmdline.log"; }
+    _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_bateria}" 2>"${_cmdline_log}" <<'PYEOF'
 import os
 import sys
 from pathlib import Path
@@ -2107,7 +2114,12 @@ lugares = kc.Lugares(
     kernel_cmdline=Path("/etc/kernel/cmdline"),
     raiz=Path("/"),
 )
-carregador = kc.ler_o_carregador(lugares)
+try:
+    carregador = kc.ler_o_carregador(lugares)
+except kc.GrubNaoEntendidoError as erro:
+    print("backend=recusa")
+    print("recusa\t" + str(erro))
+    raise SystemExit(0)
 tokens = list(carregador.tokens)
 backend = carregador.backend
 if backend == kc.BACKEND_NENHUM:
@@ -2130,7 +2142,9 @@ PYEOF
 )" || _cmdline_plan=""
     _cmdline_backend="$(sed -n 's/^backend=//p' <<<"${_cmdline_plan}" | head -1)"
     if [[ -z "${_cmdline_backend}" ]]; then
-        warn "o plano do cmdline não saiu — passo pulado (nada registrado)"
+        warn "o plano do cmdline não saiu — passo pulado (nada registrado)$([[ "${_cmdline_log}" == /dev/null ]] || printf '; o motivo está em %s' "${_cmdline_log}")"
+    elif [[ "${_cmdline_backend}" == "recusa" ]]; then
+        warn "cmdline: o grub não foi tocado — $(sed -n 's/^recusa\t//p' <<<"${_cmdline_plan}" | head -1)"
     elif [[ "${_cmdline_backend}" == "guard-violation" ]]; then
         warn "guarda anti-reintrodução disparou — passo ABORTADO (nada foi escrito):"
         sed -n 's/^viol\t/        /p' <<<"${_cmdline_plan}"
@@ -4134,7 +4148,7 @@ elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '─────────────────────────────────────────\n'
 fi
 [[ "${DRY_RUN:-0}" -eq 1 ]] || rm -f "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pendente"
-[[ -z "${_PULOS_DE_ROOT}" || -s "${_PULOS_DE_ROOT}" ]] || rm -f "${_PULOS_DE_ROOT}"
+[[ -z "${_PULOS_DE_ROOT:-}" || "${_PULOS_COMECARAM:-0}" -eq 1 ]] || rm -f "${_PULOS_DE_ROOT}"
 [[ "${DRY_RUN:-0}" -ne 1 ]] || _faria "guardar as flags desta linha em ${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas (o install do fecho da janela repete as mesmas)"
 [[ "${DRY_RUN:-0}" -eq 1 ]] || { mkdir -p "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix" && printf '%s\n' "--format=${FORMAT:-native}" "$@" > "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas"; } 2>/dev/null || true
 dizer_as_regras_do_sudo
