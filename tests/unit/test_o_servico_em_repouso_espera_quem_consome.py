@@ -11,14 +11,20 @@ Não há estado por controle nesta cura: o repouso é do serviço, e a pergunta 
 olha os pedidos de todos os controles de uma vez. A prova usa quatro controles só para mostrar
 que o pedido de qualquer um deles acorda o laço.
 
-MORDIDAS: o ``repouso`` sempre falso no laço do tato dá o passo de 60 Hz em repouso; sem o
-``_acordar_o_laco`` do ``pedir`` o pedido espera o passo de repouso; sem o ``_acordar_com`` dos
-gestos o gesto espera o passo de repouso; sem o ``em_repouso`` da luz o laço da luz segue a 30 Hz
-com o plano vazio.
+O governador do rádio só tem fio enquanto houver ponte, pedido, espera ou autorização: sem
+controle no rádio, o fio que fechou as pontes fantasmas sai, e o ar se mede só quando alguém
+pergunta (a aba Conexões segue com a medida).
+
+MORDIDAS: o fio do governador que nunca repousa dá fio vivo e amostras sem pedido; o
+``pedir_vaga`` sem ``_garantir_o_fio`` deixa a ponte sem tique; o ``repouso`` sempre falso no
+laço do tato dá o passo de 60 Hz em repouso; sem o ``_acordar_o_laco`` do ``pedir`` o pedido
+espera o passo de repouso; sem o ``_acordar_com`` dos gestos o gesto espera o passo de repouso;
+sem o ``em_repouso`` da luz o laço da luz segue a 30 Hz com o plano vazio.
 """
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from types import SimpleNamespace
 from typing import Any
@@ -26,6 +32,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 from hefesto_dualsense4unix.daemon.subsystems import luz_animada as luz
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from tests.unit.test_a_luz_animada_obedece_a_bateria_longa import (
@@ -235,3 +242,118 @@ def test_o_laco_da_luz_dorme_o_passo_de_repouso_quando_em_repouso(
 
     asyncio.run(corrida())
     assert len(tiques) <= 6, f"a luz sem plano rodou {len(tiques)} vezes em 1 s"
+
+
+ADAPTADOR = "aa:bb:cc:00:00:a1"
+
+
+class _Medidor:
+    def __init__(self) -> None:
+        self.amostras = 0
+
+    def amostrar(self) -> dict[str, Any]:
+        self.amostras += 1
+        return {ADAPTADOR: SimpleNamespace(motivo="")}
+
+
+def _governador(medidor: _Medidor, periodo_s: float = 0.01) -> gov.GovernadorDoRadio:
+    return gov.GovernadorDoRadio(
+        medidor=medidor,
+        n_max=len(UNIQS),
+        adaptador_de=lambda _u: ADAPTADOR,
+        registrar=lambda *_a, **_k: None,
+        ler_o_diario=lambda: [],
+        periodo_s=periodo_s,
+    )
+
+
+def _o_fio_saiu(governador: gov.GovernadorDoRadio, prazo_s: float = 3.0) -> bool:
+    limite = time.monotonic() + prazo_s
+    while time.monotonic() < limite:
+        if governador.em_repouso():
+            return True
+        time.sleep(0.005)
+    return False
+
+
+def _fios_do_governador() -> list[threading.Thread]:
+    return [f for f in threading.enumerate() if f.name == "hefesto-governador" and f.is_alive()]
+
+
+def test_o_governador_sem_controle_no_radio_nao_tem_fio_nem_mede_sozinho() -> None:
+    medidor = _Medidor()
+    governador = _governador(medidor)
+    governador.iniciar()
+    try:
+        assert _o_fio_saiu(governador), "sem ponte nem pedido, o fio do governador seguiu de pé"
+        assert not _fios_do_governador()
+        antes = medidor.amostras
+        time.sleep(0.2)
+        assert medidor.amostras == antes, "o governador em repouso mediu o ar sem ninguém pedir"
+    finally:
+        governador.parar()
+
+
+def test_o_pedido_de_vaga_sobe_o_fio_e_a_saida_da_ultima_ponte_o_derruba() -> None:
+    medidor = _Medidor()
+    governador = _governador(medidor)
+    governador.iniciar()
+    try:
+        assert _o_fio_saiu(governador)
+        vaga = governador.pedir_vaga("aa:bb:cc:00:00:01", "som")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu()
+        assert not governador.em_repouso(), "a ponte de pé ficou sem o tique do governador"
+        antes = medidor.amostras
+        time.sleep(0.1)
+        assert medidor.amostras > antes, "com ponte de pé o governador não mediu o ar"
+        vaga.soltar()
+        assert _o_fio_saiu(governador), "a última ponte saiu e o fio do governador seguiu"
+    finally:
+        governador.parar()
+
+
+def test_quatro_controles_no_radio_um_fio_so_ate_o_ultimo_sair() -> None:
+    governador = _governador(_Medidor())
+    governador.iniciar()
+    try:
+        assert _o_fio_saiu(governador)
+        vagas = []
+        for uniq in UNIQS:
+            vaga = governador.pedir_vaga(uniq, "som")
+            assert isinstance(vaga, gov.Vaga)
+            vaga.subiu()
+            vagas.append(vaga)
+        assert len(_fios_do_governador()) == 1
+        for vaga in vagas[:-1]:
+            vaga.soltar()
+            time.sleep(0.03)
+            assert not governador.em_repouso(), "o fio saiu com um controle ainda no rádio"
+        vagas[-1].soltar()
+        assert _o_fio_saiu(governador)
+    finally:
+        governador.parar()
+
+
+def test_em_repouso_a_aba_que_pergunta_o_ar_recebe_a_medida_de_agora() -> None:
+    medidor = _Medidor()
+    governador = _governador(medidor, periodo_s=0.05)
+    governador.iniciar()
+    try:
+        assert _o_fio_saiu(governador)
+        time.sleep(0.06)
+        antes = medidor.amostras
+        assert governador.ultima_amostra() is not None
+        assert medidor.amostras == antes + 1
+        governador.ultima_amostra()
+        assert medidor.amostras == antes + 1, "duas perguntas no mesmo período mediram duas vezes"
+    finally:
+        governador.parar()
+
+
+def test_parado_o_governador_nao_sobe_fio_no_pedido() -> None:
+    governador = _governador(_Medidor())
+    governador.iniciar()
+    governador.parar()
+    governador.pedir_vaga("aa:bb:cc:00:00:01", "som")
+    assert not _fios_do_governador()

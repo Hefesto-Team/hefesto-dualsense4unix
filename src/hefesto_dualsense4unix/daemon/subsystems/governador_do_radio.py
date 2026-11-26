@@ -522,6 +522,8 @@ class GovernadorDoRadio:
         self._esperando_medida: dict[str, _EsperaDaMedida] = {}
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
+        self._ligado = False
+        self._amostrada_em = -math.inf
         self.ao_autorizar: Callable[[str], None] | None = None
 
 
@@ -538,39 +540,107 @@ class GovernadorDoRadio:
         return cls(medidor=medidor)
 
     def ultima_amostra(self) -> dict[str, Any] | None:
-        """``{endereço: ArDoAdaptador}`` da última janela — ``None`` = não medi."""
+        """``{endereço: ArDoAdaptador}`` da última janela — ``None`` = não medi.
+
+        Com o tique em repouso, a pergunta mede na hora quando a amostra passou de um período.
+        """
+        self._medir_se_em_repouso()
         with self._trava:
             return None if self._amostra is None else dict(self._amostra)
 
     def iniciar(self) -> None:
-        """Sobe o tique numa thread — que, antes do primeiro tique, fecha as"""
+        """Liga o governador: um fio fecha as pontes fantasmas e o tique anda enquanto houver
+        ponte, pedido, espera ou autorização; sem nenhum, o fio sai e volta no pedido seguinte.
+
+        Sem controle no rádio não há fio (O-SERVICO-EM-REPOUSO-ESPERA-QUEM-CONSOME-01).
+        """
         if self._medidor is None:
             return
-        if self._thread is not None and self._thread.is_alive():
-            return
         self._parar.clear()
-        self._thread = threading.Thread(
-            target=self._laco, name="hefesto-governador", daemon=True
-        )
-        self._thread.start()
-        logger.info("governador_do_radio_iniciado", n_max=self.n_max)
+        self._ligado = True
+        if self._garantir_o_fio():
+            logger.info("governador_do_radio_iniciado", n_max=self.n_max)
 
     def parar(self, esperar_s: float = 1.0) -> None:
         self._parar.set()
-        thread, self._thread = self._thread, None
+        with self._trava:
+            self._ligado = False
+            thread, self._thread = self._thread, None
         if thread is not None:
             thread.join(timeout=esperar_s)
+
+    def em_repouso(self) -> bool:
+        """Ligado e sem fio: nada a governar agora."""
+        with self._trava:
+            return self._ligado and not self._fio_vivo()
+
+    def _fio_vivo(self) -> bool:
+        return self._thread is not None and self._thread.is_alive()
+
+    def _garantir_o_fio(self) -> bool:
+        """Sobe o fio do tique se o governador está ligado e o fio não anda. Devolve se subiu."""
+        with self._trava:
+            if not self._ligado or self._parar.is_set() or self._fio_vivo():
+                return False
+            self._thread = threading.Thread(
+                target=self._laco, name="hefesto-governador", daemon=True
+            )
+            self._thread.start()
+            return True
+
+    def _tem_trabalho(self) -> bool:
+        """Há ponte, pedido, espera da medida, autorização ou estado a andar. Chamado com a trava.
+
+        O episódio da fila e o adaptador parado são memória lida no pedido seguinte: não pedem
+        tique.
+        """
+        return bool(
+            self._vagas or self._pedidos or self._esperando_medida or self._autorizados
+            or self._estados or self._pausas
+        )
+
+    def _repousar_se_ocioso(self) -> bool:
+        """O fio sai quando não há o que governar; o próximo pedido o sobe de novo."""
+        with self._trava:
+            if self._tem_trabalho():
+                return False
+            if self._thread is threading.current_thread():
+                self._thread = None
+        logger.debug("governador_em_repouso")
+        return True
+
+    def _medir_se_em_repouso(self) -> None:
+        """Mede o ar na hora quando o fio repousa e a amostra passou de um período."""
+        medidor = self._medidor
+        if medidor is None:
+            return
+        with self._trava:
+            if not self._ligado or self._fio_vivo():
+                return
+            if self._relogio() - self._amostrada_em < self._periodo_s:
+                return
+        try:
+            crua = dict(medidor.amostrar())
+        except Exception:
+            logger.debug("governador_medidor_falhou", exc_info=True)
+            return
+        with self._trava:
+            self._guardar_a_amostra(crua)
 
     def _laco(self) -> None:
         try:
             self.fechar_as_pontes_fantasmas()
         except Exception:
             logger.debug("governador_fantasmas_falhou", exc_info=True)
+        if self._repousar_se_ocioso():
+            return
         while not self._parar.wait(self._periodo_s):
             try:
                 self.tique()
             except Exception:
                 logger.debug("governador_tique_falhou", exc_info=True)
+            if self._repousar_se_ocioso():
+                return
 
 
     def fechar_as_pontes_fantasmas(self) -> int:
@@ -693,7 +763,17 @@ class GovernadorDoRadio:
         return (*ordem, *(e for e in livres if e not in ordem))
 
     def pedir_vaga(self, uniq: str, tipo: str) -> Vaga | Recusa:
-        """Uma vaga para a ponte deste controle, ou a :class:`Recusa` dita."""
+        """Uma vaga para a ponte deste controle, ou a :class:`Recusa` dita.
+
+        Com o tique em repouso, o ar se mede antes de decidir e o fio sobe depois da decisão.
+        """
+        self._medir_se_em_repouso()
+        try:
+            return self._decidir_a_vaga(uniq, tipo)
+        finally:
+            self._garantir_o_fio()
+
+    def _decidir_a_vaga(self, uniq: str, tipo: str) -> Vaga | Recusa:
         adaptador = ""
         try:
             adaptador = str(self._adaptador_de(uniq) or "").lower()
@@ -803,6 +883,7 @@ class GovernadorDoRadio:
             return False
         with self._trava:
             self._autorizados[(chave, adaptador)] = uniq
+        self._garantir_o_fio()
         logger.info("governador_ligar_aqui", uniq=uniq, adaptador=adaptador)
         avisar = self.ao_autorizar
         if avisar is not None:
@@ -959,15 +1040,10 @@ class GovernadorDoRadio:
 
     def tique(self) -> None:
         """Uma janela: amostra o ar e decide, por adaptador, ceder ou escrever."""
-        amostra: dict[str, Any] | None = None
-        lista_lida = True
+        crua: dict[str, Any] | None = None
         if self._medidor is not None:
             try:
                 crua = dict(self._medidor.amostrar())
-                lista_lida = not any(
-                    str(getattr(a, "motivo", "") or "") == SEM_BLUETOOTH for a in crua.values()
-                )
-                amostra = {e: a for e, a in crua.items() if e}
             except Exception:
                 logger.debug("governador_medidor_falhou", exc_info=True)
         agora = self._relogio()
@@ -975,13 +1051,7 @@ class GovernadorDoRadio:
         paradas: list[tuple[str, list[Vaga], float]] = []
         andaram: list[str] = []
         with self._trava:
-            if amostra is not None:
-                self._amostra = amostra
-                self._lista_lida = lista_lida
-                if lista_lida and not any(
-                    str(getattr(a, "motivo", "") or "") == IOCTL_FALHOU for a in amostra.values()
-                ):
-                    self._nao_sei_desde = None
+            amostra = None if crua is None else self._guardar_a_amostra(crua)
             self._recolher(agora)
             acordar = self._quem_a_medida_acorda(agora)
             self._o_sinal_protege_o_botao(agora, bordas)
@@ -1020,6 +1090,21 @@ class GovernadorDoRadio:
         if agora - self._autorizacoes_vistas_em >= INTERVALO_DAS_AUTORIZACOES_S:
             self._autorizacoes_vistas_em = agora
             self.conferir_as_autorizacoes()
+
+    def _guardar_a_amostra(self, crua: dict[str, Any]) -> dict[str, Any]:
+        """Guarda a amostra crua do medidor e devolve a dos endereços. Chamado com a trava."""
+        lista_lida = not any(
+            str(getattr(a, "motivo", "") or "") == SEM_BLUETOOTH for a in crua.values()
+        )
+        amostra = {e: a for e, a in crua.items() if e}
+        self._amostra = amostra
+        self._amostrada_em = self._relogio()
+        self._lista_lida = lista_lida
+        if lista_lida and not any(
+            str(getattr(a, "motivo", "") or "") == IOCTL_FALHOU for a in amostra.values()
+        ):
+            self._nao_sei_desde = None
+        return amostra
 
     def _o_sinal_protege_o_botao(
         self, agora: float, bordas: list[tuple[str, dict[str, Any]]]
