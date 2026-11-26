@@ -363,7 +363,7 @@ def _gesto_de_lista(tipo: str) -> tuple[list[nav.Caixa], nav.Selecoes, Any]:
 
 
 def test_14_na_lista_de_gesto_o_passo_so_marca_e_o_x_entrega_uma_vez() -> None:
-    """A-LISTA-QUE-FAZ-UM-GESTO-ANDA-PELO-CONTROLE-SEM-FAZER-A-CADA-PASSO-01: dois passos e um X
+    """D-2511-A-LISTA-DE-GESTO-ANDA-SEM-APLICAR-E-O-X-ENTREGA: dois passos e um X
     mandam UM `change` (a página recebe `entregar` uma vez), e os passos só `marcar`."""
     _, sel, aplicar = _gesto_de_lista(nav.LISTA_DE_GESTO)
     passos = [aplicar(nav.Ato("passo", uniq=P1, direcao="baixo")) for _ in range(2)]

@@ -111,7 +111,8 @@ def test_as_paginas_publicadas_tem_lista_e_barra_de_gesto() -> None:
 @pytest.mark.parametrize(("pagina", "tag", "entrada", "gesto"), GESTOS)  # (noqa-acento)
 def test_o_click_de_lista_e_de_barra_nao_chega_ao_despachante(
         espia: _Espia, pagina: str, tag: str, entrada: str, gesto: str) -> None:
-    """`click` não despacha nem registra; o `change` do mesmo elemento despacha."""
+    """D-2511-A-LISTA-E-A-BARRA-PEDEM-SO-PELA-ESCOLHA: `click` não despacha nem registra; o
+    `change` do mesmo elemento despacha."""
     piloto = _piloto()
     piloto._gesto(_carga(pagina, tag, entrada, gesto, "click"))
     assert espia.despachos == [], f"abrir {tag} de «{gesto}» mandou gesto: {espia.despachos}"

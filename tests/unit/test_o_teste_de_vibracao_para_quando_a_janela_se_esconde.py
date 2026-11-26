@@ -125,7 +125,8 @@ def _ligar_os_tres(ponte: PonteQueAnota) -> None:
 
 
 def test_esconder_a_janela_larga_o_teste_de_cada_controle(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Barras, padrão em repetição e háptica: cada um volta ao jogo, e nada renova depois."""
+    """D-2511-ESCONDER-A-JANELA-LARGA-O-TESTE-DE-VIBRACAO: barras, padrão em repetição e
+    háptica voltam ao jogo, cada um, e nada renova depois."""
     ponte = PonteQueAnota()
     monkeypatch.setattr(hv, "ponte", ponte)
     monkeypatch.setattr(hv, "_soltar_as_ondas", lambda: None)
