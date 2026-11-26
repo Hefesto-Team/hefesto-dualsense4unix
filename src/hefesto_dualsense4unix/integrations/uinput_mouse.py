@@ -384,9 +384,6 @@ class UinputMouseDevice:
         self,
         do_mouse: dict[str, str] | None,
         calados: frozenset[str] | None = None,
-        *,
-        do_teclado: Iterable[str] | None = None,
-        quem_emite_o_teclado: Callable[[], bool] | None = None,
     ) -> None:
         """Troca o que os botões fazem NESTE device. `None` volta ao de fábrica.
 
@@ -421,8 +418,8 @@ class UinputMouseDevice:
         self.soltar_o_que_segura()
         self._stick_carry_x = 0.0
         self._stick_carry_y = 0.0
-        self._quem_emite_o_teclado = quem_emite_o_teclado
-        self._cedidos = frozenset(do_teclado or ())
+        self._quem_emite_o_teclado = None
+        self._cedidos = frozenset()
         self._teclado_emitia = False
         if do_mouse is None:
             self._escolha_do_mouse = {}
@@ -439,6 +436,18 @@ class UinputMouseDevice:
         self._eixos_do_cursor = _eixos_que_fazem(TOKEN_CURSOR, do_mouse, self._mudos)
         self._eixos_da_rolagem = _eixos_que_fazem(TOKEN_ROLAGEM, do_mouse, self._mudos)
         self._mapa_botoes = {b: t for b, t in do_mouse.items() if b not in EIXOS}
+        self._montar_o_dpad_e_o_tap(self._o_teclado_emite())
+
+    def ceder_ao_teclado(
+        self, do_teclado: Iterable[str], quem_emite_o_teclado: Callable[[], bool]
+    ) -> None:
+        """Os botões de `do_teclado` deixam o de fábrica do d-pad e do tap enquanto o teclado emite.
+
+        Vale para a tabela entregue por último em :meth:`set_button_actions`, que a zera.
+        """
+        self.soltar_o_que_segura()
+        self._cedidos = frozenset(do_teclado)
+        self._quem_emite_o_teclado = quem_emite_o_teclado
         self._montar_o_dpad_e_o_tap(self._o_teclado_emite())
 
     def _o_teclado_emite(self) -> bool:

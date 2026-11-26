@@ -854,8 +854,10 @@ class ProfileManager:
 
         try:
             device.set_button_actions(  # type: ignore[attr-defined]
-                do_mouse, calados, do_teclado=frozenset(do_teclado),
-                quem_emite_o_teclado=_ha_teclado)
+                do_mouse, calados)
+            ceder = getattr(device, "ceder_ao_teclado", None)
+            if callable(ceder):
+                ceder(frozenset(do_teclado), _ha_teclado)
             teclado = (teclado_provider() if teclado_provider is not None
                        else self.keyboard_device)
             if teclado is not None:

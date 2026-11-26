@@ -8,12 +8,12 @@ e `KEY_F11`; `dpad_down=KEY_DOWN` saía duas vezes). O caminho do perfil passava
 botões calados; a tabela com o jogo aberto, `calados | do_teclado`.
 
 A pergunta «esta ação de teclado tem quem a emita agora?» tem um dono, o
-`UinputMouseDevice.set_button_actions` (`do_teclado` e `quem_emite_o_teclado`), e a resposta é
+`UinputMouseDevice.ceder_ao_teclado` (a tabela e a pergunta que o gerente entrega), e a resposta é
 lida a cada tique: com o teclado virtual de pé o de fábrica do botão sai do mouse; sem ele
 (Função do teclado desligada) o de fábrica segue, e o teclado que liga ou desliga depois da tabela
 é acompanhado sem reaplicar o perfil. O jogo aberto tem teclado privado, que sempre existe.
 
-MORDIDAS (cada uma reprova nomeando o botão): arrancar o `do_teclado=` da chamada do
+MORDIDAS (cada uma reprova nomeando o botão): arrancar a chamada `ceder` do
 `apply_button_actions` reprova os casos com teclado; trocar a pergunta por «sempre sim»
 (`calados | do_teclado` fixo) reprova os casos sem teclado e o do teclado que desliga; arrancar o
 `_acompanhar_o_teclado` do `dispatch` reprova só o do teclado que liga e desliga depois.
@@ -57,7 +57,16 @@ def uinput(monkeypatch: pytest.MonkeyPatch) -> _UinputPorDevice:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.poll.gatilhos_de_cada_controle",
         lambda d: {})
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard._fazer_o_comando",
+        lambda daemon, token: None)
     return mod
+
+
+def _zerar(mod: _UinputPorDevice) -> None:
+    """Esvazia o que cada device gravou, sem soltar as listas que os devices seguram."""
+    for gravado in mod.saiu.values():
+        gravado.clear()
 
 
 def _toques(mod: _UinputPorDevice, nome: str) -> list[str]:
@@ -79,7 +88,7 @@ def _dois_devices(mod: _UinputPorDevice, escolhas: dict[str, str], *, com_teclad
     if com_teclado:
         gerente.apply_keyboard(perfil)
     gerente.apply_button_actions(perfil)
-    mod.saiu.clear()
+    _zerar(mod)
     return mouse, teclado, de_pe
 
 
@@ -156,11 +165,11 @@ def test_o_jogo_aberto_e_o_computador_dao_o_mesmo(
 ) -> None:
     for token in ("KEY_F11", acoes.TOKEN_STEAM, DE_FABRICA[botao]):
         no_computador = _no_computador(uinput, botao, token, com_teclado=True)
-        uinput.saiu.clear()
+        _zerar(uinput)
         no_jogo = _com_o_jogo_aberto(uinput, botao, token)
         assert no_jogo == no_computador, (
             f"{botao}={token}: o computador deu {no_computador} e o jogo aberto {no_jogo}")
-        uinput.saiu.clear()
+        _zerar(uinput)
 
 
 @pytest.mark.parametrize("botao", OS_SEIS)
@@ -172,13 +181,13 @@ def test_o_teclado_que_liga_e_desliga_depois_da_tabela_e_acompanhado(
     assert _toques(uinput, NOME_DO_MOUSE) == []
 
     de_pe["teclado"] = False
-    uinput.saiu.clear()
+    _zerar(uinput)
     _apertar(mouse, teclado, botao, de_pe=de_pe, volta=1)
     assert _toques(uinput, NOME_DO_MOUSE) == [DE_FABRICA[botao]], (
         f"{botao}: o teclado desligou e o botão ficou mudo, sem ninguém para emitir F11")
 
     de_pe["teclado"] = True
-    uinput.saiu.clear()
+    _zerar(uinput)
     _apertar(mouse, teclado, botao, de_pe=de_pe, volta=2)
     assert _toques(uinput, NOME_DO_MOUSE) == []
     assert _toques(uinput, NOME_DO_TECLADO) == ["KEY_F11"]
@@ -206,7 +215,8 @@ def test_sem_a_pergunta_o_device_e_o_de_antes() -> None:
     do_mouse: dict[str, str] = {}
     velho, novo = UinputMouseDevice(), UinputMouseDevice()
     velho.set_button_actions(do_mouse, frozenset({"dpad_up"}))
-    novo.set_button_actions(do_mouse, frozenset({"dpad_up"}), do_teclado=None)
+    novo.ceder_ao_teclado((), lambda: True)
+    novo.set_button_actions(do_mouse, frozenset({"dpad_up"}))
     assert velho._mapa_dpad == novo._mapa_dpad == {
         b: k for b, k in DPAD_TO_KEY.items() if b != "dpad_up"}
     assert velho._mapa_tap == novo._mapa_tap == dict(EDGE_KEY_MAP)
@@ -218,8 +228,8 @@ def test_a_pergunta_que_levanta_conta_como_ninguem(uinput: _UinputPorDevice) -> 
 
     mouse = UinputMouseDevice()
     assert mouse.start()
-    mouse.set_button_actions(
-        {}, frozenset(), do_teclado=("dpad_up",), quem_emite_o_teclado=quebrada)
+    mouse.set_button_actions({}, frozenset())
+    mouse.ceder_ao_teclado(("dpad_up",), quebrada)
     assert mouse._mapa_dpad == dict(DPAD_TO_KEY)
 
 

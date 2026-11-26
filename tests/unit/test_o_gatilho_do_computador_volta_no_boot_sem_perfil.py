@@ -109,7 +109,7 @@ def test_o_boot_sem_perfil_leva_o_efeito_de_cada_controle_ao_aparelho() -> None:
     assert set(camada) == {CABO, RADIO}, f"controles com efeito guardado: {sorted(camada)}"
     assert camada[CABO].trigger_left is not None and camada[CABO].trigger_right is None
     assert camada[RADIO].trigger_right is not None and camada[RADIO].trigger_left is None
-    assert type(camada[CABO].trigger_left).__name__ != type(camada[RADIO].trigger_right).__name__
+    assert camada[CABO].trigger_left.mode != camada[RADIO].trigger_right.mode
     assert all(s.led is None and s.player_leds is None for s in camada.values()), (
         "o boot sem perfil só leva gatilho; a luz não é desta cura")
 
