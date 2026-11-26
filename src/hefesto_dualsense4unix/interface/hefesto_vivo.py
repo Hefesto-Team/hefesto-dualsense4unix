@@ -1813,6 +1813,7 @@ class Piloto:
         self._abertura: dict[str, float] = {"piloto": relogio()}
         self.args = args
         self.pronto = False
+        self._trocando = False
         self.agendado = False
         self.relatou = False
         self.pagina = PRIMEIRA
@@ -2259,6 +2260,7 @@ class Piloto:
             return
         if nova != self.pagina:
             pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
+        self._trocando = False
         self.pagina = nova
         if not self.args.oculta:
             _anotar_a_aba(nova)
@@ -2389,6 +2391,8 @@ class Piloto:
     def _instalado(self, _valor: Any, erro: Any) -> None:
         if erro is not None:
             print(f"ERRO: o bootstrap não instalou em {self.pagina}: {erro}", file=sys.stderr)
+            return
+        if self._trocando:
             return
         self.pronto = True
         self.ponte.perguntar(DICA_DA_CASA, self._dica_instalada)
@@ -3224,7 +3228,11 @@ class Piloto:
 
         Antes de a primeira carga confirmar, a troca espera por essa carga: a carga cortada no meio
         dá um FINISHED com a página em branco, que a guarda da janela lê como carga errada e
-        fecha a janela."""
+        fecha a janela.
+
+        A troca zera o `pronto` antes do `load_uri`: o `pronto` da aba que sai não vale para a que
+        carrega, e só a ponte instalada na aba pedida (`_instalado`) o devolve. Enquanto a carga
+        não termina, o `_instalado` atrasado da aba que saiu não o devolve."""
         alvo = onde.pagina(_a_pagina_pedida(pagina), publicado=True)
         if not alvo.exists():
             self.tela._morrer(f"não existe a página pedida: {alvo.name}")
@@ -3236,6 +3244,8 @@ class Piloto:
             return False
         pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
         _soltar_as_ondas()
+        self.pronto = False
+        self._trocando = True
         self.view.load_uri(alvo.as_uri())
         return False
 
