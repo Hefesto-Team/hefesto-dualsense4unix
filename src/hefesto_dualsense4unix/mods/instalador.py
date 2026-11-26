@@ -775,6 +775,20 @@ def _commit_da_pasta(pasta: Path) -> str:
     return ""
 
 
+def _quem_a_substituiu(lg: Lugares, registro: dict[str, Entrada], mod_id: str) -> str | None:
+    """O nome da extensão instalada cujo ``substitui`` nomeia ``mod_id``; ``None`` quando nenhuma.
+
+    O manifesto instalado que não se lê não nomeia ninguém.
+    """
+    for outra_id, outra in registro.items():
+        if outra_id == mod_id:
+            continue
+        with contextlib.suppress(ManifestoRecusadoError, OSError):
+            if mod_id in ler_manifesto(lg.codigo / outra_id, exigir_api=False).substitui:
+                return outra.nome
+    return None
+
+
 def _conferir_o_lancador(manifesto: Manifesto, pasta: Path) -> None:
     """O tipo, o bloco e a permissão ``lancador`` andam juntos, e o bloco passa no conferidor.
 
@@ -967,6 +981,10 @@ def instalar(
             raise InstalacaoRecusadaError(exc.frase) from exc
         _conferir_o_lancador(manifesto, baixada)
         registro = ler_registro(lg.registro)
+        substituta = _quem_a_substituiu(lg, registro, manifesto.id)
+        if substituta is not None:
+            raise InstalacaoRecusadaError(
+                f"«{manifesto.nome}» está substituída por «{substituta}», que já está instalada.")
         anterior = registro.get(manifesto.id)
         if anterior is not None and anterior.endereco != endereco:
             raise InstalacaoRecusadaError(
