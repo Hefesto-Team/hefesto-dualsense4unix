@@ -1758,7 +1758,7 @@ _pip_a_frase() {
 
 _pip_morre_com_a_causa() {
     printf '\n      últimas linhas do pip:\n'
-    tail -n 12 "${_PIP_REGISTRO}" 2>/dev/null | sed 's/^/        /'
+    tail -n 12 "${_PIP_REGISTRO}" 2>/dev/null | sed 's/^/        /' || true
     die "$(_pip_a_frase "${_PIP_REGISTRO}"); o registro inteiro está em ${_PIP_REGISTRO}"
 }
 

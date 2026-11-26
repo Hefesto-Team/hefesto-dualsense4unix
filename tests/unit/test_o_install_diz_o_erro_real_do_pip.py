@@ -119,6 +119,15 @@ def test_a_falha_sem_causa_conhecida_diz_so_o_registro(tmp_path: pathlib.Path) -
     assert str(_registro(tmp_path)) in tela
 
 
+def test_sem_onde_gravar_o_registro_a_falha_ainda_diz_a_frase(tmp_path: pathlib.Path) -> None:
+    (tmp_path / "estado").write_text("um arquivo no lugar da pasta\n", encoding="utf-8")
+    feito = _rodar(tmp_path, saida_do_pip=SAIDAS["rede"], pip_falha=True)
+    tela = feito.stdout + feito.stderr
+    assert feito.returncode != 0, tela
+    assert "SEGUIU" not in tela
+    assert "pip install do pacote falhou" in tela, tela
+
+
 def test_com_o_dev_falhando_e_o_essencial_passando_o_install_segue(
         tmp_path: pathlib.Path) -> None:
     feito = _rodar(tmp_path, saida_do_pip=SAIDAS["conflito"], pip_falha=True, dev=True,
