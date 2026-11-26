@@ -71,12 +71,13 @@ def _bloco(doc: str, abre: str) -> str:
 
 
 def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
-    """Duas linhas no Status e quatro no exame (duas colunas de duas): seis ao todo."""
+    """Duas linhas no Status e quatro no exame, mais a das correções que o desenho mostra com
+    uma cura desfeita: sete ao todo, em três, duas e duas."""
     status3 = _bloco(_desenho(), '<div class="status3">')
     colunas = status3.split('<div class="col-lista"')[1:]
     assert len(colunas) == 3, f"o Status tem {len(colunas)} colunas, e o desenho tem três"
     por_coluna = [len(re.findall(r'class="saude(?: vai)?(?: longa)?"', c)) for c in colunas]
-    assert por_coluna == [2, 2, 2], f"linhas por coluna: {por_coluna}"
+    assert por_coluna == [3, 2, 2], f"linhas por coluna: {por_coluna}"
     ids = re.findall(r'data-id="([^"]+)"', status3)
     assert "hefesto-estado" in ids
     assert "hefesto-troca-de-perfil" in ids
@@ -531,12 +532,13 @@ def _na_tela(tamanho: tuple[int, int]) -> dict[str, Any]:
 
 @pytest.mark.parametrize("tamanho", [(1212, 700), (1212, 809)])
 def test_o_registro_cabe_em_1212x700(tamanho: tuple[int, int]) -> None:
-    """O fundo do ``.log`` não passa do quadro, a página não rola e as seis linhas estão lá.
+    """O fundo do ``.log`` não passa do quadro, a página não rola e as sete linhas do desenho
+    (as seis dos temas e a das correções desfeitas) estão lá.
 
     MORDIDA: devolver o ``min-height:120px`` do ``.registro`` empurra o fundo para fora em 700.
     """
     lido = _na_tela(tamanho)
-    assert lido["linhas"] == 6
+    assert lido["linhas"] == 7
     assert lido["ajudas"] == 0
     assert lido["log"][1] <= lido["quadro"][1] + 0.5, (
         f"o registro passa do quadro: {lido['log']} contra {lido['quadro']}")

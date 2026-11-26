@@ -47,6 +47,9 @@ ATOS: dict[Chave, str] = {
     ("*", "atualizacoes-abrir"):
         "tela: abre a pergunta das atualizações e refaz a conferência velha em fundo; "
         "nenhuma escolha muda",
+    ("09-sistema.html", "correcoes-do-sistema"):
+        "tela: a linha do Status que diz a cura desfeita abre a pergunta das atualizações; "
+        "nenhuma escolha muda",
     ("*", "atualizacoes-anteriores"):
         "tela: mostra as versões anteriores de cada peça; voltar é outro gesto, que declara",
     ("*", "atualizacoes-lista"):

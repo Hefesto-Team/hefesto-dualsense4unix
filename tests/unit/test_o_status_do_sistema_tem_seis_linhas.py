@@ -173,9 +173,18 @@ def test_sem_controle_o_gamepad_diz_nenhum_controle_ligado() -> None:
 
 
 def test_o_desenho_tem_os_mesmos_seis_temas_na_mesma_ordem() -> None:
+    """Os seis temas, na ordem; a linha das correções desfeitas entra logo depois do Steam Input.
+
+    Nota de 26/11/2026: o desenho escolhido da A-ABA-SISTEMA-DIZ-QUANDO-A-ATUALIZACAO-DESFEZ-UMA-
+    CURA-01 acrescenta uma sétima linha, que só existe com uma cura da casa desfeita; os seis
+    temas seguem fixos e sempre presentes.
+    """
     desenho = DESENHO.read_text(encoding="utf-8")
     temas = re.findall(r'class="saude[^"]*"[^>]*data-tema="([^"]+)"', desenho)
-    assert temas == list(a09.TEMAS), temas
+    depois_do_steam_input = temas.index("steam-input") + 1
+    assert temas[depois_do_steam_input] == a09.TEMA_DAS_CURAS, temas
+    sem_a_das_curas = temas[:depois_do_steam_input] + temas[depois_do_steam_input + 1:]
+    assert sem_a_das_curas == list(a09.TEMAS), temas
 
 
 def _fontes_sem_outra_casa() -> set[str]:

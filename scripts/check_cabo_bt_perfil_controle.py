@@ -32,7 +32,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                      "atualizacoes-continuar", "atualizacoes-fechar-a-steam",
                      "atualizacoes-registro-copiar", "atualizacoes-registro-salvar",
                      "atualizacoes-registro-voltar", "atualizacoes-reiniciar-o-computador",
-                     "atualizacoes-nao-reiniciar", "atualizacoes-confirmar-o-reinicio",
+                     "atualizacoes-nao-reiniciar", "atualizacoes-confirmar-o-reinicio", "correcoes-do-sistema",
                      "atualizar-sozinho", "peca-da-atualizacao", "pecas-do-grupo",
                      "prazo-da-atualizacao", "voltar-a-anterior")},
     "calibrar-sinal": "O passo do sentido só lê o giro da peça e diz o veredito: não grava "

@@ -35,6 +35,7 @@ CAMADA: dict[tuple[str, str], str] = {
        for gesto, dono in _DA_SECAO_DOS_CONTROLES.items()},
     ("01-jogar.html", "cadeado"): _C,
     ("09-sistema.html", "atualizacoes-abrir"): _W,
+    ("09-sistema.html", "correcoes-do-sistema"): _W,
     ("09-sistema.html", "atualizacoes-anteriores"): _W,
     ("09-sistema.html", "atualizar-sozinho"): _C,
     ("09-sistema.html", "peca-da-atualizacao"): _C,

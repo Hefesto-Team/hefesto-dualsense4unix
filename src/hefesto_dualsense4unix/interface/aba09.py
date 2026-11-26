@@ -269,12 +269,12 @@ def ligavel(rotulo, gesto, campo, ligado, dica):
             f' data-hef-classe="ligada"><span class="p"></span>{rotulo}</button>')
 
 
-def linha(selo, cls, g, txt, ident="", href="", dica="", tema=""):
+def linha(selo, cls, g, txt, ident="", href="", dica="", tema="", gesto=""):
     """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto, com o tema."""
     tag = "a" if href else "div"
     vai = (" vai" if href else "") + (" longa" if cls in PEDEM_ACAO else "")
     i = (f' data-id="{ident}"' if ident else "") + (f' data-tema="{tema}"' if tema else "")
-    h = f' href="{href}"' if href else ""
+    h = (f' href="{href}"' if href else "") + (f' data-gesto="{gesto}"' if gesto else "")
     dica = dica_da_linha(txt, dica, cls in PEDEM_ACAO)
     t = f' data-dica="{dica}"' if dica else ""
     return (f'            <{tag} class="saude{vai}"{i}{h}>'
@@ -353,6 +353,10 @@ ACHADOS = [
           tema="steam-input", href="10-perfis.html",
           dica="A caixinha do Steam Input mudou depois que o Hefesto confirmou o jogo. "
                "Clique para conferir o perfil dele na aba Perfis."),
+    linha("AVISO", "aviso", "!", "A atualização desfez a correção do controle",
+          tema="correcoes-do-sistema", href="#", gesto="correcoes-do-sistema",
+          dica="Correções do sistema. O kernel novo voltou ao driver de fábrica do controle. "
+               "Rode o instalador do Hefesto de novo."),
     linha("NOTA", "nt", "◆", "Nenhum controle no cabo", tema="audio"),
     linha("OK", "ok", "✓", "Um gamepad virtual por jogador", tema="gamepad",
           dica="Cada controle ligado tem o seu gamepad virtual"),

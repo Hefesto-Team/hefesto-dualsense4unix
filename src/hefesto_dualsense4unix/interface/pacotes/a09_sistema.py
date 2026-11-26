@@ -60,6 +60,7 @@ from hefesto_dualsense4unix.app.actions.versao_ao_abrir import pendencia_do_inst
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
+from hefesto_dualsense4unix.integrations import curas_da_casa as _curas
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
 from hefesto_dualsense4unix.interface import folha_da_casa as _folha
@@ -1271,6 +1272,40 @@ TEMA_DOS_ACRESCIMOS = {"vigia": "steam-input", "prontuario": "steam-input", "som
                        "vulkan": "steam-input", "perfis": "troca-de-perfil",
                        "install": "serviço"}
 
+TEMA_DAS_CURAS = "correcoes-do-sistema"
+POSICAO_DAS_CURAS = 6
+GESTO_DAS_CURAS = "correcoes-do-sistema"
+FRASE_DA_CURA_QUE_CAIU = {
+    "dkms": "A atualização desfez a correção do controle",
+    "bluetooth": "A atualização desfez a correção do Bluetooth",
+    "som": "A atualização desfez a correção do som",
+    "portal": "A atualização desfez a correção da captura de tela",
+}
+FRASE_DE_VARIAS_CURAS = "A atualização desfez {n} correções"
+FRASE_DA_CURA_SEM_NOME = "A atualização desfez uma correção do Hefesto"
+
+
+def linha_das_curas(achado: dict[str, Any]) -> dict[str, Any]:
+    """A linha a mais do Status quando uma atualização desfez uma cura da casa.
+
+    O achado é o do exame (`storm_doctor.check_curas_da_casa`), e o dono das curas
+    (`curas_da_casa`) diz qual caiu: a linha traz a frase curta da cura desfeita, no mesmo selo
+    «AVISO» das outras, e a dica leva a frase inteira e a cura. O clique abre as Atualizações,
+    onde o instalador roda de novo. Tudo verde, a linha não existe.
+    """
+    frase, _, cura = str(achado.get("txt") or "").partition(_exame.PREFIXO_DA_CURA)
+    caidas = [c for c in _curas.curas_de_agora() if c.estado == _curas.CAIU]
+    if len(caidas) == 1:
+        curta = FRASE_DA_CURA_QUE_CAIU.get(caidas[0].id, FRASE_DA_CURA_SEM_NOME)
+    elif caidas:
+        curta = FRASE_DE_VARIAS_CURAS.format(n=len(caidas))
+    else:
+        curta = FRASE_DA_CURA_SEM_NOME
+    dica = " ".join(p for p in (f"{_curas.ROTULO}.", frase.strip(), cura.strip()) if p)
+    return {"selo": achado.get("selo"), "cls": achado.get("cls"), "g": achado.get("g"),
+            "txt": curta, "curta": curta, "dica": dica, "tema": TEMA_DAS_CURAS,
+            "href": "#", "gesto": GESTO_DAS_CURAS}
+
 
 def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
     """O exame da camada do produto, com os avisos do produto no fim da lista."""
@@ -1409,7 +1444,12 @@ def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
         if cara is not None:
             cara["curta"] = cara.get("txt", "")
     avisos: dict[str, list[dict[str, Any]]] = {t: [] for t in TEMAS}
+    das_curas: dict[str, Any] | None = None
     for i, achado in enumerate(do_dono):
+        if completo and i == POSICAO_DAS_CURAS:
+            if achado.get("cls") in PEDEM_ACAO:
+                das_curas = linha_das_curas(achado)
+            continue
         tema = TEMA_DO_EXAME[i] if completo and i < len(TEMA_DO_EXAME) else TEMA_SEM_DONO
         if completo and POSICAO_NO_EXAME.get(tema) == i:
             caras[tema] = dict(achado)
@@ -1424,6 +1464,8 @@ def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
     caras["gamepad"] = linha_do_gamepad_por_jogador(state)
     saida = [_na_linha_do_tema(t, caras.get(t) or _sem_leitura(t, motivo), avisos[t])
              for t in TEMAS]
+    if das_curas is not None:
+        saida.insert(TEMAS.index("steam-input") + 1, das_curas)
     return {"linhas": saida, "vazio": ""}
 
 
@@ -1531,8 +1573,9 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     href = str(achado.get("href") or "")
     tag = "a" if href else "div"
     destino = f' href="{html.escape(href)}"' if href else ""
+    gesto = f' data-gesto="{html.escape(str(achado["gesto"]))}"' if achado.get("gesto") else ""
     return (f'<{tag} class="saude{_classes_da_linha(achado, href)}"{ident}'
-            f'{_do_tema(achado)}{destino}>'
+            f'{_do_tema(achado)}{destino}{gesto}>'
             f'<span class="selo {cls}">'
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'
@@ -1678,6 +1721,15 @@ SEM_RESPOSTA_PARA_RETOMAR = (
 SEM_RESPOSTA_DO_SERVICO = (
     "Não consegui falar com o serviço: pode não ter reaplicado nada, e pode ter "
     "reaplicado sem me responder. Clique de novo com o serviço de pé.")
+
+
+@gesto("09-sistema.html", GESTO_DAS_CURAS)
+def abrir_as_correcoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A linha «A atualização desfez a correção…» do Status: abre as Atualizações, onde a
+    pessoa roda o instalador de novo. Só abre a pergunta; nada é gravado."""
+    from . import atualizacoes
+
+    atualizacoes.abrir(ctx, o, p)
 
 
 @gesto("09-sistema.html", "atualizar")
