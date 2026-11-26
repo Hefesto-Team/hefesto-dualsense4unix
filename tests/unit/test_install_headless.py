@@ -106,5 +106,14 @@ class TestAcquireSudoAskpass:
         assert "sudo -v" not in pedidas, pedidas
 
 
+def test_o_uninstall_sem_a_variavel_e_sem_terminal_segue_pelo_askpass_do_sudo_conf(
+    tmp_path: Path,
+) -> None:
+    """D-2611-O-UNINSTALL-TENTA-O-ASKPASS-DO-SUDO-CONF: o desinstalador segue com a credencial
+    pelo askpass declarado no `sudo.conf`, como o instalador."""
+    prova = TestAcquireSudoAskpass()
+    prova.test_sem_a_variavel_e_sem_terminal_o_askpass_do_sudo_conf_vale(UNINSTALL, tmp_path)
+
+
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(pytest.main([__file__, "-q"]))

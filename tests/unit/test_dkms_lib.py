@@ -1451,3 +1451,15 @@ class TestCertificadoQueFaltaNaoMandaGerarChaveNova:
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:
     assert len(CINCO_PREPARADORES) == 5
     assert len({p.read_bytes() for p in CINCO_PREPARADORES}) == 1
+
+
+def test_o_certificado_que_falta_com_a_privada_presente_se_devolve_nos_quatro_passos(
+    tmp_path: Path,
+) -> None:
+    """D-2611-O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA: nenhum dos quatro passos do
+    install manda gerar chave com a privada presente; todos mandam devolver o certificado."""
+    prova = TestCertificadoQueFaltaNaoMandaGerarChaveNova()
+    for função in prova.PASSOS:
+        pasta = tmp_path / função
+        pasta.mkdir()
+        prova.test_com_a_privada_e_sem_o_certificado_o_passo_nomeia_o_certificado(pasta, função)
