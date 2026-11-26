@@ -38,5 +38,9 @@ tests/fixtures/bluez-5.88/** ia-literal
 assets/gdk-runtime/*.c     ia-literal
 assets/bluez-backport/*.asc ia-literal
 tests/fixtures/receita-assinada/** ia-literal
+docs/data/mapa-controles.csv ia-literal
+docs/data/ensaios.csv ia-literal
+docs/data/orcamento-de-ar.csv ia-literal
+docs/specs.html ia-literal
 tests/fixtures/receita-assinada/*.tar binary
 tests/fixtures/receita-assinada/*.sign* binary
