@@ -2457,7 +2457,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   let dica = null, alvo = null;
   const descrever = (el, liga) => {
     const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
-    if (liga) lista.push('hef-dica');
+    if (liga && el.getAttribute('data-hef-nome') !== 'dica') lista.push('hef-dica');
     if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
   };
   const mostrar = el => {
@@ -2584,14 +2584,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   prepararTelas();
   const PARADAS = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
   const paradasDe = caixa => Array.from(caixa.querySelectorAll(PARADAS)).filter(aparece);
-  const aberta = () => document.querySelector('.tela-nova:target');
+  const aberta = () => { const t = document.querySelector('.tela-nova:target'); return t && aparece(t) ? t : null; };
   let quemAbriu = null, ultimo = null, estavaAberta = false;
   document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href^="#"]');
     if (a && !a.closest('.tela-nova')) ultimo = a;
   }, true);
-  const focarSemDica = el => {
+  const focarSemDica = window.__hefFocarSemDica = el => {
     window.__hefFocoDoCodigo = el;
     try { el.focus(); } finally { window.__hefFocoDoCodigo = null; }
   };
@@ -2609,6 +2609,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     estavaAberta = !!tela;
   };
   addEventListener('hashchange', aoMudar);
+  new MutationObserver(aoMudar).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['data-hef-real']});
   addEventListener('DOMContentLoaded', aoMudar);
   addEventListener('load', aoMudar);
   aoMudar();
@@ -2626,6 +2627,85 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       const fim = e.shiftKey ? lista[0] : lista[lista.length - 1];
       if (!dentro || document.activeElement === fim) { e.preventDefault(); (e.shiftKey ? lista[lista.length - 1] : lista[0]).focus(); }
     }
+  });
+})();
+(() => {
+  const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary';
+  const GESTO = '[data-gesto],[data-hef-gesto]';
+  const DONO_DO_PAPEL = 'tr,li,output,template,option,optgroup';
+  const REGIAO_VIVA = '.ressalva';
+  const texto = el => (el.textContent || '').replace(/\s+/g, ' ').trim();
+  const ajustar = (el, nome, valor) => {
+    if (valor === null) { if (el.hasAttribute(nome)) el.removeAttribute(nome); }
+    else if (el.getAttribute(nome) !== valor) el.setAttribute(nome, valor);
+  };
+  const rotuloDoLugar = el => {
+    for (let a = el.parentElement, n = 0; a && n < 3; a = a.parentElement, n++) {
+      const r = a.querySelector(':scope > [class$="-rot"], :scope > .rot');
+      if (r && texto(r)) return texto(r);
+    }
+    return '';
+  };
+  const semNome = el => !(el.hasAttribute('aria-label') || el.hasAttribute('aria-labelledby') || el.hasAttribute('title')
+    || el.getAttribute('placeholder') || texto(el) || (el.labels && el.labels.length));
+  const nomear = el => {
+    if (el.hasAttribute('data-hef-nome')) { el.removeAttribute('aria-label'); el.removeAttribute('data-hef-nome'); }
+    if (!semNome(el)) return;
+    const th = el.closest('th'), dica = el.getAttribute('data-dica');
+    const [de, nome] = dica ? ['dica', dica]
+      : th && texto(th) ? ['coluna', 'Ordenar por ' + texto(th)]
+      : ['lugar', rotuloDoLugar(el)];
+    if (!nome) return;
+    el.setAttribute('aria-label', nome);
+    el.setAttribute('data-hef-nome', de);
+  };
+  const alvoDoRotulo = el => {
+    const a = el.matches('label[for]') ? document.getElementById(el.getAttribute('for')) : null;
+    return a && (a.type === 'radio' || a.type === 'checkbox') ? a : null;
+  };
+  const proprioRotulo = el => el.matches('label') && (el.hasAttribute('for') || el.querySelector('input,select,textarea'));
+  const dar_o_papel = el => {
+    if (el.hasAttribute('role') || el.matches(NATIVO + ',' + DONO_DO_PAPEL)) return;
+    const a = alvoDoRotulo(el);
+    if (a) el.setAttribute('role', a.type);
+    else if (!proprioRotulo(el)) el.setAttribute('role', el.classList.contains('nj-tog') ? 'switch' : 'button');
+  };
+  const marcado = (el, a) => {
+    const pilotado = document.querySelector('.hef-pos.on');
+    return el.classList.contains('hef-pos') && pilotado ? el.classList.contains('on') : a.checked;
+  };
+  const estado = el => {
+    const papel = el.getAttribute('role'), a = alvoDoRotulo(el);
+    if (a && (papel === 'radio' || papel === 'checkbox')) ajustar(el, 'aria-checked', String(marcado(el, a)));
+    else if (papel === 'switch') ajustar(el, 'aria-checked', String(el.classList.contains('ligado')));
+    else if (papel === 'button' && !el.matches(NATIVO) && el.matches('.degrau,.chip'))
+      ajustar(el, 'aria-pressed', String(el.classList.contains('on')));
+    else if (el.matches('tr,li')) ajustar(el, 'aria-current', el.classList.contains('ativo') ? 'true' : null);
+  };
+  const preparar = el => {
+    if (el.matches(REGIAO_VIVA) && !el.hasAttribute('role')) el.setAttribute('role', 'status');
+    if (!el.matches(GESTO) || el.matches('template')) return;
+    dar_o_papel(el);
+    nomear(el);
+    estado(el);
+  };
+  const varrer = raiz => {
+    if (raiz.nodeType !== 1) return;
+    preparar(raiz);
+    raiz.querySelectorAll(GESTO + ',' + REGIAO_VIVA).forEach(preparar);
+  };
+  varrer(document.body);
+  new MutationObserver(ms => {
+    for (const m of ms) {
+      if (m.type === 'childList') m.addedNodes.forEach(varrer);
+      else if (m.target.matches && m.target.matches(GESTO)) {
+        if (m.attributeName === 'data-dica') nomear(m.target); else estado(m.target);
+      }
+    }
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'data-dica']});
+  document.addEventListener('change', e => {
+    if (e.target.matches && e.target.matches('input[type=radio],input[type=checkbox]'))
+      document.querySelectorAll('label[role=radio],label[role=checkbox]').forEach(estado);
   });
 })();
 </script>
