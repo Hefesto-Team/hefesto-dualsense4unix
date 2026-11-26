@@ -208,6 +208,15 @@ def mods_dados_dir() -> Path:
     return state_dir() / "mods"
 
 
+def mods_da_pessoa_dir() -> Path:
+    """O que é da pessoa em cada modificação (opções, ``meu.css``, importados): ``<config>/mods/``.
+
+    Mora ao lado do registro: só a janela e a linha de comando gravam, e a caixa recebe a pasta de
+    cada modificação só de leitura.
+    """
+    return config_dir() / "mods"
+
+
 def mods_registro_path() -> Path:
     """O registro das modificações instaladas (origem, commit, permissões, ligada)."""
     return config_dir() / "mods.json"
@@ -239,6 +248,7 @@ __all__ = [
     "ipc_socket_path",
     "launch_env_dir",
     "mods_codigo_dir",
+    "mods_da_pessoa_dir",
     "mods_dados_dir",
     "mods_estado_path",
     "mods_registro_path",

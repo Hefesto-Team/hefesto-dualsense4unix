@@ -1,7 +1,7 @@
 """Os arquivos que quem usa importa numa opção ``importar`` de uma extensão de tema.
 
 O arquivo é dado da pessoa: entra só depois da régua, e a cópia mora em
-``<dados>/<id>/<opção>.importado``. O tema importado passa pela mesma régua do tema do pacote
+``<config>/mods/<id>/<opção>.importado``. O tema importado passa pela mesma régua do tema do pacote
 (:func:`tema.validar`, só cores e com contraste) e se grava já reescrito. A logo é PNG, JPEG
 ou WebP, conferida pelos bytes, até 256 KB e até 1024 px de lado; SVG nunca, porque roda código.
 O valor da opção é o nome do arquivo de origem, só para a tela; vazio é «nada importado».
@@ -32,7 +32,9 @@ TAMANHO_POR_FORMATO = {"tema": tema.TAMANHO_MAXIMO, "logo": TAMANHO_DA_LOGO,
 
 
 def caminho(mod_id: str, opcao_id: str, lugares: Any) -> Path:
-    return Path(lugares.dados) / mod_id / f"{opcao_id}{SUFIXO}"
+    from hefesto_dualsense4unix.mods.instalador import pasta_da_pessoa
+
+    return pasta_da_pessoa(mod_id, lugares) / f"{opcao_id}{SUFIXO}"
 
 
 _NAO_LEU = "O arquivo não pôde ser lido."

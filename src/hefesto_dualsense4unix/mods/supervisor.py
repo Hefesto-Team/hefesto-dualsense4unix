@@ -52,6 +52,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     manifesto_instalado,
     migrar_os_alcances,
     migrar_os_aparelhos,
+    pasta_da_pessoa,
     troca_viva,
     voltar_para_a_anterior,
 )
@@ -597,6 +598,7 @@ def comando_na_caixa(
     porta: Path,
     manifesto: Manifesto,
     casa: Path,
+    da_pessoa: Path | None = None,
     execucao: tuple[Path, ...],
     jogos: tuple[Path, ...] = (),
     pasta: str | None = None,
@@ -614,7 +616,8 @@ def comando_na_caixa(
     os ``pela_porta`` (``retrato`` recebe os hubs vivos), o :data:`PASTA_DO_HID` só o ``hid``. O
     ``--unshare-pid`` leva junto TUDO o que a modificação abriu; dentro do ``pasta`` o ``bwrap``
     devolve o ``uid`` e o ``gid`` de quem roda. O barramento do sistema nunca entra: ``bluez`` é
-    o soquete do proxy (:data:`FILTRO_DO_BLUEZ`), montado onde o barramento mora.
+    o soquete do proxy (:data:`FILTRO_DO_BLUEZ`), montado onde o barramento mora. Só ``dados``
+    se escreve; ``da_pessoa``, o que é da pessoa, entra só de leitura.
     """
     entram = ENTRAM_NA_CAIXA
     propria = pasta is not None and manifesto.rede != "nenhuma"
@@ -653,6 +656,7 @@ def comando_na_caixa(
     argv += [
         "--ro-bind", str(codigo), str(codigo),
         "--bind", str(dados), str(dados),
+        *(["--ro-bind", str(da_pessoa), str(da_pessoa)] if da_pessoa is not None else []),
         "--ro-bind", str(porta), str(porta),
     ]
     if "jogos" in manifesto.permissoes:
@@ -2048,6 +2052,10 @@ class Supervisor:
         codigo = self.lugares.codigo / manifesto.id
         dados = self.lugares.dados / manifesto.id
         dados.mkdir(parents=True, exist_ok=True)
+        da_pessoa = pasta_da_pessoa(manifesto.id, self.lugares)
+        da_pessoa.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with contextlib.suppress(InstalacaoRecusadaError):
+            opcoes.deixar_a_copia(manifesto.id, self.lugares)
         comando = _resolver_o_comando(codigo, manifesto.processo.executar)
         if comando is None:
             raise ValueError(f"o comando {manifesto.processo.executar[0]} não existe")
@@ -2063,6 +2071,7 @@ class Supervisor:
             "HEFESTO_MOD_SOCKET": str(self.porta.caminho),
             "HEFESTO_MOD_FICHA": vigiada.ficha,
             "HEFESTO_MOD_DADOS": str(dados),
+            "HEFESTO_MOD_OPCOES": str(da_pessoa / opcoes.NOME_DO_ARQUIVO),
             "HEFESTO_MOD_API": str(API_DAS_MODIFICACOES),
         }
         if execucao_bruta:
@@ -2103,6 +2112,7 @@ class Supervisor:
                 comando=comando,
                 codigo=codigo,
                 dados=dados,
+                da_pessoa=da_pessoa,
                 porta=self.porta.caminho,
                 manifesto=manifesto,
                 casa=casa,

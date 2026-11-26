@@ -19,6 +19,7 @@ O supervisor abre o processo com este ambiente, e com mais nada da sessão:
 | `HEFESTO_MOD_FICHA` | a ficha desta execução (aleatória, nova a cada abertura) |
 | `HEFESTO_MOD_ID` | o `id` do manifesto |
 | `HEFESTO_MOD_DADOS` | a pasta gravável da modificação |
+| `HEFESTO_MOD_OPCOES` | o `opcoes.json` com as escolhas de quem usa, numa pasta que a caixa recebe só de leitura |
 | `HEFESTO_MOD_API` | a versão da porta que este Hefesto fala |
 | `HEFESTO_MOD_JOGOS` | só com a permissão `jogos`: as pastas `steamapps` de toda biblioteca da Steam, separadas por `:`; na caixa, cada uma aparece só de leitura, mesmo a que mora na `HOME` |
 
@@ -646,12 +647,16 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   peça do controle de que a opção fala. Com o pedaço `controle` no `agora`, o ponteiro sobre a linha (ou sobre o
   cartão da linha) acende aquela peça no desenho. Os dois entram depois da 0.9.5.4, com a mesma `api` 2; o Hefesto de
   antes recusa o manifesto pelo campo.
-- **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
-  `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
-  (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
-  primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio). A pasta é escrita pela caixa,
-  então link, FIFO ou arquivo acima de 1 MiB valem como ausentes, e a recusa vai ao log
-  (`src/hefesto_dualsense4unix/mods/leitura_da_caixa.py`).
+- **onde ficam os valores**: a tela grava cada opção em `<config>/mods/<id>/opcoes.json`, ao lado do registro,
+  um objeto `{id: valor}`, em `0600`, depois de validar contra o manifesto. Só a janela e a linha de comando gravam
+  essa pasta; a caixa a recebe só de leitura, e a extensão lê o arquivo pelo caminho de `HEFESTO_MOD_OPCOES`.
+  Enquanto as extensões migram, a tela deixa também uma cópia em `HEFESTO_MOD_DADOS/opcoes.json`, que a extensão
+  lê e a janela nunca lê. Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
+  primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio). Link, FIFO ou arquivo acima de
+  1 MiB valem como ausentes, e a recusa vai ao log (`src/hefesto_dualsense4unix/mods/leitura_da_caixa.py`). Na
+  primeira leitura depois da mudança de pasta, o `opcoes.json` de cada extensão instalada vem de `<dados>/<id>`,
+  uma vez só; o `meu.css` e os importados vêm só da extensão sem processo, e a que tem processo volta com o CSS
+  desligado e os importados vazios.
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil`, `aparelhos`, `conexoes` e `linhas` (os pares que a extensão publica), sem repetir.
   Desde 16/11/2026, também `controle` e `clima`, o controle vivo. O `controle` é o desenho do «Mapa dos
@@ -945,8 +950,10 @@ pedido. O que a extensão escreve na seção passa pela porta, como qualquer esc
 
 ## A extensão de tema
 
-A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface e o lado dos botões da janela,
-sem processo nenhum. O bloco `tema` do manifesto aceita só estas chaves:
+A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface e o lado dos botões da janela.
+A escolha, o CSS de quem usa e os importados saem só do que é da pessoa (`<config>/mods/<id>/`), que a caixa lê e
+não escreve: o processo da extensão que também tem um não muda a aparência da janela. O bloco `tema` do
+manifesto aceita só estas chaves:
 
 - `folha` (`":root{…}"`) ou `arquivo` (o caminho da folha dentro da pasta, `"tema.css"`), até 16 KB: as cores;
 - `botoes`: `esquerda` ou `direita`, o lado em que a janela põe os botões de fechar, minimizar e maximizar.
@@ -978,7 +985,7 @@ troca o tema na hora, sem recarregar a página; a barra de cima e a variante do 
 ### O CSS de quem usa
 
 A extensão de tema pode declarar UMA opção de `tipo` `css` (`padrao` falso de fábrica). Ligada, a janela põe o
-`<dados>/<id>/meu.css` por cima da folha do tema, pelo mesmo vigia: salvar o arquivo repinta sem recarregar. É livre
+`<config>/mods/<id>/meu.css` por cima da folha do tema, pelo mesmo vigia: salvar o arquivo repinta sem recarregar. É livre
 (cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`, funções de
 imagem, `expression(`, `\` nem `<`, até 16 KB, chaves em par e até 32 níveis, em arquivo comum (link e FIFO não se
 abrem). Agrupam regras `@media`, `@supports`, `@container` e o
@@ -1009,7 +1016,7 @@ das extensões que estiver instalada:
   já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O modo do `livre` com `modos`
   (`<id>:modo`) passa do mesmo jeito, quando não é o `"soltar"` do padrão. O «sim» às permissões não passa: a
   permissão nova pede o do usuário;
-- sai pelo caminho do remover (o código, os dados menos o `meu.css` e a linha do registro).
+- sai pelo caminho do remover (o código, os dados, o que é da pessoa menos o `meu.css` e a linha do registro).
 
 A nova fica ligada quando alguma das antigas estava ligada e nada novo espera o «sim». A atualização sozinha que
 substitui outra não troca o código: espera o «Atualizar», com a frase «A versão X toma o lugar de «Y».». O

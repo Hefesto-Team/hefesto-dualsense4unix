@@ -1,7 +1,7 @@
-"""Os valores das opções que uma modificação declara, guardados em ``<dados>/<id>/opcoes.json``.
+"""Os valores das opções que uma modificação declara, em ``<config>/mods/<id>/opcoes.json``.
 
-A tela escolhe, a modificação lê o mesmo arquivo na sua pasta de dados. Ler nunca levanta: um valor
-que o manifesto não aceita (arquivo editado, opção que saiu da versão nova) cai no padrão.
+A tela grava ali, numa pasta que a caixa só lê, e a cópia na pasta de dados da modificação
+com processo, que nunca lê. Ler nunca levanta: o valor que o manifesto não aceita cai no padrão.
 
 As formas gravadas na opção ``livre`` valem também nos ``por_botao`` da MESMA extensão e na
 escolha dos efeitos (a ``escolha`` cujas ``escolhas`` estão todas nas ``formas`` de um
@@ -21,8 +21,9 @@ from hefesto_dualsense4unix.mods.instalador import (
     InstalacaoRecusadaError,
     Lugares,
     gravar_na_caixa,
+    pasta_da_pessoa,
 )
-from hefesto_dualsense4unix.mods.leitura_da_caixa import dizer_a_recusa, ler_da_caixa
+from hefesto_dualsense4unix.mods.leitura_da_caixa import dizer_a_recusa, ler_da_caixa, ler_ou_vazio
 from hefesto_dualsense4unix.mods.manifesto import (
     CHAVE_DE_JOGO,
     COR_HEXA,
@@ -33,6 +34,9 @@ from hefesto_dualsense4unix.mods.manifesto import (
     endereco_valido,
     forma_valida,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 NOME_DO_ARQUIVO = "opcoes.json"
 TETO_DO_ARQUIVO = 1024 * 1024
@@ -43,7 +47,21 @@ Valor = str | bool | float | list[str] | dict[str, str] | Formas
 
 
 def caminho(mod_id: str, lugares: Lugares) -> Path:
+    return pasta_da_pessoa(mod_id, lugares) / NOME_DO_ARQUIVO
+
+
+def copia_da_extensao(mod_id: str, lugares: Lugares) -> Path:
+    """A cópia que a extensão com processo lê na própria pasta de dados; a janela nunca a lê."""
     return lugares.dados / mod_id / NOME_DO_ARQUIVO
+
+
+def deixar_a_copia(mod_id: str, lugares: Lugares) -> None:
+    """Copia o ``opcoes.json`` da pessoa para a pasta de dados da extensão (nada, sem ele). O
+    que não grava é a recusa do instalador."""
+    dados = ler_ou_vazio(caminho(mod_id, lugares), TETO_DO_ARQUIVO)
+    if dados:
+        gravar_na_caixa(copia_da_extensao(mod_id, lugares), dados,
+                        "A cópia das opções não foi gravada")
 
 
 def padrao_de(opcao: Opcao) -> Valor:
@@ -328,7 +346,7 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
         opcao, valor, formas_extras=aceitas_de(manifesto, opcao, atuais, valor))
     atuais[opcao_id] = certo
     memorias = {o.id for o in manifesto.opcoes if o.tipo == "memoria"}
-    _gravar(manifesto.id, {k: v for k, v in atuais.items() if k not in memorias}, lugares)
+    _gravar(manifesto, {k: v for k, v in atuais.items() if k not in memorias}, lugares)
     return certo
 
 
@@ -358,11 +376,17 @@ def _texto_que_se_le(valores: dict[str, Any]) -> bytes | None:
     return dados if len(dados) <= TETO_DO_ARQUIVO else None
 
 
-def _gravar(mod_id: str, valores: dict[str, Any], lugares: Lugares) -> None:
+def _gravar(manifesto: Manifesto, valores: dict[str, Any], lugares: Lugares) -> None:
+    """Grava o arquivo da pessoa e, na extensão com processo, a cópia da pasta de dados."""
     dados = _texto_que_se_le(valores)
     if dados is None:
         raise InstalacaoRecusadaError("A opção não foi gravada: o arquivo não se leria de volta.")
-    gravar_na_caixa(caminho(mod_id, lugares), dados, "A opção não foi gravada")
+    gravar_na_caixa(caminho(manifesto.id, lugares), dados, "A opção não foi gravada")
+    if manifesto.processo is not None:
+        try:
+            gravar_na_caixa(copia_da_extensao(manifesto.id, lugares), dados, "sem cópia")
+        except InstalacaoRecusadaError as exc:
+            logger.warning("mods_opcoes_sem_copia", mod=manifesto.id, err=str(exc))
 
 
 def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
@@ -396,7 +420,7 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
                 break
     if herdadas:
         completo = {**feitas, **herdadas}
-        _gravar(manifesto.id, completo if _texto_que_se_le(completo) else herdadas, lugares)
+        _gravar(manifesto, completo if _texto_que_se_le(completo) else herdadas, lugares)
     return herdadas
 
 

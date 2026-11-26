@@ -140,6 +140,8 @@ TETO_DO_DIARIO_DOS_GESTOS_BYTES = 64 * 1024
 
 PASTA_DOS_DIARIOS = ".diarios"
 
+MARCA_DA_MUDANCA_DA_PESSOA = ".veio-dos-dados"
+
 _DA_SESSAO_NO_PREPARO = (
     "PATH", "LANG", "HOME", "USER", "LOGNAME",
     "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_RUNTIME_DIR",
@@ -248,6 +250,12 @@ class Lugares:
             registro=xdg_paths.mods_registro_path(),
             estado=xdg_paths.mods_estado_path(),
         )
+
+    @property
+    def da_pessoa(self) -> Path:
+        """O que é da pessoa em cada extensão, ao lado do registro
+        (:func:`xdg_paths.mods_da_pessoa_dir`): a caixa recebe a pasta só de leitura."""
+        return self.registro.with_name(xdg_paths.mods_da_pessoa_dir().name)
 
     @property
     def diario_dos_gestos(self) -> Path:
@@ -368,6 +376,85 @@ def migrar_os_alcances(lg: Lugares, registro: dict[str, Entrada]) -> list[str]:
     return migradas
 
 
+def pasta_da_pessoa(mod_id: str, lugares: Lugares) -> Path:
+    """A pasta do que é da pessoa em ``mod_id``, depois da mudança única de ``<dados>``
+    (:func:`migrar_o_que_e_da_pessoa`)."""
+    migrar_o_que_e_da_pessoa(lugares)
+    return lugares.da_pessoa / mod_id
+
+
+def migrar_o_que_e_da_pessoa(lg: Lugares) -> list[str]:
+    """Uma vez só, o que era da pessoa em ``<dados>/<id>`` vai para :attr:`Lugares.da_pessoa`.
+
+    Vai o ``opcoes.json`` de cada extensão instalada que ainda não tem o seu. O ``meu.css`` e os
+    importados vão só da extensão sem ``processo``, a que nunca escreveu na pasta; na que tem, a
+    opção ``css`` e as ``importar`` voltam ao padrão (desligada, vazia). A extensão cujo manifesto
+    não se lê não leva nada. A marca fica no fim; o que não grava tenta de novo na próxima vez.
+    Devolve os ids que mudaram.
+    """
+    marca = lg.da_pessoa / MARCA_DA_MUDANCA_DA_PESSOA
+    if os.path.lexists(marca):
+        return []
+    try:
+        registro = ler_registro(lg.registro)
+    except InstalacaoRecusadaError:
+        return []
+    mudaram = [mod_id for mod_id in registro if _mudar_o_que_e_da_pessoa(lg, mod_id)]
+    try:
+        lg.da_pessoa.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with open(marca, "xb", opener=abrir_sem_seguir):
+            pass
+    except FileExistsError:
+        pass
+    except OSError as exc:
+        logger.warning("mods_mudanca_da_pessoa_sem_marca", err=str(exc))
+    return mudaram
+
+
+def _mudar_o_que_e_da_pessoa(lg: Lugares, mod_id: str) -> bool:
+    from hefesto_dualsense4unix.mods import importados, opcoes
+
+    origem, destino = lg.dados / mod_id, lg.da_pessoa / mod_id
+    if os.path.lexists(destino) or origem.is_symlink() or not origem.is_dir():
+        return False
+    try:
+        manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
+    except ManifestoRecusadoError:
+        return False
+    da_caixa = manifesto.processo is not None
+    arquivos: dict[str, bytes] = {}
+    try:
+        guardados = json.loads(ler_ou_vazio(origem / opcoes.NOME_DO_ARQUIVO,
+                                            opcoes.TETO_DO_ARQUIVO).decode("utf-8") or "{}")
+    except (ValueError, RecursionError):
+        guardados = {}
+    if isinstance(guardados, dict) and guardados:
+        if da_caixa:
+            for opcao in manifesto.opcoes:
+                if opcao.tipo in ("css", "importar"):
+                    guardados.pop(opcao.id, None)
+        dados = opcoes._texto_que_se_le(guardados)
+        if dados is not None:
+            arquivos[opcoes.NOME_DO_ARQUIVO] = dados
+    if not da_caixa:
+        nomes = [(meu_css.NOME_DO_ARQUIVO, meu_css.TAMANHO_MAXIMO)] + [
+            (f"{o.id}{importados.SUFIXO}", importados.TAMANHO_POR_FORMATO.get(
+                str(o.formato), importados.TAMANHO_DA_LOGO))
+            for o in manifesto.opcoes if o.tipo == "importar"]
+        for nome, teto in nomes:
+            if corpo := ler_ou_vazio(origem / nome, teto):
+                arquivos[nome] = corpo
+    try:
+        destino.mkdir(mode=0o700, parents=True, exist_ok=True)
+        for nome, corpo in arquivos.items():
+            gravar_na_caixa(destino / nome, corpo, "O que é da pessoa não mudou de pasta")
+    except (OSError, InstalacaoRecusadaError) as exc:
+        logger.warning("mods_mudanca_da_pessoa_falhou", mod=mod_id, err=str(exc))
+        shutil.rmtree(destino, ignore_errors=True)
+        return False
+    return True
+
+
 def ler_registro(caminho: Path) -> dict[str, Entrada]:
     """As modificações instaladas, por id. Sem arquivo, nenhuma."""
     try:
@@ -422,7 +509,7 @@ def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str], *,
             guarda = _guarda_do_codigo(lg.codigo / mod_id)
             caminhos += [str(p) for p in (
                 lg.codigo / mod_id, *([guarda] if verbo == "atualizar" or guarda.exists() else []),
-                lg.dados / mod_id, lg.pasta_do_diario(mod_id))]
+                lg.dados / mod_id, lg.da_pessoa / mod_id, lg.pasta_do_diario(mod_id))]
         caminhos.append(str(lg.registro))
     else:
         caminhos = [str(p) for p in tocados]
@@ -1456,13 +1543,23 @@ def _apagar_o_codigo(lg: Lugares, mod_id: str) -> None:
     _apagar_a_pasta(_guarda_do_codigo(lg.codigo / mod_id))
 
 
+def _apagar_a_pasta_ou_o_link(pasta: Path) -> None:
+    if pasta.is_symlink() or (os.path.lexists(pasta) and not pasta.is_dir()):
+        with contextlib.suppress(OSError):
+            pasta.unlink()
+        return
+    shutil.rmtree(pasta, ignore_errors=True)
+
+
 def _apagar_os_dados(lg: Lugares, mod_id: str) -> None:
-    """Apaga ``<dados>/<id>`` menos o ``meu.css``: ele é escrita da pessoa, e reinstalar a
-    extensão o encontra (``meu_css.garantir`` nunca reescreve). O diário sai junto."""
+    """Apaga ``<dados>/<id>`` inteira e o que é da pessoa menos o ``meu.css``: ele é escrita da
+    pessoa, e reinstalar a extensão o encontra (``meu_css.garantir`` nunca reescreve). O diário
+    sai junto."""
+    pasta = pasta_da_pessoa(mod_id, lg)
     shutil.rmtree(lg.pasta_do_diario(mod_id), ignore_errors=True)
-    pasta = lg.dados / mod_id
+    _apagar_a_pasta_ou_o_link(lg.dados / mod_id)
     if pasta.is_symlink() or not pasta.is_dir():
-        shutil.rmtree(pasta, ignore_errors=True)
+        _apagar_a_pasta_ou_o_link(pasta)
         return
     for item in pasta.iterdir():
         if item.name == meu_css.NOME_DO_ARQUIVO:
@@ -1496,14 +1593,15 @@ def _so_o_css_da_pessoa(pasta: Path) -> bool:
 
 
 def conferir_remocao(mod_id: str, *, lugares: Lugares | None = None) -> list[str]:
-    """O que ainda existe de ``mod_id`` nos três lugares; vazio = removida. O ``meu.css`` não
+    """O que ainda existe de ``mod_id`` nos seus lugares; vazio = removida. O ``meu.css`` não
     conta: ele é da pessoa e fica (``o_css_que_fica``)."""
     lg = lugares or Lugares.do_xdg()
     restos: list[str] = []
+    da_pessoa = lg.da_pessoa / mod_id
     for pasta in (lg.codigo / mod_id, _guarda_do_codigo(lg.codigo / mod_id), lg.dados / mod_id,
-                  lg.pasta_do_diario(mod_id)):
+                  da_pessoa, lg.pasta_do_diario(mod_id)):
         if pasta.exists() or pasta.is_symlink():
-            if pasta == lg.dados / mod_id and _so_o_css_da_pessoa(pasta):
+            if pasta == da_pessoa and _so_o_css_da_pessoa(pasta):
                 continue
             restos.append(str(pasta))
     if mod_id in ler_registro(lg.registro):

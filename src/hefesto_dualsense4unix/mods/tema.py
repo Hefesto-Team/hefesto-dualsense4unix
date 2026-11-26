@@ -553,7 +553,8 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
     A cor e o lado dos botões se escolhem à parte: cada um vale pela extensão ligada por último
     que o traz (com a opção dele ligada, quando o bloco o liga a uma). As outras ficam nos avisos.
     O CSS de quem usa vale pela ligada por último que tem a opção ``css`` ligada, à parte da cor.
-    Nada aqui escreve: o registro é lido como está.
+    Nada aqui escreve, fora a mudança única do que é da pessoa
+    (:func:`instalador.migrar_o_que_e_da_pessoa`): o registro é lido como está.
     """
     from hefesto_dualsense4unix.mods import instalador
     from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto

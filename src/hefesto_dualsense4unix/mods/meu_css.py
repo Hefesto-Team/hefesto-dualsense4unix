@@ -1,6 +1,6 @@
 """O CSS de quem usa: a folha que a pessoa escreve e o Hefesto põe POR CIMA do tema.
 
-Livre (layout e cor), lida do ``<dados>/<id>/meu.css`` da extensão de tema que declara uma opção
+Livre (layout e cor), lida do ``<config>/mods/<id>/meu.css`` da extensão de tema que declara a opção
 ``css``. Livre não é aberta: nada busca arquivo nem endereço, nada escapa, e passar de 16 KB não
 entra. O recusado não se aplica: o log tem a frase longa, e a tela, a curta com a linha. O WebKit
 só deixa a folha de usuário vencer a da página com ``!important``: cada declaração sai daqui com
@@ -93,7 +93,9 @@ headerbar button.fechar { background: var(--red); border-radius: 50%; }
 
 
 def caminho(mod_id: str, lugares: Any) -> Path:
-    return Path(lugares.dados) / mod_id / NOME_DO_ARQUIVO
+    from hefesto_dualsense4unix.mods.instalador import pasta_da_pessoa
+
+    return pasta_da_pessoa(mod_id, lugares) / NOME_DO_ARQUIVO
 
 
 def garantir(mod_id: str, lugares: Any) -> Path:
@@ -352,7 +354,7 @@ def ler(mod_id: str, lugares: Any) -> FolhaDeQuemUsa:
     """A folha do ``meu.css`` da extensão: vazia sem arquivo; a recusa dita quando ele não serve.
 
     O arquivo mora na pasta que a caixa da extensão escreve: link, fila e dispositivo não se
-    abrem. Nada aqui escreve.
+    abrem. Nada aqui escreve, fora a mudança única de :func:`instalador.migrar_o_que_e_da_pessoa`.
     """
     try:
         texto = ler_da_caixa(caminho(mod_id, lugares), TAMANHO_MAXIMO).decode("utf-8")
