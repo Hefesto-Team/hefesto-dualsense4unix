@@ -74,6 +74,7 @@ def _lista(curto: Path, chave: Path, ficha: str) -> list[str]:
 
 
 def test_cada_extensao_tem_o_seu_apelido_e_ele_sobrevive_ao_reinicio(curto: Path) -> None:
+    """D-2611-O-APELIDO-DO-CONTROLE-SAI-DE-UMA-CHAVE-DA-CASA."""
     chave = curto / "config" / "mods-apelidos.chave"
     da_a, da_b = _lista(curto, chave, "ficha-a"), _lista(curto, chave, "ficha-b")
     assert len(da_a) == 2 and len(set(da_a)) == 2

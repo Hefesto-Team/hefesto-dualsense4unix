@@ -45,6 +45,7 @@ def _linha(rede: str, tmp_path: Path) -> list[str]:
 
 
 def test_a_linha_da_rede_local_leva_o_filtro(tmp_path: Path) -> None:
+    """D-2611-A-REDE-DA-CASA-DA-EXTENSAO-NAO-TEM-ROTA-PARA-FORA."""
     local = _linha("local", tmp_path)
     fim_do_pasta = local.index("--")
     assert local[0] == _PASTA
