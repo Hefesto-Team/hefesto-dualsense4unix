@@ -4484,7 +4484,11 @@ class Daemon:
 
                     discard_touchpad_motion(self)
                 if self._keyboard_device is not None:
-                    self._prime_keyboard_emulation(buttons_pressed)
+                    from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                        botoes_para_o_teclado,
+                    )
+
+                    self._prime_keyboard_emulation(botoes_para_o_teclado(self, buttons_pressed))
                 previous_buttons = current_buttons
                 self.store.bump("input.settling.tick")
                 from hefesto_dualsense4unix.mods.porta import topicos_de_todo_controle_no_servico
@@ -4531,6 +4535,7 @@ class Daemon:
             emu_active = not self._emulation_suppressed
             from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                 botoes_com_os_gatilhos,
+                botoes_para_o_teclado,
                 despachar_no_jogo,
             )
 
@@ -4565,12 +4570,13 @@ class Daemon:
 
                 if self._keyboard_device is not None:
                     with passos.isolado("teclado"):
+                        no_teclado = botoes_para_o_teclado(self, emu_buttons)
                         if not emu_active:
-                            self._dispatch_so_a_saida_do_modo_jogo(emu_buttons)
+                            self._dispatch_so_a_saida_do_modo_jogo(no_teclado)
                         elif self._teclado_so_no_jogo:
-                            self._prime_keyboard_emulation(emu_buttons)
+                            self._prime_keyboard_emulation(no_teclado)
                         else:
-                            self._dispatch_keyboard_emulation(emu_buttons)
+                            self._dispatch_keyboard_emulation(no_teclado)
 
             despachar_no_jogo(self, state, emu_buttons, no_jogo=gamepad_dispatched)
 

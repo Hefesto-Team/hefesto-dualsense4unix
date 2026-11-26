@@ -203,10 +203,10 @@ def test_o_filtro_e_o_mesmo_do_teclado_do_desktop(uinput: _Uinput) -> None:
     eu = types.SimpleNamespace(
         _keyboard_device=teclado, _mouse_device=None, _touchpad_reader=None)
     Daemon._dispatch_so_a_saida_do_modo_jogo(eu, frozenset({"cross"}))  # type: ignore[arg-type]
-    assert daemon.saidas == 0
+    assert daemon.saidas == 0 and "KEY_A" not in _teclas(uinput)
     Daemon._dispatch_so_a_saida_do_modo_jogo(  # type: ignore[arg-type]
         eu, frozenset({"cross", "circle"}))
-    assert daemon.saidas == 1
+    assert daemon.saidas == 1 and "KEY_A" not in _teclas(uinput)
     assert sub_mouse.so_a_saida_do_modo_jogo(
         frozenset({"cross", "circle"}), teclado.bindings) == frozenset({"circle"})
 

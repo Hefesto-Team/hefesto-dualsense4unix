@@ -342,7 +342,7 @@ class TabelaNoJogo:
         if not self.ligada or not self._abrir(daemon):
             return
         self._teclado.dispatch(so_a_saida_do_modo_jogo(
-            botoes_de_todo_controle(daemon, state, botoes_do_p1), self._teclado.bindings))
+            botoes_para_o_teclado(daemon, botoes_do_p1), self._teclado.bindings))
 
     def _teclas_apertadas(
         self, daemon: Any, state: Any, outros: Any
@@ -548,6 +548,36 @@ def so_a_saida_do_modo_jogo(
         botao for botao in botoes if tuple(ligacoes.get(botao, ())) == saida)
 
 
+def botoes_dos_outros_controles(daemon: Any, *, mouse_ligado: bool = True) -> frozenset[str]:
+    """Os botões que os controles que NÃO são o P1 apertam agora, como o teclado do desktop os lê.
+
+    Cada controle passa pelo mesmo que o P1 passa no laço (os membros do gesto do PS que ele
+    segura, o eixo do gesto dos acessórios e o que a navegação interna toma) e o gatilho vira
+    `l2`/`r2` pelo mesmo limiar. As leituras são as da tabela do jogo e dos atalhos
+    (`poll.gatilhos_de_cada_controle`). Nunca levanta.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import sem_o_eixo_do_gesto
+    from hefesto_dualsense4unix.daemon.subsystems.poll import gatilhos_de_cada_controle
+
+    uniao: frozenset[str] = frozenset()
+    gerente = getattr(daemon, "_hotkey_manager", None)
+    navegacao = getattr(daemon, "_navegacao_interna", None)
+    try:
+        outros = gatilhos_de_cada_controle(daemon)
+        for uniq, (botoes, l2, r2) in outros.items():
+            cru = botoes
+            if gerente is not None:
+                botoes = botoes - gerente.combo_buttons_active(
+                    cru, de=uniq, gatilhos=(l2, r2))
+                l2, r2 = sem_o_eixo_do_gesto(daemon, uniq, cru, (l2, r2), l2, r2)
+            if navegacao is not None:
+                botoes = navegacao.calar_o_alt_tab(botoes, mouse_ligado=mouse_ligado)
+            uniao |= botoes_com_os_gatilhos(botoes, l2, r2)
+    except Exception as exc:
+        logger.debug("botoes_dos_outros_controles_sem_leitura", err=str(exc))
+    return uniao
+
+
 def entregar_so_a_saida_ao_teclado(
     daemon: Any, teclado: Any, botoes: frozenset[str]
 ) -> None:
@@ -558,21 +588,14 @@ def entregar_so_a_saida_ao_teclado(
         _combine_with_touchpad(daemon, botoes), getattr(teclado, "bindings", None)))
 
 
-def botoes_de_todo_controle(
-    daemon: Any, state: Any, botoes_do_p1: frozenset[str]
-) -> frozenset[str]:
-    """Os botões do P1 (com o gatilho de `state`) somados aos dos demais controles, crus.
+def _mouse_ligado(daemon: Any) -> bool:
+    return bool(getattr(getattr(daemon, "config", None), "mouse_emulation_enabled", True))
 
-    Sem filtro nem modo: é o que a saída do modo jogo lê sob a supressão, onde a tabela não age.
-    """
-    from hefesto_dualsense4unix.daemon.subsystems.poll import gatilhos_de_cada_controle
 
-    conjunto = botoes_com_os_gatilhos(
-        botoes_do_p1,
-        int(getattr(state, "l2_raw", 0) or 0), int(getattr(state, "r2_raw", 0) or 0))
-    for _uniq, (botoes, l2, r2) in gatilhos_de_cada_controle(daemon).items():
-        conjunto |= botoes_com_os_gatilhos(botoes, l2, r2)
-    return conjunto
+def botoes_para_o_teclado(daemon: Any, botoes_do_p1: frozenset[str]) -> frozenset[str]:
+    """Os botões do P1 somados aos dos demais controles: o que o teclado do desktop lê."""
+    return frozenset(botoes_do_p1) | botoes_dos_outros_controles(
+        daemon, mouse_ligado=_mouse_ligado(daemon))
 
 
 def despachar_no_jogo(
@@ -614,7 +637,7 @@ def despachar_no_jogo(
     if tabela is not None:
         tabela.tick(daemon, state, emu_buttons)
     elif so_dentro and teclado is not None:
-        daemon._dispatch_keyboard_emulation(emu_buttons)
+        daemon._dispatch_keyboard_emulation(botoes_para_o_teclado(daemon, emu_buttons))
 
 
 def _so_a_saida_sob_a_supressao(
@@ -626,7 +649,8 @@ def _so_a_saida_sob_a_supressao(
         if tabela is not None:
             tabela.so_a_saida(daemon, state, emu_buttons)
         elif so_dentro and teclado is not None:
-            entregar_so_a_saida_ao_teclado(daemon, teclado, emu_buttons)
+            entregar_so_a_saida_ao_teclado(
+                daemon, teclado, botoes_para_o_teclado(daemon, emu_buttons))
     except Exception as exc:
         logger.warning("saida_do_modo_jogo_sob_a_supressao_falhou", err=str(exc))
 
