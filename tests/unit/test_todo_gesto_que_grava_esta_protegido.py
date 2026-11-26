@@ -156,6 +156,9 @@ METODOS_QUE_ESCREVEM = {
     "navegacao.big_picture.set",
     "motion.calibrate",
     "motion.rampa",
+    "perfil.ativacao.set",
+    "perfil.analogicos.set",
+    "mira.set",
 }
 
 _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")

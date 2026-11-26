@@ -74,6 +74,25 @@ ATOS: dict[Chave, str] = {
     ("*", "aplicar"):
         "ato: manda o perfil do disco aos controles e não muda escolha "
         "nenhuma (`D-2709-O-SALVAR-LE-O-PERFIL`)",
+    ("06-navegacao.html", "ac-liga"):
+        "tela: o chip e a chave da janela Acessibilidade só mexem no rascunho que a janela "
+        "pinta; quem grava é o «Guardar» (`ac-guarda`), que declara `grava=`",
+    ("06-navegacao.html", "ac-passo"):
+        "tela: os passos de menos e de mais da janela Acessibilidade só mexem no rascunho; "
+        "quem grava é o "
+        "«Guardar» (`ac-guarda`), que declara `grava=`",
+    ("06-navegacao.html", "ac-escolhe"):
+        "tela: a mão, a curva e o giroscópio da janela Acessibilidade só mexem no rascunho; "
+        "quem grava é o «Guardar» (`ac-guarda`), que declara `grava=`",
+    ("06-navegacao.html", "ac-escopo"):
+        "tela: a chave «Em todo perfil» só diz onde o «Guardar» escreve (no perfil ou no "
+        "controle do «Para»); nada se grava no clique",
+    ("06-navegacao.html", "ac-padrao"):
+        "tela: o «Voltar ao padrão» da janela Acessibilidade enche o rascunho com o de "
+        "fábrica; o que vale só muda no «Guardar» (`ac-guarda`)",
+    ("06-navegacao.html", "ac-cancela"):
+        "tela: o «Cancelar» e o botão de fechar da janela Acessibilidade largam o rascunho; "
+        "nada se grava",
     ("*", "exportar"):
         "ato: copia o arquivo do perfil para FORA, onde quem usa escolhe; nenhum "
         "perfil nem aparelho de quem usa muda",

@@ -168,6 +168,16 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "acao-do-gesto": "escolhe a ação de um gesto — é do perfil",
     "novo-gesto": "acrescenta um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
     "remover-gesto": "tira um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
+    "ac-liga": "liga ou desliga um chip da janela Acessibilidade — é do rascunho da tela, vale no Guardar",
+    "ac-passo": "um passo de número da janela Acessibilidade — é do rascunho da tela, vale no Guardar",
+    "ac-escolhe": "escolhe a mão, a curva ou o giroscópio na janela Acessibilidade — é do rascunho da tela, "
+                  "vale no Guardar",
+    "ac-escopo": "diz se o Guardar da Acessibilidade escreve no perfil ou no controle do «Para» — é da tela",
+    "ac-padrao": "enche o rascunho da Acessibilidade com o de fábrica — é da tela, vale no Guardar",
+    "ac-cancela": "larga o rascunho da Acessibilidade — é da tela",
+    "ac-guarda": "grava `ativacao` e `analogicos` no perfil ou na peça do «Para», e o giro pelo `mira.set` "  # (noqa-acento)
+                 "do controle — é do perfil e por controle; o ATO no aparelho é o do motor, o mesmo "
+                 "no cabo e no rádio",
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global para todos os controles",
     "vel-rolagem": "idem",
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "

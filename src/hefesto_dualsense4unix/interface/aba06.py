@@ -29,6 +29,14 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
 from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL, moldes_a_vista
 from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, FIM_DA_ABA, MESA, glifo, monta
 from pacotes.a06_navegacao import (
+    AC_CHIPS,
+    AC_CURVA,
+    AC_GIRO_LADO,
+    AC_GIRO_GATILHO,
+    AC_MAO,
+    AC_PS_TRAVADO,
+    AC_TODO_PERFIL,
+    AC_TROCAR,
     DO_PERMITIR,
     PERMITIR,
     PERMITIR_INTERNA,
@@ -36,6 +44,8 @@ from pacotes.a06_navegacao import (
     PREFIXO_DA_VALIDADE,
     PREFIXO_DO_GESTO,
     PREFIXO_DO_SCRIPT,
+    campo_da_linha,
+    campo_do_chip,
     chips_da_fita,
     chips_de_quem_navega,
 )
@@ -425,74 +435,115 @@ SCRIPT = """<script>
 </script>"""
 
 
-def _ac(rotulo, controle, dica=""):
+def _ac(rotulo, controle, dica="", sem_motor=False):
+    """Uma linha da janela. A que o motor não atende fica apagada e inerte, com a dica."""
+    if sem_motor:
+        return (f'<div class="ac2" style="opacity:.4" data-dica="{dica}"><span class="ac2-rot">{rotulo}</span>'
+                f'<span class="ac2-ctl" inert>{controle}</span></div>')
     d = f' data-dica="{dica}"' if dica else ""
     return (f'<div class="ac2"><span class="ac2-rot"{d}>{rotulo}</span>'
-            f'<span class="ac2-ctl" inert>{controle}</span></div>')
+            f'<span class="ac2-ctl">{controle}</span></div>')
 
 
-def _ac_seg(itens, ligado):
+def _ac_vivo(gesto, campo, valor, endereco, quando=None, atributo="aria-pressed"):
+    """Os atributos de um botão da janela: o gesto, o ajuste, o valor e o endereço da pintura."""
+    marca = f' data-hef-quando="{quando}"' if quando is not None else ""
+    return (f'data-gesto="{gesto}" data-ac="{campo}" data-v="{valor}" data-campo="{endereco}" '
+            f'data-hef-alvo="classe"{marca} data-hef-atributo="{atributo}"')
+
+
+def _ac_seg(campo, itens, ligado, gesto="ac-escolhe"):
     botoes = []
-    for item in itens:
-        marca = ' class="on"' if item == ligado else ""
-        botoes.append(f'<button type="button" disabled{marca}>{item}</button>')
+    for valor, rotulo in itens:
+        marca = ' class="on"' if valor == ligado else ""
+        botoes.append(f'<button type="button"{marca} aria-pressed="{"true" if valor == ligado else "false"}" '
+                      f'{_ac_vivo(gesto, campo, valor, campo_da_linha(campo), quando=valor)}>{rotulo}</button>')
     return '<div class="seg mini">' + "".join(botoes) + '</div>'
 
 
-def _ac_chips(itens, ligados):
-    return ('<div class="ac-chips">' + "".join(
-        f'<span class="chip{" on" if i in ligados else ""}">{i}</span>' for i in itens) + '</div>')
+def _ac_chips(campo, ligados):
+    chips = []
+    for chip, rotulo, _botoes in AC_CHIPS[campo]:
+        aceso = chip in ligados
+        chips.append(f'<button type="button" class="chip{" on" if aceso else ""}" '
+                     f'aria-pressed="{"true" if aceso else "false"}" '
+                     f'{_ac_vivo("ac-liga", campo, chip, campo_do_chip(campo, chip))}>{rotulo}</button>')
+    return '<div class="ac-chips">' + "".join(chips) + '</div>'
 
 
-def _ac_num(valor, unidade):
+def _ac_num(campo, valor, unidade):
+    endereco = campo_da_linha(campo)
     return ('<div class="campo-num mini"><span class="par"><span class="bignum">'
-            f'<button class="passo" type="button" disabled>−</button><b>{valor}</b>'
-            f'<button class="passo" type="button" disabled>+</button></span>'
+            f'<button class="passo" type="button" data-gesto="ac-passo" data-ac="{campo}" data-v="-">−</button>'
+            f'<b data-campo="{endereco}" data-hef-alvo="texto">{valor}</b>'
+            f'<button class="passo" type="button" data-gesto="ac-passo" data-ac="{campo}" data-v="+">+</button></span>'
             f'<span class="un">{unidade}</span></span></div>')
 
 
-def _ac_lista(opcoes, escolhida):
-    op = "".join(f'<option{" selected" if o == escolhida else ""}>{o}</option>' for o in opcoes)
-    return f'<select class="campo-linha" disabled>{op}</select>'
+def _ac_lista(opcoes, escolhida, campo=None):
+    op = "".join(f'<option value="{v}"{" selected" if v == escolhida else ""}>{r}</option>'
+                 for v, r in opcoes)
+    if campo is None:
+        return f'<select class="campo-linha" disabled>{op}</select>'
+    return (f'<select class="campo-linha" data-gesto="ac-escolhe" data-ac="{campo}" '
+            f'data-campo="{campo_da_linha(campo)}" data-hef-alvo="valor">{op}</select>')
 
 
-def _ac_tog(texto):
-    return f'<span class="nj-tog"><span class="pino"></span><span class="txt">{texto}</span></span>'
+def _ac_tog(campo, texto, gesto, ligado=False):
+    endereco = campo_da_linha(campo)
+    return (f'<span class="nj-tog{" ligado" if ligado else ""}" role="switch" '
+            f'aria-checked="{"true" if ligado else "false"}" tabindex="0" data-gesto="{gesto}" '
+            f'data-ac="{campo}" data-campo="{endereco}" data-hef-alvo="classe" '
+            f'data-hef-classe="ligado" data-hef-atributo="aria-checked"><span class="pino"></span>'
+            f'<span class="txt" data-campo="{endereco}-txt" data-hef-alvo="texto">{texto}</span></span>')
 
 
 def _grade_da_acessibilidade():
     col1 = [
-        _ac("Uma mão", _ac_seg(["Desligada", "Esquerda", "Direita"], "Desligada"),
+        _ac("Uma mão", _ac_seg(AC_MAO, [("desligada", "Desligada"), ("esquerda", "Esquerda"),
+                                        ("direita", "Direita")], "desligada"),
             "Segurar o botão leva o lado ao outro"),
         _ac("Trocar de lado com",
-            _ac_lista(["Segurar L1", "Segurar L2", "Tocar no touchpad"], "Segurar L1")),
-        _ac("Alternar em vez de segurar",
-            _ac_chips(["L1", "L2", "R1", "R2", "Cruz", "Círculo"], ()), "Um toque prende; outro solta"),
-        _ac("Segurar conta após", _ac_num("0,8", "s")),
-        _ac("Toque duplo em até", _ac_num("0,3", "s")),
-        _ac("Repetir ao segurar", _ac_chips(["Direcional", "Cruz", "Círculo"], ()),
+            _ac_lista([("l1", "Segurar L1"), ("l2", "Segurar L2"), ("touchpad", "Tocar no touchpad")], "l1"),
+            "O lado se escolhe em «Uma mão»", sem_motor=True),
+        _ac("Alternar em vez de segurar", _ac_chips("ativacao.alternar", ("l1",)),
+            "Um toque prende; outro solta"),
+        _ac("Segurar conta após", _ac_num("ativacao.longo_ms", "0,8", "s")),
+        _ac("Toque duplo em até", _ac_num("ativacao.duplo_ms", "0,3", "s")),
+        _ac("Repetir ao segurar", _ac_chips("ativacao.repetir", ()),
             "Segurar repete, como uma tecla"),
-        _ac("Repete após", _ac_num("0,5", "s")),
-        _ac("Ritmo da repetição", _ac_num("6", "Hz")),
+        _ac("Repete após", _ac_num("ativacao.repete_apos_ms", "0,5", "s")),
+        _ac("Ritmo da repetição", _ac_num("ativacao.repete_por_segundo", "6", "Hz")),
     ]
+    inverter = _ac_chips("analogicos.inverter", ()).replace(
+        '</div>', _ac_trocar_os_lados() + '</div>')
     col2 = [
-        _ac("Ignorar tremor abaixo de", _ac_num("120", "ms")),
-        _ac("Aperto mínimo", _ac_num("50", "ms")),
-        _ac("Botão que trava", _ac_chips(["L1", "R1", "L2", "R2"], ()),
+        _ac("Ignorar tremor abaixo de", _ac_num("ativacao.repique_ms", "120", "ms")),
+        _ac("Aperto mínimo", _ac_num("ativacao.aperto_minimo_ms", "50", "ms")),
+        _ac("Botão que trava", _ac_chips("ativacao.travar", ()),
             "Fica preso até o próximo botão"),
-        _ac("Gestos sem apertar junto", _ac_tog("Desligado"), "Toque no PS e depois no outro"),
-        _ac("Zona morta", _ac_num("10", "%")),
-        _ac("Curva", _ac_seg(["Linear", "Precisa", "Estável", "Digital"], "Linear")),
-        _ac("Sensibilidade", _ac_num("100", "%")),
-        _ac("Inverter", _ac_chips(["Eixo Y", "Eixo X", "Trocar os lados"], ())),
+        _ac("Gestos sem apertar junto", _ac_tog(AC_PS_TRAVADO, "Desligado", "ac-liga"),
+            "Toque no PS e depois no outro"),
+        _ac("Zona morta", _ac_num("analogicos.zona_morta", "10", "%")),
+        _ac("Curva", _ac_seg(AC_CURVA, [("linear", "Linear"), ("precisa", "Precisa"),
+                                        ("estavel", "Estável"), ("digital", "Digital")], "linear")),
+        _ac("Sensibilidade", _ac_num("analogicos.sensibilidade", "100", "%")),
+        _ac("Inverter", inverter),
         _ac("Giroscópio como analógico",
-            _ac_lista(["Desligado", "Analógico direito", "Analógico esquerdo"], "Desligado")
-            + _ac_lista(["Sempre", "Segurando L2"], "Segurando L2"),
+            _ac_lista([("desligado", "Desligado"), ("analogico_direito", "Analógico direito"),
+                       ("analogico_esquerdo", "Analógico esquerdo")], "desligado", AC_GIRO_LADO)
+            + _ac_lista([("sempre", "Sempre"), ("l2", "Segurando L2")], "l2", AC_GIRO_GATILHO),
             "Mexer o controle move o analógico"),
     ]
     return ('<div class="ac2-grade">'
             f'<div class="ac2-col">{"".join(col1)}</div>'
             f'<div class="ac2-col">{"".join(col2)}</div></div>')
+
+
+def _ac_trocar_os_lados():
+    return (f'<button type="button" class="chip" aria-pressed="false" '
+            f'{_ac_vivo("ac-liga", AC_TROCAR, "lados", campo_do_chip(AC_TROCAR, "lados"))}>'
+            'Trocar os lados</button>')
 
 
 def _tela_da_acessibilidade():
@@ -502,16 +553,16 @@ def _tela_da_acessibilidade():
     <div class="tn-topo">
       <span class="tn-tit" data-dica="Para pouca força, pouco alcance ou uma mão só">Acessibilidade</span>
       <span class="pc-para"><span class="ext-rot">Para</span><span data-bloco="{BLOCO_PARA_QUEM}">{chips_de_quem_navega(MESA_DA_FITA, so_o_primeiro=True)}</span></span>
-      <span class="chave-jogo ac-chave" data-dica="A necessidade é de quem joga, não do jogo"><span class="nj-tog ligado" inert><span class="pino"></span><span class="txt">Sim</span></span><span class="chave-rot">Em todo perfil</span></span>
-      <a class="tn-x" href="#" aria-label="Fechar">×</a>
+      <span class="chave-jogo ac-chave" data-dica="A necessidade é de quem joga, não do jogo">{_ac_tog(AC_TODO_PERFIL, "Sim", "ac-escopo", ligado=True)}<span class="chave-rot">Em todo perfil</span></span>
+      <a class="tn-x" href="#" aria-label="Fechar" data-gesto="ac-cancela">×</a>
     </div>
     <div class="tn-corpo">
       {_grade_da_acessibilidade()}
     </div>
     <div class="tn-rod">
-      <a class="btn" href="#">Cancelar</a>
-      <span class="btn amarelo-padrao apagado" aria-disabled="true" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</span>
-      <span class="btn roxo apagado" aria-disabled="true" data-dica="Guarda estes ajustes para quem joga">Guardar</span>
+      <a class="btn" href="#" data-gesto="ac-cancela">Cancelar</a>
+      <button type="button" class="btn amarelo-padrao" data-gesto="ac-padrao" data-dica="Volta estes ajustes ao de fábrica">Voltar ao padrão</button>
+      <button type="button" class="btn roxo" data-gesto="ac-guarda" data-dica="Guarda estes ajustes para quem joga">Guardar</button>
     </div>
   </div>
 </div>

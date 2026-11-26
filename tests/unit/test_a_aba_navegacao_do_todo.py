@@ -137,13 +137,22 @@ def test_os_tres_de_permitir_navegacao_cabem_numa_linha(pagina) -> None:
 
 
 def test_o_que_ainda_nao_grava_aparece_apagado(pagina) -> None:
-    """O «Voltar ao padrão» e o «Guardar» da Acessibilidade não gravam, e a tela os mostra apagados.
+    """Só o que nenhum motor atende aparece apagado; o «Guardar» e o «Voltar ao padrão» acendem.
 
-    MORDIDA: tirar a regra `.btn.apagado` deixa os dois acesos, iguais a um botão que funciona.
+    A D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS valeu até os donos gravarem: com a
+    A-ACESSIBILIDADE-DA-NAVEGACAO-GRAVA-O-QUE-SE-CLICA-01 os dois botões do rodapé gravam, e a linha
+    «Trocar de lado com», sem motor, segue a 0,4 de opacidade com a dica.
 
-    Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS.
+    MORDIDA: apagar de novo o «Guardar», ou acender a linha sem motor, reprova.
     """
     pagina.goto(MOCKUP.as_uri() + "#acessibilidade")
-    opacidades = pagina.evaluate("""() => [...document.querySelectorAll(
-      '#acessibilidade .apagado[aria-disabled="true"]')].map(b => getComputedStyle(b).opacity)""")
-    assert len(opacidades) == 2 and all(float(o) <= 0.6 for o in opacidades), opacidades
+    apagados = pagina.evaluate("""() => [...document.querySelectorAll(
+      '#acessibilidade .apagado[aria-disabled="true"]')].length""")
+    assert apagados == 0, apagados
+    rodape = pagina.evaluate("""() => [...document.querySelectorAll(
+      '#acessibilidade .tn-rod button.btn')].map(b => [b.textContent.trim(),
+      getComputedStyle(b).opacity, b.getAttribute('aria-disabled')])""")
+    assert rodape == [["Voltar ao padrão", "1", None], ["Guardar", "1", None]], rodape
+    sem_motor = pagina.evaluate("""() => [...document.querySelectorAll(
+      '#acessibilidade .ac2[style*="opacity"]')].map(l => getComputedStyle(l).opacity)""")
+    assert sem_motor == ["0.4"], sem_motor

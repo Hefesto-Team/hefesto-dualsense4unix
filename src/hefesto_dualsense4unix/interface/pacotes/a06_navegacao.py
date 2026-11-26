@@ -613,6 +613,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     atalhos = _os_atalhos_fora_da_lista(linhas)
     mesa.update(linhas)
     mesa.update(_o_que_os_gestos_fazem())
+    mesa.update(_pinta_acessibilidade(ctx))
     mesa[f"{PREFIXO_DA_ACAO}ps"] = _o_que_o_ps_faz(p, linhas[f"{PREFIXO_DA_ACAO}ps"])
     blocos = {
         f'[data-bloco="{BLOCO_PARA_QUEM}"]': chips_de_quem_navega(
@@ -1238,11 +1239,12 @@ SEM_GESTO: dict[str, str] = {}
 PONTE = {"chamar", "machine_declare", "escolher_arquivo", "profile_reaplicar"}
 REPOR_O_POINT_AND_CLICK = "desktop.arranjo.repor"
 METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "machine.declare",
-           "navegacao.interna.set", "navegacao.big_picture.set", REPOR_O_POINT_AND_CLICK}
+           "navegacao.interna.set", "navegacao.big_picture.set", REPOR_O_POINT_AND_CLICK,
+           "perfil.ativacao.set", "perfil.analogicos.set", "mira.set"}
 
 
 PAGINA = "06-navegacao.html"
-PISO_DA_ABA = 8
+PISO_DA_ABA = 15
 
 
 def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any]:
@@ -1514,3 +1516,336 @@ def remover_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     _esquecer_a_maquina()
     _avisar_se_sem_saida_de_emergencia()
     return None
+
+
+ACESSIBILIDADE = "ac"
+BOTOES_DO_DIRECIONAL = ("dpad_up", "dpad_down", "dpad_left", "dpad_right")
+AC_CHIPS: dict[str, tuple[tuple[str, str, tuple[str, ...]], ...]] = {
+    "ativacao.alternar": (("l1", "L1", ("l1",)), ("l2", "L2", ("l2",)),
+                          ("r1", "R1", ("r1",)), ("r2", "R2", ("r2",)),
+                          ("cross", "Cruz", ("cross",)), ("circle", "Círculo", ("circle",))),
+    "ativacao.repetir": (("direcional", "Direcional", BOTOES_DO_DIRECIONAL),
+                         ("cross", "Cruz", ("cross",)), ("circle", "Círculo", ("circle",))),
+    "ativacao.travar": (("l1", "L1", ("l1",)), ("r1", "R1", ("r1",)),
+                        ("l2", "L2", ("l2",)), ("r2", "R2", ("r2",))),
+    "analogicos.inverter": (("y", "Eixo Y", ("ly", "ry")), ("x", "Eixo X", ("lx", "rx"))),
+}
+AC_EXCLUSIVAS = ("ativacao.alternar", "ativacao.repetir", "ativacao.travar")
+AC_TROCAR = "analogicos.trocar"
+AC_PS_TRAVADO = "ativacao.ps_travado_ms"
+AC_MAO = "analogicos.mao"
+AC_CURVA = "analogicos.curva"
+AC_MAOS = (("desligada", None), ("esquerda", "esquerda"), ("direita", "direita"))
+AC_CURVAS = ("linear", "precisa", "estavel", "digital")
+AC_GIRO_LADO = "giro.lado"
+AC_GIRO_GATILHO = "giro.gatilho"
+AC_GIRO_LADOS = ("desligado", "analogico_direito", "analogico_esquerdo")
+AC_GIRO_GATILHOS = ("sempre", "l2")
+AC_PASSOS: dict[str, tuple[int, int, int, str]] = {
+    "ativacao.longo_ms": (100, 150, 3000, "s"),
+    "ativacao.duplo_ms": (100, 100, 1000, "s"),
+    "ativacao.repete_apos_ms": (100, 100, 3000, "s"),
+    "ativacao.repete_por_segundo": (1, 1, 20, "Hz"),
+    "ativacao.repique_ms": (10, 0, 1000, "ms"),
+    "ativacao.aperto_minimo_ms": (10, 0, 500, "ms"),
+    "analogicos.zona_morta": (5, 0, 50, "%"),
+    "analogicos.sensibilidade": (5, 50, 150, "%"),
+}
+AC_DE_FABRICA: dict[str, Any] = {
+    "ativacao.alternar": [], "ativacao.repetir": [], "ativacao.travar": [],
+    "ativacao.longo_ms": 500, "ativacao.duplo_ms": 300, "ativacao.repete_apos_ms": 500,
+    "ativacao.repete_por_segundo": 6, "ativacao.repique_ms": 0, "ativacao.aperto_minimo_ms": 0,
+    AC_PS_TRAVADO: 0, "analogicos.zona_morta": 0, AC_CURVA: "linear",
+    "analogicos.sensibilidade": 100, "analogicos.inverter": [], AC_TROCAR: False, AC_MAO: None,
+    AC_GIRO_LADO: "desligado", AC_GIRO_GATILHO: "sempre",
+}
+AC_TODO_PERFIL = "todo-perfil"
+_AC_RASCUNHO: dict[str, Any] = {}
+_AC_ESCOPO: dict[str, bool] = {"todo_perfil": True}
+
+
+def campo_do_chip(campo: str, chip: str) -> str:
+    """O endereço de um chip da janela Acessibilidade na página (`ac-<seção>-<campo>-<chip>`)."""
+    return f"{ACESSIBILIDADE}-{campo.replace('.', '-')}-{chip}"
+
+
+def campo_da_linha(campo: str) -> str:
+    """O endereço de uma linha (número, curva, mão, giro) da janela Acessibilidade."""
+    return f"{ACESSIBILIDADE}-{campo.replace('.', '-')}"
+
+
+def _controle_da_janela(ctx: Contexto) -> str:
+    """O endereço do controle do «Para»: o primário da mesa, ou o primeiro; `""` sem controle."""
+    lugares = _quem_navega(ctx)
+    aceso = next((x for x in lugares if x.get(CHAVE_PRIMARIA)), lugares[0] if lugares else {})
+    return str(aceso.get("uniq") or "")
+
+
+def _do_controle_no_perfil(p: dict[str, Any], uniq: str, secao: str) -> dict[str, Any]:
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    quem = opc.chave(uniq)
+    for original, dele in (p.get("controllers") or {}).items():
+        if quem is not None and opc.chave(original) == quem:
+            return dict((dele or {}).get(secao) or {})
+    return {}
+
+
+def _o_que_vale_agora(ctx: Contexto) -> dict[str, Any]:
+    """Cada campo da janela como o perfil o diz hoje, com o de fábrica onde o perfil cala.
+
+    Com «Em todo perfil» apagado, a escolha da peça do «Para» vai por cima campo a campo; o giro
+    é o que o controle diz no estado (`mira`), que é sempre de uma peça só.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileAnalogicosConfig,
+        ProfileAtivacaoConfig,
+    )
+
+    p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
+    uniq = _controle_da_janela(ctx)
+    vale: dict[str, Any] = {}
+    for secao, modelo in (("ativacao", ProfileAtivacaoConfig),  # (noqa-acento)
+                          ("analogicos", ProfileAnalogicosConfig)):
+        campos = {n: f.get_default(call_default_factory=True)
+                  for n, f in modelo.model_fields.items()}
+        campos.update(p.get(secao) or {})
+        if not _AC_ESCOPO["todo_perfil"] and uniq:
+            campos.update(_do_controle_no_perfil(p, uniq, secao))
+        for nome, valor in campos.items():
+            vale[f"{secao}.{nome}"] = list(valor) if isinstance(valor, list) else valor
+    mira = ctx.por_uniq(uniq).get("mira") or {} if uniq else {}
+    virtual = bool(mira.get("virtual"))
+    vale[AC_GIRO_LADO] = (str(mira.get("lado") or "analogico_direito")
+                          if virtual else "desligado")
+    vale[AC_GIRO_GATILHO] = "l2" if mira.get("gatilho") == "l2" else "sempre"
+    return vale
+
+
+def _o_que_a_janela_mostra(ctx: Contexto) -> dict[str, Any]:
+    return {**_o_que_vale_agora(ctx), **_AC_RASCUNHO}
+
+
+def _em_segundos(ms: int) -> str:
+    return f"{ms / 1000:.1f}".replace(".", ",")
+
+
+def _pinta_acessibilidade(ctx: Contexto) -> dict[str, str]:
+    """O endereço de cada controle da janela, com o que a janela mostra (o perfil e o rascunho)."""
+    mostra = _o_que_a_janela_mostra(ctx)
+    saida: dict[str, str] = {}
+    for campo, chips in AC_CHIPS.items():
+        ligados = set(mostra[campo])
+        for chip, _rotulo, botoes in chips:
+            saida[campo_do_chip(campo, chip)] = "sim" if set(botoes) <= ligados else ""
+    saida[campo_do_chip(AC_TROCAR, "lados")] = "sim" if mostra[AC_TROCAR] else ""
+    ligado = bool(mostra[AC_PS_TRAVADO])
+    saida[campo_da_linha(AC_PS_TRAVADO)] = "sim" if ligado else ""
+    saida[campo_da_linha(AC_PS_TRAVADO) + "-txt"] = "Ligado" if ligado else "Desligado"
+    saida[campo_da_linha(AC_MAO)] = next(
+        (nome for nome, valor in AC_MAOS if valor == mostra[AC_MAO]), "desligada")
+    saida[campo_da_linha(AC_CURVA)] = str(mostra[AC_CURVA])
+    for campo, (_passo, _minimo, _maximo, unidade) in AC_PASSOS.items():
+        valor = int(mostra[campo])
+        saida[campo_da_linha(campo)] = _em_segundos(valor) if unidade == "s" else str(valor)
+    saida[campo_da_linha(AC_GIRO_LADO)] = str(mostra[AC_GIRO_LADO])
+    saida[campo_da_linha(AC_GIRO_GATILHO)] = str(mostra[AC_GIRO_GATILHO])
+    todo = _AC_ESCOPO["todo_perfil"]
+    saida[campo_da_linha(AC_TODO_PERFIL)] = "sim" if todo else ""
+    saida[campo_da_linha(AC_TODO_PERFIL) + "-txt"] = "Sim" if todo else "Não"
+    return saida
+
+
+def _o_gesto_da_janela(o: dict[str, Any]) -> tuple[str, str]:
+    campo = str(o.get("ac") or "").strip()
+    valor = str(o.get("v") or o.get("valor") or "").strip()
+    if not campo:
+        raise ValueError("a Acessibilidade: o clique não disse qual ajuste é (`data-ac`)")
+    return campo, valor
+
+
+def _eco_da_janela(ctx: Contexto) -> dict[str, Any]:
+    return {"mesa": _pinta_acessibilidade(ctx)}
+
+
+@gesto("06-navegacao.html", "ac-liga")
+def ac_liga(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Um chip (ou a chave) da janela Acessibilidade: liga ou desliga no rascunho.
+
+    Nada vai ao daemon antes do «Guardar». Um botão tem um modo só: o botão que entra em
+    «Alternar», «Repetir» ou «Botão que trava» sai dos outros dois do rascunho, na mesma volta.
+    «Trocar os lados» e a mão se excluem, como no modelo do perfil.
+    """
+    campo, valor = _o_gesto_da_janela(o)
+    mostra = _o_que_a_janela_mostra(ctx)
+    if campo in AC_CHIPS:
+        botoes = next((b for chip, _r, b in AC_CHIPS[campo] if chip == valor), None)
+        if botoes is None:
+            raise ValueError(f"a Acessibilidade: {valor!r} não é um chip de {campo}")
+        atual = list(mostra[campo])
+        if set(botoes) <= set(atual):
+            novo = [b for b in atual if b not in botoes]
+        else:
+            novo = [*atual, *(b for b in botoes if b not in atual)]
+            for outro in AC_EXCLUSIVAS:
+                if outro != campo:
+                    _AC_RASCUNHO[outro] = [b for b in mostra[outro] if b not in botoes]
+        _AC_RASCUNHO[campo] = novo
+    elif campo == AC_TROCAR:
+        _AC_RASCUNHO[AC_TROCAR] = not mostra[AC_TROCAR]
+        if _AC_RASCUNHO[AC_TROCAR]:
+            _AC_RASCUNHO[AC_MAO] = None
+    elif campo == AC_PS_TRAVADO:
+        from hefesto_dualsense4unix.core.filtro_de_botao import PS_TRAVADO_DE_FABRICA_MS
+
+        _AC_RASCUNHO[AC_PS_TRAVADO] = 0 if mostra[AC_PS_TRAVADO] else PS_TRAVADO_DE_FABRICA_MS
+    else:
+        raise ValueError(f"a Acessibilidade: {campo!r} não é um chip nem uma chave")
+    return _eco_da_janela(ctx)
+
+
+@gesto("06-navegacao.html", "ac-passo")
+def ac_passo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Os passos de menos e de mais de um número da janela, dentro da faixa do perfil."""
+    campo, sentido = _o_gesto_da_janela(o)
+    if campo not in AC_PASSOS or sentido not in ("-", "+"):
+        raise ValueError(f"a Acessibilidade: {campo!r} {sentido!r} não é um passo de número")
+    passo, minimo, maximo, _unidade = AC_PASSOS[campo]
+    atual = int(_o_que_a_janela_mostra(ctx)[campo])
+    _AC_RASCUNHO[campo] = max(minimo, min(maximo, atual + (passo if sentido == "+" else -passo)))
+    return _eco_da_janela(ctx)
+
+
+@gesto("06-navegacao.html", "ac-escolhe")
+def ac_escolhe(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Uma escolha entre várias da janela: a mão, a curva e os dois do giroscópio."""
+    campo, valor = _o_gesto_da_janela(o)
+    if campo == AC_MAO:
+        achada = [m for nome, m in AC_MAOS if nome == valor]
+        if not achada:
+            raise ValueError(f"a Acessibilidade: a mão {valor!r} não existe")
+        _AC_RASCUNHO[AC_MAO] = achada[0]
+        if achada[0] is not None:
+            _AC_RASCUNHO[AC_TROCAR] = False
+    elif campo == AC_CURVA and valor in AC_CURVAS:
+        _AC_RASCUNHO[AC_CURVA] = valor
+    elif campo == AC_GIRO_LADO and valor in AC_GIRO_LADOS:
+        _AC_RASCUNHO[AC_GIRO_LADO] = valor
+    elif campo == AC_GIRO_GATILHO and valor in AC_GIRO_GATILHOS:
+        _AC_RASCUNHO[AC_GIRO_GATILHO] = valor
+    else:
+        raise ValueError(f"a Acessibilidade: {valor!r} não é uma escolha de {campo!r}")
+    return _eco_da_janela(ctx)
+
+
+@gesto("06-navegacao.html", "ac-escopo")
+def ac_escopo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Em todo perfil»: aceso, o «Guardar» vale no perfil; apagado, no controle do «Para»."""
+    _AC_ESCOPO["todo_perfil"] = not _AC_ESCOPO["todo_perfil"]
+    return _eco_da_janela(ctx)
+
+
+@gesto("06-navegacao.html", "ac-padrao")
+def ac_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Voltar ao padrão»: o rascunho vira o de fábrica; o que vale só muda no «Guardar»."""
+    _AC_RASCUNHO.clear()
+    _AC_RASCUNHO.update({k: list(v) if isinstance(v, list) else v
+                         for k, v in AC_DE_FABRICA.items()})
+    return _eco_da_janela(ctx)
+
+
+@gesto("06-navegacao.html", "ac-cancela")
+def ac_cancela(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Cancelar» e o botão de fechar: o rascunho some e a janela volta ao que o perfil diz."""
+    _AC_RASCUNHO.clear()
+    return _eco_da_janela(ctx)
+
+
+def _o_que_mudou_na_janela(ctx: Contexto) -> dict[str, dict[str, Any]]:
+    """O rascunho menos o que o perfil já diz, por seção, com os botões na ordem do controle."""
+    from hefesto_dualsense4unix.core.ativacao_de_botao import ATIVAVEIS
+
+    vale = _o_que_vale_agora(ctx)
+    por_secao: dict[str, dict[str, Any]] = {  # (noqa-acento)
+        "ativacao": {}, "analogicos": {}, "giro": {}}  # (noqa-acento)
+    for chave, novo in _AC_RASCUNHO.items():
+        if chave not in vale:
+            continue
+        antes = vale[chave]
+        if isinstance(novo, list):
+            if set(novo) == set(antes):
+                continue
+            novo = [b for b in (*ATIVAVEIS, "lx", "ly", "rx", "ry") if b in novo]
+        elif novo == antes:
+            continue
+        secao, _, campo = chave.partition(".")
+        por_secao[secao][campo] = novo
+    return por_secao
+
+
+def _conferir_a_secao(modelo: Any, inteira: dict[str, Any], campos: dict[str, Any]) -> None:
+    """A seção como ficaria, pelo modelo do perfil, ANTES de ir ao Hefesto."""
+    try:
+        modelo.model_validate({**inteira, **campos})
+    except ValueError as erro:
+        achados = getattr(erro, "errors", None)
+        frase = str(achados()[0]["msg"]) if callable(achados) else str(erro)
+        raise RuntimeError(f"não guardei: {frase.removeprefix('Value error, ')}") from erro
+
+
+def _conferir_a_resposta(corpo: Any, metodo: str) -> None:
+    """O Hefesto respondeu `ok`, ou a frase do que ele disse (ou de que ficou mudo) sobe."""
+    if isinstance(corpo, dict) and corpo.get("status") == "ok":
+        return
+    if not isinstance(corpo, dict):
+        raise RuntimeError(f"o Hefesto não respondeu a {metodo}; nada foi guardado")
+    raise RuntimeError(str(corpo.get("motivo") or f"o Hefesto recusou: {corpo.get('status')}"))
+
+
+@gesto("06-navegacao.html", "ac-guarda", grava="perfil.ativacao.set")
+def ac_guarda(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Guardar»: o que o rascunho mudou vai ao perfil, em Em todo perfil ou no controle do «Para».
+
+    Só a diferença sai: `perfil.ativacao.set`, `perfil.analogicos.set` e, para o giroscópio, o
+    `mira.set` do controle do «Para». Cada seção é validada pelo modelo do perfil ANTES de ir ao
+    Hefesto, para a recusa dizer o botão que está em dois modos. O rascunho só some quando tudo
+    foi guardado.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileAnalogicosConfig,
+        ProfileAtivacaoConfig,
+    )
+
+    mudou = _o_que_mudou_na_janela(ctx)
+    uniq = _controle_da_janela(ctx)
+    por_controle = not _AC_ESCOPO["todo_perfil"]
+    if (por_controle or mudou["giro"]) and not uniq:
+        raise RuntimeError("não há controle ligado para guardar estes ajustes")
+    vale = _o_que_vale_agora(ctx)
+    ao_perfil = {"uniq": uniq} if por_controle else {}
+    for secao, modelo in (("ativacao", ProfileAtivacaoConfig),  # (noqa-acento)
+                          ("analogicos", ProfileAnalogicosConfig)):
+        campos = mudou[secao]
+        if not campos:
+            continue
+        _conferir_a_secao(modelo, {c: vale[f"{secao}.{c}"] for c in modelo.model_fields}, campos)
+    if mudou["ativacao"]:  # (noqa-acento)
+        pedido = {**mudou["ativacao"], **ao_perfil}  # (noqa-acento)
+        corpo = p.resultado("perfil.ativacao.set", **pedido)
+        _conferir_a_resposta(corpo, "perfil.ativacao.set")
+    if mudou["analogicos"]:
+        corpo = p.resultado("perfil.analogicos.set", **mudou["analogicos"], **ao_perfil)
+        _conferir_a_resposta(corpo, "perfil.analogicos.set")
+    giro = mudou["giro"]
+    if giro:
+        pedido_do_giro: dict[str, Any] = {"uniq": uniq}
+        if "lado" in giro:
+            if giro["lado"] == "desligado":
+                pedido_do_giro["ligada"] = False
+            else:
+                pedido_do_giro.update(ligada=True, lado=giro["lado"])
+        if "gatilho" in giro:
+            pedido_do_giro["gatilho"] = "l2" if giro["gatilho"] == "l2" else None
+        _conferir_a_resposta(p.resultado("mira.set", **pedido_do_giro), "mira.set")
+    _AC_RASCUNHO.clear()
+    return _eco_da_janela(ctx)

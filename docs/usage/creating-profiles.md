@@ -37,6 +37,7 @@ perfil não mexe naquilo quando entra.
 | `remapeamento` | trocar um botão por outro no jogo, nos quatro controles (`{"cross": "circle"}`) |
 | `movimento` | a mira pelo giroscópio |
 | `mouse`, `teclado_emulado`, `suppress_desktop_emulation` | o mouse e o teclado do controle |
+| `ativacao`, `analogicos`, `cursor` | a acessibilidade: como o botão ativa, a zona morta e a curva dos analógicos, e o cursor ([A acessibilidade do controle](#a-acessibilidade-do-controle)) |
 | `mic`, `speaker` | o microfone e o alto-falante |
 | `mode` | o modo que o perfil pede ([modos.md](modos.md)) |
 | `estilo` | o Estilo de jogo (`fps`, `corrida`, `acao`, `terror`, `retro` e outros). Num perfil com estilo, a lista de efeito que ninguém escolheu vale «Do estilo»; sem estilo, vale «—» |
@@ -146,8 +147,48 @@ som dentro do mesmo perfil:
 A chave é o endereço do controle, com ou sem os dois-pontos
 (`AA:BB:CC:00:00:02` vira `aabbcc000002`). O que não estiver ali vem do perfil,
 campo a campo. Aceita `leds`, `triggers`, `rumble`, `speaker`, `mic`,
-`sensores`, `mascara` e `movimento`. O `rumble` daqui só aceita `policy` (sem
+`sensores`, `mascara`, `movimento`, `ativacao` e `analogicos`. O `rumble` daqui só aceita `policy` (sem
 `auto`) e `custom_mult`.
+
+## A acessibilidade do controle
+
+Três seções, para quem tem pouca força, pouco alcance ou uma mão só. As três valem
+no perfil inteiro, e `ativacao` e `analogicos` também dentro de um controle
+(`controllers`). O que a seção não diz fica como o controle entrega.
+
+```json
+{"ativacao": {"alternar": ["l1"], "repique_ms": 120},
+ "analogicos": {"zona_morta": 10, "curva": "precisa", "mao": "direita"}}
+```
+
+- `ativacao`: um botão tem um modo só. `alternar` (um toque prende, outro solta),
+  `repetir` (segurado, repete como uma tecla, a `repete_apos_ms` e a
+  `repete_por_segundo` vezes por segundo), `travar` (fica preso até o próximo
+  botão) ou um gesto, `longo` e `duplo`, que dispara outro botão
+  (`longo_ms`, `duplo_ms`). `repique_ms` ignora o tremor (o botão que sobe e
+  desce mais rápido que isso conta uma vez), `aperto_minimo_ms` descarta o toque
+  curto demais e `ps_travado_ms` deixa tocar o PS e depois o outro botão, em vez
+  de apertar os dois juntos.
+- `ativacao.sequencia`, a sequência (ou macro): um botão do controle que toca
+  vários botões do jogo, um depois do outro. Cada entrada é um botão e os
+  `passos` da sequência (`botao` e `ms` até o seguinte, de 0 a 5000, até 32 passos),
+  com o `jeito` (`uma_vez`, `repete` enquanto segura ou `alterna`) e o `ritmo`
+  (`gravado`, `rapido` ou `devagar`). A gravação, que ouve os botões e anota
+  os tempos, é do mapa do controle.
+- `analogicos`: `zona_morta` (0 a 50 %), `zona_externa` (0 a 30 %), `curva`
+  (`linear`, `precisa`, `estavel` ou `digital`), `sensibilidade` (50 a 150 %),
+  `inverter` (`lx`, `ly`, `rx`, `ry`), `trocar` os dois lados ou a `mao`
+  (`esquerda` ou `direita`, que já decide a troca) e o início e o fim do curso
+  dos gatilhos (`gatilho_inicio`, `gatilho_fim`, até 40 %).
+- `cursor`: a `precisao_botao`, que ao ser apertado reduz o cursor a `precisao`
+  % (10 a 100), a `permanencia_ms` (clica sozinho depois de andar e parar, de
+  300 a 3000, ou 0 para desligar) e o `clique_travado`, o botão que prende o
+  clique esquerdo. Vale para o perfil, nunca para um controle só.
+
+Na aba Navegação, a janela **Acessibilidade** escreve estas seções: os cliques
+ficam num rascunho, **Guardar** grava o que mudou (em todo perfil, ou só no
+controle do «Para»), **Cancelar** larga o rascunho e **Voltar ao padrão** o
+enche com o de fábrica.
 
 ## O que o Hefesto aprende
 

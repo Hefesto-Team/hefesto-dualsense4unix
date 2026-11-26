@@ -147,10 +147,15 @@ desligado.
   controles, e **+ Gesto** acrescenta um ([hotkeys.md](hotkeys.md)). PS + R3 e
   PS + Options são as duas saídas quando o jogo não responde.
 - **Trocar os botões**: o Cruz pode virar Quadrado no jogo, por exemplo.
-- **Acessibilidade**, para pouca força, pouco alcance ou uma mão só: trocar de
-  lado segurando um botão, alternar em vez de segurar, repetir ao segurar,
-  ignorar tremor, botão que trava e o giroscópio como analógico. **Guardar**
-  grava esses ajustes para quem joga.
+- **Acessibilidade**, para pouca força, pouco alcance ou uma mão só: uma mão
+  só (esquerda ou direita), alternar em vez de segurar, repetir ao segurar,
+  ignorar tremor, botão que trava, zona morta, curva e sensibilidade dos
+  analógicos e o giroscópio como analógico. Os cliques ficam num rascunho:
+  **Guardar** grava o que mudou para quem joga (em todo perfil, ou só no
+  controle do «Para»), **Cancelar** o larga e **Voltar ao padrão** o enche com o
+  de fábrica. Os ajustes moram nas seções `ativacao`, `analogicos` e `cursor` do
+  perfil, e a sequência gravada num botão (a macro, `ativacao.sequencia`) está
+  em [creating-profiles.md](creating-profiles.md#a-acessibilidade-do-controle).
 - **Voltar ao padrão** devolve os botões, as velocidades e os gestos, depois de
   confirmar.
 

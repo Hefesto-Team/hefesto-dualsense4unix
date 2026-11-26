@@ -1,16 +1,18 @@
 """O point and click e a Acessibilidade se definem na Navegação: a fila, a tela e o perfil.
 
 Absorve O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01. A fila leva ao mapa (os
-botões do point and click) e à Acessibilidade. A Acessibilidade vem renderizada como no desenho,
-mas todo controle sem dono sai `disabled`/`inert`, e o Guardar e o Voltar ao padrão da tela saem
-apagados, porque nenhum campo do perfil as guarda ainda. A dica diz o que cada um faz,
+botões do point and click) e à Acessibilidade. A Acessibilidade vem renderizada como no desenho e,
+desde A-ACESSIBILIDADE-DA-NAVEGACAO-GRAVA-O-QUE-SE-CLICA-01, acesa: só a linha que nenhum motor
+atende («Trocar de lado com») segue apagada e inerte, e o Guardar e o Voltar ao padrão são botões
+vivos com a dica do que fazem (o que cada clique grava mora em
+`test_a_acessibilidade_da_navegacao_grava_o_que_se_clica.py`). A dica diz o que cada um faz,
 nunca a dívida (regra de 07/09/2026: a tela não confessa o que o produto ainda não faz).
 O «Perfil jogo - navegação» lista os moldes e os perfis do disco que configuram botão
 (`blocos`), e a escolha vale para o perfil ativo: o do jogo, ou o `maquina.json` sem jogo.
 
-MORDIDAS: tirar o `inert` de um controle da Acessibilidade, acender o Guardar, devolver a dica
-«Chega com a próxima versão», tirar «Meus perfis» do pacote ou deixar o gesto aceitar um valor sem o
-prefixo reprovam.
+MORDIDAS: apagar de novo um controle da Acessibilidade que tem motor, apagar o Guardar, devolver a
+dica «Chega com a próxima versão», tirar «Meus perfis» do pacote ou deixar o gesto aceitar um valor
+sem o prefixo reprovam.
 """
 
 from __future__ import annotations
@@ -36,28 +38,27 @@ def _acessibilidade() -> str:
     return sem[inicio:sem.index("</body>", inicio)]
 
 
-def test_todo_controle_da_acessibilidade_sem_dono_esta_apagado_e_inerte() -> None:
+def test_so_a_linha_sem_motor_da_acessibilidade_esta_apagada_e_inerte() -> None:
     tela = _acessibilidade()
-    controles = re.findall(r'<span class="ac2-ctl"([^>]*)>(.*?)</span></div>', tela, flags=re.S)
-    assert len(controles) >= 15, len(controles)
-    for atributos, miolo in controles:
-        assert "inert" in atributos, miolo[:80]
-    for tag in re.findall(r"<(?:button|select|input)\b[^>]*>", tela):
-        assert "disabled" in tag or "data-gesto" not in tag, tag
-    assert "data-gesto" not in tela, "a Acessibilidade acendeu um gesto que ninguém atende"
+    inertes = re.findall(r'<span class="ac2-ctl" inert>(.*?)</span></div>', tela, flags=re.S)
+    assert len(inertes) == 1, len(inertes)
+    assert "disabled" in inertes[0] and "data-gesto" not in inertes[0]
+    assert tela.count("inert") == 1, "a Acessibilidade apagou um controle que tem motor"
+    assert 'class="ac2" style="opacity:.4" data-dica="O lado se escolhe em «Uma mão»"' in tela
+    assert tela.count("data-gesto=") >= 40, "a Acessibilidade perdeu gestos"
 
 
 DICAS_DO_RODAPE = {"Voltar ao padrão": "Volta estes ajustes ao de fábrica",
                    "Guardar": "Guarda estes ajustes para quem joga"}
 
 
-def test_o_guardar_e_o_voltar_ao_padrao_da_acessibilidade_saem_apagados_com_a_dica() -> None:
+def test_o_guardar_e_o_voltar_ao_padrao_da_acessibilidade_estao_vivos_com_a_dica() -> None:
     tela = _acessibilidade()
     rodape = tela[tela.index('class="tn-rod"'):]
     for rotulo, dica in DICAS_DO_RODAPE.items():
-        tag = re.search(rf'<span class="btn[^"]*"([^>]*)>{rotulo}</span>', rodape)
-        assert tag, f"o «{rotulo}» não é um botão apagado"
-        assert 'aria-disabled="true"' in tag.group(1)
+        tag = re.search(rf'<button type="button" class="btn[^"]*"([^>]*)>{rotulo}</button>', rodape)
+        assert tag, f"o «{rotulo}» não é um botão vivo"
+        assert "aria-disabled" not in tag.group(1) and "data-gesto=" in tag.group(1)
         assert f'data-dica="{dica}"' in tag.group(1)
     assert "Cancelar" in rodape
     assert "próxima versão" not in MOCKUP.read_text(encoding="utf-8"), (
