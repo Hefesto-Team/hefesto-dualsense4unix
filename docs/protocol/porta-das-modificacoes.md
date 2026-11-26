@@ -64,6 +64,13 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `tela.parar` | `{}` | `ler:jogo.tela` | `{status}` |
 | `aparelho.abrir` | `{ficha, no}`, primeira e única palavra da conexão | `aparelhos` e o aparelho declarado | `{no}`, com o descritor do nó junto (`SCM_RIGHTS`) |
 
+O `uniq` que a extensão recebe (na lista, em todo envelope e em todo evento) é um apelido do controle, `ctl-` e 20
+letras hexadecimais, e não o endereço do aparelho: o HMAC-SHA256 do endereço com uma chave da casa
+(`mods-apelidos.chave`, `0600`, ao lado do registro) e o `id` da extensão. Cada extensão tem o seu, o mesmo depois
+de reiniciar, nos quatro controles, no cabo e no rádio; a porta traduz de volta todo campo `uniq` que a extensão
+manda (as escritas, o `mira.peso`, o que a extensão publica). `""` e `"todos"` passam como estão
+(`Apelidos` em `src/hefesto_dualsense4unix/mods/porta.py`).
+
 O `mira.peso` (ensaio) multiplica o giro de um controle, ou de todos, pelo ganho, até o prazo: na máscara Xbox, a
 deflexão do analógico e o cursor que o giro move; na máscara DualSense, os três eixos do giro que o pad virtual
 recebe. Sem pedido, a janela do movimento passa byte a byte. Com mais de um pedido, vale o menor ganho. O ganho

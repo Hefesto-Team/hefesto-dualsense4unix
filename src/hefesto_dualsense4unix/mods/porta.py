@@ -14,14 +14,18 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import hashlib
+import hmac
 import inspect
 import json
 import math
 import os
 import re
+import secrets
 import shutil
 import socket
 import struct
+import tempfile
 import time
 from collections import deque
 from collections.abc import Awaitable, Callable, Coroutine, Sequence
@@ -1201,6 +1205,92 @@ class _Compasso:
         self.pendente = self.relogio = None
 
 
+PREFIXO_DO_APELIDO = "ctl-"
+UNIQS_SEM_CONTROLE = frozenset({"", "todos"})
+_UNIQ_NA_LINHA = re.compile(rb'("uniq"\s*:\s*")((?:[^"\\]|\\.)*)(")')
+TAMANHO_DA_CHAVE_DOS_APELIDOS = 32
+
+
+def chave_dos_apelidos(caminho: Path) -> bytes:
+    """A chave da casa para os apelidos, em ``caminho`` (``0600``): nasce na primeira vez e
+    sobrevive ao reinício. A que não se lê inteira dá lugar a uma nova."""
+    try:
+        chave = caminho.read_bytes()
+        if len(chave) == TAMANHO_DA_CHAVE_DOS_APELIDOS:
+            return chave
+    except OSError:
+        pass
+    chave = secrets.token_bytes(TAMANHO_DA_CHAVE_DOS_APELIDOS)
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    fd, nome = tempfile.mkstemp(prefix=".chave-", dir=caminho.parent)
+    try:
+        with os.fdopen(fd, "wb") as arquivo:
+            arquivo.write(chave)
+        os.replace(nome, caminho)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(nome)
+        raise
+    return chave
+
+
+class Apelidos:
+    """O apelido estável de cada controle, um por extensão: o HMAC-SHA256 do ``uniq`` com a chave
+    da casa e o id da extensão. A extensão conhece só o apelido, e a porta traduz de volta o
+    que chega da extensão. ``""``, ``"todos"`` e o que já é apelido passam como estão."""
+
+    def __init__(self, chave: bytes | Callable[[], bytes],
+                 controles: Callable[[], Sequence[str]] = tuple) -> None:
+        self._chave = chave
+        self._controles = controles
+        self._de_volta: dict[tuple[str, str], str] = {}
+
+    def _a_chave(self) -> bytes:
+        if callable(self._chave):
+            self._chave = self._chave()
+        return self._chave
+
+    def de(self, mod_id: str, uniq: str) -> str:
+        if uniq in UNIQS_SEM_CONTROLE or uniq.startswith(PREFIXO_DO_APELIDO):
+            return uniq
+        marca = hmac.new(self._a_chave(), f"{mod_id}\0{uniq}".encode(), hashlib.sha256)
+        apelido = PREFIXO_DO_APELIDO + marca.hexdigest()[:20]
+        self._de_volta[(mod_id, apelido)] = uniq
+        return apelido
+
+    def uniq_de(self, mod_id: str, apelido: str) -> str:
+        """O ``uniq`` do apelido; o apelido de um controle ligado que esta porta ainda não deu
+        (a extensão o guardou antes do reinício) se acha pelos controles de agora."""
+        if not apelido.startswith(PREFIXO_DO_APELIDO):
+            return apelido
+        if (mod_id, apelido) not in self._de_volta:
+            with contextlib.suppress(Exception):
+                for uniq in self._controles():
+                    self.de(mod_id, uniq)
+        return self._de_volta.get((mod_id, apelido), apelido)
+
+    def na_linha(self, mod_id: str, linha: bytes) -> bytes:
+        """A linha JSON que vai à extensão com cada ``"uniq": "…"`` trocado pelo apelido."""
+        def trocar(achado: re.Match[bytes]) -> bytes:
+            try:
+                uniq = json.loads(b'"' + achado.group(2) + b'"')
+            except ValueError:
+                return achado.group(0)
+            apelido = json.dumps(self.de(mod_id, uniq), ensure_ascii=False)[1:-1]
+            return achado.group(1) + apelido.encode("utf-8") + achado.group(3)
+
+        return _UNIQ_NA_LINHA.sub(trocar, linha) if b'"uniq"' in linha else linha
+
+    def no_pedido(self, mod_id: str, valor: Any) -> Any:
+        """O que a extensão mandou, com o apelido de cada chave ``uniq`` trocado pelo ``uniq``."""
+        if isinstance(valor, dict):
+            return {k: (self.uniq_de(mod_id, v) if k == "uniq" and isinstance(v, str)
+                        else self.no_pedido(mod_id, v)) for k, v in valor.items()}
+        if isinstance(valor, list):
+            return [self.no_pedido(mod_id, v) for v in valor]
+        return valor
+
+
 class Porta:
     """O servidor da porta das modificações, dentro do laço do serviço."""
 
@@ -1219,8 +1309,10 @@ class Porta:
         arbitro: Arbitro | None = None,
         fonte_da_tela: Callable[[], FonteDaTela] = fonte_do_sistema,
         abrir_o_jogo: AbrirOJogo = abrir_pelo_lancador,
+        apelidos: Apelidos | None = None,
     ) -> None:
         self.caminho = caminho
+        self.apelidos = apelidos
         self._abrir_o_jogo = abrir_o_jogo
         self._fonte_da_tela = fonte_da_tela
         self._regioes_da_tela: dict[str, Regiao] = {}
@@ -1445,6 +1537,8 @@ class Porta:
             fonte.esquecer(_origem(sessao))
 
     async def _enviar(self, con: _Conexao, writer: asyncio.StreamWriter, linha: bytes) -> None:
+        if self.apelidos is not None and con.sessao is not None:
+            linha = self.apelidos.na_linha(con.sessao.mod_id, linha)
         async with con.trava:
             fd, con.fd_da_resposta = con.fd_da_resposta, None
             if fd is None:
@@ -1474,6 +1568,8 @@ class Porta:
         params = pedido.get("params") or {}
         if not isinstance(metodo, str) or not isinstance(params, dict):
             return _erro(req_id, CODE_INVALID_REQUEST, "method e params são obrigatórios")
+        if self.apelidos is not None and con.sessao is not None:
+            params = self.apelidos.no_pedido(con.sessao.mod_id, params)
         try:
             if con.sessao is None and metodo == "aparelho.abrir":
                 return _resposta(req_id, await self._abrir_o_aparelho(con, params, par))
@@ -3319,9 +3415,11 @@ __all__ = [
     "MENSAGENS_POR_SEGUNDO",
     "MOVIMENTO_POR_SEGUNDO",
     "PRAZO_DA_RESPOSTA_S",
+    "PREFIXO_DO_APELIDO",
     "PUBLICACOES_POR_SEGUNDO",
     "TETO_DA_MENSAGEM",
     "TOPICO_DO_ESTILO",
+    "Apelidos",
     "Controles",
     "Porta",
     "RecusaError",
@@ -3329,6 +3427,7 @@ __all__ = [
     "botoes_de_todo_controle_no_servico",
     "caminho_da_sessao",
     "carga_do_estilo",
+    "chave_dos_apelidos",
     "comando_fora_da_caixa",
     "controles_no_servico",
     "cor_do_plastico_no_servico",

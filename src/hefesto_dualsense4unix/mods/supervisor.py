@@ -66,12 +66,14 @@ from hefesto_dualsense4unix.mods.manifesto import (
     permissoes_novas,
 )
 from hefesto_dualsense4unix.mods.porta import (
+    Apelidos,
     Controles,
     Escritor,
     OJogoEscreve,
     Porta,
     Pulsador,
     UniqDoPosto,
+    chave_dos_apelidos,
 )
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -587,6 +589,18 @@ async def _esvaziar_a_copia(copia: asyncio.Task[None] | None, prazo: float) -> N
             await copia
     elif not copia.cancelled() and (erro := copia.exception()) is not None:
         logger.warning("mods_diario_falhou", err=str(erro))
+
+
+CHAVE_DOS_APELIDOS = "mods-apelidos.chave"
+
+
+def _uniqs_de_agora(controles: Callable[[], Any] | None,
+                    uniq_do_posto: Callable[[], str | None]) -> list[str]:
+    """Os ``uniq`` dos controles ligados agora, para achar o apelido guardado pela extensão."""
+    brutos = controles() if controles is not None else []
+    uniqs = [c["uniq"] for c in brutos if isinstance(c, dict) and isinstance(c.get("uniq"), str)]
+    posto = uniq_do_posto()
+    return [*uniqs, *([posto] if isinstance(posto, str) and posto else [])]
 
 
 def comando_na_caixa(
@@ -1586,6 +1600,9 @@ class Supervisor:
             pulsador=pulsador,
             controles=controles,
             ligar_a_chave=self._ligar_a_chave,
+            apelidos=Apelidos(
+                lambda: chave_dos_apelidos(self.lugares.registro.with_name(CHAVE_DOS_APELIDOS)),
+                lambda: _uniqs_de_agora(controles, uniq_do_posto)),
         )
         self.bwrap = bwrap or (shutil.which("bwrap") if procurar_bwrap else None)
         self.proxy_dbus = proxy_dbus or (
