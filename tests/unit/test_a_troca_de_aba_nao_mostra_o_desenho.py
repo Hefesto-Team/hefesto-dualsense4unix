@@ -9,8 +9,10 @@ DECISÃO D-2611-A-JANELA-DA-EXPERIMENTAL-SO-APARECE-COM-O-DADO-REAL (a validar):
 que recebe bloco não abre com título nem botão de exemplo; sem resposta, fica fechada.
 
 MORDIDA: tirar ``#mod-janela`` da regra (a lista de três de antes) reprova
-``test_toda_janela_que_recebe_bloco_nasce_escondida_inteira``; tirar o ``aparece`` do ``aberta`` do
-``base-comum.js`` reprova ``test_a_janela_escondida_nao_prende_o_teclado_e_leva_o_foco``.
+``test_toda_janela_que_recebe_bloco_nasce_escondida_inteira``, e tirar os filhos (`` *``) da
+regra também (a aba marcada da ``#mod-janela`` diz ``visible`` e fura); tirar o ``aparece`` do
+``aberta`` do ``base-comum.js`` reprova
+``test_a_janela_escondida_nao_prende_o_teclado_e_leva_o_foco``.
 """
 
 from __future__ import annotations
@@ -75,9 +77,11 @@ def test_o_aviso_diz_que_espera_e_a_pintura_o_apaga() -> None:
 
 def test_a_janela_so_aparece_com_o_carimbo_que_a_pintura_poe() -> None:
     """Uma regra só, por seletor e não por lista de janelas: a ``.tela-nova`` cuja caixa recebe
-    bloco (a que tem ``id``) fica escondida inteira, título incluído, até o carimbo."""
-    assert ".tela-nova:has(> .tn-cx[id]:not([data-hef-real])){visibility:hidden !important}" in (
-        FOLHA_DA_CASA)
+    bloco (a que tem ``id``) fica escondida inteira, título e filhos incluídos, até o carimbo.
+    Os filhos entram na regra porque ``visibility`` é furada por quem diz ``visible``: a aba
+    marcada da ``#mod-janela`` (``.mj-tela``) boiava sobre a página sem a janela em volta."""
+    sem = ".tela-nova:has(> .tn-cx[id]:not([data-hef-real]))"
+    assert f"{sem},{sem} *{{visibility:hidden !important}}" in FOLHA_DA_CASA
     assert ".tn-corpo{visibility:hidden" not in FOLHA_DA_CASA
     assert "alvo.dataset.hefReal = '1'" in _corpo_do_pintar()
 
@@ -116,6 +120,11 @@ def _pagina_com_a_folha(tmp_path: pathlib.Path) -> Any:
 
 _VISIVEL = ("(sel) => getComputedStyle(document.querySelector(sel)).visibility")
 
+_A_MOSTRA = """(p) => [...document.getElementById(p).querySelectorAll('*')]
+  .filter(e => getComputedStyle(e).visibility === 'visible' && e.getClientRects().length
+          && e.getBoundingClientRect().width > 0)
+  .map(e => e.tagName + ' ' + (e.textContent || '').trim().slice(0, 40))"""
+
 
 def test_toda_janela_que_recebe_bloco_nasce_escondida_inteira(_pagina_com_a_folha: Any) -> None:
     """Aberta pelo ``href`` antes da resposta, a janela não mostra título nem botão de exemplo
@@ -131,8 +140,11 @@ def test_toda_janela_que_recebe_bloco_nasce_escondida_inteira(_pagina_com_a_folh
         titulo = f"#{pai} .tn-tit"
         assert pg.evaluate(_VISIVEL, titulo) == "hidden", f"{ident}: o título de exemplo aparece"
         assert pg.evaluate(_VISIVEL, f"#{ident}") == "hidden", f"{ident}: a caixa aparece cedo"
+        furos = pg.evaluate(_A_MOSTRA, pai)
+        assert not furos, f"{ident}: o exemplo fura a janela escondida: {furos[:4]}"
         pg.evaluate("(i) => { document.getElementById(i).dataset.hefReal = '1'; }", ident)
         assert pg.evaluate(_VISIVEL, titulo) == "visible", f"{ident}: o carimbo não a mostra"
+        assert pg.evaluate(_A_MOSTRA, pai), f"{ident}: com o carimbo, nada da janela aparece"
         pg.evaluate("(i) => { delete document.getElementById(i).dataset.hefReal; }", ident)
     pg.evaluate("() => { location.hash = 'novo-lancador'; }")
     assert pg.evaluate(_VISIVEL, "#novo-lancador .tn-tit") == "visible"
