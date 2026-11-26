@@ -84,6 +84,7 @@ from hefesto_dualsense4unix.core.linhagem_nintendo import (
     OUI_PRO_DESTE_ENSAIO,
     e_pro_genuino,
 )
+from hefesto_dualsense4unix.daemon.passos_do_laco import FALHOU, passos_do_daemon
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     CONTROLLERS_FILE_LOCK,
     CONTROLLERS_SCHEMA_VERSION,
@@ -1054,10 +1055,9 @@ class ExternalLedSync:
             read_player_pattern,
         )
 
-        try:
-            inventory = discover_external_gamepads()
-        except Exception as exc:
-            logger.debug("external_led_tick_enumeracao_falhou", err=str(exc))
+        inventory = passos_do_daemon(self._daemon, "led_externo").passo(
+            "enumeracao", discover_external_gamepads)
+        if inventory is FALHOU:
             return
         agora = time.monotonic() if now is None else now
         reserve = self._ds_reserve()

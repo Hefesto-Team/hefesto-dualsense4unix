@@ -22,6 +22,7 @@ from functools import partial
 from typing import Any, Protocol, cast
 
 from hefesto_dualsense4unix.daemon.caderno_do_tique import a_resposta_chegou, no_caderno
+from hefesto_dualsense4unix.daemon.passos_do_laco import passos_do_daemon
 from hefesto_dualsense4unix.daemon.subsystems.chegada import segurando_a_luz
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     CANAL_LUZ,
@@ -738,11 +739,9 @@ class Passo:
         return decidir(CANAL_LUZ, dataclasses.replace(estado, ha_jogo=True))
 
     def tique_do_laco(self, agora: float) -> int:
-        try:
-            return self(agora)
-        except Exception:
-            logger.debug("luz_animada_tique_falhou", exc_info=True)
-            return 0
+        resultado = passos_do_daemon(self.daemon, "luz_animada").passo(
+            "tique", lambda: self(agora))
+        return resultado if isinstance(resultado, int) else 0
 
 
 async def luz_animada_loop(daemon: Any, luz: LuzAnimada) -> None:

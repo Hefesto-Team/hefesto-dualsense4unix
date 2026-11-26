@@ -69,6 +69,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.core.evdev_reader import BOTOES_DO_EDGE
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
+from hefesto_dualsense4unix.daemon.passos_do_laco import LACO_DO_POLL, passos_do_daemon
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import PRAZO_DO_P1_QUE_NASCE_S
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
     _uniq_do_pedido,
@@ -2631,7 +2632,7 @@ def _bater_os_eventos_do_jogo(daemon: Any) -> None:
     from hefesto_dualsense4unix.daemon.subsystems.gatilho_do_jogo import bater_o_gatilho
     from hefesto_dualsense4unix.integrations.envelope_da_haptica import bater_o_envelope
 
-    try:
+    with passos_do_daemon(daemon, LACO_DO_POLL).isolado("eventos_do_jogo"):
         bater_o_gatilho(daemon)
         bater_o_envelope(daemon)
         appid = getattr(daemon, "appid_em_cena", None)
@@ -2642,8 +2643,6 @@ def _bater_os_eventos_do_jogo(daemon: Any) -> None:
         daemon._appid_dos_eventos_do_jogo = appid
         if anterior is not None:
             _esquecer_os_eventos_do_jogo(daemon)
-    except Exception as exc:
-        logger.debug("eventos_do_jogo_no_tique_falharam", err=str(exc))
 
 
 def o_pad_da_peca_muda_repousa(device: Any, leitor: Any) -> bool:
@@ -3302,11 +3301,9 @@ def andar_os_acionadores(daemon: Any) -> None:
     ponte = ponte_dos_acionadores(daemon)
     if ponte is None:
         return
-    try:
+    with passos_do_daemon(daemon, LACO_DO_POLL).isolado("acionadores"):
         ponte.andar(getattr(getattr(daemon, "_maquina", None), "acionadores", None),
                     lambda: _ha_jogo_em_foco(daemon))
-    except Exception as exc:
-        logger.debug("acionadores_tique_falhou", err=str(exc))
 
 
 def com_os_acionadores(daemon: Any, uniq: object, botoes: frozenset[str]) -> frozenset[str]:

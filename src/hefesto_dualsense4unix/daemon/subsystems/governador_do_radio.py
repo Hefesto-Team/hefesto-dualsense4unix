@@ -138,6 +138,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.daemon.passos_do_laco import PassosDoLaco
 from hefesto_dualsense4unix.integrations import diario_do_radio as diario
 from hefesto_dualsense4unix.integrations.alto_falante_bt import TETO_DE_CEDER_S
 from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
@@ -504,6 +505,7 @@ class GovernadorDoRadio:
         else:
             self._ler_o_diario = _nenhum_diario
         self._fantasmas_fechadas = False
+        self._passos = PassosDoLaco(laco="governador_do_radio")
         self._trava = threading.RLock()
         self._trava_do_par = threading.RLock()
         self._vagas: list[Vaga] = []
@@ -628,17 +630,11 @@ class GovernadorDoRadio:
             self._guardar_a_amostra(crua)
 
     def _laco(self) -> None:
-        try:
-            self.fechar_as_pontes_fantasmas()
-        except Exception:
-            logger.debug("governador_fantasmas_falhou", exc_info=True)
+        self._passos.passo("fantasmas", self.fechar_as_pontes_fantasmas)
         if self._repousar_se_ocioso():
             return
         while not self._parar.wait(self._periodo_s):
-            try:
-                self.tique()
-            except Exception:
-                logger.debug("governador_tique_falhou", exc_info=True)
+            self._passos.passo("tique", self.tique)
             if self._repousar_se_ocioso():
                 return
 

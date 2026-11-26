@@ -12,7 +12,7 @@ import pkgutil
 import signal
 import threading
 import time
-from collections.abc import Awaitable, Callable, Coroutine, Iterator
+from collections.abc import Awaitable, Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -25,10 +25,16 @@ from hefesto_dualsense4unix.core.ds_output_report import (
 )
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
+from hefesto_dualsense4unix.daemon import passos_do_laco as _passos_do_laco
 from hefesto_dualsense4unix.daemon.battery_journal import (
     INTERVALO_SONDA_S,
     diario_da_bateria,
     registrar_queda_da_bateria,
+)
+from hefesto_dualsense4unix.daemon.passos_do_laco import (
+    PassosDoLaco,
+    passos_do_daemon,
+    registrar_o_store_do_processo,
 )
 from hefesto_dualsense4unix.daemon.protocols import GravaOModo, PortaQueGrava
 from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -805,6 +811,7 @@ class Daemon:
 
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
+        registrar_o_store_do_processo(self.store)
         self._install_signal_handlers(loop)
         await asyncio.to_thread(_importar_o_que_a_subida_usa)
         if self._is_stopping():
@@ -3876,9 +3883,10 @@ class Daemon:
                     ),
                 )
         except Exception as exc:
-            logger.debug("external_led_sync_falhou", err=str(exc))
+            passos_do_daemon(self, "led_externo").falhou("tique", exc)
         else:
             self._external_tick_timeouts = 0
+            passos_do_daemon(self, "led_externo").deu_certo("tique")
 
 
     @property
@@ -4983,7 +4991,9 @@ class _RelogiosLentos:
         return vencidos
 
 
-_FALHOU: Final = object()
+
+_FALHOU: Final = _passos_do_laco.FALHOU
+_PassosDoLaco = PassosDoLaco
 
 
 TETO_DE_MORTES_SEGUIDAS: Final[int] = 5
@@ -5079,63 +5089,6 @@ def _sair_se_o_laco_nao_volta(daemon: Any) -> None:
     codigo = getattr(daemon, "_codigo_de_saida", None)
     if codigo is not None:
         raise SystemExit(codigo)
-
-
-class _PassosDoLaco:
-    """O embrulho ÚNICO dos passos do `_poll_loop`: uma falha não derruba o laço nem some.
-
-    Cada falha soma ``poll.erro.<nome>`` no store; o ``warning`` com o traceback
-    sai UMA vez por episódio (o log volta só quando o passo dá certo de novo).
-    Nenhuma falha de passo desmonta a mesa: o laço segue para o próximo tique.
-    """
-
-    __slots__ = ("_em_erro", "_store")
-
-    def __init__(self, store: Any) -> None:
-        self._store = store
-        self._em_erro: set[str] = set()
-
-    def falhou(self, nome: str, exc: BaseException) -> bool:
-        """Conta a falha de ``nome``; ``True`` se a falha abre um episódio novo."""
-        self._store.bump(f"poll.erro.{nome}")
-        if nome in self._em_erro:
-            return False
-        self._em_erro.add(nome)
-        logger.warning("passo_do_laco_falhou", passo=nome, err=str(exc), exc_info=exc)
-        return True
-
-    def deu_certo(self, nome: str) -> None:
-        self._em_erro.discard(nome)
-
-    @contextlib.contextmanager
-    def isolado(self, nome: str) -> Iterator[None]:
-        """O bloco que levanta conta como falha de ``nome``, e o tique segue depois dele."""
-        try:
-            yield
-        except Exception as exc:
-            self.falhou(nome, exc)
-            return
-        self.deu_certo(nome)
-
-    def passo(self, nome: str, fn: Callable[[], Any]) -> Any:
-        """Roda ``fn``; devolve o resultado de ``fn``, ou ``_FALHOU``."""
-        try:
-            resultado = fn()
-        except Exception as exc:
-            self.falhou(nome, exc)
-            return _FALHOU
-        self.deu_certo(nome)
-        return resultado
-
-    async def passo_async(self, nome: str, fn: Callable[[], Awaitable[Any]]) -> Any:
-        """O mesmo de :meth:`passo` para uma corrotina."""
-        try:
-            resultado = await fn()
-        except Exception as exc:
-            self.falhou(nome, exc)
-            return _FALHOU
-        self.deu_certo(nome)
-        return resultado
 
 
 def _gravar_medida(store: Any, nome: str, valor: int) -> None:

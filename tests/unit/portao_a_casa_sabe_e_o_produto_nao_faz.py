@@ -802,7 +802,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "(True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1762`, "
+        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1769`, "
         "dentro de "
         "`set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço antigo, a linha 1300, caducou; "
@@ -3006,7 +3006,7 @@ class TestOPortaoMorde:
         ), (
             "a varredura não vê chamada direta "
             "(`sync_steam_input_exception` em "
-            "`src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:1249`) — e é a chamada que "
+            "`src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:1250`) — e é a chamada que "
             "prova que a exceção do Steam Input continua viva"
         )
         assert (

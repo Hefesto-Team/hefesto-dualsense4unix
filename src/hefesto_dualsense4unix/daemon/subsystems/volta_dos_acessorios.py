@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.daemon.passos_do_laco import PassosDoLaco
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     TETO_POR_CONTROLE,
     TETO_TOTAL,
@@ -125,8 +126,11 @@ def _escurecer(cor: RGB, fracao: float) -> RGB:
 class VoltaDosAcessorios:
     """O que o controle devolve a cada gesto dos acessórios, e o pulso da barra."""
 
-    def __init__(self, ligacoes: Ligacoes, *, teto: Teto | None = None) -> None:
+    def __init__(
+        self, ligacoes: Ligacoes, *, teto: Teto | None = None, store: Any = None,
+    ) -> None:
         self._l = ligacoes
+        self._passos = PassosDoLaco(store, laco="volta_dos_acessorios")
         self._teto = teto if teto is not None else Teto(TETO_POR_CONTROLE, TETO_TOTAL)
         self._trava = threading.RLock()
         self._ligado = False
@@ -352,16 +356,14 @@ class VoltaDosAcessorios:
         """Anda o toque, o medidor e o pulso de cada controle; devolve quantas escritas saíram."""
         antes = self.escritas
         with self._trava:
-            for andar, em_curso in (
-                (self._andar_o_toque, self._toques),
-                (self._andar_o_medidor, self._medidores),
-                (self._andar_o_pulso, self._pulsos),
+            for nome, andar, em_curso in (
+                ("toque", self._andar_o_toque, self._toques),
+                ("medidor", self._andar_o_medidor, self._medidores),
+                ("pulso", self._andar_o_pulso, self._pulsos),
             ):
                 for uniq in list(em_curso):
-                    try:
+                    with self._passos.isolado(nome):
                         andar(uniq, agora)
-                    except Exception:
-                        logger.debug("volta_dos_acessorios_tique_falhou", exc_info=True)
         return self.escritas - antes
 
     def segurando_a_barra(self) -> frozenset[str]:
@@ -463,7 +465,7 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         pode_falar=pode_falar,
         o_jogo_pinta=lambda uniq: o_jogo_escreve(uniq, "luz"),
         estilo=estilo,
-    ))
+    ), store=getattr(daemon, "store", None))
 
 
 __all__ = [

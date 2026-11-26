@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.daemon.passos_do_laco import PassosDoLaco
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     LinkDeRadio,
@@ -168,6 +169,7 @@ class ConexoesSubsystem:
         self._intervalo_s = intervalo_s
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
+        self._passos = PassosDoLaco(laco=self.name)
         self.ultimo_veredito: Veredito | None = None
         self._avisadas: frozenset[str] = frozenset()
 
@@ -204,10 +206,7 @@ class ConexoesSubsystem:
 
     def _laco(self) -> None:
         while not self._parar.is_set():
-            try:
-                self.uma_volta(time.monotonic())
-            except Exception:
-                logger.debug("conexao_zumbi_volta_falhou", exc_info=True)
+            self._passos.passo("volta", lambda: self.uma_volta(time.monotonic()))
             self._parar.wait(self._intervalo_s)
 
     def uma_volta(self, agora: float) -> Veredito:

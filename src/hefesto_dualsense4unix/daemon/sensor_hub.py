@@ -88,6 +88,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from hefesto_dualsense4unix.core.roteador_de_movimento import orientar
+from hefesto_dualsense4unix.daemon.passos_do_laco import PassosDoLaco
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -140,6 +141,7 @@ class SensorHub:
         tem configuração própria de toque para esta peça. Sem eles, não há jogo.
         """
         self._relogio = relogio or time.monotonic
+        self._passos = PassosDoLaco(laco="sensor_hub")
         self._ha_jogo = ha_jogo
         self._toque_proprio_do_jogo = toque_proprio_do_jogo
         self._universo_do_toque: set[str] | None = None
@@ -441,10 +443,7 @@ class SensorHub:
 
     def _loop_manutencao(self) -> None:
         while not self._parar.is_set():
-            try:
-                self.reconciliar()
-            except Exception as exc:
-                logger.debug("sensor_hub_reconciliacao_falhou", err=str(exc))
+            self._passos.passo("reconciliacao", self.reconciliar)
             self._parar.wait(self._MANUTENCAO_INTERVALO_S)
 
     def perguntar_ao_daemon(
