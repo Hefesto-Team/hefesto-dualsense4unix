@@ -88,11 +88,17 @@ class TestGuardaDeSlugNoCreate:
         assert result.exit_code == 0
         assert (isolated_profiles_dir / "jogos.json").exists()
 
-    def test_mesmo_nome_e_edicao_in_place(self, isolated_profiles_dir: Path) -> None:
-        """Recriar com o nome IDÊNTICO é o comportamento de sempre."""
+    def test_mesmo_nome_pede_force(self, isolated_profiles_dir: Path) -> None:
+        """Recriar com o nome IDÊNTICO recusa sem --force: o nome ocupado é o do `nome_livre`.
+
+        D-2611-A-LINHA-DE-COMANDO-PERGUNTA-AO-MESMO-DONO-SE-O-NOME-DO-PERFIL-ESTA-LIVRE
+        """
         save_profile(_navegacao())
+        antes = (isolated_profiles_dir / "navegacao.json").read_bytes()
         result = runner.invoke(app, ["profile", "create", "Navegação"])
-        assert result.exit_code == 0
+        assert result.exit_code == 1
+        assert (isolated_profiles_dir / "navegacao.json").read_bytes() == antes
+        assert runner.invoke(app, ["profile", "create", "Navegação", "--force"]).exit_code == 0
 
 
 class TestCloneDoPerfilAtivo:

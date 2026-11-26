@@ -31,28 +31,54 @@ app = typer.Typer(name="profile", help="Gerencia perfis Hefesto - DualSense4Unix
 console = Console()
 
 
-def _guarda_slug(name: str, *, force: bool) -> None:
-    """Recusa gravar por cima de OUTRO perfil que já ocupa o mesmo arquivo."""
-    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+def _guarda_slug(name: str, *, force: bool, atualiza: bool = False) -> None:
+    """Recusa gravar sobre um nome que a pasta já ocupa, pela mesma pergunta da janela.
+
+    O dono da pergunta «este nome está livre?» é ``loader.nome_ocupado`` (o mesmo critério do
+    ``nome_livre``): o perfil legível e o arquivo ilegível do mesmo arquivo ocupam o nome.
+    ``atualiza`` deixa passar o perfil legível de MESMO nome (o ``save`` que o atualiza).
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles, nome_ocupado
     from hefesto_dualsense4unix.profiles.slug import find_by_slug, slugify
 
     if force:
         return
-    ocupante = find_by_slug(name, load_all_profiles())
-    if ocupante is None or ocupante.name == name:
+    legiveis = load_all_profiles()
+    if not nome_ocupado(name, legiveis):
         return
-    try:
-        arquivo = f"{slugify(name)}.json"
-    except ValueError:
-        arquivo = "?"
-    console.print(
-        f"[red]'{name}' e '{ocupante.name}' são o MESMO arquivo[/red] ({arquivo}) "
-        f"— salvar assim apagaria '{ocupante.name}'."
-    )
+    ocupante = find_by_slug(name, legiveis)
+    if atualiza and ocupante is not None and ocupante.name == name:
+        return
+    arquivo = f"{slugify(name)}.json"
+    if ocupante is None:
+        console.print(
+            f"[red]o arquivo {arquivo} já ocupa o nome '{name}' e não abre como perfil[/red] "
+            "— salvar assim apagaria esse arquivo."
+        )
+    elif ocupante.name == name:
+        console.print(f"[red]o perfil '{name}' já existe[/red] ({arquivo}).")
+    else:
+        console.print(
+            f"[red]'{name}' e '{ocupante.name}' são o MESMO arquivo[/red] ({arquivo}) "
+            f"— salvar assim apagaria '{ocupante.name}'."
+        )
     console.print(
         "[dim]escolha outro nome ou repita com --force para sobrescrever.[/dim]"
     )
     raise typer.Exit(code=1)
+
+
+def _igual_ao_que_esta_no_disco(profile: Profile) -> bool:
+    """O perfil de MESMO nome que já está na pasta tem o conteúdo deste (fora as datas)?"""
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.slug import find_by_slug
+
+    ocupante = find_by_slug(profile.name, load_all_profiles())
+    if ocupante is None or ocupante.name != profile.name:
+        return False
+    fora = {"criado_em", "modificado_em"}
+    return ocupante.model_dump(mode="json", exclude=fora) == profile.model_dump(
+        mode="json", exclude=fora)
 
 
 @app.command("list")
@@ -387,7 +413,12 @@ def cmd_apply(
     """Valida um JSON de perfil, salva no disco e ativa via daemon (se online)."""
     from pydantic import ValidationError
 
-    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.loader import (
+        load_profile,
+        nome_livre,
+        nome_ocupado,
+        save_profile,
+    )
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     try:
@@ -403,9 +434,21 @@ def cmd_apply(
         raise typer.Exit(code=1) from None
 
     if save:
-        _guarda_slug(profile.name, force=force)
-        path = save_profile(profile)
-        console.print(f"[green]perfil salvo:[/green] {path}")
+        if not force and nome_ocupado(profile.name):
+            if _igual_ao_que_esta_no_disco(profile):
+                console.print(f"[green]perfil já igual no disco:[/green] {profile.name}")
+            else:
+                nome = nome_livre(profile.name)
+                console.print(
+                    f"[yellow]'{profile.name}' já existe: gravado como '{nome}'[/yellow] "
+                    "(repita com --force para sobrescrever)."
+                )
+                profile = profile.model_copy(update={"name": nome})
+                path = save_profile(profile)
+                console.print(f"[green]perfil salvo:[/green] {path}")
+        else:
+            path = save_profile(profile)
+            console.print(f"[green]perfil salvo:[/green] {path}")
     else:
         try:
             load_profile(profile.name)
@@ -459,7 +502,7 @@ def cmd_save(
         )
         raise typer.Exit(code=1) from None
 
-    _guarda_slug(name, force=force)
+    _guarda_slug(name, force=force, atualiza=True)
 
     payload = source.model_dump(mode="json")
     payload["name"] = name

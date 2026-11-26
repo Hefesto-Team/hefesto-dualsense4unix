@@ -650,16 +650,27 @@ def _relatar_migracao_aposentada(migracao: str, arquivo: str) -> None:
     )
 
 
+def _slugs_ocupados(todos: Iterable[Any] | None) -> set[str]:
+    """Os slugs que a pasta ocupa: o de cada perfil lido e o de cada arquivo, lido ou não."""
+    perfis = load_all_profiles() if todos is None else todos
+    return {slugify(x.name) for x in perfis} | {p.stem for p in profiles_dir().glob("*.json")}
+
+
+def nome_ocupado(base: str, todos: Iterable[Any] | None = None) -> bool:
+    """O nome ``base`` já é de um perfil ou de um arquivo da pasta (o ilegível também)?"""
+    return slugify(base) in _slugs_ocupados(todos)
+
+
 def nome_livre(base: str, todos: Iterable[Any] | None = None) -> str:
     """`base`, ou `base 2`, `base 3`…: o primeiro nome que nenhum perfil nem arquivo ocupa.
 
-    O dono único da pergunta «este nome está livre?»: a aba Perfis (duplicar, novo) e o
-    «Importar» do rodapé chamam esta. Ocupa o nome o slug de um perfil lido e o de um arquivo
+    O dono único da pergunta «este nome está livre?»: a aba Perfis (duplicar, novo), o
+    «Importar» do rodapé e a linha de comando (`profile create|apply|save`, por
+    :func:`nome_ocupado`) chamam esta. Ocupa o nome o slug de um perfil lido e o de um arquivo
     da pasta, lido ou não, para o novo nunca cair sobre o que ficou ilegível. `todos` é a leitura
     já feita pelo chamador; sem `todos`, lê o disco.
     """
-    perfis = load_all_profiles() if todos is None else todos
-    usados = {slugify(x.name) for x in perfis} | {p.stem for p in profiles_dir().glob("*.json")}
+    usados = _slugs_ocupados(todos)
     if slugify(base) not in usados:
         return base
     n = 2
@@ -3083,6 +3094,7 @@ __all__ = [
     "migrate_coop_local_match",
     "migrate_default_profile_name",
     "nome_livre",
+    "nome_ocupado",
     "o_carimbo_da_escolha_ganha_o_nome_novo",
     "o_freestyle_de_fabrica_nasce_ligado",
     "o_mudo_do_microfone_vai_para_o_controle",
