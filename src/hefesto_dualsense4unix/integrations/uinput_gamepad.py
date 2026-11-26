@@ -794,6 +794,8 @@ class UinputGamepad:
         if self._ff_last_sent != (0, 0) and self.rumble_sink is not None:
             with contextlib.suppress(Exception):
                 self.rumble_sink(0, 0)
+        if no_deposito and sd_notify.esta_parando() and sd_notify.no_deposito(no_deposito):
+            self._largar_o_no(device)
         _fechar_o_no(device, no_deposito)
         if self._device is not None:
             return
@@ -968,6 +970,32 @@ class UinputGamepad:
 
         self._device.syn()
         self._last_buttons = frozenset(pressed)
+
+    def _largar_o_no(self, device: Any) -> None:
+        """O nó que fica no depósito do systemd fica largado: nada apertado, eixos no centro.
+
+        Sem isto, o botão e o eixo do último envio seguiriam no jogo até o serviço voltar.
+        """
+        ec = self._ecodes
+        if ec is None:
+            return
+        try:
+            for nome in self._last_buttons:
+                code = self._resolve_evdev(nome, ec)
+                if code is not None:
+                    device.write(ec.EV_KEY, code, 0)
+            eixos = [(ec.ABS_X, 128), (ec.ABS_Y, 128), (ec.ABS_RX, 128), (ec.ABS_RY, 128),
+                     (ec.ABS_HAT0X, 0), (ec.ABS_HAT0Y, 0)]
+            if self.mascara_no_jogo == "nintendo":
+                for code in (ec.BTN_TL2, ec.BTN_TR2):
+                    device.write(ec.EV_KEY, code, 0)
+            else:
+                eixos += [(ec.ABS_Z, 0), (ec.ABS_RZ, 0)]
+            for code, valor in eixos:
+                device.write(ec.EV_ABS, code, valor)
+            device.syn()
+        except Exception as exc:
+            logger.info("uinput_no_largado_falhou", err=str(exc))
 
     def _resolve_evdev(self, hefesto_name: str, ecodes_mod: Any) -> int | None:
         tabela = BOTOES_POR_FLAVOR.get(self.mascara_no_jogo, BUTTON_TO_UINPUT)

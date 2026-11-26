@@ -921,7 +921,7 @@ class UhidDualSense:
             return False
         if self._adotar_o_herdado(features):
             return True
-        retomado = _retomar_o_estacionado(self)
+        retomado = _retomar_o_estacionado(self) or _o_gadget_da_graca(self)
         if _esperar_o_kernel_soltar_o_endereco(self, esperar_o_kernel_s, retomado):
             features = self._features_com_mac_proprio()
             create_event = self._create2_event(self.blueprint["descriptor"])
@@ -1025,6 +1025,7 @@ class UhidDualSense:
                 return
             self._fd = None
             no_deposito: str | None = self.__dict__.pop("_no_deposito", None)
+            neutro = _report_neutro(self) if no_deposito else None
             self._rumble_pico_a_entregar = None
             self._rumble_toque_restante = 0
             self._entregar_o_pendente()
@@ -1032,9 +1033,9 @@ class UhidDualSense:
             self._end_game_session()
             if not _soltar_o_gadget(self):
                 if adiar is None:
-                    _desfazer_o_fd(fd, no_deposito)
+                    _desfazer_o_fd(fd, no_deposito, neutro)
                 else:
-                    adiar(lambda: _desfazer_o_fd(fd, no_deposito))
+                    adiar(lambda: _desfazer_o_fd(fd, no_deposito, neutro))
             self._features = {}
             self._last_sent = (0, 0)
             self._output_count = 0
@@ -2999,9 +3000,70 @@ def _o_pad_em_usb(
     if gadget.interface is None:
         pad_usb.anotar_gadget_a_caminho(gadget.serial, gadget.identidade, gadget.a_caminho_s)
     pad._iniciar_o_fio_do_uhid(gadget.fd)
+    _marcar_o_gadget_no_deposito(pad, gadget)
     logger.info("pad_usb_montado", gadget=gadget.gadget, mac=pad.mac, player=pad.player)
     _vigiar_a_enumeracao(pad)
     return True
+
+
+def _nome_do_gadget_no_deposito(serial: str) -> str:
+    """O ``FDNAME`` da marca do gadget no depósito do systemd: o serial dele."""
+    return sd_notify.nome_no_deposito("hefesto-gadget", serial)
+
+
+def _marcar_o_gadget_no_deposito(pad: UhidDualSense, gadget: _GadgetDoPad) -> None:
+    """Deixa no depósito do systemd a marca de que este serviço tem o gadget de ``serial``.
+
+    A marca é um `eventfd` vazio: o gadget mora no broker, e a marca só diz ao serviço que
+    volta (a queda, o reinício) que o gadget que o broker segura na graça é dele
+    (:func:`_o_gadget_da_graca`). OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01.
+    """
+    nome = _nome_do_gadget_no_deposito(gadget.serial)
+    if sd_notify.no_deposito(nome):
+        pad.__dict__["_gadget_no_deposito"] = nome
+        return
+    try:
+        marca = os.eventfd(0, os.EFD_CLOEXEC)
+    except (OSError, AttributeError):
+        return
+    try:
+        if sd_notify.guardar_descritor(marca, nome):
+            pad.__dict__["_gadget_no_deposito"] = nome
+    finally:
+        os.close(marca)
+
+
+def _o_gadget_da_graca(pad: UhidDualSense) -> _GadgetDoPad | None:
+    """O gadget que o serviço anterior tinha, pedido ao broker antes da espera pelo endereço.
+
+    Com a marca do serial no depósito (:func:`_marcar_o_gadget_no_deposito`), o endereço que
+    o kernel ainda guarda é o do gadget que o broker segura na graça, e não o de um gêmeo:
+    esperar por ele e vestir o próximo endereço mudaria o serial, e o jogo veria outro
+    controle. O broker devolve o mesmo gadget (``herdado``). None = sem marca, e o pad segue
+    como sempre. OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01.
+    """
+    if pad._sem_gadget or pad.blueprint is None or pad._gadget_na_mao is not None:
+        return None
+    try:
+        serial = pad_usb.serial_do_pad(pad.mac, pad.player)
+    except ValueError:
+        return None
+    nome = _nome_do_gadget_no_deposito(serial)
+    marca = sd_notify.tomar_herdado(nome)
+    if marca is None:
+        return None
+    with contextlib.suppress(OSError):
+        os.close(marca)
+    pedido = _o_pedido_do_gadget(pad)
+    gadget = (
+        _a_resposta_do_broker(pad, pedido[0], _pedir_na_vez(PEDIR_O_PAD_USB, pedido))
+        if pedido is not None else None
+    )
+    if gadget is None:
+        sd_notify.soltar_descritor(nome)
+        return None
+    logger.info("pad_usb_volta_da_graca", gadget=gadget.gadget, player=pad.player)
+    return gadget
 
 
 def _pedir_o_gadget(pad: UhidDualSense) -> _GadgetDoPad | None:
@@ -3840,14 +3902,20 @@ def _nome_do_uhid_no_deposito(pad: UhidDualSense) -> str:
     )
 
 
-def _desfazer_o_fd(fd: int, no_deposito: str | None = None) -> None:
+def _desfazer_o_fd(
+    fd: int, no_deposito: str | None = None, neutro: bytes | None = None
+) -> None:
     """O `UHID_DESTROY` e o `close` do fd do uhid: o que o kernel leva para tirar o nó.
 
     O nó guardado no depósito do systemd (``no_deposito``) sai do depósito antes. Com o serviço
-    parando, só o `close`: o depósito segura o nó, e o systemd o fecha no `stop` ou o devolve
-    no reinício (OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01).
+    parando, só o report ``neutro`` (nada apertado até o serviço voltar) e o `close`: o depósito
+    segura o nó, e o systemd o fecha no `stop` ou o devolve no reinício
+    (OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01).
     """
     if no_deposito and sd_notify.esta_parando() and sd_notify.no_deposito(no_deposito):
+        if neutro:
+            with contextlib.suppress(OSError):
+                os.write(fd, struct.pack("<IH", UHID_INPUT2, len(neutro)) + neutro)
         with contextlib.suppress(OSError):
             os.close(fd)
         logger.info("uhid_no_fica_no_deposito", nome=no_deposito)
@@ -3932,7 +4000,10 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
     pad._gadget_prazo = None
     pad._gadget_falhou = False
     pad._gadget_caiu = False
+    marca: str | None = pad.__dict__.pop("_gadget_no_deposito", None)
     if not falhou and sd_notify.esta_parando():
+        with contextlib.suppress(OSError):
+            os.write(gadget.fd, _report_neutro(pad))
         gadget._soltar_na_casa()
         try:
             gadget.cliente.close()
@@ -3940,6 +4011,8 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
             logger.info("pad_usb_conexao_do_gadget_ja_fechada", err=str(exc))
         logger.info("pad_usb_fica_na_graca_do_broker", gadget=gadget.gadget, player=pad.player)
         return True
+    if marca:
+        sd_notify.soltar_descritor(marca)
     if not falhou and gadget.hidraw is not None and pad.identity and JOGO_ABERTO():
         with contextlib.suppress(OSError):
             os.write(gadget.fd, _report_neutro(pad))

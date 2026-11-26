@@ -1895,7 +1895,7 @@ class _PadNaGraca:
     prazo: float
 
 
-GRACA_DO_PAD_USB_S = 15.0
+GRACA_DO_PAD_USB_S = 30.0
 GRACA_DA_ENTREGA_S = 30.0
 GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
 PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
@@ -2946,7 +2946,8 @@ class BrokerState:
 
     def _pads_da_conexao_entram_na_graca(self, conn_id: int) -> None:
         """O EOF não desmonta na hora: o gadget espera ``GRACA_DO_PAD_USB_S`` o serviço que
-        volta (a queda, o reinício) pedir o mesmo serial com a mesma roupa e o mesmo uid.
+        volta (a queda, o reinício) pedir o mesmo serial com a mesma roupa e o mesmo uid. A
+        graça é a da entrega do físico, o dobro do pior reinício medido (15 s).
 
         O jogo segue com o mesmo aparelho USB. Vencida a graça, desce como antes
         (:meth:`vencer_a_graca_dos_pads`). OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01.

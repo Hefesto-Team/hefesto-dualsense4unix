@@ -12,7 +12,10 @@ O systemd é de mentira: um soquete de datagrama que recebe o ``FDSTORE`` com o 
 mentira das réguas do pad em USB. Nada toca o uhid, o uinput ou o systemd de verdade.
 
 MORDIDAS: sem o ``guardar_descritor`` no ``_criar_o_device``, o serviço que volta recria o device
-(``UHID_CREATE2`` de novo); sem a graça no EOF do broker, o gadget desce na hora.
+(``UHID_CREATE2`` de novo); sem a graça no EOF do broker, o gadget desce na hora; sem o pedido
+do gadget da graça antes da espera pelo endereço, o serviço que volta veste outro serial; sem o
+report largado, o nó que fica no depósito segue com o botão apertado; sem o herdado no uinput, o
+modo Xbox recria o nó.
 """
 
 from __future__ import annotations
@@ -373,3 +376,183 @@ class TestOBrokerSeguraOGadgetNaGraca:
         assert novo["ok"] is True and novo.get("herdado") is None
         if fd is not None:
             os.close(fd)
+
+
+def _ultimo_input_do_uhid(kernel: socket.socket) -> bytes | None:
+    """O report do último `UHID_INPUT2` que chegou ao lado do kernel."""
+    ultimo: bytes | None = None
+    with contextlib.suppress(BlockingIOError):
+        while True:
+            dado = kernel.recv(8192)
+            if not dado:
+                break
+            if len(dado) < 6:
+                continue
+            tipo, tamanho = struct.unpack("<IH", dado[:6])
+            if tipo == uhid.UHID_INPUT2:
+                ultimo = dado[6:6 + tamanho]
+    return ultimo
+
+
+def _largado(report: bytes) -> bool:
+    """O report 0x01 de um controle largado: eixos no centro, nada apertado."""
+    return (
+        report[0] == 0x01
+        and report[1:7] == bytes(uhid._AXES_NEUTRAL)
+        and report[1 + uhid._BUTTONS0_OFFSET] == uhid._DPAD_NEUTRAL
+    )
+
+
+def test_o_no_que_fica_no_deposito_fica_largado(systemd: _Systemd, no_uhid: _Uhid) -> None:
+    """O serviço que para com o botão apertado: o nó que fica para o reinício recebe o report
+    largado antes do `close`, e o jogo não segue com o botão apertado até o serviço voltar."""
+    pad = _pad(1)
+    assert pad.start() is True
+    pad.forward_buttons(frozenset({"cross"}))
+    apertado = _ultimo_input_do_uhid(no_uhid.kernel[0])
+    assert apertado is not None and not _largado(apertado)
+    assert sd_notify.parando() is True
+    pad.stop()
+    uhid.esperar_as_descidas(5.0)
+    ultimo = _ultimo_input_do_uhid(no_uhid.kernel[0])
+    assert ultimo is not None and _largado(ultimo), "o nó ficou no depósito com o botão apertado"
+
+
+def test_o_gadget_do_servico_que_volta_e_o_mesmo_serial_da_graca(
+    systemd: _Systemd, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Máscara DualSense pelo gadget: o serviço para com o jogo aberto, o broker segura o
+    gadget na graça, e o endereço dele segue no kernel. O serviço que volta pede o MESMO
+    serial na hora, sem esperar o endereço sair nem vestir o próximo (outro serial seria
+    outro controle no jogo); e o gadget que fica recebe o report largado."""
+    from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import EnsaioDoGadget
+
+    ensaio = EnsaioDoGadget(monkeypatch, tmp_path)
+    no_kernel: set[str] = set()
+    monkeypatch.setattr(uhid, "_enderecos_no_kernel", lambda: frozenset(no_kernel))
+    antes = ensaio.pad(player=1)
+    assert antes.start() is True and antes._gadget is not None
+    serial = ensaio.pedidos[0][0]
+    marca = uhid._nome_do_gadget_no_deposito(serial)
+    systemd.receber()
+    assert marca in systemd.deposito, systemd.avisos
+    jogo = ensaio.jogo
+    assert jogo is not None
+    no_kernel.add(antes.mac.lower())
+    assert sd_notify.parando() is True
+    antes.stop()
+    uhid.esperar_as_descidas(5.0)
+    jogo.setblocking(False)
+    reports: list[bytes] = []
+    with contextlib.suppress(BlockingIOError):
+        while True:
+            dado = jogo.recv(8192)
+            if not dado:
+                break
+            reports.append(dado)
+    assert reports and _largado(reports[-1]), "o gadget ficou na graça sem o report largado"
+    assert ensaio.clientes[0].desmontados == [], "o serviço que para desceu o gadget"
+    systemd.receber()
+    assert marca in systemd.deposito
+
+    sd_notify._estado["parando"] = False
+    systemd.entregar()
+    depois = ensaio.pad(player=1)
+    try:
+        assert depois.start() is True
+        assert len(ensaio.pedidos) == 2
+        assert ensaio.pedidos[1][0] == serial, (
+            "o serviço que voltou vestiu outro endereço e pediu outro gadget")
+        assert depois._gadget is not None
+    finally:
+        depois.stop()
+        uhid.esperar_as_descidas(5.0)
+
+
+def _a_classe_do_uinput() -> type:
+    """A classe `UInput` do python-evdev, que a vigia da suíte troca por uma fábrica que
+    recusa: o herdado só a aloca em volta do fd (``__new__``), sem `UI_DEV_CREATE`."""
+    from evdev.eventio import EventIO
+
+    pilha: list[type] = [EventIO]
+    while pilha:
+        classe = pilha.pop()
+        if classe.__name__ == "UInput":
+            return classe
+        pilha.extend(classe.__subclasses__())
+    raise AssertionError("o python-evdev não tem a classe UInput")
+
+
+class _NoDoUinput:
+    """O `UInput` de mentira: um fd de verdade (para o ``SCM_RIGHTS``) e cada escrita anotada."""
+
+    def __init__(self) -> None:
+        self.fd = os.open(os.devnull, os.O_RDWR)
+        self.escritas: list[tuple[int, int, int]] = []
+        self.destruido = False
+
+    def write(self, tipo: int, codigo: int, valor: int) -> None:
+        self.escritas.append((tipo, codigo, valor))
+
+    def syn(self) -> None:
+        self.escritas.append((0, 0, 0))
+
+    def close(self) -> None:
+        self.destruido = True
+        with contextlib.suppress(OSError):
+            os.close(self.fd)
+        self.fd = -1
+
+
+def test_o_pad_uinput_volta_no_mesmo_no_e_fica_largado(
+    systemd: _Systemd, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Máscara Xbox (uinput): o nó se guarda, o serviço que para o deixa largado no depósito
+    sem `UI_DEV_DESTROY`, e o serviço que volta o readota sem criar outro."""
+    import evdev
+    from evdev import ecodes
+
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+
+    criados: list[_NoDoUinput] = []
+
+    def criar(self: UinputGamepad, *, with_ff: bool) -> _NoDoUinput | None:
+        if with_ff:
+            return None
+        no = _NoDoUinput()
+        criados.append(no)
+        return no
+
+    monkeypatch.setattr(UinputGamepad, "_create_device", criar)
+    antes = UinputGamepad.for_flavor("xbox")
+    antes.identidade = _IDENTIDADES[2]
+    assert antes.start() is True and len(criados) == 1
+    systemd.receber()
+    nome = antes._nome_no_deposito(False)
+    assert nome in systemd.deposito, systemd.avisos
+    antes.forward_buttons(frozenset({"cross"}))
+    codigo = antes._resolve_evdev("cross", ecodes)
+    assert (ecodes.EV_KEY, codigo, 1) in criados[0].escritas
+    assert sd_notify.parando() is True
+    antes.stop()
+    no = criados[0]
+    assert not no.destruido, "o serviço que para destruiu o nó guardado"
+    assert no.escritas[-1] == (0, 0, 0)
+    assert (ecodes.EV_KEY, codigo, 0) in no.escritas and (ecodes.EV_ABS, ecodes.ABS_X, 128) in (
+        no.escritas), "o nó ficou no depósito com o botão apertado"
+    systemd.receber()
+    assert nome in systemd.deposito
+
+    sd_notify._estado["parando"] = False
+    herdados = systemd.entregar()
+    monkeypatch.setattr(evdev, "UInput", _a_classe_do_uinput())
+    depois = UinputGamepad.for_flavor("xbox")
+    depois.identidade = _IDENTIDADES[2]
+    try:
+        assert depois.start() is True
+        assert len(criados) == 1, "o serviço que voltou recriou o nó"
+        assert depois._device.fd == herdados[nome]
+    finally:
+        depois.stop()
+        with contextlib.suppress(OSError):
+            os.close(herdados[nome])
