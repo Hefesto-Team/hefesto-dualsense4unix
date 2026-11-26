@@ -137,3 +137,55 @@ def test_o_bootstrap_nao_manda_o_click_de_lista_nem_de_barra() -> None:
     assert "e.tagName === 'SELECT'" in texto
     assert "e.type === 'range'" in texto
     assert "entrada: (alvo.type || '')" in texto
+
+
+PAGINA_DO_CLIQUE = """<!doctype html><meta charset="utf-8"><body>
+<select data-gesto="efeito-imersao" style="width:200px">
+  <option value="">Escolha</option><option value="a">A</option><option value="b">B</option></select>
+<input type="range" data-gesto="forca" min="0" max="10" value="0" style="width:200px">
+<button data-gesto="testar">Testar</button>
+<label><input type="checkbox" data-gesto="marcar"> Marcar</label>
+<script>
+  window.recebidos = [];
+  window.webkit = {messageHandlers: {hefesto: {postMessage: function(m){
+    const o = JSON.parse(m); if (o.gesto) window.recebidos.push(o.gesto + ':' + o.evento);
+  }}}};
+</script></body>"""
+
+CHROME = pathlib.Path("/usr/bin/google-chrome")
+
+
+@pytest.fixture
+def pagina_do_clique(tmp_path: pathlib.Path) -> Any:
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    playwright = pytest.importorskip("playwright.sync_api")
+    arquivo = tmp_path / "clique.html"
+    arquivo.write_text(PAGINA_DO_CLIQUE, encoding="utf-8")
+    with playwright.sync_playwright() as pw:
+        motor = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = motor.new_page(viewport={"width": 800, "height": 600})
+            pg.goto(arquivo.as_uri())
+            assert pg.evaluate(hv.BOOTSTRAP) == "ok"
+            yield pg
+        finally:
+            motor.close()
+
+
+def test_o_bootstrap_na_pagina_nao_manda_o_click_de_lista_nem_de_barra(
+        pagina_do_clique: Any) -> None:
+    """O clique do rato numa lista e numa barra não sai da página; a escolha, o botão e a caixa
+    de marcar saem."""
+    pg = pagina_do_clique
+    pg.click("select")
+    pg.keyboard.press("Escape")
+    pg.click("input[type=range]")
+    pg.select_option("select", "b")
+    pg.click("button")
+    pg.click("input[type=checkbox]")
+    recebidos = list(pg.evaluate("window.recebidos"))
+    assert "efeito-imersao:click" not in recebidos, recebidos
+    assert "forca:click" not in recebidos, recebidos
+    assert "efeito-imersao:change" in recebidos, recebidos
+    assert {"testar:click", "marcar:click"} <= set(recebidos), recebidos

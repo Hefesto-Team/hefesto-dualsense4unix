@@ -87,3 +87,36 @@ def test_a_ponte_instalada_na_aba_pedida_devolve_o_pronto(
     monkeypatch.setattr(hv.pacotes, "a_aba_abriu", lambda *_a, **_k: None)
     piloto._instalado(None, None)
     assert piloto.pronto is True
+
+
+def test_o_fim_da_carga_da_aba_pedida_devolve_o_pronto_pela_ponte_instalada(
+        hv: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O caminho inteiro: `_ir`, `_carregou` (o FINISHED da aba pedida) e a ponte da aba pedida.
+
+    O `_instalado` da aba que saiu, atrasado, não devolve o `pronto`; o FINISHED solta a trava,
+    e a ponte instalada na aba pedida o devolve. Sem soltar a trava no `_carregou`, o piloto
+    ficaria sem `pronto` para sempre depois da primeira troca."""
+    from gi.repository import WebKit2
+
+    piloto, _ = _piloto(hv, pronto=True)
+    perguntas: list[Any] = []
+    piloto.ponte = SimpleNamespace(perguntar=lambda js, cb: perguntas.append(cb),
+                                   rodar=lambda *_a: None)
+    piloto.args = SimpleNamespace(oculta=True, prova_de_mockup=False)
+    piloto.pagina = ABA_QUE_SAI
+    piloto.visitadas = [ABA_QUE_SAI]
+    piloto._estado_vivo = SimpleNamespace(comecar=lambda: None)
+    piloto._tique = lambda: True
+    monkeypatch.setattr(hv, "_esquecer_a_pintura", lambda *_a, **_k: None)
+    monkeypatch.setattr(hv.pacotes, "a_aba_abriu", lambda *_a, **_k: None)
+
+    piloto._ir(ABA_PEDIDA)
+    piloto._instalado(None, None)
+    assert piloto.pronto is False, "o `_instalado` atrasado da aba que saiu devolveu o pronto"
+    piloto.view.get_uri = lambda: hv.onde.pagina(ABA_PEDIDA, publicado=True).as_uri()
+    piloto._carregou(None, WebKit2.LoadEvent.FINISHED)
+    assert piloto.pagina == ABA_PEDIDA
+    assert piloto.pronto is False, "a aba pedida carregou, mas a ponte ainda não se instalou"
+    instalado = perguntas[-1]
+    instalado(None, None)
+    assert piloto.pronto is True, "a ponte instalada na aba pedida não devolveu o pronto"
