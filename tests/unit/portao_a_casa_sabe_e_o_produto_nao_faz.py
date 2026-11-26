@@ -623,6 +623,12 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "modificação filha, que a lê para "
         "falar com o serviço. Quem a liga é o próprio supervisor, a cada modificação aberta."
     ),
+    "HEFESTO_MOD_OPCOES": (
+        "26/11/2026, O-QUE-E-DA-PESSOA-MORA-ONDE-A-CAIXA-SO-LE-01 — o Hefesto PÕE esta chave no "
+        "ambiente de cada modificação que abre (o arquivo das opções da modificação, que dentro "
+        "da caixa só se lê): é o contrato do supervisor com a modificação filha, que a lê para "
+        "saber o que foi escolhido. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
     "HEFESTO_MOD_API": (
         "13/10/2026, ADR-021 — o Hefesto PÕE esta chave no ambiente de cada modificação que "
         "abre (a versão da API das modificações): é o contrato do supervisor com a "
@@ -738,6 +744,15 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
         "põe a chave no ambiente da modificação antes de abri-la "
         "(`HEFESTO_MOD_DADOS` em `src/hefesto_dualsense4unix/mods/supervisor.py:2137`), "
+        "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
+        "`Environment=` a escrever: a chave nasce a cada modificação, para a filha, e não para "
+        "o serviço.",
+    ),
+    "HEFESTO_MOD_OPCOES": (
+        "mods/supervisor.py::Supervisor",
+        "26/11/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "põe a chave no ambiente da modificação antes de abri-la "
+        "(`HEFESTO_MOD_OPCOES` em `src/hefesto_dualsense4unix/mods/supervisor.py:2138`), "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para a filha, e não para "
         "o serviço.",
@@ -1085,6 +1100,18 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "MEDIDO em 12/08/2026. Instrumento, e o nome o declara. Reconfigura o "
         "logging entre casos; em produção o logging é configurado uma vez, no "
         "início do processo, e reconfigurá-lo perderia handlers."
+    ),
+    "utils/nome_do_fio.py::desinstalar": (
+        "26/11/2026, OS-FIOS-DO-SERVICO-TEM-NOME-E-CUSTO-MEDIDO-01. Instrumento de teste, e o "
+        "docstring o diz: «Devolve o nascimento original dos fios; para os testes». Em produção "
+        "o `instalar` roda uma vez na subida do serviço e o nome vale até o processo sair."
+    ),
+    "utils/nome_do_fio.py::nome_no_kernel": (
+        "26/11/2026, OS-FIOS-DO-SERVICO-TEM-NOME-E-CUSTO-MEDIDO-01. Instrumento de teste: lê de "
+        "volta o `comm` de UM fio, e é por essa leitura que "
+        "`tests/unit/test_os_fios_do_servico_tem_nome.py` prova que o nome chegou ao kernel. O "
+        "produto lê o `comm` de todos os fios de uma vez, pelo `custo_dos_fios` que o `doctor` "
+        "chama."
     ),
     "integrations/uhid_gamepad.py::capture_dualsense_blueprint": (
         "MEDIDO em 12/08/2026. Ferramenta de diagnóstico, e o docstring o diz em "
