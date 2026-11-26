@@ -14,6 +14,7 @@ import select
 import sys
 import threading
 import time
+from concurrent.futures import Future
 from dataclasses import dataclass, field, replace
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -105,7 +106,8 @@ class _PedidoDeLuz:
 
     tipo: str
     dados: dict[str, Any]
-    executar: Callable[[dict[str, Any]], None]
+    executar: Callable[[dict[str, Any]], Any]
+    futuros: list[Future[Any]] = field(default_factory=list)
 
 
 class _EscritorDaLuz:
@@ -113,9 +115,11 @@ class _EscritorDaLuz:
 
     Quem pinta deixa o pedido e volta; o sysfs do LED, a leitura do brilho e o report direto do
     rádio correm aqui. O pedido novo se junta ao último da fila quando é do mesmo tipo (o mais novo
-    vence, campo a campo); entre tipos a ordem é a da chegada. Quem precisa do resultado entra por
-    :meth:`agora`, que escoa a fila antes de escrever. O handle sem escritor (dublê, CLI) escreve na
-    hora. A-LUZ-DO-CONTROLE-SE-ESCREVE-FORA-DO-FIO-DO-LACO-01.
+    vence, campo a campo); entre tipos a ordem é a da chegada. Quem precisa do resultado deixa um
+    `Future` no pedido e o recebe quando a escrita sai; quem chama do laço asyncio nunca usa
+    :meth:`agora`, que escoa a fila e escreve no fio de quem chama. O handle sem escritor (dublê,
+    CLI) escreve na hora. A-LUZ-DO-CONTROLE-SE-ESCREVE-FORA-DO-FIO-DO-LACO-01 e
+    O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01.
     """
 
     def __init__(self, nome: str) -> None:
@@ -132,18 +136,29 @@ class _EscritorDaLuz:
         self,
         tipo: str,
         dados: dict[str, Any],
-        executar: Callable[[dict[str, Any]], None],
+        executar: Callable[[dict[str, Any]], Any],
         juntar: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]],
+        futuro: Future[Any] | None = None,
     ) -> None:
-        """Deixa o pedido na fila e acorda o fio; junta ao último se ele é do mesmo tipo."""
+        """Deixa o pedido na fila e acorda o fio; junta ao último se ele é do mesmo tipo.
+
+        ``futuro`` recebe o que ``executar`` devolver (ou a exceção dele) quando o pedido sai; no
+        pedido juntado, recebe o da escrita juntada. O escritor fechado o resolve com ``None``.
+        """
         with self._fila_trava:
             if self._fechado:
+                if futuro is not None:
+                    futuro.set_result(None)
                 return
             if self._fila and self._fila[-1].tipo == tipo:
                 ultimo = self._fila[-1]
                 ultimo.dados = juntar(ultimo.dados, dados)
+                if futuro is not None:
+                    ultimo.futuros.append(futuro)
             else:
-                self._fila.append(_PedidoDeLuz(tipo, dados, executar))
+                self._fila.append(
+                    _PedidoDeLuz(tipo, dados, executar, [futuro] if futuro is not None else [])
+                )
             if self._fio is None or not self._fio.is_alive():
                 self._fio = threading.Thread(target=self._girar, daemon=True, name=self._nome)
                 self._fio.start()
@@ -160,7 +175,10 @@ class _EscritorDaLuz:
         """O handle fechou: a fila se perde e o fio sai na próxima passada."""
         with self._fila_trava:
             self._fechado = True
+            perdidos = [f for pedido in self._fila for f in pedido.futuros]
             self._fila.clear()
+        for futuro in perdidos:
+            futuro.set_result(None)
         self._acorda.set()
 
     def ocioso(self) -> bool:
@@ -181,9 +199,14 @@ class _EscritorDaLuz:
             pedido = self._fila.pop(0)
             self._rodando = True
         try:
-            pedido.executar(pedido.dados)
+            resultado = pedido.executar(pedido.dados)
         except Exception as exc:
             logger.warning("luz_do_controle_falhou", tipo=pedido.tipo, err=str(exc))
+            for futuro in pedido.futuros:
+                futuro.set_exception(exc)
+        else:
+            for futuro in pedido.futuros:
+                futuro.set_result(resultado)
         finally:
             with self._fila_trava:
                 self._rodando = False
@@ -214,9 +237,34 @@ def _na_vez_da_luz(handle: Any, escrever: Callable[[], Any]) -> Any:
     return escrever() if escritor is None else escritor.agora(escrever)
 
 
-def _rodar_o_quadro(dados: dict[str, Any]) -> None:
-    """A passada do escritor da luz para um quadro de luz."""
-    _escrever_a_luz_do_quadro(
+def _futuro_pronto(valor: Any) -> Future[Any]:
+    """Um `Future` já resolvido com `valor` (o handle sem escritor escreve na hora)."""
+    futuro: Future[Any] = Future()
+    futuro.set_result(valor)
+    return futuro
+
+
+def _quando_sair(origem: Future[Any], montar: Callable[[Any], Any]) -> Future[Any]:
+    """O `Future` de `montar(resultado de origem)`; exceção de `origem` vira `montar(False)`."""
+    destino: Future[Any] = Future()
+
+    def _pronto(feito: Future[Any]) -> None:
+        try:
+            valor = feito.result()
+        except Exception:
+            valor = False
+        try:
+            destino.set_result(montar(valor))
+        except Exception as exc:
+            destino.set_exception(exc)
+
+    origem.add_done_callback(_pronto)
+    return destino
+
+
+def _rodar_o_quadro(dados: dict[str, Any]) -> bool:
+    """A passada do escritor da luz para um quadro de luz; devolve se deu certo."""
+    return _escrever_a_luz_do_quadro(
         dados["backend"], dados["handle"], dados["node"], dados["luz"], dados["what"]
     )
 
@@ -347,9 +395,11 @@ def _repintar_agora(
     )
 
 
-def _rodar_a_repintura(dados: dict[str, Any]) -> None:
+def _rodar_a_repintura(
+    dados: dict[str, Any],
+) -> tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]:
     """A passada do escritor da luz para uma repintura resolvida."""
-    _repintar_agora(
+    return _repintar_agora(
         dados["backend"], dados["key"], dados["handle"], dados["no"], dados["desired"],
         pode_player=dados["pode_player"], what=dados["what"], verify=dados["verify"],
         forcar=dados["forcar"], apesar_do_mudo=dados["apesar_do_mudo"],
@@ -3537,8 +3587,8 @@ class PyDualSenseController(IController):
                     (key, handle, no, radio, self._merged_desired_for_key(key))
                 )
         resultado: dict[str, bool] = {}
-        for key, handle, no, radio, desired in alvos:
-            ok, cor, players = self._repintar_a_luz_de_um(
+        pedidos = [
+            (key, radio, self._repintar_a_luz_de_um_em_futuro(
                 key,
                 handle,
                 no,
@@ -3547,8 +3597,15 @@ class PyDualSenseController(IController):
                 what="vigia_do_sequestro",
                 forcar=True,
                 apesar_do_mudo=True,
-                agora=True,
-            )
+            ))
+            for key, handle, no, radio, desired in alvos
+        ]
+        for key, radio, futuro in pedidos:
+            try:
+                repintada = futuro.result()
+            except Exception:
+                repintada = None
+            ok, cor, players = repintada if repintada else (False, None, None)
             resultado[key] = ok
             logger.debug(
                 "vigia_do_sequestro_reafirmou",
@@ -3608,6 +3665,41 @@ class PyDualSenseController(IController):
             _juntar_as_repinturas,
         )
         return True, desired.led, desired.player_leds if pode_player else None
+
+    def _repintar_a_luz_de_um_em_futuro(
+        self,
+        key: str,
+        handle: Any,
+        no: Any,
+        desired: _DesiredOutput,
+        *,
+        pode_player: bool,
+        what: str,
+        forcar: bool = False,
+        apesar_do_mudo: bool = False,
+    ) -> Future[Any]:
+        """A repintura de :meth:`_repintar_a_luz_de_um` pela fila do controle, com o resultado
+        `(ok, cor, número)` num `Future` que se resolve quando a escrita sai (``None``: o
+        escritor fechou). Sem escritor, escreve na hora."""
+        escritor = _escritor_da_luz_de(handle)
+        if escritor is None:
+            return _futuro_pronto(_repintar_agora(
+                self, key, handle, no, desired, pode_player=pode_player, what=what,
+                verify=False, forcar=forcar, apesar_do_mudo=apesar_do_mudo,
+            ))
+        futuro: Future[Any] = Future()
+        escritor.pedir(
+            "repintar",
+            {
+                "backend": self, "key": key, "handle": handle, "no": no, "desired": desired,
+                "pode_player": pode_player, "what": what, "verify": False,
+                "forcar": forcar, "apesar_do_mudo": apesar_do_mudo,
+            },
+            _rodar_a_repintura,
+            _juntar_as_repinturas,
+            futuro,
+        )
+        return futuro
 
     def _repintar_a_luz_de_um_agora(
         self,
@@ -3749,7 +3841,6 @@ class PyDualSenseController(IController):
                     node,
                     _DesiredOutput(led=alvo),
                     what="aviso_de_modo_devolve",
-                    agora=True,
                 )
             except Exception as exc:
                 logger.warning("aviso_de_modo_devolve_falhou", key=key, err=str(exc))
@@ -3980,27 +4071,12 @@ class PyDualSenseController(IController):
         Gatilho e LED do mic só mexem no estado do handle e saem aqui. A luz (cor, número, brilho:
         o sysfs do LED, o `brightness` lido e o report direto do rádio) vai ao escritor do handle,
         fora do fio de quem chama, e este devolve `True` quando o pedido foi aceito. `agora` é de
-        quem usa o resultado: escoa a fila do controle e escreve no fio de quem chama.
+        quem usa o resultado fora do laço asyncio: escoa a fila do controle e escreve no fio de quem
+        chama. Do laço, o resultado vem por :meth:`_write_partial_output_em_futuro`.
         """
-        try:
-            if out.trigger_left is not None:
-                self._apply_trigger(handle, "left", out.trigger_left)
-            if out.trigger_right is not None:
-                self._apply_trigger(handle, "right", out.trigger_right)
-            if out.mic_led is not None:
-                _escrever_led_do_mic(handle, out.mic_led)
-        except Exception as exc:
-            logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
-            _acordar_a_volta_de(handle)
-            return False
-        if out.led is None and out.player_leds is None and out.player_led_brightness is None:
-            _acordar_a_volta_de(handle)
-            return True
-        luz = _DesiredOutput(
-            led=out.led,
-            player_leds=out.player_leds,
-            player_led_brightness=out.player_led_brightness,
-        )
+        luz = self._preparar_a_saida(handle, out, what=what)
+        if isinstance(luz, bool):
+            return luz
         escritor = _escritor_da_luz_de(handle)
         if escritor is None or agora:
             return bool(
@@ -4016,6 +4092,56 @@ class PyDualSenseController(IController):
         )
         _acordar_a_volta_de(handle)
         return True
+
+    def _preparar_a_saida(
+        self, handle: pydualsense, out: _DesiredOutput, *, what: str
+    ) -> _DesiredOutput | bool:
+        """O gatilho e o LED do mic de `out` no estado do handle; devolve a luz que falta escrever,
+        ou o desfecho (`False` falhou, `True` sem luz a escrever)."""
+        try:
+            if out.trigger_left is not None:
+                self._apply_trigger(handle, "left", out.trigger_left)
+            if out.trigger_right is not None:
+                self._apply_trigger(handle, "right", out.trigger_right)
+            if out.mic_led is not None:
+                _escrever_led_do_mic(handle, out.mic_led)
+        except Exception as exc:
+            logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
+            _acordar_a_volta_de(handle)
+            return False
+        if out.led is None and out.player_leds is None and out.player_led_brightness is None:
+            _acordar_a_volta_de(handle)
+            return True
+        return _DesiredOutput(
+            led=out.led,
+            player_leds=out.player_leds,
+            player_led_brightness=out.player_led_brightness,
+        )
+
+    def _write_partial_output_em_futuro(
+        self, handle: pydualsense, node: Any, out: _DesiredOutput, *, what: str
+    ) -> Future[Any]:
+        """:meth:`_write_partial_output` sem escrever no fio de quem chama: a luz vai à fila do
+        controle (junta ao quadro que espera) e o `Future` recebe se deu certo quando a escrita sai.
+        Sem escritor, escreve na hora.
+        O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01.
+        """
+        luz = self._preparar_a_saida(handle, out, what=what)
+        if isinstance(luz, bool):
+            return _futuro_pronto(luz)
+        escritor = _escritor_da_luz_de(handle)
+        if escritor is None:
+            return _futuro_pronto(_escrever_a_luz_do_quadro(self, handle, node, luz, what))
+        futuro: Future[Any] = Future()
+        escritor.pedir(
+            "quadro",
+            {"backend": self, "handle": handle, "node": node, "luz": luz, "what": what},
+            _rodar_o_quadro,
+            _juntar_os_quadros,
+            futuro,
+        )
+        _acordar_a_volta_de(handle)
+        return futuro
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
         campo = "trigger_left" if side == "left" else "trigger_right"
@@ -4710,14 +4836,33 @@ class PyDualSenseController(IController):
         procedencia_da_cor: object = None,
         brilho_da_cor: float | None = None,
     ) -> ResultadoDeSaida:
-        """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele."""
+        """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele.
+
+        Espera a escrita: fora do laço asyncio. Do laço, :meth:`apply_output_for_em_futuro`.
+        """
+        resultado: ResultadoDeSaida = self.apply_output_for_em_futuro(
+            uniq, spec, procedencia_da_cor=procedencia_da_cor, brilho_da_cor=brilho_da_cor
+        ).result()
+        return resultado
+
+    def apply_output_for_em_futuro(
+        self,
+        uniq: str,
+        spec: OutputSpec,
+        *,
+        procedencia_da_cor: object = None,
+        brilho_da_cor: float | None = None,
+    ) -> Future[Any]:
+        """:meth:`apply_output_for` sem esperar a escrita: o override se registra aqui, a luz vai
+        à fila do controle e o `Future` recebe a palavra (`ResultadoDeSaida`) quando a escrita sai.
+        O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01."""
         fields = _spec_fields(spec)
         if not fields:
-            return "nada_a_fazer"
+            return _futuro_pronto("nada_a_fazer")
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
             logger.warning("apply_output_for_sem_mac_ignorado", uniq=uniq)
-            return "sem_alvo"
+            return _futuro_pronto("sem_alvo")
         with self._io_lock:
             override = self._desired_by_uniq.setdefault(alvo, _DesiredOutput())
             for name, value in fields.items():
@@ -4741,24 +4886,30 @@ class PyDualSenseController(IController):
                 uniq=alvo,
                 campos=sorted(fields),
             )
-            return "registrado"
-        escreveu = self._write_partial_output(
-            handle, node, _DesiredOutput(**fields), what="apply_output_for", agora=True
-        )
-        if not escreveu:
-            return "falhou"
+            return _futuro_pronto("registrado")
         sairam = _CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset(
             {"player_led_brightness"}
         )
         guardados = sorted(set(fields) - sairam)
-        if muted and guardados:
-            logger.debug(
-                "apply_output_for_modo_nativo_registrado",
-                uniq=alvo,
-                campos=guardados,
-            )
-            return "registrado"
-        return "escreveu"
+
+        def _palavra(escreveu: Any) -> ResultadoDeSaida:
+            if not escreveu:
+                return "falhou"
+            if muted and guardados:
+                logger.debug(
+                    "apply_output_for_modo_nativo_registrado",
+                    uniq=alvo,
+                    campos=guardados,
+                )
+                return "registrado"
+            return "escreveu"
+
+        return _quando_sair(
+            self._write_partial_output_em_futuro(
+                handle, node, _DesiredOutput(**fields), what="apply_output_for"
+            ),
+            _palavra,
+        )
 
     def _camadas_da_extensao(self) -> dict[str, _DesiredOutput]:
         camadas: dict[str, _DesiredOutput] = self.__dict__.setdefault("_extensao_by_uniq", {})
@@ -4773,20 +4924,27 @@ class PyDualSenseController(IController):
     def apply_extension_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
         """Aplica `spec` SÓ em `uniq`, na camada da extensão: acima do perfil e da escolha de quem
         usa, abaixo do jogo. Só sai por `release_extension_output_for` ou pela saída do
-        controle."""
+        controle. Espera a escrita: do laço, :meth:`apply_extension_output_for_em_futuro`."""
+        resultado: ResultadoDeSaida = self.apply_extension_output_for_em_futuro(
+            uniq, spec
+        ).result()
+        return resultado
+
+    def apply_extension_output_for_em_futuro(self, uniq: str, spec: OutputSpec) -> Future[Any]:
+        """:meth:`apply_extension_output_for` sem esperar a escrita; a palavra vem no `Future`."""
         fields = _spec_fields(spec)
         if not fields:
-            return "nada_a_fazer"
+            return _futuro_pronto("nada_a_fazer")
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
             logger.warning("apply_extension_output_for_sem_mac_ignorado", uniq=uniq)
-            return "sem_alvo"
+            return _futuro_pronto("sem_alvo")
         with self._io_lock:
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
             if handle is None and not self._troca_valida_locked(alvo):
-                return "sem_alvo"
+                return _futuro_pronto("sem_alvo")
             camada = self._camadas_da_extensao().setdefault(alvo, _DesiredOutput())
             for name, value in fields.items():
                 setattr(camada, name, value)
@@ -4795,28 +4953,44 @@ class PyDualSenseController(IController):
             )
             muted = self._output_mute
         if handle is None:
-            return "registrado"
-        if not self._write_partial_output(
-            handle, node, _DesiredOutput(**fields), what="apply_extension_output_for",
-            agora=True,
-        ):
-            return "falhou"
+            return _futuro_pronto("registrado")
         sairam = _CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset(
             {"player_led_brightness"}
         )
-        if muted and set(fields) - sairam:
-            return "registrado"
-        return "escreveu"
+        guardados = bool(muted and set(fields) - sairam)
+
+        def _palavra(escreveu: Any) -> ResultadoDeSaida:
+            if not escreveu:
+                return "falhou"
+            return "registrado" if guardados else "escreveu"
+
+        return _quando_sair(
+            self._write_partial_output_em_futuro(
+                handle, node, _DesiredOutput(**fields), what="apply_extension_output_for"
+            ),
+            _palavra,
+        )
 
     def release_extension_output_for(
         self, uniq: str, campos: Iterable[str]
     ) -> ResultadoDeSaida:
         """Solta da camada da extensão os `campos` de `uniq` e devolve ao controle o valor
         resolvido sem a camada (o perfil, ou a escolha da aba). Campo que a extensão não tem não
-        escreve nada: soltar duas vezes devolve uma."""
+        escreve nada: soltar duas vezes devolve uma. Espera a escrita: do laço,
+        :meth:`release_extension_output_for_em_futuro`."""
+        resultado: ResultadoDeSaida = self.release_extension_output_for_em_futuro(
+            uniq, campos
+        ).result()
+        return resultado
+
+    def release_extension_output_for_em_futuro(
+        self, uniq: str, campos: Iterable[str]
+    ) -> Future[Any]:
+        """:meth:`release_extension_output_for` sem esperar a escrita; a palavra vem no
+        `Future`."""
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
-            return "sem_alvo"
+            return _futuro_pronto("sem_alvo")
         with self._io_lock:
             camada = self._camadas_da_extensao().get(alvo)
             soltos = [
@@ -4824,7 +4998,7 @@ class PyDualSenseController(IController):
                 if camada is not None and getattr(camada, nome, None) is not None
             ]
             if camada is None or not soltos:
-                return "nada_a_fazer"
+                return _futuro_pronto("nada_a_fazer")
             for nome in soltos:
                 setattr(camada, nome, None)
             if all(getattr(camada, nome) is None for nome in _OUTPUT_FIELDS):
@@ -4834,7 +5008,7 @@ class PyDualSenseController(IController):
             node = self._sysfs.get(key) if key is not None else None
             desired = self._merged_desired_for_key(key) if key is not None else None
         if handle is None or desired is None:
-            return "registrado"
+            return _futuro_pronto("registrado")
         try:
             lados: tuple[Side, ...] = ("left", "right")
             gatilhos_soltos = [lado for lado in lados if f"trigger_{lado}" in soltos]
@@ -4847,13 +5021,16 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.warning("output_handle_failed", op="release_extension_output_for",
                            key=key, err=str(exc))
-            return "falhou"
-        if "led" in soltos and desired.led is not None and not self._write_partial_output(
-            handle, node, _DesiredOutput(led=desired.led), what="release_extension_output_for",
-            agora=True,
-        ):
-            return "falhou"
-        return "escreveu"
+            return _futuro_pronto("falhou")
+        if "led" not in soltos or desired.led is None:
+            return _futuro_pronto("escreveu")
+        return _quando_sair(
+            self._write_partial_output_em_futuro(
+                handle, node, _DesiredOutput(led=desired.led),
+                what="release_extension_output_for",
+            ),
+            lambda escreveu: "escreveu" if escreveu else "falhou",
+        )
 
     def reset_output_overrides(
         self,

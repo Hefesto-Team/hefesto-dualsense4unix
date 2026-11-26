@@ -59,7 +59,7 @@ voltou a ser dele.
 
 **POR QUE `set_microphone_led` E NÃO `set_mic_led`, e isto não é preferência.**
 Medido nesta árvore em 03/09/2026: `set_mic_led` coage a `bool` DUAS VEZES em
-série (`core/backend_pydualsense.py:4194`, `flag = bool(aceso)`, e `:646`,
+série (`core/backend_pydualsense.py:4320`, `flag = bool(aceso)`, e `:696`,
 `tomar(bool(aceso))`), então `2` e `3` viram `1` sem erro e sem log — luz acesa
 fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*. O
 único caminho de produção que carrega o nível é
@@ -622,7 +622,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
 
     **NÃO É `set_mic_led`.** Aquele esmaga em `bool` duas vezes em série e faz
     o `2` e o `3` virarem `1` sem erro e sem log (medido em 03/09/2026,
-    `core/backend_pydualsense.py:4194` e `:646`).
+    `core/backend_pydualsense.py:4320` e `:696`).
 
     `valor is None` é a DEVOLUÇÃO DA POSSE (o bit `0x01` do flag1 cai e o
     kernel volta a escrever a luz na borda do botão); `0` é uma ORDEM

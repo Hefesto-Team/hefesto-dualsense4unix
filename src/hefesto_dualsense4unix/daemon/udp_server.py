@@ -443,14 +443,43 @@ class UdpHandler:
         kind: str,
         sem_endereco: Callable[[], None],
     ) -> None:
-        """Escreve `spec` SÓ no controle do jogador `indice`, por `apply_output_for`."""
+        """Escreve `spec` SÓ no controle do jogador `indice`, por `apply_output_for`.
+
+        Com o backend que tem `apply_output_for_em_futuro`, a luz vai à fila do controle e o
+        datagrama volta sem esperar a escrita: a palavra que chega depois conta o erro em
+        ``udp.error.<kind>``. O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01.
+        """
         uniq = self._uniq_do_indice(indice)
         if uniq is None:
             sem_endereco()
             return
-        resultado = self.controller.apply_output_for(uniq, spec)
-        if resultado in ("falhou", "sem_alvo"):
-            raise ValueError(f"{kind} não chegou ao controle do índice {indice}: {resultado}")
+        em_futuro = getattr(self.controller, "apply_output_for_em_futuro", None)
+        if not callable(em_futuro):
+            resultado = self.controller.apply_output_for(uniq, spec)
+            if resultado in ("falhou", "sem_alvo"):
+                raise ValueError(f"{kind} não chegou ao controle do índice {indice}: {resultado}")
+            return
+        futuro = em_futuro(uniq, spec)
+        if futuro.done():
+            resultado = futuro.result()
+            if resultado in ("falhou", "sem_alvo"):
+                raise ValueError(f"{kind} não chegou ao controle do índice {indice}: {resultado}")
+            return
+
+        def _quando_sair(feito: Any) -> None:
+            try:
+                palavra = feito.result()
+            except Exception as exc:
+                palavra = f"falhou ({exc})"
+            if palavra in ("falhou", "sem_alvo") or str(palavra).startswith("falhou"):
+                self.store.bump(f"udp.error.{kind}")
+                logger.warning(
+                    "udp_instruction_error",
+                    kind=kind,
+                    err=f"{kind} não chegou ao controle do índice {indice}: {palavra}",
+                )
+
+        futuro.add_done_callback(_quando_sair)
 
     def _do_rgb_update(self, params: list[Any]) -> None:
         if len(params) < 4:

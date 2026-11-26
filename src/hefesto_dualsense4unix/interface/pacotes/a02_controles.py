@@ -2023,7 +2023,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     A Jogar não tem botão de mudo desde 02/11/2026: o volume do alto-falante em 0 cala, e o
     volume que sobe solta o mudo (o gesto `volume`).
 
-    O `mic.set` é o MUDO NO FIRMWARE (camada 3, `_handle_mic_set` em ipc_handlers.py:4510):
+    O `mic.set` é o MUDO NO FIRMWARE (camada 3, `_handle_mic_set` em ipc_handlers.py:4528):
     é o único que apaga a luz vermelha do plástico, e a partir dele o botão físico do
     controle deixa de valer — é o que o `title` do desenho já promete.
 

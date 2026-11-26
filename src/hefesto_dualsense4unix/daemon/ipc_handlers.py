@@ -915,7 +915,7 @@ class IpcHandlersMixin:
         return resposta
 
 
-    def _apply_por_uniq(
+    async def _apply_por_uniq(
         self,
         params: dict[str, Any],
         *,
@@ -941,15 +941,29 @@ class IpcHandlersMixin:
 
         spec = OutputSpec(**campos)
         if brilho_da_cor is None:
-            resultado = apply_for(alvo, spec)
+            resultado = await self._palavra_sem_parar_o_laco("apply_output_for", alvo, spec)
         else:
             try:
-                resultado = apply_for(alvo, spec, brilho_da_cor=brilho_da_cor)
+                resultado = await self._palavra_sem_parar_o_laco(
+                    "apply_output_for", alvo, spec, brilho_da_cor=brilho_da_cor
+                )
             except TypeError:
-                resultado = apply_for(alvo, spec)
+                resultado = await self._palavra_sem_parar_o_laco("apply_output_for", alvo, spec)
         return resultado if isinstance(resultado, str) and resultado else "escreveu"
 
-    def _escrever_na_extensao(self, params: dict[str, Any], **campos: Any) -> dict[str, Any]:
+    async def _palavra_sem_parar_o_laco(self, nome: str, *args: Any, **kwargs: Any) -> Any:
+        """A palavra do backend para a saída `nome`, esperada sem parar o laço: o
+        ``<nome>_em_futuro`` do backend deixa a luz na fila do controle e o laço espera o
+        `Future` da escrita. Backend sem a versão em futuro (dublê) responde na hora.
+        O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01."""
+        em_futuro = getattr(self.controller, f"{nome}_em_futuro", None)
+        if callable(em_futuro):
+            return await asyncio.wrap_future(em_futuro(*args, **kwargs))
+        return getattr(self.controller, nome)(*args, **kwargs)
+
+    async def _escrever_na_extensao(
+        self, params: dict[str, Any], **campos: Any
+    ) -> dict[str, Any]:
         """O pedido de uma extensão (``camada: "extensao"``) vai à camada da extensão em ``uniq``,
         acima do perfil e da escolha da aba; sai por ``soltar`` ou pela saída do controle."""
         alvo = params.get("uniq")
@@ -958,19 +972,23 @@ class IpcHandlersMixin:
             raise ValueError("a camada da extensão pede o uniq de um controle com a camada")
         from hefesto_dualsense4unix.core.controller import OutputSpec
 
-        resultado = aplicar(alvo, OutputSpec(**campos))
+        resultado = await self._palavra_sem_parar_o_laco(
+            "apply_extension_output_for", alvo, OutputSpec(**campos)
+        )
         aplicado_em, guardado_em = self._destinos_por_uniq(
             resultado if isinstance(resultado, str) and resultado else "escreveu", alvo
         )
         return {"status": "ok", "aplicado_em": aplicado_em, "guardado_em": guardado_em}
 
-    def _soltar_a_extensao(self, params: dict[str, Any], campo: str) -> dict[str, Any]:
+    async def _soltar_a_extensao(self, params: dict[str, Any], campo: str) -> dict[str, Any]:
         """Tira ``campo`` da camada da extensão em ``uniq`` e devolve o valor sem a camada."""
         alvo = params.get("uniq")
         soltar = getattr(self.controller, "release_extension_output_for", None)
         if not isinstance(alvo, str) or not alvo or not callable(soltar):
             raise ValueError("a camada da extensão pede o uniq de um controle com a camada")
-        resultado = soltar(alvo, (campo,))
+        resultado = await self._palavra_sem_parar_o_laco(
+            "release_extension_output_for", alvo, (campo,)
+        )
         aplicado_em, guardado_em = self._destinos_por_uniq(
             resultado if isinstance(resultado, str) and resultado else "nada_a_fazer", alvo
         )
@@ -1117,7 +1135,7 @@ class IpcHandlersMixin:
         if params.get("camada") == CAMADA_DA_EXTENSAO and params.get("soltar") is True:
             if side not in ("left", "right"):
                 raise ValueError("trigger.set: side precisa ser 'left' ou 'right'")
-            return self._soltar_a_extensao(params, f"trigger_{side}")
+            return await self._soltar_a_extensao(params, f"trigger_{side}")
         trigger_params = params.get("params", [])
         if side not in ("left", "right"):
             raise ValueError("trigger.set: side precisa ser 'left' ou 'right'")
@@ -1137,8 +1155,8 @@ class IpcHandlersMixin:
             {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
         )
         if params.get("camada") == CAMADA_DA_EXTENSAO:
-            return self._escrever_na_extensao(params, **campos)
-        resultado = self._apply_por_uniq(params, **campos)
+            return await self._escrever_na_extensao(params, **campos)
+        resultado = await self._apply_por_uniq(params, **campos)
         if resultado is None:
             self.controller.set_trigger(side, effect)
             aplicado_em, guardado_em = self._destinos_do_broadcast()
@@ -1176,7 +1194,7 @@ class IpcHandlersMixin:
                 "aplicado_em": aplicado_em,
                 "guardado_em": guardado_em,
             }
-        resultado = self._apply_por_uniq(params, **campos)
+        resultado = await self._apply_por_uniq(params, **campos)
         if resultado is None:
             for lado in ("left", "right"):
                 if f"trigger_{lado}" in campos:
@@ -1220,7 +1238,7 @@ class IpcHandlersMixin:
 
     async def _handle_led_set(self, params: dict[str, Any]) -> dict[str, Any]:
         if params.get("camada") == CAMADA_DA_EXTENSAO and params.get("soltar") is True:
-            return self._soltar_a_extensao(params, "led")
+            return await self._soltar_a_extensao(params, "led")
         rgb = params.get("rgb")
         if not isinstance(rgb, list) or len(rgb) != 3:
             raise ValueError("led.set: rgb precisa ser lista com 3 inteiros")
@@ -1242,8 +1260,8 @@ class IpcHandlersMixin:
             lightbar=(int(rgb[0]), int(rgb[1]), int(rgb[2]))
         ).apply_brightness(brightness).lightbar
         if params.get("camada") == CAMADA_DA_EXTENSAO:
-            return self._escrever_na_extensao(params, led=(r, g, b))
-        resultado = self._apply_por_uniq(params, brilho_da_cor=brightness, led=(r, g, b))
+            return await self._escrever_na_extensao(params, led=(r, g, b))
+        resultado = await self._apply_por_uniq(params, brilho_da_cor=brightness, led=(r, g, b))
         guardado_em: list[str] = []
         if resultado is not None:
             aplicado_em, guardado_em = self._destinos_por_uniq(
@@ -1272,7 +1290,7 @@ class IpcHandlersMixin:
         bits: tuple[bool, bool, bool, bool, bool] = (
             bits_raw[0], bits_raw[1], bits_raw[2], bits_raw[3], bits_raw[4]
         )
-        resultado = self._apply_por_uniq(params, player_leds=bits)
+        resultado = await self._apply_por_uniq(params, player_leds=bits)
         guardado_em: list[str] = []
         if resultado is not None:
             aplicado_em, guardado_em = self._destinos_por_uniq(
@@ -1330,7 +1348,7 @@ class IpcHandlersMixin:
                 escolhido = ausente_fn() if callable(ausente_fn) else None
             if isinstance(escolhido, str) and escolhido:
                 pedido = {**params, "uniq": escolhido}
-        resultado = self._apply_por_uniq(pedido, player_led_brightness=degrau)
+        resultado = await self._apply_por_uniq(pedido, player_led_brightness=degrau)
         guardado_em: list[str] = []
         if resultado is not None:
             aplicado_em, guardado_em = self._destinos_por_uniq(
