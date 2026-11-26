@@ -350,9 +350,11 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
     pagina = PUBLICADA.read_text(encoding="utf-8")
     lista = re.search(r'data-campo="status-lista"[^>]*>(.*?)\n\s*</div>\n', pagina, re.S)
     assert lista, "a lista do Status sumiu da página publicada"
-    assert lista.group(1).count('class="saude') == 2, lista.group(1)
+    linhas = 6 + ('data-tema="correcoes-do-sistema"' in pagina)
+    na_primeira = len(a09.em_tres_colunas(list(range(linhas)))[0])
+    assert lista.group(1).count('class="saude') == na_primeira, lista.group(1)
     assert 'class="ajuda"' not in lista.group(1), lista.group(1)
-    assert lista.group(1).count(' data-dica="') == 2, lista.group(1)
+    assert lista.group(1).count(' data-dica="') == na_primeira, lista.group(1)
     assert ' title="' not in lista.group(1), lista.group(1)
 
 
