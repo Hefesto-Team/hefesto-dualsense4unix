@@ -48,6 +48,18 @@ from hefesto_dualsense4unix.utils import repo_files
 
 AJUDANTE = Path("/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz")
 RAIZ_DO_REPOSITORIO = Path(__file__).resolve().parents[4]
+
+
+def _arquivo_do_repo(relpath: str) -> Path:
+    """Onde ESTA instalação tem o arquivo: a raiz do clone, ou o ``share/`` que o pacote põe.
+
+    Sem o arquivo em base nenhuma devolve o caminho da raiz do clone, que não se abre e cai no
+    ramo do arquivo ausente.
+    """
+    candidato = RAIZ_DO_REPOSITORIO / relpath
+    if candidato.is_file():
+        return candidato
+    return repo_files.encontrar_arquivo_do_repo(relpath) or candidato
 API_DO_GITHUB = "https://api.github.com/repos/{}/releases/latest"
 API_DA_TAG = "https://api.github.com/repos/{}/releases/tags/{}"
 REPO_DO_MANGOHUD = "flightlessmango/MangoHud"
@@ -1222,9 +1234,8 @@ def _vao() -> Any:
     return vao
 
 
-def _versoes_do_hefesto_sem_clone(rede: bool, forma: str) -> Versoes:
-    """Sem clone, a última release publicada diz a versão nova, e o gesto da forma de instalação
-    diz como instalá-la; o Hefesto não a sobe."""
+def _versao_instalada() -> str:
+    """A versão desta instalação: a do ``pyproject.toml`` do clone, ou a do pacote instalado."""
     from importlib import metadata
 
     instalada = ""
@@ -1233,6 +1244,13 @@ def _versoes_do_hefesto_sem_clone(rede: bool, forma: str) -> Versoes:
             (RAIZ_DO_REPOSITORIO / "pyproject.toml").read_text(encoding="utf-8"))
     with contextlib.suppress(metadata.PackageNotFoundError):
         instalada = metadata.version(PACOTE_DO_PRODUTO)
+    return instalada
+
+
+def _versoes_do_hefesto_sem_clone(rede: bool, forma: str) -> Versoes:
+    """Sem clone, a última release publicada diz a versão nova, e o gesto da forma de instalação
+    diz como instalá-la; o Hefesto não a sobe."""
+    instalada = _versao_instalada()
     if not rede:
         return Versoes(instalada, None)
     release = _release(REPO_DO_PRODUTO)
@@ -1417,7 +1435,7 @@ def mesma_serie(tags: Sequence[str], atual: str) -> tuple[str, str | None]:
 
 
 NOMES_DO_SOM = {"pipewire": "PipeWire", "wireplumber": "WirePlumber"}
-SOMAS_REVISADAS_DO_SOM = RAIZ_DO_REPOSITORIO / "assets" / "pipewire-backport" / "SOMAS-REVISADAS"
+SOMAS_REVISADAS_DO_SOM = _arquivo_do_repo("assets/pipewire-backport/SOMAS-REVISADAS")
 REVISAR_A_VERSAO_NOVA = "a casa precisa revisar a versão nova"
 
 
@@ -1555,11 +1573,13 @@ def _compilar_a_gdk(pasta: Path, arquivo: str, sha: str) -> tuple[Path | None, s
     """A peça compilada aqui, se bate com o pino; senão, o porquê de não ter dado."""
     if not shutil.which(COMPILADOR_DA_GDK):
         return None, f"sem o {COMPILADOR_DA_GDK} para compilar aqui"
+    receita = _arquivo_do_repo("assets/gdk-runtime/construir.sh")
+    if not receita.is_file():
+        return None, "a compilação da peça é do clone do Hefesto, e esta instalação não o traz"
     construida = pasta / "construida"
     if not (construida / arquivo).is_file():
         shutil.rmtree(construida, ignore_errors=True)
-        rc, ultima = _comando(["bash", str(RAIZ_DO_REPOSITORIO / "assets" / "gdk-runtime"
-                                            / "construir.sh"), str(construida)])
+        rc, ultima = _comando(["bash", str(receita), str(construida)])
         if rc != 0:
             return None, f"a compilação aqui parou ({ultima or rc})"
     feito = construida / arquivo
@@ -1598,11 +1618,7 @@ def _baixar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> None:
     """Cada arquivo do pino, da cópia que já bate, do release da versão, de outro release com a
     mesma soma, ou compilado aqui; o porquê de cada caminho que não deu vai junto da falha."""
     pino = _pino_da_gdk()
-    try:
-        versao = _versao_do_pyproject(
-            (RAIZ_DO_REPOSITORIO / "pyproject.toml").read_text(encoding="utf-8"))
-    except OSError:
-        versao = ""
+    versao = _versao_instalada()
     pasta = _cache() / "gdk"
     shutil.rmtree(pasta / "construida", ignore_errors=True)
     prontos: dict[str, Path] = {}
@@ -1656,7 +1672,7 @@ LICENCA_DA_GDK = "LICENCA-DA-ORIGEM.txt"
 
 def _gravar_a_licenca_da_gdk(pasta: Path) -> None:
     """O aviso MIT da origem ao lado das DLL: a licença pede o texto em toda cópia."""
-    origem = RAIZ_DO_REPOSITORIO / "assets" / "gdk-runtime" / LICENCA_DA_GDK
+    origem = _arquivo_do_repo(f"assets/gdk-runtime/{LICENCA_DA_GDK}")
     if origem.is_file():
         _por_no_lugar(origem, pasta / LICENCA_DA_GDK)
 

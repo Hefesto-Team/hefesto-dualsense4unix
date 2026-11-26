@@ -222,10 +222,20 @@ print(json.dumps({
 """
 
 
-def _perguntar(destino: Path, sem: tuple[str, ...] = ()) -> dict:
+PERGUNTA_DO_PINO = """
+import json, os, sys
+sys.prefix = os.path.join(os.environ["LIB"], "sem-prefixo")
+sys.path.insert(0, os.environ["LIB"])
+from hefesto_dualsense4unix.integrations import proton_pin
+conf = proton_pin.default_pin_conf_path()
+print(json.dumps({"pino_conf": str(conf.resolve()) if conf is not None else None}))
+"""
+
+
+def _perguntar(destino: Path, sem: tuple[str, ...] = (), pergunta: str = PERGUNTA) -> dict:
     ambiente = _montar_prefixo(destino, sem)
     feito = subprocess.run(
-        [sys.executable, "-I", "-c", PERGUNTA], env=ambiente, capture_output=True, text=True,
+        [sys.executable, "-I", "-c", pergunta], env=ambiente, capture_output=True, text=True,
         timeout=120, check=False, cwd=destino / "home",
     )
     assert feito.returncode == 0, feito.stderr[-2000:]
@@ -276,3 +286,142 @@ def test_tabela_presente_sem_receita_valida_nao_diz_que_veio_sem_nada(tmp_path, 
     linhas = receitas_de_ambiente.linhas_do_doctor(tabela=tabela)
     assert linhas[0][0] == "[WARN]"
     assert "não se leem" in linhas[0][1]
+
+
+def test_instalado_so_com_o_shared_data_o_pino_do_proton_se_acha_no_share(tmp_path):
+    """D-2611-O-PINO-DO-PROTON-SE-ACHA-EM-TODA-INSTALACAO: fora do clone, o `proton-pin.conf` é o
+    do `share/`, e sem ele a resposta é «não há», nunca um caminho de fora do prefixo."""
+    achado = _perguntar(tmp_path / "com", pergunta=PERGUNTA_DO_PINO)["pino_conf"]
+    esperado = tmp_path / "com" / "share" / "hefesto-dualsense4unix" / "assets" / "proton-pin.conf"
+    assert achado == str(esperado.resolve()), achado
+    sem = _perguntar(
+        tmp_path / "sem", sem=("assets/proton-pin.conf",), pergunta=PERGUNTA_DO_PINO)["pino_conf"]
+    assert sem is None, sem
+
+
+EXCECOES_DOS_PAIS_DO_ARQUIVO: dict[str, str] = {
+    "interface/": "ferramenta do mockup e das fotos: roda do clone",
+    "utils/memoria_dos_controles.py": "acha a cópia do clone para listar rastros, não lê dado",
+    "utils/repo_files.py": "o resolvedor único: a primeira base é o clone",
+}
+
+
+def _sobe_pelos_pais_do_proprio_arquivo(arvore: ast.AST) -> list[int]:
+    """As linhas que sobem do `__file__` até a raiz do clone: `parents[3]` ou mais, ou um laço
+    sobre `.parents`."""
+    linhas: list[int] = []
+    for no in ast.walk(arvore):
+        if (
+            isinstance(no, ast.Subscript)
+            and isinstance(no.value, ast.Attribute)
+            and no.value.attr == "parents"
+            and "__file__" in ast.unparse(no.value)
+            and isinstance(no.slice, ast.Constant)
+            and isinstance(no.slice.value, int)
+            and no.slice.value >= 3
+        ):
+            linhas.append(no.lineno)
+        if (
+            isinstance(no, ast.For)
+            and isinstance(no.iter, ast.Attribute)
+            and no.iter.attr == "parents"
+        ):
+            linhas.append(no.lineno)
+        if isinstance(no, ast.Assign) and any(
+            isinstance(x, ast.Name) and x.id == "here" for x in no.targets
+        ) and "__file__" in ast.unparse(no.value):
+            linhas.append(no.lineno)
+    return linhas
+
+
+def test_nenhum_modulo_monta_caminho_de_dado_pelos_pais_do_proprio_arquivo():
+    """D-2611-O-PINO-DO-PROTON-SE-ACHA-EM-TODA-INSTALACAO: subir os pais do `__file__` só acha o
+    dado no clone. Fora do `utils/repo_files.py` só passa quem também pergunta ao `repo_files`
+    (o clone vira o último recurso) ou está justificado em EXCECOES_DOS_PAIS_DO_ARQUIVO."""
+    soltos: dict[str, list[int]] = {}
+    for arquivo in sorted(PACOTE.rglob("*.py")):
+        relativo = arquivo.relative_to(PACOTE).as_posix()
+        texto = arquivo.read_text("utf-8")
+        linhas = _sobe_pelos_pais_do_proprio_arquivo(ast.parse(texto))
+        if not linhas:
+            continue
+        if any(relativo.startswith(p) for p in EXCECOES_DOS_PAIS_DO_ARQUIVO):
+            continue
+        if "encontrar_arquivo_do_repo" in texto:
+            continue
+        soltos[relativo] = linhas
+    assert not soltos, (
+        "monta caminho de dado pelos pais do `__file__`, que só o clone tem: pergunte ao "
+        f"`utils/repo_files.py` ou justifique: {json.dumps(soltos, ensure_ascii=False)}"
+    )
+
+
+def test_a_regua_dos_pais_do_arquivo_enxerga_o_laco_que_o_pino_tinha():
+    """D-2611-O-PINO-DO-PROTON-SE-ACHA-EM-TODA-INSTALACAO: a régua não é cega ao desenho antigo."""
+    antigo = (
+        "from pathlib import Path\n"
+        "def f():\n"
+        "    here = Path(__file__).resolve()\n"
+        "    for parent in here.parents:\n"
+        "        pass\n"
+        "RAIZ = Path(__file__).resolve().parents[3]\n"
+    )
+    assert sorted(_sobe_pelos_pais_do_proprio_arquivo(ast.parse(antigo))) == [3, 4, 6]
+    assert _sobe_pelos_pais_do_proprio_arquivo(ast.parse(
+        "from pathlib import Path\nX = Path(__file__).resolve().parents[2]\n")) == []
+
+
+def _sem_clone(tmp_path, monkeypatch):
+    """O atualizador de uma instalação por pacote: nenhuma base tem o clone."""
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    vazio = tmp_path / "sem-clone"
+    vazio.mkdir()
+    monkeypatch.setattr(pa, "RAIZ_DO_REPOSITORIO", vazio)
+    monkeypatch.setattr(pa.repo_files, "bases_de_instalacao", lambda: (vazio,))
+    return pa
+
+
+def test_o_atualizador_sem_clone_diz_que_a_compilacao_da_peca_e_do_clone(tmp_path, monkeypatch):
+    """D-2611-O-PINO-DO-PROTON-SE-ACHA-EM-TODA-INSTALACAO: sem o `construir.sh` ao lado, o
+    atualizador não roda caminho que não existe e diz de quem é a compilação."""
+    pa = _sem_clone(tmp_path, monkeypatch)
+    rodados = []
+    monkeypatch.setattr(pa.shutil, "which", lambda _nome: "/usr/bin/compilador")
+    monkeypatch.setattr(pa, "_comando", lambda *a, **k: rodados.append(a) or (0, ""))
+    feita, porque = pa._compilar_a_gdk(tmp_path / "pasta", "xgameruntime.dll", "0" * 64)
+    assert feita is None
+    assert "é do clone do Hefesto" in porque, porque
+    assert not rodados, rodados
+
+
+def test_o_atualizador_sem_clone_baixa_a_peca_da_versao_do_pacote_instalado(tmp_path, monkeypatch):
+    """D-2611-O-PINO-DO-PROTON-SE-ACHA-EM-TODA-INSTALACAO: sem o `pyproject.toml` do clone, a
+    versão do endereço da peça é a do pacote instalado, não vazia."""
+    from importlib import metadata
+
+    from hefesto_dualsense4unix.integrations import receitas_de_ambiente as receitas
+
+    pa = _sem_clone(tmp_path, monkeypatch)
+    marca = pa.MARCA_DA_VERSAO_NO_PINO
+    pino = tmp_path / "pino.txt"
+    pino.write_text(
+        f"url=https://x/v{marca}/xgameruntime.dll\nsha256={'a' * 64}\n"
+        f"gameinput_url=https://x/v{marca}/gameinput.dll\ngameinput_sha256={'b' * 64}\n",
+        encoding="utf-8")
+    monkeypatch.setattr(receitas, "PINO_DA_PECA", pino)
+    monkeypatch.setattr(receitas, "pasta_da_peca", lambda home=None: tmp_path / "casa")
+    monkeypatch.setattr(pa, "_cache", lambda: tmp_path / "cache")
+    monkeypatch.setattr(metadata, "version", lambda _nome: "7.7.7")
+    baixados: list[str] = []
+
+    def baixar(url, destino, passo, sha256=""):
+        baixados.append(url)
+        raise pa.EtapaFalhouError("sem rede no ensaio")
+
+    monkeypatch.setattr(pa, "_baixar", baixar)
+    monkeypatch.setattr(pa, "_da_release_com_a_soma", lambda *_a: "")
+    monkeypatch.setattr(pa.shutil, "which", lambda _nome: None)
+    with pytest.raises(pa.EtapaFalhouError):
+        pa._baixar_a_gdk(pa.Passo(), {})
+    assert baixados == ["https://x/v7.7.7/xgameruntime.dll"], baixados

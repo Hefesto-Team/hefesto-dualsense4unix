@@ -168,13 +168,13 @@ def parse_pin_conf(text: str) -> dict[str, str]:
 
 
 def default_pin_conf_path() -> Path | None:
-    """Localiza assets/proton-pin.conf subindo a partir deste arquivo."""
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        candidate = parent / "assets" / "proton-pin.conf"
-        if candidate.is_file():
-            return candidate
-    return None
+    """Localiza assets/proton-pin.conf onde ESTA instalação o pôs: o clone, o ``share/`` do
+    prefixo, o Flatpak ou o do usuário."""
+    try:
+        from ..utils.repo_files import encontrar_arquivo_do_repo
+    except ImportError:  # pragma: no cover
+        from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+    return encontrar_arquivo_do_repo("assets/proton-pin.conf")
 
 
 def e_raiz_de_steam(raiz: Path) -> bool:
