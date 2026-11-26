@@ -666,7 +666,9 @@ def comando_na_caixa(
     argv += ["--die-with-parent", "--new-session", "--chdir", str(codigo), "--", *comando]
     if propria:
         assert pasta is not None
-        return [*linha_do_pasta(pasta, manifesto, ocupada or ocupada_na_casa), "--", *argv]
+        so_a_casa = linha_da_rede_da_casa() if manifesto.rede == "local" else []
+        return [*linha_do_pasta(pasta, manifesto, ocupada or ocupada_na_casa), "--", *so_a_casa,
+                *argv]
     return argv
 
 
@@ -964,6 +966,46 @@ def linha_do_pasta(pasta: str, manifesto: Manifesto,
     return linha
 
 
+FAIXAS_DA_CASA = {
+    "4": ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"),
+    "6": ("fc00::/7", "fe80::/10"),
+}
+
+SO_A_REDE_DA_CASA = (
+    'if ! command -v ip >/dev/null 2>&1; then\n'
+    '  echo "rede:local pede o ip (iproute2); a extensão não liga." >&2; exit 1\n'
+    'fi\n'
+    'for v in 4 6; do\n'
+    '  gw=; dev=; antes=\n'
+    '  set -f\n'
+    '  for palavra in $(ip -"$v" route show default 2>/dev/null | head -n 1); do\n'
+    '    case "$antes" in via) gw=$palavra ;; dev) dev=$palavra ;; esac\n'
+    '    antes=$palavra\n'
+    '  done\n'
+    '  set +f\n'
+    '  ip -"$v" route flush table main 2>/dev/null || :\n'
+    '  if ip -"$v" route show table main 2>/dev/null | grep -q .; then\n'
+    '    echo "rede:local: as rotas de fora não saíram; a extensão não liga." >&2; exit 1\n'
+    '  fi\n'
+    '  [ -n "$gw" ] && [ -n "$dev" ] || continue\n'
+    '  if [ "$v" = 4 ]; then faixas="' + " ".join(FAIXAS_DA_CASA["4"]) + '"; '
+    'else faixas="' + " ".join(FAIXAS_DA_CASA["6"]) + '"; fi\n'
+    '  for faixa in $faixas; do\n'
+    '    ip -"$v" route add "$faixa" via "$gw" dev "$dev" onlink || exit 1\n'
+    '  done\n'
+    'done\n'
+    'exec "$@"\n'
+)
+
+
+def linha_da_rede_da_casa() -> list[str]:
+    """O que roda entre o ``pasta`` e o ``bwrap`` na caixa com ``rede:local``: tira toda rota do
+    espaço de rede da caixa e põe de volta só as :data:`FAIXAS_DA_CASA` (privadas e link-local),
+    pelo gateway que o ``pasta`` deu; sem ``ip``, ou com rota que não sai, a extensão não liga.
+    O ``bwrap`` abre depois, num espaço de usuário sem poder sobre a rede."""
+    return ["sh", "-c", SO_A_REDE_DA_CASA, "rede-da-casa"]
+
+
 A_REDE_INCLUI_A_MAQUINA = (
     "A rede da extensão inclui a internet e os serviços desta máquina, "
     "inclusive o controle pelo protocolo do DSX.")
@@ -1149,8 +1191,9 @@ def _as_portas_pelo_nome(lista: Sequence[Any]) -> str:
 def frase_da_rede(manifesto: Manifesto) -> str:
     """O que a rede do «sim» abre de fato.
 
-    Com o ``pasta``, a internet e, do ``127.0.0.1`` da casa, só as ``portas`` declaradas, pelo
-    nome de cada uma. Sem ele, a caixa fica no espaço de rede da casa, e a frase diz que a rede
+    Com o ``pasta``, a internet (só no ``rede:internet``: o ``rede:local`` alcança as
+    :data:`FAIXAS_DA_CASA`) e, do ``127.0.0.1`` da casa, só as ``portas`` declaradas, pelo nome
+    de cada uma. Sem ele, a caixa fica no espaço de rede da casa, e a frase diz que a rede
     inclui os serviços desta máquina: um espaço próprio sem as portas tirava das extensões a ponte
     que o jogo alcança e o app que a pessoa abriu na máquina (medido em 14/11/2026).
     """
@@ -1158,7 +1201,7 @@ def frase_da_rede(manifesto: Manifesto) -> str:
         return ""
     if pasta_da_caixa(manifesto) is None:
         return A_REDE_INCLUI_A_MAQUINA
-    frase = [A_REDE_INCLUI_A_INTERNET]
+    frase = [A_REDE_INCLUI_A_INTERNET] if manifesto.rede == "internet" else []
     portas = manifesto.portas
     if portas and portas.da_casa:
         frase.append(f"Desta máquina, a extensão alcança só: "
@@ -2417,6 +2460,7 @@ __all__ = [
     "ESPERA_DEPOIS_DO_SIGKILL_S",
     "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
+    "FAIXAS_DA_CASA",
     "FALTA_O_BWRAP",
     "FALTA_O_PROXY_DO_BLUETOOTH",
     "FILTRO_DO_BLUEZ",
@@ -2450,6 +2494,7 @@ __all__ = [
     "frase_dos_aparelhos",
     "hid_da_caixa",
     "irmaos_a_vista",
+    "linha_da_rede_da_casa",
     "linha_do_pasta",
     "mudar_por_dentro_da_caixa",
     "nome_no_sys",
