@@ -19,11 +19,22 @@ O QUE ESTA RÉGUA COBRA:
 4. **A SUÍTE NÃO FALA COM O RÁDIO DO USUÁRIO.** Esta é a régua do estrago do dia: o
    passo nasceu sem guarda e a primeira corrida de 457 testes derrubou os
    QUATRO DualSense da máquina de teste, ao vivo.
+5. **A porta de fuga é do teste que a pede (A-SUITE-NUNCA-HERDA-O-BARRAMENTO-REAL-DO-BLUEZ-01,
+   25/11/2026).** Medido: com a porta aberta por um teste, o fio que outro teste deixou vivo
+   chamava ``dono()``, abria o barramento real e o deixava no global ``_DONO``; o teste seguinte
+   recebia os controles de verdade. Agora só o fio do próprio teste vê a porta aberta, o dono
+   real nunca é entregue sob a suíte e o dono real que um caso abriu fecha com o caso.
+
+MORDIDAS: sem o fio principal em ``a_suite_esta_rodando``, os dois primeiros testes da porta
+reprovam; sem a recusa do dono real em ``dono()``, ``test_o_dono_real_herdado_nao_e_entregue_...``
+reprova; sem a fixture ``_o_dono_do_bluez_de_verdade_nao_atravessa``, o par de testes do dono
+aberto pela porta reprova no segundo.
 """
 
 from __future__ import annotations
 
 import sys
+import threading
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import bluez_dbus
@@ -155,3 +166,72 @@ def test_a_porta_de_fuga_existe_e_e_declarada(monkeypatch: Any) -> None:
     """Quem precisa medir o bus de verdade declara — e assume o rádio do usuário."""
     monkeypatch.setenv(radio.RADIO_DE_VERDADE_NA_SUITE, "1")
     assert bluez_dbus.a_suite_esta_rodando() is False
+
+
+def _dono_real_de_mentira(monkeypatch: Any) -> bluez_dbus.DonoVivo:
+    """Um dono cujo barramento é o ``BarramentoGio`` do sistema, sem abrir conexão nenhuma."""
+    barramento = bluez_dbus.BarramentoGio()
+    monkeypatch.setattr(bluez_dbus.BarramentoGio, "vivo", lambda self: True)
+    return bluez_dbus.DonoVivo(barramento)
+
+
+def test_o_fio_de_outro_teste_nao_ve_a_porta_aberta(monkeypatch: Any) -> None:
+    monkeypatch.setenv(radio.RADIO_DE_VERDADE_NA_SUITE, "1")
+    visto: list[bool] = []
+    fio = threading.Thread(target=lambda: visto.append(bluez_dbus.a_suite_esta_rodando()))
+    fio.start()
+    fio.join(5)
+    assert visto == [True], "o fio vazado viu o rádio aberto"
+    assert bluez_dbus.a_suite_esta_rodando() is False
+
+
+def test_o_fio_vazado_com_a_porta_aberta_nao_abre_o_barramento_real(monkeypatch: Any) -> None:
+    abriu: list[str] = []
+    monkeypatch.setattr(bluez_dbus, "_DONO", None)
+    monkeypatch.setattr(bluez_dbus, "_GIO_FALHOU_EM", None)
+
+    def _abrir() -> None:
+        abriu.append("abriu")
+
+    monkeypatch.setattr(bluez_dbus, "_ligar_o_dono_do_sistema", _abrir)
+    monkeypatch.setenv(radio.RADIO_DE_VERDADE_NA_SUITE, "1")
+    entregue: list[Any] = []
+    fio = threading.Thread(target=lambda: entregue.append(bluez_dbus.dono()))
+    fio.start()
+    fio.join(5)
+    assert abriu == [] and isinstance(entregue[0], bluez_dbus.PeloBusctl), (abriu, entregue)
+    bluez_dbus.dono()
+    assert abriu == ["abriu"], "a porta não abre para o próprio teste que a pediu"
+
+
+def test_o_dono_real_herdado_nao_e_entregue_sob_a_suite(monkeypatch: Any) -> None:
+    real = _dono_real_de_mentira(monkeypatch)
+    monkeypatch.setattr(bluez_dbus, "_DONO", real)
+    assert bluez_dbus.e_o_dono_de_verdade(real)
+    entregue = bluez_dbus.dono()
+    assert entregue is not real and isinstance(entregue, bluez_dbus.PeloBusctl)
+
+
+def test_o_dubles_que_se_diz_do_sistema_segue_sendo_entregue(monkeypatch: Any) -> None:
+    from tests.unit import bluez_de_mentira as bm
+
+    dubles = bluez_dbus.DonoVivo(bm.BarramentoDeMentira(e_do_sistema=True))
+    monkeypatch.setattr(bluez_dbus, "_DONO", dubles)
+    assert not bluez_dbus.e_o_dono_de_verdade(dubles)
+    assert bluez_dbus.dono() is dubles
+
+
+def test_o_dono_aberto_pela_porta_deixa_o_global_como_estava_1(monkeypatch: Any) -> None:
+    """Par com o seguinte: este deixa um dono real no global, sem desfazer, como o vazamento."""
+    assert bluez_dbus._DONO is None or not bluez_dbus.e_o_dono_de_verdade(bluez_dbus._DONO)
+    real = _dono_real_de_mentira(monkeypatch)
+    bluez_dbus._DONO = real
+    _DEIXADOS.append(real)
+
+
+def test_o_dono_aberto_pela_porta_deixa_o_global_como_estava_2() -> None:
+    assert _DEIXADOS, "o par só vale depois do primeiro"
+    assert not bluez_dbus.e_o_dono_de_verdade(bluez_dbus._DONO), "o dono real atravessou o caso"
+
+
+_DEIXADOS: list[Any] = []

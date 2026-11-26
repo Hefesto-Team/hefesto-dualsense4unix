@@ -2011,6 +2011,27 @@ def _nenhum_controle_de_fora_da_mesa_do_usuario_entra_no_coop(
 
 
 @pytest.fixture(autouse=True)
+def _o_dono_do_bluez_de_verdade_nao_atravessa() -> Iterator[None]:
+    """O dono vivo do barramento real que um caso abriu fecha com o caso.
+
+    A porta de fuga ``HEFESTO_RADIO_DE_VERDADE`` é do caso que a pede; o dono aberto no global
+    ``_DONO`` ficava para o caso seguinte, que listava os controles reais da máquina.
+    """
+    nome = "hefesto_dualsense4unix.integrations.bluez_dbus"
+    modulo = sys.modules.get(nome)
+    antes = getattr(modulo, "_DONO", None) if modulo else None
+    yield
+    modulo = sys.modules.get(nome)
+    if modulo is None:
+        return
+    depois = getattr(modulo, "_DONO", None)
+    if depois is not antes and modulo.e_o_dono_de_verdade(depois):
+        setattr(modulo, "_DONO", antes)  # noqa: B010
+        with contextlib.suppress(Exception):
+            depois.fechar()
+
+
+@pytest.fixture(autouse=True)
 def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
     """SINGLETON-QUE-ATRAVESSA-01 — o `identity._registry` morre com o caso."""
     _descartar_registro_de_identidade()

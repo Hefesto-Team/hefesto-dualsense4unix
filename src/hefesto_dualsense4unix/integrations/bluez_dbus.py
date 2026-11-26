@@ -146,15 +146,17 @@ RADIO_DE_VERDADE_NA_SUITE = "HEFESTO_RADIO_DE_VERDADE"
 def a_suite_esta_rodando() -> bool:
     """A suíte está no ar? Então nada daqui escreve no BlueZ da máquina, nem o lê.
 
-    É o sinal que ``gesto_de_reconexao`` usava sozinho desde 22/09/2026, quando
-    a primeira corrida de 457 testes chamou ``Disconnect`` e ``Connect`` nos
-    quatro DualSense, ao vivo. Agora ele guarda a BORDA: toda
-    escrita passa por :meth:`LeitorDoBluez.chamar` ou
-    :meth:`LeitorDoBluez.escrever_propriedade`, e as duas perguntam aqui.
+    Guarda a BORDA: toda escrita passa por :meth:`LeitorDoBluez.chamar` ou
+    :meth:`LeitorDoBluez.escrever_propriedade`, e as duas perguntam aqui. A porta de fuga
+    ``HEFESTO_RADIO_DE_VERDADE=1`` é do teste que a pede: só o fio principal, o do próprio
+    teste, a vê aberta; o fio que outro teste deixou vivo segue recusado.
     """
-    if os.environ.get(RADIO_DE_VERDADE_NA_SUITE) == "1":
+    na_suite = bool(os.environ.get("PYTEST_CURRENT_TEST")) or "pytest" in sys.modules
+    if os.environ.get(RADIO_DE_VERDADE_NA_SUITE) == "1" and (
+        not na_suite or threading.current_thread() is threading.main_thread()
+    ):
         return False
-    return bool(os.environ.get("PYTEST_CURRENT_TEST")) or "pytest" in sys.modules
+    return na_suite
 
 
 def _registrar(evento: str, *, nivel: str = "info", **campos: Any) -> None:
@@ -1972,14 +1974,22 @@ def _ligar_o_dono_do_sistema() -> DonoVivo | None:
     return vivo
 
 
+def e_o_dono_de_verdade(leitor: LeitorDoBluez | None) -> bool:
+    """O dono é o vivo do barramento de sistema real (não um dublê de teste)."""
+    barramento = getattr(leitor, "_barramento", None)
+    return isinstance(barramento, BarramentoGio) and barramento.e_do_sistema
+
+
 def dono() -> LeitorDoBluez:
     """O dono do BlueZ deste processo: o vivo quando o Gio alcança, o ``busctl`` quando não."""
     global _DONO, _GIO_FALHOU_EM
     with _TRANCA_DO_DONO:
         atual = _DONO
-        if atual is not None and atual.pode_perguntar():
+        sob_a_suite = a_suite_esta_rodando()
+        if (atual is not None and atual.pode_perguntar()
+                and not (sob_a_suite and e_o_dono_de_verdade(atual))):
             return atual
-        if a_suite_esta_rodando():
+        if sob_a_suite:
             return PeloBusctl()
         agora = time.monotonic()
         if _GIO_FALHOU_EM is None or agora - _GIO_FALHOU_EM >= TENTAR_O_GIO_DE_NOVO_S:
@@ -2051,6 +2061,7 @@ __all__ = [
     "como_booleano",
     "desembrulhar",
     "dono",
+    "e_o_dono_de_verdade",
     "endereco_do_aparelho",
     "enderecos_pelo_kernel",
     "hci_do_aparelho",
