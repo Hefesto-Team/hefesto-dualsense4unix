@@ -27,6 +27,8 @@ def daemon(tmp_config: Any, monkeypatch: pytest.MonkeyPatch) -> Daemon:
     d = Daemon(controller=FakeController())
     d.set_mouse_emulation = MagicMock(return_value=False)  # type: ignore[method-assign]
     d.set_gamepad_emulation = MagicMock(return_value=True)  # type: ignore[method-assign]
+    d.set_gamepad_emulation_desfecho = MagicMock(  # type: ignore[method-assign]
+        return_value="aplicado")
     return d
 
 
@@ -75,9 +77,9 @@ def test_native_restaura_gamepad_do_stash(
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
     daemon.set_native_mode(True, origin="manual")
     assert daemon._native_emu_stash["gamepad"] == [True, "xbox"]
-    daemon.set_gamepad_emulation.reset_mock()  # type: ignore[attr-defined]
+    daemon.set_gamepad_emulation_desfecho.reset_mock()  # type: ignore[attr-defined]
     daemon.set_native_mode(False, origin="manual")
-    daemon.set_gamepad_emulation.assert_called_with(  # type: ignore[attr-defined]
+    daemon.set_gamepad_emulation_desfecho.assert_called_with(  # type: ignore[attr-defined]
         True, "xbox", origin="profile", caminho=None
     )
 

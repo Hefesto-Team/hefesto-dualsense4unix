@@ -216,6 +216,7 @@ class _Mesa:
     def tique(self) -> None:
         estado = SimpleNamespace(raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128,
                                  l2_raw=0, r2_raw=0)
+        gp.andar_os_acionadores(self.daemon)
         gp.dispatch_gamepad(self.daemon, estado, frozenset())
         self.coop.forward_all()
 

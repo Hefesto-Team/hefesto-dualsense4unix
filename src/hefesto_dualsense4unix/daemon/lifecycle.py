@@ -1234,23 +1234,40 @@ class Daemon:
         zero_motors_on_mode_exit(self)
 
     def _restore_emulation_from_stash(self) -> None:
-        """Restaura a emulação capturada antes do Modo Nativo (FEAT-NATIVE-MODE-01)."""
+        """Restaura a emulação capturada antes do Modo Nativo (FEAT-NATIVE-MODE-01).
+
+        O pad ou o mouse que não volta se diz: ``warning`` com o desfecho e o contador
+        ``nativo.volta_falhou.<desfecho>``; a exceção vai ao dono dos passos (laço ``nativo``)
+        e conta ``nativo.volta_falhou.excecao``.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import DESFECHOS_EMULACAO_ATIVA
+
         stash = getattr(self, "_native_emu_stash", None) or {}
         g = stash.get("gamepad") or [False, None]
         m = stash.get("mouse") or [False, None, None]
+        passos = passos_do_daemon(self, "nativo")
         if g[0]:
-            with contextlib.suppress(Exception):
-                self.set_gamepad_emulation(
-                    True,
-                    g[1],
-                    origin="profile",
-                    caminho=_caminho_do_dono(self, "saida_do_modo_nativo"),
-                )
+            o_que = "pad"
+            desfecho = passos.passo("volta_do_pad", lambda: self.set_gamepad_emulation_desfecho(
+                True, g[1], origin="profile",
+                caminho=_caminho_do_dono(self, "saida_do_modo_nativo"),
+            ))
+            voltou = desfecho in DESFECHOS_EMULACAO_ATIVA
         elif m[0]:
-            with contextlib.suppress(Exception):
-                self.set_mouse_emulation(
-                    True, m[1], m[2], origin="profile"
-                )
+            o_que = "mouse"
+            desfecho = passos.passo("volta_do_mouse", lambda: self.set_mouse_emulation(
+                True, m[1], m[2], origin="profile"))
+            voltou = desfecho is True
+            desfecho = "falhou" if desfecho is False else desfecho
+        else:
+            return
+        if voltou:
+            return
+        if desfecho is _FALHOU:
+            self.store.bump("nativo.volta_falhou.excecao")
+            return
+        self.store.bump(f"nativo.volta_falhou.{desfecho}")
+        logger.warning("modo_nativo_a_emulacao_nao_voltou", o_que=o_que, desfecho=desfecho)
 
     def reload_config(self, new_config: DaemonConfig) -> None:
         """Aplica nova configuração em runtime sem reiniciar o daemon."""

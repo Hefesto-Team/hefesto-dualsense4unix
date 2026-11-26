@@ -802,7 +802,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "(True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1771`, "
+        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1788`, "
         "dentro de "
         "`set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço antigo, a linha 1300, caducou; "

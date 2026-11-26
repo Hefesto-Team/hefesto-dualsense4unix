@@ -327,7 +327,8 @@ def test_a_camada_desliga_sozinha_em_6_s_sem_gesto_e_o_ate_eu_desligar_fica() ->
         _toque_do_ps(cena)
         cena.solta(7.0)
         cena.segura(0.1, ("r2_btn",), r2=255)
-    assert curta.gestos == ["camada"], "passados 6 s sem gesto, o R2 sozinho é do jogo"
+    assert curta.gestos == ["camada", "camada"], "passados 6 s sem gesto, o R2 sozinho é do jogo"
+    assert [(g, v) for _de, g, v in curta.saiu] == [("camada", 1), ("camada", 0)]
     assert longa.gestos == ["camada", "sobe"], "«até eu desligar» não vence por tempo"
 
 

@@ -276,11 +276,11 @@ def test_a_mascara_do_perfil_atravessa_o_modo_nativo(
         *,
         origin: str = "manual",
         caminho: str | None = None,
-    ) -> bool:
+    ) -> str:
         pedidos.append((enabled, flavor))
-        return enabled
+        return "aplicado"
 
-    monkeypatch.setattr(daemon, "set_gamepad_emulation", _voltou)
+    monkeypatch.setattr(daemon, "set_gamepad_emulation_desfecho", _voltou)
     daemon.set_native_mode(False, reapply=False, restore_stash=True, origin="profile")
 
     assert pedidos == [(True, "dualsense")], (
