@@ -1,11 +1,13 @@
 """Paths XDG do Hefesto - DualSense4Unix, via `platformdirs`.
 
-Centraliza config / data / cache / runtime paths. `ensure_dir=True`
-cria o diretório se não existir.
+Centraliza config / data / cache / state / runtime paths. Com ``ensure=True`` cada uma nasce
+``0700``; a que já existia aberta fecha na primeira vez que o processo a pede.
 """
 from __future__ import annotations
 
+import contextlib
 import os
+import stat
 from pathlib import Path
 
 from platformdirs import PlatformDirs
@@ -38,25 +40,39 @@ def ipc_socket_name() -> str:
     return IPC_SOCKET_DEFAULT_NAME
 
 
-def config_dir(ensure: bool = False) -> Path:
-    p = Path(_DIRS.user_config_dir)
+MODO_DAS_PASTAS = 0o700
+_JA_CONFERIDAS: set[str] = set()
+
+
+def _do_produto(p: Path, ensure: bool) -> Path:
+    """A pasta do produto: nasce ``0700`` com ``ensure``; a que já existe com acesso de grupo ou
+    de outros fecha uma vez por processo (a subida do serviço e da janela)."""
     if ensure:
-        p.mkdir(parents=True, exist_ok=True)
+        p.mkdir(mode=MODO_DAS_PASTAS, parents=True, exist_ok=True)
+    chave = str(p)
+    if chave in _JA_CONFERIDAS:
+        return p
+    try:
+        modo = p.stat().st_mode
+    except OSError:
+        return p
+    _JA_CONFERIDAS.add(chave)
+    if stat.S_ISDIR(modo) and modo & 0o077:
+        with contextlib.suppress(OSError):
+            p.chmod(MODO_DAS_PASTAS)
     return p
+
+
+def config_dir(ensure: bool = False) -> Path:
+    return _do_produto(Path(_DIRS.user_config_dir), ensure)
 
 
 def data_dir(ensure: bool = False) -> Path:
-    p = Path(_DIRS.user_data_dir)
-    if ensure:
-        p.mkdir(parents=True, exist_ok=True)
-    return p
+    return _do_produto(Path(_DIRS.user_data_dir), ensure)
 
 
 def cache_dir(ensure: bool = False) -> Path:
-    p = Path(_DIRS.user_cache_dir)
-    if ensure:
-        p.mkdir(parents=True, exist_ok=True)
-    return p
+    return _do_produto(Path(_DIRS.user_cache_dir), ensure)
 
 
 def runtime_dir(ensure: bool = False) -> Path:
@@ -73,17 +89,19 @@ def runtime_dir(ensure: bool = False) -> Path:
     else:
         runtime = _DIRS.user_runtime_dir
         p = Path(runtime) if runtime else cache_dir() / "runtime"
-    if ensure:
-        p.mkdir(parents=True, exist_ok=True)
-    return p
+    return _do_produto(p, ensure)
 
 
 def state_dir(ensure: bool = False) -> Path:
     """XDG_STATE_HOME/hefesto-dualsense4unix (~/.local/state/... por default)."""
-    p = Path(_DIRS.user_state_dir)
-    if ensure:
-        p.mkdir(parents=True, exist_ok=True)
-    return p
+    return _do_produto(Path(_DIRS.user_state_dir), ensure)
+
+
+def fechar_as_pastas_do_produto() -> list[Path]:
+    """Confere de novo as cinco pastas do produto que existem (sem criar nenhuma), fechando a
+    aberta, e devolve as cinco."""
+    _JA_CONFERIDAS.clear()
+    return [f() for f in (config_dir, data_dir, cache_dir, state_dir, runtime_dir)]
 
 
 def launch_env_dir(ensure: bool = False) -> Path:
@@ -239,11 +257,13 @@ __all__ = [
     "IPC_SOCKET_DEFAULT_NAME",
     "IPC_SOCKET_ENV_VAR",
     "IPC_SOCKET_FAKE_NAME",
+    "MODO_DAS_PASTAS",
     "WIREPLUMBER_SISTEMA_ENV_VAR",
     "cache_dir",
     "config_dir",
     "data_dir",
     "fake_mode_enabled",
+    "fechar_as_pastas_do_produto",
     "ipc_socket_name",
     "ipc_socket_path",
     "launch_env_dir",
