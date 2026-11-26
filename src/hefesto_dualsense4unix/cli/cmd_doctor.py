@@ -701,10 +701,7 @@ def _pid_do_servico() -> int | None:
     from hefesto_dualsense4unix.daemon.main import single_instance_name
     from hefesto_dualsense4unix.utils import single_instance
 
-    try:
-        pid = single_instance._read_existing_pid(single_instance._pid_file(single_instance_name()))
-    except (OSError, ValueError):
-        return None
+    pid = single_instance._read_existing_pid(single_instance._pid_file(single_instance_name()))
     if pid is None or not single_instance.is_alive(pid):
         return None
     if not single_instance._is_hefesto_dualsense4unix_process(pid):

@@ -9,7 +9,6 @@ processo: é por ele que a instância única reconhece o serviço.
 
 from __future__ import annotations
 
-import contextlib
 import ctypes
 import os
 import re
@@ -19,6 +18,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 BYTES_DO_NOME = 15
 
@@ -33,7 +36,8 @@ def _carregar_o_prctl() -> Any:
     """O ``prctl`` da libc, ou ``None`` fora do Linux."""
     try:
         return ctypes.CDLL("libc.so.6", use_errno=True).prctl
-    except (OSError, AttributeError):
+    except (OSError, AttributeError) as exc:
+        logger.debug("nome_do_fio_sem_prctl", err=str(exc))
         return None
 
 
@@ -59,13 +63,11 @@ def nome_curto(nome: str) -> bytes:
 
 
 def dar_o_nome(nome: str) -> bool:
-    """Dá ao fio que chama o nome curto de ``nome`` no kernel. Nunca levanta."""
+    """Dá ao fio que chama o nome curto de ``nome`` no kernel; ``False`` sem ``prctl``."""
     prctl = _PRCTL
     if prctl is None:
         return False
-    with contextlib.suppress(Exception):
-        return int(prctl(_PR_SET_NAME, ctypes.c_char_p(nome_curto(nome)), 0, 0, 0)) == 0
-    return False
+    return int(prctl(_PR_SET_NAME, ctypes.c_char_p(nome_curto(nome)), 0, 0, 0)) == 0
 
 
 def instalar() -> bool:
@@ -78,7 +80,10 @@ def instalar() -> bool:
     original = threading.Thread._bootstrap_inner  # type: ignore[attr-defined]
 
     def _nascer_com_nome(fio: threading.Thread) -> None:
-        dar_o_nome(fio.name)
+        try:
+            dar_o_nome(fio.name)
+        except Exception as exc:
+            logger.debug("nome_do_fio_nao_pegou", fio=fio.name, err=str(exc))
         original(fio)
 
     _original = original
@@ -99,7 +104,8 @@ def nome_no_kernel(tid: int, pid: int | str = "self") -> str | None:
     """O ``comm`` do fio ``tid`` em ``/proc/<pid>/task``; ``None`` se não se lê."""
     try:
         return Path(f"/proc/{pid}/task/{tid}/comm").read_text(encoding="utf-8").strip()
-    except OSError:
+    except OSError as exc:
+        logger.debug("nome_do_fio_ilegivel", tid=tid, err=str(exc))
         return None
 
 
@@ -125,7 +131,8 @@ def _leitura_do_fio(pasta: Path) -> tuple[str, int, int] | None:
             if linha.startswith("voluntary_ctxt_switches:"):
                 voluntarias = int(linha.split()[1])
         return nome, tiques, voluntarias
-    except (OSError, ValueError, IndexError):
+    except (OSError, ValueError, IndexError) as exc:
+        logger.debug("fio_saiu_no_meio_da_leitura", fio=pasta.name, err=str(exc))
         return None
 
 
