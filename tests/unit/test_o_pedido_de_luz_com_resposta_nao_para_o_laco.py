@@ -96,16 +96,21 @@ def _handle(transporte: str, atraso: float, *, quebrado: bool = False) -> Simple
 
 
 class _Mesa:
-    def __init__(self, *, quebrados: tuple[bool, ...] = (False,) * 4) -> None:
+    def __init__(
+        self,
+        *,
+        quebrados: tuple[bool, ...] = (False,) * 4,
+        atrasos: tuple[float, ...] = ATRASOS,
+    ) -> None:
         self.ctl = bp.PyDualSenseController()
         self.handles = [
             _handle(t, a, quebrado=q)
-            for t, a, q in zip(TRANSPORTES, ATRASOS, quebrados, strict=True)
+            for t, a, q in zip(TRANSPORTES, atrasos, quebrados, strict=True)
         ]
         self.ctl._handles = dict(zip(MACS, self.handles, strict=True))
         self.nos = {
             mac: _NoDeLed(a, quebrado=q)
-            for mac, a, q in zip(MACS, ATRASOS, quebrados, strict=True)
+            for mac, a, q in zip(MACS, atrasos, quebrados, strict=True)
         }
         self.ctl._sysfs = dict(self.nos)
 
@@ -268,21 +273,26 @@ async def test_a_cor_que_nao_saiu_conta_o_erro_do_udp_e_a_resposta_do_ipc_nao_af
         mesa.fechar()
 
 
-def test_o_vigia_reafirma_os_controles_em_paralelo_fora_do_laco(mesa: _Mesa) -> None:
+def test_o_vigia_reafirma_os_controles_em_paralelo_fora_do_laco() -> None:
     """`reafirmar_barra_e_numero` (o vigia, que roda no pool) pede pela fila de cada controle e
-    espera todas juntas: P1 e P3 lentos custam um atraso, não a soma dos dois."""
+    espera todas juntas: P3 e P4 (rádio), lentos, custam um atraso, não a soma dos dois."""
+    mesa = _Mesa(atrasos=(0.5,) * 4)
 
     def _cronometrar(alvos: tuple[str, ...]) -> tuple[float, dict[str, bool]]:
         inicio = time.monotonic()
         resultado = mesa.ctl.reafirmar_barra_e_numero(alvos)
         return time.monotonic() - inicio, resultado
 
-    so_p1, _ = _cronometrar((MACS[0],))
-    so_p3, _ = _cronometrar((MACS[2],))
-    juntos, resultado = _cronometrar(MACS)
+    try:
+        so_p3, _ = _cronometrar((MACS[2],))
+        so_p4, _ = _cronometrar((MACS[3],))
+        juntos, resultado = _cronometrar((MACS[2], MACS[3]))
+    finally:
+        mesa.fechar()
     assert set(resultado.values()) == {True}, resultado
-    assert juntos < 0.75 * (so_p1 + so_p3), (
-        f"o vigia esperou {juntos:.2f} s pelos quatro, {so_p1:.2f} + {so_p3:.2f} s um a um: "
+    assert so_p3 > 0.3 and so_p4 > 0.3, "o dublê do rádio não dormiu: a régua não mede nada"
+    assert juntos < 0.75 * (so_p3 + so_p4), (
+        f"o vigia esperou {juntos:.2f} s por P3 e P4, {so_p3:.2f} + {so_p4:.2f} s um a um: "
         "as escritas foram em série"
     )
 

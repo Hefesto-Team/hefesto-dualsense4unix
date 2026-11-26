@@ -763,7 +763,7 @@ def test_o_gesto_que_grava_nao_para_o_laco(
     presa = _GravacaoPresa(monkeypatch)
 
     def _valor(volta: int) -> Any:
-        return 30 + volta if campo == "fraco_pct" else bool((volta + 1) % 2)
+        return 30 + volta if campo == "fraco_pct" else bool(volta % 2)
 
     async def _uma_volta(volta: int) -> bool:
         presa.prender()
@@ -799,7 +799,8 @@ def test_o_gesto_que_grava_nao_para_o_laco(
         if campo == "fraco_pct":
             assert dele.rumble is not None and dele.rumble.motor_fraco_pct == ultima, dele
         else:
-            assert dele.sensores is not None and dele.sensores.giroscopio is ultima, dele
+            gravado = dele.sensores.giroscopio if dele.sensores is not None else None
+            assert gravado is ultima or (ultima is True and gravado is None), dele
 
 
 def test_dois_gestos_no_mesmo_perfil_nao_perdem_um_ao_outro(

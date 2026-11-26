@@ -302,10 +302,14 @@ def test_o_hotplug_nao_traz_o_valor_da_extensao_e_a_troca_de_transporte_atravess
         assert (mesa.r2(2), mesa.cor(2)) == (IMPACTO, DANO), "a troca perdeu o que a extensão tem"
 
         desfechos: list[str] = []
-        soltar = mesa.backend.release_extension_output_for
-        monkeypatch.setattr(
-            mesa.backend, "release_extension_output_for",
-            lambda uniq, campos: desfechos.append(soltar(uniq, campos)) or desfechos[-1])
+        soltar = mesa.backend.release_extension_output_for_em_futuro
+
+        def anotar(uniq: str, campos: Any) -> Any:
+            futuro = soltar(uniq, campos)
+            futuro.add_done_callback(lambda feito: desfechos.append(feito.result()))
+            return futuro
+
+        monkeypatch.setattr(mesa.backend, "release_extension_output_for_em_futuro", anotar)
         await pedir("gatilho.set", {"uniq": UNIQS[2], "lado": "direito", "modo": "Off"})
         await pedir("luz.set", {"uniq": UNIQS[2], "rgb": [0, 0, 0]})
         await mesa.andar(1.0)
@@ -365,14 +369,15 @@ def test_quatro_no_radio_em_tres_adaptadores_o_cabo_no_meio_e_a_volta_pelo_camin
         await mesa.andar(0.5)
         assert [(mesa.r2(i), mesa.cor(i)) for i in range(4)] == [(IMPACTO, DANO)] * 4
         desfechos: dict[str, list[str]] = {}
-        soltar = backend.release_extension_output_for
+        soltar = backend.release_extension_output_for_em_futuro
 
-        def contar(uniq: str, campos: Any) -> str:
-            desfecho = soltar(uniq, campos)
-            desfechos.setdefault(uniq, []).append(desfecho)
-            return desfecho
+        def contar(uniq: str, campos: Any) -> Any:
+            futuro = soltar(uniq, campos)
+            futuro.add_done_callback(
+                lambda feito: desfechos.setdefault(uniq, []).append(feito.result()))
+            return futuro
 
-        monkeypatch.setattr(backend, "release_extension_output_for", contar)
+        monkeypatch.setattr(backend, "release_extension_output_for_em_futuro", contar)
 
         assert backend.iniciar_troca_de_transporte(PLANOS[2], motivo="o_cabo_chegou")
         sair(2)
