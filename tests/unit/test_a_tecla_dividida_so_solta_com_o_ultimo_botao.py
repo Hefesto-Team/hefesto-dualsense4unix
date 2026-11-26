@@ -119,8 +119,8 @@ def test_set_bindings_com_os_dois_apertados_solta_cada_tecla_uma_vez(fabrica: _F
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.set_bindings(dict(DEFAULT_BUTTON_BINDINGS))
-    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT"):
-        assert _de(g, tecla) == [1, 0], tecla
+    assert _de(g, "KEY_LEFTALT") == [1, 0]
+    assert _de(g, "KEY_LEFTSHIFT") == [1, 0, 1, 0], "o R1 retoca o Tab sem o Shift do L1"
     assert _de(g, "KEY_TAB") == [1, 0, 1, 0]
     assert dev._quem_segura == {}
     dev.dispatch(frozenset())
@@ -131,8 +131,8 @@ def test_parar_solta_cada_tecla_uma_vez(fabrica: _Fabrica) -> None:
     dev, g = fabrica()
     dev.dispatch(frozenset({"r1", "l1"}))
     dev.stop()
-    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT"):
-        assert _de(g, tecla) == [1, 0], tecla
+    assert _de(g, "KEY_LEFTALT") == [1, 0]
+    assert _de(g, "KEY_LEFTSHIFT") == [1, 0, 1, 0], "o R1 retoca o Tab sem o Shift do L1"
     assert _de(g, "KEY_TAB") == [1, 0, 1, 0]
 
 

@@ -15,7 +15,8 @@ O leitor é o `uinput` de mentira que grava `(tecla, valor)` na ordem em que o p
 tecla final é lida junto do estado do Shift naquele instante, pelo fluxo gravado.
 
 MORDIDAS: voltar a não reemitir a tecla segura (tirar o retoque do `_emit_sequence_press`),
-estender o retoque à tecla de um botão sem modificador e tratar o Shift como tecla final reprovam.
+estender o retoque à tecla de um botão sem modificador, tratar o Shift como tecla final e retocar
+com o Shift que só o outro botão pede reprovam.
 """
 from __future__ import annotations
 
@@ -100,6 +101,29 @@ def test_r1_de_pe_e_l1_tocado_duas_vezes_volta_duas_janelas(uinput: _Uinput) -> 
     assert _toques_do_tab_com_o_shift(uinput.saiu) == [False, True, True], uinput.saiu
     shift = [valor for tecla, valor in uinput.saiu if tecla == "KEY_LEFTSHIFT"]
     assert shift == [1, 0, 1, 0]
+
+
+def test_l1_de_pe_e_r1_tocado_duas_vezes_avanca_duas_janelas(uinput: _Uinput) -> None:
+    """O Tab do R1 desce sem o Shift do L1, e o Shift volta enquanto o L1 segue de pé.
+
+    MORDIDA: retocar a tecla final sem subir o modificador que só o outro botão pede (o R1
+    voltaria no seletor em vez de avançar).
+    """
+    teclado = _teclado()
+    teclado.dispatch(frozenset({"l1"}))
+    teclado.dispatch(frozenset({"l1", "r1"}))
+    teclado.dispatch(frozenset({"l1"}))
+    teclado.dispatch(frozenset({"l1", "r1"}))
+    teclado.dispatch(frozenset({"l1"}))
+    shift_antes_de_soltar = [v for t, v in uinput.saiu if t == "KEY_LEFTSHIFT"][-1]
+    teclado.dispatch(frozenset())
+    assert _toques_do_tab_com_o_shift(uinput.saiu) == [True, False, False], uinput.saiu
+    assert [v for t, v in uinput.saiu if t == "KEY_LEFTALT"] == [1, 0]
+    assert shift_antes_de_soltar == 1, "o Shift do L1 não voltou depois do toque do R1"
+    assert uinput.saiu[-1] == ("KEY_LEFTALT", 0)
+    for tecla in ("KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"):
+        valores = [v for t, v in uinput.saiu if t == tecla]
+        assert valores.count(1) == valores.count(0), (tecla, valores)
 
 
 def test_a_tecla_final_so_fica_solta_no_fim(uinput: _Uinput) -> None:

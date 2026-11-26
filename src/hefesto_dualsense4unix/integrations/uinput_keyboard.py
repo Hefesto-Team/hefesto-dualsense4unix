@@ -221,6 +221,26 @@ class UinputKeyboardDevice:
             ev = getattr(self._uinput_mod, key_name, None)
         return ev
 
+    def _retocar(self, ev: Any, seq: KeyBinding) -> None:
+        """Solta e aperta a tecla final já de pé, com os modificadores de `seq` e só eles.
+
+        O modificador que outro botão segura e `seq` não pede sobe durante o toque e volta
+        depois: o R1 tocado com o L1 de pé avança no seletor de janelas, em vez de voltar.
+        """
+        alheios = [
+            (nome, alheio) for nome in sorted(MODIFICADORES)
+            if nome not in seq and self._quem_segura.get(nome, 0)
+            and (alheio := self._evento(nome)) is not None
+        ]
+        for _nome, alheio in alheios:
+            self._device.emit(alheio, 0, syn=False)
+        self._device.emit(ev, 0)
+        self._device.emit(ev, 1, syn=False)
+        if alheios:
+            self._device.syn()
+            for _nome, alheio in alheios:
+                self._device.emit(alheio, 1, syn=False)
+
     def _emit_sequence_press(self, button: str) -> None:
         seq = self.bindings.get(button)
         if not seq:
@@ -240,8 +260,7 @@ class UinputKeyboardDevice:
             self._quem_segura[key_name] = seguram + 1
             if seguram:
                 if key_name == final:
-                    self._device.emit(ev, 0)
-                    self._device.emit(ev, 1, syn=False)
+                    self._retocar(ev, seq)
                     any_emitted = True
                 continue
             self._device.emit(ev, 1, syn=False)
