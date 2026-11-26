@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1329369,
+      "piso": 1330077,
       "por_item": {
-        "docs": 108048,
+        "docs": 108050,
         "scripts": 122925,
-        "src": 328732,
-        "tests": 769664
+        "src": 328934,
+        "tests": 770168
       },
-      "razao": "tamanho: +1288 linhas (1328081 -> 1329369), pagas por Origem: D-1911-O-DUPLO-CLIQUE-RENOMEIA-SEM-ATIVAR, D-1911-O-IMPORTADO-DE-NOME-REPETIDO-GANHA-NOME-PROPRIO, D-1911-O-NOME-QUE-NAO-SERVE-SE-RECUSA-ANTES-DE-RENOMEAR, D-1911-O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA; registrado no fecho, topo f73d5f6a3c73",
+      "razao": "tamanho: +708 linhas (1329369 -> 1330077), pagas por Origem: D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO, D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES, D-1911-O-ESTADO-SE-GRAVA-INTEIRO, D-1911-O-MODO-E-O-GATILHO-TEM-PADRAO-DO-COMPUTADOR; registrado no fecho, topo 106c09c922d3",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2619,10 +2619,16 @@
           "de": 1328081,
           "para": 1329369,
           "razao": "tamanho: +1288 linhas (1328081 -> 1329369), pagas por Origem: D-1911-O-DUPLO-CLIQUE-RENOMEIA-SEM-ATIVAR, D-1911-O-IMPORTADO-DE-NOME-REPETIDO-GANHA-NOME-PROPRIO, D-1911-O-NOME-QUE-NAO-SERVE-SE-RECUSA-ANTES-DE-RENOMEAR, D-1911-O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA; registrado no fecho, topo f73d5f6a3c73"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1329369,
+          "para": 1330077,
+          "razao": "tamanho: +708 linhas (1329369 -> 1330077), pagas por Origem: D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO, D-1911-A-MIRA-DO-CONTROLE-DE-FORA-TEM-DOIS-BOTOES, D-1911-O-ESTADO-SE-GRAVA-INTEIRO, D-1911-O-MODO-E-O-GATILHO-TEM-PADRAO-DO-COMPUTADOR; registrado no fecho, topo 106c09c922d3"
         }
       ],
       "unidade": "linhas",
-      "universo": 3713
+      "universo": 3715
     }
   }
 }
