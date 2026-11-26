@@ -100,7 +100,7 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
         )
 
     for numero in range(80, 130):
-        if Path(f"/tmp/.X11-unix/X{numero}").exists():
+        if Path(f"/tmp/.X11-unix/X{numero}").exists() or _trava_temporaria_abandonada(numero):
             continue
         proc = subprocess.Popen(
             [xvfb, f":{numero}", "-screen", "0", "1920x1080x24", "-nolisten", "tcp"],
@@ -157,3 +157,15 @@ def derrubar_tela_de_mentira() -> None:
     _XVFB = None
     if proc is not None:
         _encerrar(proc)
+
+
+_IDADE_DA_TRAVA_ABANDONADA_S = 10.0
+
+
+def _trava_temporaria_abandonada(numero: int) -> bool:
+    """A trava temporária do número é velha demais para ser de um ``Xvfb`` que está nascendo."""
+    try:
+        idade = time.time() - Path(f"/tmp/.tX{numero}-lock").stat().st_mtime
+    except OSError:
+        return False
+    return idade > _IDADE_DA_TRAVA_ABANDONADA_S

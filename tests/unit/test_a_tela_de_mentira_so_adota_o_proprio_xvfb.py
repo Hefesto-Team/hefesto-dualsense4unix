@@ -87,6 +87,22 @@ t._encerrar(proc)
 print(json.dumps({"adotou": adotou, "espera": espera}))
 """
 
+_TRAVA_ABANDONADA = r"""
+import json, os, sys, time
+from pathlib import Path
+os.makedirs("/tmp/.X11-unix", mode=0o1777, exist_ok=True)
+trava = Path("/tmp/.tX80-lock")
+trava.write_text("")
+velha = time.time() - float(sys.argv[1])
+os.utime(trava, (velha, velha))
+from hefesto_dualsense4unix.utils import tela_de_mentira as t
+inicio = time.monotonic()
+tela = t.garantir_tela_de_mentira(anunciar=False)
+espera = time.monotonic() - inicio
+t.derrubar_tela_de_mentira()
+print(json.dumps({"tela": tela, "espera": espera}))
+"""
+
 
 def _caixa() -> list[str]:
     if shutil.which("bwrap") is None:
@@ -235,3 +251,22 @@ def test_um_arquivo_comum_no_lugar_do_socket_nao_e_barramento(tmp_path: Path) ->
     (tmp_path / "bus").write_text("", encoding="utf-8")
     feito = _derrubar_a_tela(tmp_path, _SO_O_ENDERECO)
     assert (feito.returncode, feito.stdout.strip()) == (0, "disabled:"), feito.stderr[-400:]
+
+
+def test_a_trava_temporaria_abandonada_nao_custa_a_espera_inteira() -> None:
+    """A trava temporária vazia que um ``Xvfb`` morto deixou no ``:80`` segura por seis
+    segundos todo servidor que tenta o número (medido em 26/11/2026: oito travas de um
+    ``/tmp`` cheio custavam 15 s a dois de cada três portões de teste). MORDE: sem pular a
+    trava velha, a espera passa de cinco segundos antes de a tela ir para o ``:81``."""
+    medida = _correr(_TRAVA_ABANDONADA, "600")
+    assert medida["tela"] == ":81", medida
+    assert float(str(medida["espera"])) < 3.0, medida
+
+
+def test_a_trava_temporaria_de_agora_ainda_se_disputa() -> None:
+    """A trava de um servidor que está nascendo tem segundos de vida e não se pula: quem
+    decide o número é a disputa pelo lock. MORDE: pulando toda trava temporária, a espera
+    cai a zero e a corrida com o vizinho deixa de ser provada."""
+    medida = _correr(_TRAVA_ABANDONADA, "1")
+    assert medida["tela"] == ":81", medida
+    assert float(str(medida["espera"])) >= 3.0, medida
