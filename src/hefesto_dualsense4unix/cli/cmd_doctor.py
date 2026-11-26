@@ -843,11 +843,11 @@ def _rodar_o_doctor(
 
     rc = max(rc, _print_bloco_registro())
     rc = max(rc, _print_bloco_install())
-    rc = max(rc, _print_bloco_fios())
 
     linhas_do_daemon = asyncio.run(_daemon_checks())
     _bloco("daemon (via IPC)", linhas_do_daemon)
     rc = max(rc, _gravidade_das_linhas(linhas_do_daemon))
+    rc = max(rc, _print_bloco_fios())
     _entregar_o_json()
 
     if fix_safe and not como_json:

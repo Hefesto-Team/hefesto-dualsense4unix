@@ -260,7 +260,21 @@ def _tocador_no_cano_cheio(relogio: _Relogio) -> tuple[eh.TocadorDoRumble, threa
     tocador._sink = "s"
     fio = threading.Thread(target=tocador._tocar, args=("s",), daemon=True)
     fio.start()
+    assert _esperar(lambda: lancar.lancados), "o tocador não lançou o processo"
+    cano = lancar.lancados[-1].stdin
+
+    def ler_ate_o_primeiro_bloco() -> None:
+        os.set_blocking(cano.leitura, False)
+        while not tocador._vivo and cano.leitura >= 0:
+            try:
+                os.read(cano.leitura, 65536)
+            except (BlockingIOError, OSError):
+                time.sleep(0.001)
+
+    leitor = threading.Thread(target=ler_ate_o_primeiro_bloco, daemon=True)
+    leitor.start()
     assert _esperar(lambda: tocador._vivo), "o tocador nem chegou a escrever"
+    leitor.join(2.0)
     time.sleep(0.2)
     return tocador, fio
 

@@ -312,7 +312,7 @@ def test_o_tocador_ligado_a_outro_no_morre_e_fica_recusado() -> None:
     )
     try:
         tocador.tocar(_um_recorte(dura_s=0.02))
-        assert _esperar(lambda: tocador._recusado_ate > time.monotonic())
+        assert _esperar(lambda: tocador.recusado)
         assert _esperar(lambda: tocador._proc is None)
         tocador.tocar(_um_recorte(dura_s=0.02))
         time.sleep(0.2)
