@@ -295,7 +295,8 @@ class Selecoes:
     As operações são dicionários que a página executa: ``clicar`` (com o assento de quem
     apertou), ``escolha`` e ``trilho`` (um passo) e ``fechar``. Na lista de GESTO
     (:data:`LISTA_DE_GESTO`, primeira opção ``value=""``) o passo só ``marcar``, o X
-    ``entregar`` o ``change`` e o O devolve ao ``convite``.
+    ``entregar`` o ``change`` (só se a marcada não é a de antes) e sair sem o X (o O, ou o
+    dedo em outra caixa) ``desmarcar``: a lista volta a mostrar o que mostrava antes do passo.
     """
 
     _de: dict[str, _Selecao] = field(default_factory=dict)
@@ -343,7 +344,7 @@ class Selecoes:
                 if sel.dentro:
                     sel.dentro = False
                     if atual is not None and caixas[atual].tipo == LISTA_DE_GESTO:
-                        ops.append({"op": "convite", "endereco": caixas[atual].endereco})
+                        ops.append({"op": "desmarcar", "endereco": caixas[atual].endereco})
                 elif popup:
                     ops.append({"op": "fechar"})
                 continue
@@ -375,6 +376,8 @@ class Selecoes:
             else:
                 indice = vizinho(caixas, atual, ato.direcao)
             if indice is not None:
+                if sel.dentro and atual is not None and caixas[atual].tipo == LISTA_DE_GESTO:
+                    ops.append({"op": "desmarcar", "endereco": caixas[atual].endereco})
                 sel.endereco, sel.dentro = caixas[indice].endereco, False
         return ops
 

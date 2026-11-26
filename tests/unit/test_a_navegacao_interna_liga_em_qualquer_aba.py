@@ -372,11 +372,21 @@ def test_14_na_lista_de_gesto_o_passo_so_marca_e_o_x_entrega_uma_vez() -> None:
     assert sel.dentro(P1) is False, "o X que entrega devolve o direcional à tela"
 
 
-def test_14_na_lista_de_gesto_o_o_devolve_a_marcacao_ao_convite() -> None:
+def test_14_na_lista_de_gesto_o_o_desmarca() -> None:
     _, sel, aplicar = _gesto_de_lista(nav.LISTA_DE_GESTO)
     aplicar(nav.Ato("passo", uniq=P1, direcao="baixo"))
-    assert aplicar(nav.Ato("o", uniq=P1)) == [{"op": "convite", "endereco": "mover"}]
+    assert aplicar(nav.Ato("o", uniq=P1)) == [{"op": "desmarcar", "endereco": "mover"}]
     assert sel.dentro(P1) is False
+
+
+def test_14_o_dedo_que_sai_da_lista_de_gesto_desmarca() -> None:
+    """Sair da lista sem o X, pelo dedo, não deixa à vista uma opção que não se aplicou."""
+    caixas, sel, aplicar = _gesto_de_lista(nav.LISTA_DE_GESTO)
+    aplicar(nav.Ato("passo", uniq=P1, direcao="baixo"))
+    embaixo = caixas[1]
+    ops = aplicar(nav.Ato("dedo", uniq=P1, ponto=(embaixo.x + 5, embaixo.y + 5)))
+    assert ops == [{"op": "desmarcar", "endereco": "mover"}]
+    assert sel.de(P1) == "embaixo" and sel.dentro(P1) is False
 
 
 def test_14_na_lista_de_valor_cada_passo_segue_sendo_uma_escolha() -> None:
@@ -394,6 +404,9 @@ PAGINA_DAS_LISTAS = """<!doctype html><meta charset="utf-8"><body>
   <option value="b">B</option><option value="c">C</option></select>
 <select data-gesto="lugar" id="valor">
   <option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select>
+<select data-gesto="estilo" id="estilo">
+  <option value="" disabled>—</option><option>A</option><option selected>B</option>
+  <option>C</option></select>
 <script>
   window.mudancas = [];
   for (const s of document.querySelectorAll('select'))
@@ -433,7 +446,8 @@ def _tipos(pg: Any) -> dict[str, str]:
 
 
 def test_14_a_pagina_mede_a_lista_de_convite_como_lista_de_gesto(pagina_das_listas: Any) -> None:
-    assert _tipos(pagina_das_listas) == {"mover": nav.LISTA_DE_GESTO, "lugar": "lista"}
+    assert _tipos(pagina_das_listas) == {"mover": nav.LISTA_DE_GESTO, "lugar": "lista",
+                                         "estilo": nav.LISTA_DE_GESTO}
 
 
 def test_14_na_pagina_dois_passos_e_um_x_mandam_um_change_com_a_segunda_opcao(
@@ -455,3 +469,46 @@ def test_14_na_pagina_dois_passos_e_um_x_mandam_um_change_com_a_segunda_opcao(
                          pref_de={P1: "p1"}, popup=False)
     pg.evaluate("(ops) => window.__hefNav.aplicar(ops, [])", feitos)
     assert pg.evaluate("window.mudancas") == ["convite=b"]
+
+
+def _percorrer(pg: Any, gesto: str, *atos: nav.Ato) -> None:
+    endereco = next(c["endereco"] for c in _leiaute(pg)["caixas"] if f"|{gesto}|" in c["endereco"])
+    caixas = [nav.Caixa(endereco, 0, 0, 10, 10, tipo=nav.LISTA_DE_GESTO),
+              nav.Caixa("fora", 0, 100, 10, 10)]
+    sel = nav.Selecoes()
+    sel.aplicar([nav.Ato("passo", uniq=P1, direcao="cima")], lambda _u: caixas,
+                pref_de={P1: "p1"}, popup=False)
+    for ato in atos:
+        feitos = sel.aplicar([ato], lambda _u: caixas, pref_de={P1: "p1"}, popup=False)
+        pg.evaluate("(ops) => window.__hefNav.aplicar(ops, [])", feitos)
+
+
+def _mostra(pg: Any, id_: str) -> str:
+    return str(pg.evaluate(f"document.getElementById('{id_}').selectedOptions[0].textContent"))
+
+
+def test_14_o_o_volta_a_lista_de_gesto_para_a_opcao_de_antes(pagina_das_listas: Any) -> None:
+    """Com um valor escolhido, entrar e sair pelo O (com ou sem passo) não mostra o «—»: a
+    lista volta ao que mostrava, e nada se manda."""
+    pg = pagina_das_listas
+    x, o = nav.Ato("x", uniq=P1), nav.Ato("o", uniq=P1)
+    baixo = nav.Ato("passo", uniq=P1, direcao="baixo")
+    _percorrer(pg, "estilo", x, o)
+    assert _mostra(pg, "estilo") == "B"
+    _percorrer(pg, "estilo", x, baixo, o)
+    assert _mostra(pg, "estilo") == "B"
+    _percorrer(pg, "estilo", x, baixo, nav.Ato("dedo", uniq=P1, ponto=(5.0, 105.0)))
+    assert _mostra(pg, "estilo") == "B", "o dedo que saiu deixou à vista a opção não aplicada"
+    assert pg.evaluate("window.mudancas") == []
+
+
+def test_14_o_x_entrega_so_a_opcao_que_mudou(pagina_das_listas: Any) -> None:
+    """Voltar à opção de antes e apertar o X não manda nada; a que mudou manda uma vez."""
+    pg = pagina_das_listas
+    x = nav.Ato("x", uniq=P1)
+    baixo = nav.Ato("passo", uniq=P1, direcao="baixo")
+    cima = nav.Ato("passo", uniq=P1, direcao="cima")
+    _percorrer(pg, "estilo", x, baixo, cima, x)
+    assert pg.evaluate("window.mudancas") == []
+    _percorrer(pg, "estilo", x, baixo, x)
+    assert pg.evaluate("window.mudancas") == ["estilo=C"]

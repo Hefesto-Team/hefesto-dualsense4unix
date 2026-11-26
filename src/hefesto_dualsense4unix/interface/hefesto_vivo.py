@@ -1225,12 +1225,16 @@ NAV_INSTALAR = r"""
           if(op.op === 'clicar'){
             if(window.__hef && op.pref) window.__hef.alvoPadrao = op.pref;
             el.click();
-          } else if(op.op === 'convite'){
-            if(el.selectedIndex !== 0) el.selectedIndex = 0;
+          } else if(op.op === 'desmarcar'){
+            if(el.__hefAntes !== undefined) el.selectedIndex = el.__hefAntes;
+            delete el.__hefAntes;
           } else if(op.op === 'entregar'){
-            const o = el.options[el.selectedIndex];
-            if(o && o.value !== '') el.dispatchEvent(new Event('change', {bubbles: true}));
+            const antes = el.__hefAntes;
+            delete el.__hefAntes;
+            if(antes !== undefined && el.selectedIndex !== antes)
+              el.dispatchEvent(new Event('change', {bubbles: true}));
           } else if(op.op === 'escolha' || op.op === 'marcar'){
+            if(op.op === 'marcar' && el.__hefAntes === undefined) el.__hefAntes = el.selectedIndex;
             const n = el.options.length;
             const escolhivel = function(o){
               return !o.disabled && !o.hidden &&
