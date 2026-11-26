@@ -233,6 +233,58 @@ async def test_o_led_da_extensao_pelo_ipc_nao_para_o_laco_e_responde_o_que_saiu(
 
 
 @pytest.mark.asyncio
+async def test_a_cor_de_todos_pela_janela_nao_para_o_laco_e_chega_aos_quatro(
+    mesa: _Mesa,
+) -> None:
+    """O `led.set` sem `uniq` (o «Todos» da janela) registra a cor em cada controle e espera as
+    quatro escritas juntas pela fila de cada um: o laço segue com P1 (cabo) e P3 (rádio) lentos,
+    e a resposta diz os quatro.
+
+    MORDIDA: o `set_led` ou o `_registrar_em_todos` de volta ao fio do laço o param.
+    """
+    handlers = _Handlers(mesa.ctl)
+    handlers._uniqs_conectados = lambda: list(MACS)  # type: ignore[method-assign]
+    respostas: list[dict[str, Any]] = []
+
+    async def mandar(fim: float) -> None:
+        i = 0
+        while time.monotonic() < fim:
+            i += 1
+            respostas.append(await handlers._handle_led_set({"rgb": [i % 256, 3, 4]}))
+            await asyncio.sleep(1 / 60)
+
+    pior = await _medir_o_laco(mandar)
+    assert pior < TETO_DO_LACO_S, f"a luz parou o laço por {pior * 1000:.0f} ms"
+    assert respostas
+    assert all(sorted(r["aplicado_em"]) == sorted(MACS) for r in respostas), respostas[:2]
+
+
+@pytest.mark.asyncio
+async def test_o_registro_de_todos_espera_as_quatro_escritas_sem_parar_o_laco(
+    mesa: _Mesa,
+) -> None:
+    """O registro da cor de «Todos» em cada controle (`_registrar_em_todos`, também do número)
+    espera as quatro escritas juntas pela fila de cada uma: o laço segue com P1 e P3 lentos.
+
+    MORDIDA: o `apply_output_for` síncrono no `_registrar_em_todos` para o laço.
+    """
+    handlers = _Handlers(mesa.ctl)
+    handlers._uniqs_conectados = lambda: list(MACS)  # type: ignore[method-assign]
+    aplicados: list[list[str]] = []
+
+    async def mandar(fim: float) -> None:
+        i = 0
+        while time.monotonic() < fim:
+            i += 1
+            aplicados.append(await handlers._registrar_em_todos(led=(i % 256, 5, 6)))
+            await asyncio.sleep(1 / 60)
+
+    pior = await _medir_o_laco(mandar)
+    assert pior < TETO_DO_LACO_S, f"a luz parou o laço por {pior * 1000:.0f} ms"
+    assert aplicados and all(sorted(a) == sorted(MACS) for a in aplicados), aplicados[:2]
+
+
+@pytest.mark.asyncio
 async def test_o_soltar_da_extensao_espera_a_escrita_sem_parar_o_laco(mesa: _Mesa) -> None:
     """Soltar a cor da extensão devolve a do perfil pela fila, e o laço segue durante a escrita."""
     handlers = _Handlers(mesa.ctl)

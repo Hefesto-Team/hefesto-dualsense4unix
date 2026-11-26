@@ -956,9 +956,13 @@ class IpcHandlersMixin:
         ``<nome>_em_futuro`` do backend deixa a luz na fila do controle e o laço espera o
         `Future` da escrita. Backend sem a versão em futuro (dublê) responde na hora.
         O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01."""
+        from concurrent.futures import Future
+
         em_futuro = getattr(self.controller, f"{nome}_em_futuro", None)
         if callable(em_futuro):
-            return await asyncio.wrap_future(em_futuro(*args, **kwargs))
+            futuro = em_futuro(*args, **kwargs)
+            if isinstance(futuro, Future):
+                return await asyncio.wrap_future(futuro)
         return getattr(self.controller, nome)(*args, **kwargs)
 
     async def _escrever_na_extensao(
@@ -1042,10 +1046,13 @@ class IpcHandlersMixin:
                 alvos.append(uniq)
         return alvos
 
-    def _registrar_em_todos(
+    async def _registrar_em_todos(
         self, *, brilho_da_cor: float | None = None, **campos: Any
     ) -> list[str]:
-        """Registra ``campos`` na camada da USUÁRIA de CADA controle conectado."""
+        """Registra ``campos`` na camada da USUÁRIA de CADA controle conectado.
+
+        Cada escrita espera pela fila do controle do usuário, todas juntas e sem parar o laço
+        (O-PEDIDO-DE-LUZ-DO-UDP-E-DA-EXTENSAO-NAO-ESCREVE-NO-FIO-DO-LACO-01)."""
         apply_for = getattr(self.controller, "apply_output_for", None)
         if not callable(apply_for):
             return []
@@ -1064,25 +1071,24 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.core.led_control import DO_BROADCAST
 
         spec = OutputSpec(**campos)
-        aplicados: list[str] = []
-        for alvo in alvos:
+        extra: dict[str, Any] = {"procedencia_da_cor": DO_BROADCAST}
+        if brilho_da_cor is not None:
+            extra["brilho_da_cor"] = brilho_da_cor
+
+        async def _um(alvo: str) -> bool:
             try:
-                if brilho_da_cor is None:
-                    apply_for(alvo, spec, procedencia_da_cor=DO_BROADCAST)
-                else:
-                    apply_for(
-                        alvo, spec, procedencia_da_cor=DO_BROADCAST,
-                        brilho_da_cor=brilho_da_cor,
-                    )
+                await self._palavra_sem_parar_o_laco("apply_output_for", alvo, spec, **extra)
             except TypeError:
-                apply_for(alvo, spec)
+                await self._palavra_sem_parar_o_laco("apply_output_for", alvo, spec)
             except Exception as exc:
                 logger.warning(
                     "registrar_em_todos_falhou", uniq=alvo, err=str(exc)
                 )
-                continue
-            aplicados.append(alvo)
-        return aplicados
+                return False
+            return True
+
+        feitos = await asyncio.gather(*(_um(alvo) for alvo in alvos))
+        return [alvo for alvo, feito in zip(alvos, feitos, strict=True) if feito]
 
     def _destinos_do_broadcast(self) -> tuple[list[str], list[str]]:
         """``(aplicado_em, guardado_em)`` da rota CLÁSSICA — o pedido SEM ``uniq`` (conserto 1.4).
@@ -1268,8 +1274,10 @@ class IpcHandlersMixin:
                 resultado, str(params["uniq"])
             )
         else:
-            self.controller.set_led((r, g, b))
-            aplicado_em = self._registrar_em_todos(brilho_da_cor=brightness, led=(r, g, b))
+            await asyncio.to_thread(self.controller.set_led, (r, g, b))
+            aplicado_em = await self._registrar_em_todos(
+                brilho_da_cor=brightness, led=(r, g, b)
+            )
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
@@ -1297,8 +1305,8 @@ class IpcHandlersMixin:
                 resultado, str(params["uniq"])
             )
         else:
-            self.controller.set_player_leds(bits)
-            aplicado_em = self._registrar_em_todos(player_leds=bits)
+            await asyncio.to_thread(self.controller.set_player_leds, bits)
+            aplicado_em = await self._registrar_em_todos(player_leds=bits)
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
@@ -1362,16 +1370,20 @@ class IpcHandlersMixin:
             if callable(padrao):
                 padrao(spec)
             aplicado_em = []
-            apply_for = getattr(self.controller, "apply_output_for", None)
-            if callable(apply_for):
-                for alvo in self._uniqs_conectados():
-                    try:
-                        if apply_for(alvo, spec) == "escreveu":
-                            aplicado_em.append(alvo)
-                    except Exception as exc:
+            if callable(getattr(self.controller, "apply_output_for", None)):
+                alvos = self._uniqs_conectados()
+                ditas = await asyncio.gather(
+                    *(self._palavra_sem_parar_o_laco("apply_output_for", alvo, spec)
+                      for alvo in alvos),
+                    return_exceptions=True,
+                )
+                for alvo, palavra in zip(alvos, ditas, strict=True):
+                    if isinstance(palavra, Exception):
                         logger.warning(
-                            "brilho_das_luzes_em_todos_falhou", uniq=alvo, err=str(exc)
+                            "brilho_das_luzes_em_todos_falhou", uniq=alvo, err=str(palavra)
                         )
+                    elif palavra == "escreveu":
+                        aplicado_em.append(alvo)
         return {
             "status": "ok",
             "brilho": brilho,
