@@ -2025,7 +2025,7 @@ def _o_dono_do_bluez_de_verdade_nao_atravessa() -> Iterator[None]:
     if modulo is None:
         return
     depois = getattr(modulo, "_DONO", None)
-    if depois is not antes and modulo.e_o_dono_de_verdade(depois):
+    if depois is not None and depois is not antes and modulo.e_o_dono_de_verdade(depois):
         setattr(modulo, "_DONO", antes)  # noqa: B010
         with contextlib.suppress(Exception):
             depois.fechar()
