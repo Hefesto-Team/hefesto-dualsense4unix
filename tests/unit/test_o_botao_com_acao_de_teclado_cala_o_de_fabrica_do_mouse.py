@@ -202,8 +202,10 @@ def test_o_teclado_que_liga_e_desliga_depois_da_tabela_e_acompanhado(
 def test_o_teclado_que_nasce_sem_a_tabela_nao_cala_o_de_fabrica(
     uinput: _UinputPorDevice, botao: str, com_teclado: bool,
 ) -> None:
-    """Ligar a Função do teclado cria um device novo, com o de fábrica dele e sem a tabela do
-    perfil: ninguém emite a ação escolhida, e o de fábrica do mouse segue (o botão não fica mudo).
+    """D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE: o mouse cede só ao teclado
+    que tem a tabela. Ligar a Função do teclado cria um device novo, com o de fábrica dele e sem a
+    tabela do perfil: ninguém emite a ação escolhida, e o de fábrica do mouse segue (o botão não
+    fica mudo).
     """
     mouse, _velho, de_pe = _dois_devices(uinput, {botao: "KEY_F11"}, com_teclado=com_teclado)
     novo = UinputKeyboardDevice()

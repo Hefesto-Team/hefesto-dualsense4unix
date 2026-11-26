@@ -72,6 +72,7 @@ def test_o_fim_da_sessao_de_um_controle_solta_so_o_limiar_dele(mesa: _Mesa, i: i
 
 
 def test_o_jogo_que_fecha_solta_o_limiar_de_todos(mesa: _Mesa) -> None:
+    """D-2511-O-LIMIAR-DO-DSX-VALE-SO-ENQUANTO-O-JOGO-ESTA-EM-CENA: o jogo que fecha solta todos."""
     mesa.daemon.appid_em_cena = JOGO
     gp._bater_os_eventos_do_jogo(mesa.daemon)
     assert _cortados(mesa) == list(UNIQS), "premissa: com o jogo em cena o limiar corta"
