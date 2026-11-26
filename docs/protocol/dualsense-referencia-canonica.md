@@ -784,7 +784,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:659-660` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:821-825`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1740-1742`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:90` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:872-876`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1740-1742`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:90` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: um ajuste acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
@@ -1742,14 +1742,14 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:319` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:46` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:947-982` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1362` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:298` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1348`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1348`, offset `_STATUS1_OFFSET = 53` em `:273` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
 > são de **detecção**: `HP_DETECT` **ligado** significa *"há fone"*. Com o byte
 > em `0x00`, o vpad não anunciava *"fone e microfone sempre plugados"* —
 > anunciava **"nada plugado"**, que é o oposto. O código diz isso com todas as
-> letras em `integrations/uhid_gamepad.py:243-245`: *"O valor neutro do byte
+> letras em `integrations/uhid_gamepad.py:244-246`: *"O valor neutro do byte
 > 53: nada plugado, nada mudo (...) é honesto, porque 'não sei' e 'não há'
 > levam o jogo à mesma decisão (usar o alto-falante do controle)"*.
 >
@@ -1780,7 +1780,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1373` `forward_battery`, saindo em `:1640`,
+> (`integrations/uhid_gamepad.py:1373` `forward_battery`, saindo em `:1679`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de

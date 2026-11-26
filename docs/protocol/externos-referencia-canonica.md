@@ -223,7 +223,7 @@ Por rádio o **único** discriminador entre o Pro genuíno e o clone é a OUI.
 > escritores.
 
 A regra vive em `core/linhagem_nintendo.py`; `NINTENDO_REAL_OUI`
-(`daemon/subsystems/external_identity.py:120`) e `scripts/bt_active_mode.sh` a
+(`daemon/subsystems/external_identity.py:121`) e `scripts/bt_active_mode.sh` a
 consomem, junto de `assets/82-nintendo-pro-nosniff.rules`; e a
 `assets/84-nintendo-pro-variant.rules`, que usa o `bcdDevice`, é escopada só ao
 cabo. GRAU: ALTA.

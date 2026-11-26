@@ -1390,7 +1390,7 @@ Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 
 E a parada do SDL tem discriminador próprio, `_e_a_parada_do_sdl`
-(`integrations/uhid_gamepad.py:271-293`), que exige `valid_flag0 == 0`,
+(`integrations/uhid_gamepad.py:272-294`), que exige `valid_flag0 == 0`,
 `valid_flag1 == 0` e motores zerados — exatamente o report que 6.3 descreve.
 
 **Conclusão desta subseção: o formato que o SDL emite para um Edge atravessa o
