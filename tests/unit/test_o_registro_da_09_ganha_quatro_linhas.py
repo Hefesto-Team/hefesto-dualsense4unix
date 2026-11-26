@@ -9,6 +9,10 @@ das margens e da entrelinha do registro, com a letra em 12 px. Medido no WebKit,
 A MORDIDA: devolver os espaços de antes (o vão de 6 px das colunas, o ``padding`` de 10 px do
 registro, a entrelinha 1.6 e as margens de 10 px da folha do piso) deixa cada caso com as linhas
 de antes, e a régua reprova.
+
+Nota de 26/11/2026: o desenho traz a linha das correções desfeitas, que só existe com uma cura da
+casa desfeita (A-ABA-SISTEMA-DIZ-QUANDO-A-ATUALIZACAO-DESFEZ-UMA-CURA-01). A rolagem e o fundo do
+registro se medem com a linha; as linhas do registro, no estado de todo dia, com as seis linhas.
 """
 from __future__ import annotations
 
@@ -31,14 +35,21 @@ LINHAS_ANTES = {
 MEDIR = r"""
 (function () {
   const log = document.querySelector('.registro > .log');
+  const q = document.querySelector('.quadro.estica').getBoundingClientRect();
+  const fundo = log.getBoundingClientRect().bottom, scrollH = document.documentElement.scrollHeight;
+  const cura = document.querySelector('[data-tema="correcoes-do-sistema"]');
+  if (cura) {
+    cura.remove();
+    const colunas = document.querySelectorAll('.status3 .col-lista');
+    const sobra = colunas[0].querySelectorAll('.saude');
+    if (sobra.length > 2) colunas[1].prepend(sobra[sobra.length - 1]);
+  }
   const s = getComputedStyle(log);
   const lh = parseFloat(s.lineHeight);
   const util = log.getBoundingClientRect().height - parseFloat(s.paddingTop)
     - parseFloat(s.paddingBottom) - parseFloat(s.borderTopWidth) - parseFloat(s.borderBottomWidth);
-  const q = document.querySelector('.quadro.estica').getBoundingClientRect();
   return JSON.stringify({linhas: Math.floor((util + 0.5) / lh), letra: parseFloat(s.fontSize),
-    fundo: log.getBoundingClientRect().bottom, quadro: q.bottom, innerH: innerHeight,
-    scrollH: document.documentElement.scrollHeight});
+    fundo: fundo, quadro: q.bottom, innerH: innerHeight, scrollH: scrollH});
 })()
 """
 

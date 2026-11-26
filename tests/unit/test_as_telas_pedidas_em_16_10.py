@@ -185,7 +185,8 @@ def test_as_notas_do_status_saem_em_tercos() -> None:
     faixa = doc[doc.index('<div class="status3">'):doc.index('<div class="sec-rot sr-avancadas">')]
     por_coluna = [len(re.findall(r'class="saude[" ]', c))
                   for c in faixa.split('class="col-lista"')[1:]]
-    assert por_coluna == [2, 2, 2], por_coluna
+    linhas = 6 + ('data-tema="correcoes-do-sistema"' in faixa)
+    assert por_coluna == [len(c) for c in a09.em_tres_colunas(list(range(linhas)))], por_coluna
 
 
 def test_o_parar_e_vermelho_e_o_restaurar_e_o_amarelo_do_padrao() -> None:
