@@ -47,6 +47,7 @@ def _nome_do_processo() -> str:
 
 
 def test_com_o_dono_o_fio_novo_le_o_proprio_nome_no_kernel(dono_instalado: None) -> None:
+    """D-2611-CADA-FIO-LEVA-O-NOME-AO-KERNEL."""
     assert _nome_lido_pelo_fio("tato-do-p1") == "tato-do-p1"
 
 

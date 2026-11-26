@@ -633,7 +633,8 @@ def _jogar_ate_ouvir(
 def test_o_cabo_que_sai_e_volta_o_destino_renasce_e_o_ouvido_volta_sem_reinicio(
     quem: int, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O-OUVIDO-DA-HAPTICA-VOLTA-SOZINHO-DEPOIS-DE-O-CABO-SAIR-E-VOLTAR-01.
+    """D-2611-O-OUVIDO-PEDE-O-NO-NOVO-DO-DESTINO:
+    O-OUVIDO-DA-HAPTICA-VOLTA-SOZINHO-DEPOIS-DE-O-CABO-SAIR-E-VOLTAR-01.
 
     MORDIDA: sem o ``_talvez_refazer_o_destino`` o ouvido segue surdo depois de três religadas.
     """

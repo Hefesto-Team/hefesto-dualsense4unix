@@ -281,6 +281,7 @@ def _fios_do_governador() -> list[threading.Thread]:
 
 
 def test_o_governador_sem_controle_no_radio_nao_tem_fio_nem_mede_sozinho() -> None:
+    """D-2611-O-GOVERNADOR-SO-TEM-FIO-COM-PONTE."""
     medidor = _Medidor()
     governador = _governador(medidor)
     governador.iniciar()

@@ -214,6 +214,7 @@ def test_a_recusa_do_tocador_chama_a_queda_pelo_motor() -> None:
 
 
 def test_o_processo_que_morre_recua_um_dois_quatro_ate_o_teto(relogio: _Relogio) -> None:
+    """D-2611-A-RECUSA-DO-TOCADOR-RECUA-EM-SEGUNDOS."""
     lancar = _Lancador(morto=True)
     tocador = eh.TocadorDoRumble(
         "m01", argv_de=lambda *_a: ["pw-cat"], lancar=lancar, conferir=_sem_conferir,
