@@ -107,6 +107,7 @@ def test_o_fim_da_carga_da_aba_pedida_devolve_o_pronto_pela_ponte_instalada(
     piloto.visitadas = [ABA_QUE_SAI]
     piloto._estado_vivo = SimpleNamespace(comecar=lambda: None)
     piloto._tique = lambda: True
+    piloto.agendado = True
     monkeypatch.setattr(hv, "_esquecer_a_pintura", lambda *_a, **_k: None)
     monkeypatch.setattr(hv.pacotes, "a_aba_abriu", lambda *_a, **_k: None)
 
