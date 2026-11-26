@@ -3024,7 +3024,8 @@ def _marcar_o_gadget_no_deposito(pad: UhidDualSense, gadget: _GadgetDoPad) -> No
         return
     try:
         marca = os.eventfd(0, os.EFD_CLOEXEC)
-    except (OSError, AttributeError):
+    except OSError as exc:
+        logger.info("pad_usb_marca_sem_eventfd", err=str(exc), player=pad.player)
         return
     try:
         if sd_notify.guardar_descritor(marca, nome):
@@ -3044,11 +3045,9 @@ def _o_gadget_da_graca(pad: UhidDualSense) -> _GadgetDoPad | None:
     """
     if pad._sem_gadget or pad.blueprint is None or pad._gadget_na_mao is not None:
         return None
-    try:
-        serial = pad_usb.serial_do_pad(pad.mac, pad.player)
-    except ValueError:
+    if len(pad_usb._so_hex(pad.mac)) != 12:
         return None
-    nome = _nome_do_gadget_no_deposito(serial)
+    nome = _nome_do_gadget_no_deposito(pad_usb.serial_do_pad(pad.mac, pad.player))
     marca = sd_notify.tomar_herdado(nome)
     if marca is None:
         return None
