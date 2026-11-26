@@ -33,7 +33,11 @@ def _no_chrome(pagina: pathlib.Path, js: str, largura: int = 1600):
 
 
 def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
-    """§1 — medido no navegador, na forma de 25/09/2026 (A-09-SISTEMA-EM-TRES-"""
+    """§1 — medido no navegador, na forma de 25/09/2026 (A-09-SISTEMA-EM-TRES-
+
+    Nota de 26/11/2026: com a linha da cura desfeita (sete linhas em 3, 2 e 2), a coluna que tem
+    uma linha a mais desce uma linha; as de mesmo número seguem fechando juntas.
+    """
     import onde
 
     r = _no_chrome(onde.pagina("09-sistema.html", publicado=True), """() => {
@@ -47,6 +51,8 @@ def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
               status: [...document.querySelectorAll('.status3 .col-lista')].map(c => Math.round(
                 c.getBoundingClientRect().bottom - [...c.querySelectorAll('.saude.longa')].reduce(
                   (s, l) => s + Math.max(0, l.getBoundingClientRect().height - 25.5), 0))),
+              linhas: [...document.querySelectorAll('.status3 .col-lista')].map(
+                c => c.querySelectorAll('.saude').length),
               log: log ? Math.round(log.getBoundingClientRect().height) : null,
               fundo_log: log ? Math.round(log.getBoundingClientRect().bottom) : null,
               fundo_quadro: corpo ? Math.round(corpo.getBoundingClientRect().bottom) : null};
@@ -55,8 +61,16 @@ def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
     assert len(r["colunas"]) == 4, r
     assert len(set(r["colunas"])) == 1, (
         f"as quatro colunas não fecham na mesma linha: {r['colunas']}")
-    assert len(r["status"]) == 3 and max(r["status"]) - min(r["status"]) <= 1, (
-        f"as três colunas do Status não fecham na mesma linha: {r['status']}")
+    assert len(r["status"]) == 3, r
+    menos = min(r["linhas"])
+    iguais = [b for b, n in zip(r["status"], r["linhas"], strict=True) if n == menos]
+    assert max(iguais) - min(iguais) <= 1, (
+        f"as colunas do Status com as mesmas linhas não fecham na mesma linha: {r}")
+    for fundo, n in zip(r["status"], r["linhas"], strict=True):
+        assert n - menos <= 1, r
+        if n > menos:
+            assert 20 <= fundo - max(iguais) <= 32, (
+                f"a coluna com a linha da cura desfeita desce mais de uma linha: {r}")
     assert r["log"] and r["log"] >= 120, f"o registro encolheu: {r['log']}px"
     assert r["fundo_quadro"] - r["fundo_log"] <= 20, (
         f"sobra {r['fundo_quadro'] - r['fundo_log']}px vazios embaixo do registro — "
