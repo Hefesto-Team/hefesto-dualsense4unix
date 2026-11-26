@@ -160,6 +160,7 @@ def _o_doctor_com(
         "_print_storm_block",
         "_print_bloco_contratos",
         "_print_bloco_proton_fixado",
+        "_print_bloco_receitas",
         "_print_bloco_entrada",
         "_print_bloco_registro",
         "_print_bloco_install",

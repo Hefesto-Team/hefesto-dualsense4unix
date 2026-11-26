@@ -446,6 +446,45 @@ if [[ -z "${REGRA_DO_NO_SRC}" ]]; then
     RULES=("${_restantes[@]}")
 fi
 
+_unit_do_pacote_correta() {
+    local dir unit_servico socket exec_do_broker
+    for dir in "$@"; do
+        unit_servico="${dir}/hefesto-hidraw-broker.service"
+        socket="${dir}/hefesto-hidraw-broker.socket"
+        [[ -f "${unit_servico}" && -f "${socket}" ]] || continue
+        if grep -q '__[A-Z_]*__' "${unit_servico}" "${socket}"; then
+            continue
+        fi
+        grep -q '^Environment=HEFESTO_BROKER_NO_NASCE_FECHADO=1$' "${unit_servico}" || continue
+        exec_do_broker="$(sed -n 's/^ExecStart=\([^ ]*\).*/\1/p' "${unit_servico}" | head -n 1)"
+        [[ -n "${exec_do_broker}" && -x "${exec_do_broker}" ]] || continue
+        printf '%s' "${dir}"
+        return 0
+    done
+    return 1
+}
+
+_render_unit_do_broker() {
+    local unit_modelo="$1" socket_modelo="$2" destino="$3" fechado="$4"
+    sed -e "s/__NO_NASCE_FECHADO__/${fechado}/" "${unit_modelo}" \
+        > "${destino}/hefesto-hidraw-broker.service" || return 1
+    cat "${socket_modelo}" > "${destino}/hefesto-hidraw-broker.socket" || return 1
+    if grep -q '__[A-Z_]*__' "${destino}/hefesto-hidraw-broker.service" \
+            "${destino}/hefesto-hidraw-broker.socket"; then
+        return 1
+    fi
+    return 0
+}
+
+UNIT_DO_PACOTE=""
+if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
+    UNIT_DO_PACOTE="$(_unit_do_pacote_correta /usr/lib/systemd/system /lib/systemd/system || true)"
+fi
+NO_NASCE_FECHADO=0
+if [[ -n "${REGRA_DO_NO_SRC}" && "${REGRA_DO_NO_SRC}" == "${RULES_SRC}/${REGRA_DO_NO}" ]]; then
+    NO_NASCE_FECHADO=1
+fi
+
 echo "As seguintes regras serão instaladas:"
 for regra in "${RULES[@]}"; do
     echo "  - ${regra}"
@@ -468,7 +507,9 @@ fi
 if [[ -f /etc/modprobe.d/hefesto-uhid.conf ]]; then
     echo "  - contrapressão do uhid rearmada a quente (o pedido --uhid-contrapressao já está em /etc/modprobe.d)"
 fi
-if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
+if [[ "${BROKER_INSTALL_OK}" -eq 1 && -n "${UNIT_DO_PACOTE}" ]]; then
+    echo "  - hefesto-hidraw-broker (a unit do pacote em ${UNIT_DO_PACOTE} é a que vale: só se liga, nada vai para /etc/systemd/system)"
+elif [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
     echo "  - hefesto-hidraw-broker (broker root hide-hidraw, BROKER-01; uid ${BROKER_SESSION_UID}, grupo ${BROKER_SESSION_GROUP})"
 elif [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" ]]; then
     echo "  - hefesto-hidraw-broker NÃO instalado (SESSION_UID resolveu 0/root — rode este script a partir da sessão da usuária)"
@@ -564,30 +605,27 @@ _build_install_cmd() {
         _v="$(_opcao_do_modprobe /etc/modprobe.d/hefesto-uhid.conf backpressure)" \
             && cmd+="printf '${_v}' > /sys/module/uhid/parameters/backpressure 2>/dev/null || true; "
     fi
-    if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
+    if [[ "${BROKER_INSTALL_OK}" -eq 1 && -n "${UNIT_DO_PACOTE}" ]]; then
+        cmd+="rm -f /etc/systemd/system/hefesto-hidraw-broker.service "
+        cmd+="/etc/systemd/system/hefesto-hidraw-broker.socket; "
+        cmd+="systemctl daemon-reload; "
+        cmd+="systemctl enable --now hefesto-hidraw-broker.socket; "
+    elif [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
         cmd+="install -Dm755 '${BROKER_BIN_SRC}/hidraw_broker.py' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker; "
+        cmd+="$(declare -f _render_unit_do_broker)"$'\n'
         cmd+="_hbr=\$(mktemp -d /tmp/hefesto-broker-render.XXXXXXXX) "
-        cmd+="&& sed 's/__SESSION_UID__/${BROKER_SESSION_UID}/' "
-        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
-        cmd+="> \"\${_hbr}/hefesto-hidraw-broker.service\" "
-        cmd+="&& sed 's/__SESSION_GROUP__/${BROKER_SESSION_GROUP}/' "
-        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' "
-        cmd+="> \"\${_hbr}/hefesto-hidraw-broker.socket\" "
-        cmd+="|| { echo 'ERRO: render do broker falhou — broker NAO instalado' >&2; "
+        cmd+="&& _render_unit_do_broker '${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
+        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' \"\${_hbr}\" '${NO_NASCE_FECHADO}' "
+        cmd+="|| { echo 'ERRO: render do broker falhou ou deixou marcador cru — broker NAO instalado' >&2; "
         cmd+="[ -n \"\${_hbr:-}\" ] && rm -rf \"\${_hbr}\"; _hbr=; }; "
         cmd+="if [ -n \"\${_hbr:-}\" ]; then "
-        cmd+="if grep -q '__SESSION_' \"\${_hbr}/hefesto-hidraw-broker.service\" "
-        cmd+="\"\${_hbr}/hefesto-hidraw-broker.socket\" 2>/dev/null; then "
-        cmd+="echo 'ERRO: render do broker deixou placeholder __SESSION_* — broker NAO instalado' >&2; "
-        cmd+="else "
         cmd+="install -Dm644 \"\${_hbr}/hefesto-hidraw-broker.service\" "
         cmd+="/etc/systemd/system/hefesto-hidraw-broker.service; "
         cmd+="install -Dm644 \"\${_hbr}/hefesto-hidraw-broker.socket\" "
         cmd+="/etc/systemd/system/hefesto-hidraw-broker.socket; "
         cmd+="systemctl daemon-reload; "
         cmd+="systemctl enable --now hefesto-hidraw-broker.socket; "
-        cmd+="fi; "
         cmd+="rm -rf \"\${_hbr}\"; "
         cmd+="fi; "
     fi

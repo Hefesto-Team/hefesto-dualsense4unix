@@ -361,7 +361,8 @@ fi
 # BROKER-01: a unit que o helper renderizava antes, com o uid GRAVADO, ficou em
 # /etc e vence a do rpm: sai, porque o broker novo nao precisa dessa unit.
 for _u in service socket; do
-    if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
+    if grep -qs -e '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
+            -e '__[A-Z_]*__' \
             "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
         rm -f "/etc/systemd/system/hefesto-hidraw-broker.${_u}"
     fi
