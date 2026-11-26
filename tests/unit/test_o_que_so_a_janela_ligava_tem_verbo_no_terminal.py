@@ -36,6 +36,13 @@ ISENTOS: dict[str, str] = {
     "led.player_brightness_set": _PELO_PERFIL,
     "sensor.set": _PELO_PERFIL,
     "profile.reaplicar": "a reaplicação do perfil ativo é o `profile activate`",
+    "perfil.ativacao.set": (
+        "o efeito mora no perfil (a seção `ativacao`), "  # (noqa-acento)
+        "e `profile apply --file` o leva inteiro"
+    ),
+    "perfil.analogicos.set": (
+        "o efeito mora no perfil (a seção `analogicos`), e `profile apply --file` o leva inteiro"
+    ),
     "motion.calibrate": _GESTO_DA_TELA + " (calibrar pede o controle parado, olhando a tela)",
     "motion.sinal": _GESTO_DA_TELA + " (o gesto guiado pede a tela e devolve pelo estado)",
     "motion.rampa": _GESTO_DA_TELA + " (a rampa pede o jogo aberto e quem olha a câmera)",

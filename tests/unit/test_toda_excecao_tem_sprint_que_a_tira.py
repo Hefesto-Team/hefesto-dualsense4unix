@@ -239,6 +239,11 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o aceite que a versão nova da extensão pede no ensaio (ref, permissões, aparelhos, "
         "alcances, aviso e preparo): dado de entrada do teste, e nenhum caso fica de fora de "
         "regra nenhuma"),
+    "tests/unit/test_os_dados_lidos_pelo_produto_viajam_nos_pacotes.py"
+    "::EXCECOES_DOS_PAIS_DO_ARQUIVO": (
+        "os três lugares que sobem ao clone por construção: as ferramentas do desenho e das fotos, "
+        "que só rodam do clone, o listador de rastros, que não lê dado, e o resolvedor único, cuja "
+        "primeira base é o clone; nenhum leitor de dado do produto instalado fica fora da regra"),
     "tests/unit/test_o_laco_do_daemon_nao_le_o_disco.py::_FORA_DO_EXT4": (
         "as leituras de /sys e /dev, que moram na memória do kernel e não no ext4: a régua "
         "pergunta pelo disco, e nenhum caso de disco fica fora da conta"),

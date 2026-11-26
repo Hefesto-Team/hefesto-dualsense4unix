@@ -343,6 +343,15 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "chega ao controle."
         )
     ),
+    "escolhas_de_fabrica": SecaoDireta(
+        razao=(
+            "D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: a marca, por seção densa "
+            "(`leds`, `rumble`, `mouse`), dos campos que o perfil do jogo escolheu com o valor de "
+            "fábrica. Quem a lê é a composição do padrão do computador "
+            "(`o_padrao_do_computador.escolhas_globais_do_jogo`); nada chega ao controle por esta "
+            "seção, só pelas seções que a marca qualifica."
+        )
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),

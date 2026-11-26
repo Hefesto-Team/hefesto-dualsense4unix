@@ -89,6 +89,7 @@ _METODOS = (
     "_pintar_por_hidraw_bt",
     "_levar_o_brilho_das_luzes",
     "_write_partial_output",
+    "_preparar_a_saida",
     "_apply_trigger",
     "_pode_escrever_player_leds",
     "set_led",
