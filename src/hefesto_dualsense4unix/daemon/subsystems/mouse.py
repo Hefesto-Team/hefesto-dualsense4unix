@@ -337,6 +337,13 @@ class TabelaNoJogo:
         except Exception as exc:
             logger.warning("tabela_no_jogo_dispatch_falhou", err=str(exc))
 
+    def so_a_saida(self, daemon: Any, state: Any, botoes_do_p1: frozenset[str]) -> None:
+        """Sob a supressão do usuário, o teclado da tabela recebe só a saída do modo jogo."""
+        if not self.ligada or not self._abrir(daemon):
+            return
+        self._teclado.dispatch(so_a_saida_do_modo_jogo(
+            botoes_de_todo_controle(daemon, state, botoes_do_p1), self._teclado.bindings))
+
     def _teclas_apertadas(
         self, daemon: Any, state: Any, outros: Any
     ) -> frozenset[str]:
@@ -526,6 +533,48 @@ def _suspenso_pelo_usuario(daemon: Any) -> bool:
         getattr(daemon, "_suppress_from_profile", False))
 
 
+def so_a_saida_do_modo_jogo(
+    botoes: frozenset[str], bindings: Any
+) -> frozenset[str]:
+    """Dos `botoes`, só os que a ligação de `bindings` faz «Sair do modo jogo».
+
+    O dono único de «o que passa sob a supressão que o usuário ligou»: o teclado do desktop
+    (`Daemon._dispatch_so_a_saida_do_modo_jogo`) e a saída do jogo (`despachar_no_jogo`) o
+    chamam, e toda outra tecla segue calada.
+    """
+    saida = (acoes.TOKEN_SAIR_DO_JOGO,)
+    ligacoes = bindings if isinstance(bindings, dict) else {}
+    return frozenset(
+        botao for botao in botoes if tuple(ligacoes.get(botao, ())) == saida)
+
+
+def entregar_so_a_saida_ao_teclado(
+    daemon: Any, teclado: Any, botoes: frozenset[str]
+) -> None:
+    """O teclado recebe, dos `botoes` (e das regiões do toque), só o de «Sair do modo jogo»."""
+    from hefesto_dualsense4unix.daemon.subsystems.keyboard import _combine_with_touchpad
+
+    teclado.dispatch(so_a_saida_do_modo_jogo(
+        _combine_with_touchpad(daemon, botoes), getattr(teclado, "bindings", None)))
+
+
+def botoes_de_todo_controle(
+    daemon: Any, state: Any, botoes_do_p1: frozenset[str]
+) -> frozenset[str]:
+    """Os botões do P1 (com o gatilho de `state`) somados aos dos demais controles, crus.
+
+    Sem filtro nem modo: é o que a saída do modo jogo lê sob a supressão, onde a tabela não age.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.poll import gatilhos_de_cada_controle
+
+    conjunto = botoes_com_os_gatilhos(
+        botoes_do_p1,
+        int(getattr(state, "l2_raw", 0) or 0), int(getattr(state, "r2_raw", 0) or 0))
+    for _uniq, (botoes, l2, r2) in gatilhos_de_cada_controle(daemon).items():
+        conjunto |= botoes_com_os_gatilhos(botoes, l2, r2)
+    return conjunto
+
+
 def despachar_no_jogo(
     daemon: Any,
     state: Any,
@@ -535,19 +584,16 @@ def despachar_no_jogo(
 ) -> None:
     """O que o laço faz com o gamepad virtual despachando, e a saída dele.
 
-    * Tabela ligada: age (mouse e teclado privados). O teclado do desktop
-      não despacha junto, para a mesma tecla não sair duas vezes.
-    * O teclado «Só dentro do jogo» ou «Sempre»: o teclado do desktop despacha daqui,
-      mesmo com a emulação suprimida pelo perfil do jogo.
-    * Ao sair do jogo (ou ao largar a chave) tudo é solto.
-    * «Suspender mouse e teclado» (o gesto, a interface, o IPC) cala os dois aqui
-      também: a supressão que o USUÁRIO ligou vale com o jogo aberto. A do perfil do jogo
-      não cala, porque o jogo aberto é justamente onde a chave e o «Só dentro» agem.
+    A tabela ligada age (mouse e teclado privados) e o teclado do desktop não despacha junto;
+    sem tabela, «Só dentro do jogo» e «Sempre» despacham o teclado do desktop. Ao sair do jogo
+    tudo é solto. A supressão que o USUÁRIO ligou cala os dois (a do perfil não) e deixa passar
+    só a saída do modo jogo (:func:`so_a_saida_do_modo_jogo`), de qualquer controle.
     """
     if no_jogo:
         _soltar_o_travado(getattr(daemon, "_mouse_device", None))
         soltar_as_teclas_do_analogico(daemon)
-    if no_jogo and _suspenso_pelo_usuario(daemon):
+    suspenso = no_jogo and _suspenso_pelo_usuario(daemon)
+    if suspenso:
         no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)
     so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False)) or bool(
@@ -562,11 +608,27 @@ def despachar_no_jogo(
             if so_dentro and teclado is not None:
                 with contextlib.suppress(Exception):
                     teclado.dispatch(frozenset())
+        if suspenso:
+            _so_a_saida_sob_a_supressao(daemon, state, emu_buttons, tabela, so_dentro, teclado)
         return
     if tabela is not None:
         tabela.tick(daemon, state, emu_buttons)
     elif so_dentro and teclado is not None:
         daemon._dispatch_keyboard_emulation(emu_buttons)
+
+
+def _so_a_saida_sob_a_supressao(
+    daemon: Any, state: Any, emu_buttons: frozenset[str], tabela: Any, so_dentro: bool,
+    teclado: Any,
+) -> None:
+    """Com o jogo aberto e a supressão do usuário, só a saída do modo jogo chega ao teclado."""
+    try:
+        if tabela is not None:
+            tabela.so_a_saida(daemon, state, emu_buttons)
+        elif so_dentro and teclado is not None:
+            entregar_so_a_saida_ao_teclado(daemon, teclado, emu_buttons)
+    except Exception as exc:
+        logger.warning("saida_do_modo_jogo_sob_a_supressao_falhou", err=str(exc))
 
 
 def mover_o_cursor_pelo_giro(daemon: DaemonProtocol, botoes_do_primario: frozenset[str]) -> None:

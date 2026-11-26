@@ -3394,17 +3394,12 @@ class Daemon:
         O teclado recebe o conjunto já filtrado: a borda dele aperta a saída uma vez, e toda outra
         tecla segue calada (e solta, se estava apertada).
         """
-        from hefesto_dualsense4unix.core.acoes_de_botao import TOKEN_SAIR_DO_JOGO
-        from hefesto_dualsense4unix.daemon.subsystems.keyboard import _combine_with_touchpad
+        from hefesto_dualsense4unix.daemon.subsystems.mouse import entregar_so_a_saida_ao_teclado
 
         device = self._keyboard_device
         if device is None:
             return
-        saida = (TOKEN_SAIR_DO_JOGO,)
-        device.dispatch(frozenset(
-            botao for botao in _combine_with_touchpad(self, buttons_pressed)
-            if tuple(device.bindings.get(botao, ())) == saida
-        ))
+        entregar_so_a_saida_ao_teclado(self, device, buttons_pressed)
 
     def _prime_keyboard_emulation(self, buttons_pressed: frozenset[str]) -> None:
         """Thin wrapper — semeia o edge-tracker do teclado sem apertar."""
