@@ -810,10 +810,16 @@ class ProfileManager:
             if relatorio is not None:
                 relatorio["button_actions"] = "ignorado_sem_device"
             return
+        teclado_provider = self.keyboard_device_provider
+
+        def _ha_teclado() -> bool:
+            return (teclado_provider() if teclado_provider is not None
+                    else self.keyboard_device) is not None
+
         try:
             device.set_button_actions(  # type: ignore[attr-defined]
-                do_mouse, calados)
-            teclado_provider = self.keyboard_device_provider
+                do_mouse, calados, do_teclado=frozenset(do_teclado),
+                quem_emite_o_teclado=_ha_teclado)
             teclado = (teclado_provider() if teclado_provider is not None
                        else self.keyboard_device)
             if teclado is not None:

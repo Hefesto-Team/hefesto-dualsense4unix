@@ -53,6 +53,7 @@ from __future__ import annotations
 import contextlib
 import math
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -289,6 +290,11 @@ class UinputMouseDevice:
     _andou: bool = False
     _ultimo_movimento: float = -math.inf
     _ultimo_dispatch: float = -math.inf
+    _escolha_do_mouse: dict[str, str] = field(default_factory=dict)
+    _mudos: frozenset[str] = field(default_factory=frozenset)
+    _cedidos: frozenset[str] = field(default_factory=frozenset)
+    _quem_emite_o_teclado: Callable[[], bool] | None = None
+    _teclado_emitia: bool = False
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível ou módulo ausente."""
@@ -378,6 +384,9 @@ class UinputMouseDevice:
         self,
         do_mouse: dict[str, str] | None,
         calados: frozenset[str] | None = None,
+        *,
+        do_teclado: Iterable[str] | None = None,
+        quem_emite_o_teclado: Callable[[], bool] | None = None,
     ) -> None:
         """Troca o que os botões fazem NESTE device. `None` volta ao de fábrica.
 
@@ -412,21 +421,57 @@ class UinputMouseDevice:
         self.soltar_o_que_segura()
         self._stick_carry_x = 0.0
         self._stick_carry_y = 0.0
+        self._quem_emite_o_teclado = quem_emite_o_teclado
+        self._cedidos = frozenset(do_teclado or ())
+        self._teclado_emitia = False
         if do_mouse is None:
+            self._escolha_do_mouse = {}
+            self._mudos = frozenset()
+            self._cedidos = frozenset()
             self._mapa_botoes = dict(BUTTON_TO_UINPUT)
             self._mapa_dpad = dict(DPAD_TO_KEY)
             self._mapa_tap = dict(EDGE_KEY_MAP)
             self._eixos_do_cursor = (EIXO_ESQUERDO,)
             self._eixos_da_rolagem = (EIXO_DIREITO,)
             return
-        mudos = frozenset(calados or ())
-        self._eixos_do_cursor = _eixos_que_fazem(TOKEN_CURSOR, do_mouse, mudos)
-        self._eixos_da_rolagem = _eixos_que_fazem(TOKEN_ROLAGEM, do_mouse, mudos)
+        self._escolha_do_mouse = dict(do_mouse)
+        self._mudos = frozenset(calados or ())
+        self._eixos_do_cursor = _eixos_que_fazem(TOKEN_CURSOR, do_mouse, self._mudos)
+        self._eixos_da_rolagem = _eixos_que_fazem(TOKEN_ROLAGEM, do_mouse, self._mudos)
         self._mapa_botoes = {b: t for b, t in do_mouse.items() if b not in EIXOS}
+        self._montar_o_dpad_e_o_tap(self._o_teclado_emite())
+
+    def _o_teclado_emite(self) -> bool:
+        """O teclado virtual está de pé para emitir as ações de teclado? Sem a pergunta, não.
+
+        D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE: o dono único da conta. Com
+        o teclado de pé, o d-pad e o tap de fábrica dos botões em `do_teclado` saem do mouse; sem
+        ele o de fábrica segue. Lida a cada `dispatch`, o jogo aberto passa `calados | do_teclado`.
+        """
+        if self._quem_emite_o_teclado is None:
+            return False
+        try:
+            return bool(self._quem_emite_o_teclado())
+        except Exception:
+            return False
+
+    def _montar_o_dpad_e_o_tap(self, teclado_emite: bool) -> None:
+        """O d-pad e o tap de fábrica, sem o do mouse, o calado e o que o teclado emite."""
+        fora = self._mudos | (self._cedidos if teclado_emite else frozenset())
         self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items()
-                           if b not in do_mouse and b not in mudos}
+                           if b not in self._escolha_do_mouse and b not in fora}
         self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
-                          if b not in do_mouse and b not in mudos}
+                          if b not in self._escolha_do_mouse and b not in fora}
+        self._teclado_emitia = teclado_emite
+
+    def _acompanhar_o_teclado(self) -> None:
+        """O teclado ligou ou desligou depois da tabela: o d-pad e o tap refazem a conta."""
+        if self._quem_emite_o_teclado is None or not self._cedidos:
+            return
+        emite = self._o_teclado_emite()
+        if emite != self._teclado_emitia:
+            self.soltar_o_que_segura()
+            self._montar_o_dpad_e_o_tap(emite)
 
     def soltar_o_que_segura(self) -> None:
         """Solta todo clique e toda seta que segura: a tabela trocou ou o laço o largou."""
@@ -471,6 +516,7 @@ class UinputMouseDevice:
             return
         if now is None:
             now = time.monotonic()
+        self._acompanhar_o_teclado()
 
         emulated = self._resolve_emulated_set(buttons, l2, r2)
         ajuste = self._ajuste
