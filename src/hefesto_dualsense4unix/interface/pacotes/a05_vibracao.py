@@ -841,7 +841,7 @@ def _devolver_ao_jogo(p: Any, uniq: str) -> None:
 
 @largada
 def _largar_o_teste(p: Any) -> None:
-    """Devolve os motores ao jogo. Chamado ao trocar de página e ao fim da janela."""
+    """Devolve os motores ao jogo. Chamado ao trocar de página, ao esconder e ao fim da janela."""
     for uniq in sorted(_EM_TESTE):
         parar_o_teste(uniq)
         _devolver_ao_jogo(p, uniq)

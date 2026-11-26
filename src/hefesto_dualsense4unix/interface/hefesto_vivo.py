@@ -2083,7 +2083,10 @@ class Piloto:
             raise
 
     def _a_janela_mudou(self, escondida: bool) -> None:
-        """A página disse se alguém pode vê-la. Escondida, a janela não trabalha."""
+        """A página disse se alguém pode vê-la. Escondida, a janela não trabalha, e esconder larga o teste.
+
+        A largada devolve ao jogo o que as abas seguravam (o teste da vibração, o padrão em repetição e
+        a háptica), por controle, cabo e rádio: com a janela escondida nada mais renova o teste."""
         if escondida == self._escondida:
             return
         self._escondida = escondida
@@ -2093,6 +2096,7 @@ class Piloto:
             self._escondida_desde = _agora(self)
             self._estado_vivo.pausar()
             _soltar_as_ondas()
+            pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
             print("[janela] escondida: o tique parou", file=sys.stderr)
             return
         self._geracao_na_volta = self._estado_vivo.ultimo()[2]
