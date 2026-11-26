@@ -11,6 +11,7 @@ a flag da Interna que o daemon grava cai no ``tmp`` da régua.
 from __future__ import annotations
 
 import inspect
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -346,3 +347,111 @@ def test_13_o_start_de_quem_navega_o_pc_guarda_o_perfil_tambem() -> None:
     atos = n.atos(pagina="02-controles.html", dez=DEZ, ativa=True, sem_selecao={P1},
                   toques={P1: _toques(start=1, r1=1), P2: _toques(start=1)})
     assert nav.Ato("salvar") in atos, "o Start do secundário deixou de guardar"
+
+
+def _gesto_de_lista(tipo: str) -> tuple[list[nav.Caixa], nav.Selecoes, Any]:
+    caixas = [nav.Caixa("mover", 100, 100, 80, 20, tipo=tipo),
+              nav.Caixa("embaixo", 100, 200, 80, 20)]
+    sel = nav.Selecoes()
+
+    def aplicar(*atos: nav.Ato) -> list[dict[str, Any]]:
+        return sel.aplicar(list(atos), lambda _u: caixas, pref_de={P1: "p1"}, popup=False)
+
+    aplicar(nav.Ato("passo", uniq=P1, direcao="cima"))
+    aplicar(nav.Ato("x", uniq=P1))
+    return caixas, sel, aplicar
+
+
+def test_14_na_lista_de_gesto_o_passo_so_marca_e_o_x_entrega_uma_vez() -> None:
+    """A-LISTA-QUE-FAZ-UM-GESTO-ANDA-PELO-CONTROLE-SEM-FAZER-A-CADA-PASSO-01: dois passos e um X
+    mandam UM `change` (a página recebe `entregar` uma vez), e os passos só `marcar`."""
+    _, sel, aplicar = _gesto_de_lista(nav.LISTA_DE_GESTO)
+    passos = [aplicar(nav.Ato("passo", uniq=P1, direcao="baixo")) for _ in range(2)]
+    assert passos == [[{"op": "marcar", "endereco": "mover", "passo": 1}]] * 2
+    assert aplicar(nav.Ato("x", uniq=P1)) == [{"op": "entregar", "endereco": "mover"}]
+    assert sel.dentro(P1) is False, "o X que entrega devolve o direcional à tela"
+
+
+def test_14_na_lista_de_gesto_o_o_devolve_a_marcacao_ao_convite() -> None:
+    _, sel, aplicar = _gesto_de_lista(nav.LISTA_DE_GESTO)
+    aplicar(nav.Ato("passo", uniq=P1, direcao="baixo"))
+    assert aplicar(nav.Ato("o", uniq=P1)) == [{"op": "convite", "endereco": "mover"}]
+    assert sel.dentro(P1) is False
+
+
+def test_14_na_lista_de_valor_cada_passo_segue_sendo_uma_escolha() -> None:
+    """Sem convite, a lista é de valor: um passo, um `change`, como sempre."""
+    _, _, aplicar = _gesto_de_lista("lista")
+    passos = [aplicar(nav.Ato("passo", uniq=P1, direcao="baixo")) for _ in range(2)]
+    assert passos == [[{"op": "escolha", "endereco": "mover", "passo": 1}]] * 2
+    assert aplicar(nav.Ato("x", uniq=P1)) == []
+    assert aplicar(nav.Ato("o", uniq=P1)) == []
+
+
+PAGINA_DAS_LISTAS = """<!doctype html><meta charset="utf-8"><body>
+<select data-gesto="mover" id="convite">
+  <option value="">Mover para</option><option value="a">A</option>
+  <option value="b">B</option><option value="c">C</option></select>
+<select data-gesto="lugar" id="valor">
+  <option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select>
+<script>
+  window.mudancas = [];
+  for (const s of document.querySelectorAll('select'))
+    s.addEventListener('change', () => window.mudancas.push(s.id + '=' + s.value));
+</script></body>"""
+
+CHROME = Path("/usr/bin/google-chrome")
+
+
+@pytest.fixture
+def pagina_das_listas(tmp_path: Path) -> Any:
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    playwright = pytest.importorskip("playwright.sync_api")
+    pytest.importorskip("gi", reason="o NAV_INSTALAR mora no piloto, que carrega o GTK")
+    arquivo = tmp_path / "listas.html"
+    arquivo.write_text(PAGINA_DAS_LISTAS, encoding="utf-8")
+    with playwright.sync_playwright() as pw:
+        motor = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = motor.new_page(viewport={"width": 800, "height": 600})
+            pg.goto(arquivo.as_uri())
+            from hefesto_dualsense4unix.interface import hefesto_vivo
+
+            pg.evaluate(hefesto_vivo.NAV_INSTALAR)
+            yield pg
+        finally:
+            motor.close()
+
+
+def _leiaute(pg: Any) -> dict[str, Any]:
+    return dict(json.loads(pg.evaluate("window.__hefNav.ler()")))
+
+
+def _tipos(pg: Any) -> dict[str, str]:
+    return {c["endereco"].split("|")[1]: c["tipo"] for c in _leiaute(pg)["caixas"]}
+
+
+def test_14_a_pagina_mede_a_lista_de_convite_como_lista_de_gesto(pagina_das_listas: Any) -> None:
+    assert _tipos(pagina_das_listas) == {"mover": nav.LISTA_DE_GESTO, "lugar": "lista"}
+
+
+def test_14_na_pagina_dois_passos_e_um_x_mandam_um_change_com_a_segunda_opcao(
+        pagina_das_listas: Any) -> None:
+    """O mesmo percurso do controle sobre a página real: o convite não troca a cada passo."""
+    pg = pagina_das_listas
+    endereco = next(c["endereco"] for c in _leiaute(pg)["caixas"] if "|mover|" in c["endereco"])
+    caixas = [nav.Caixa(endereco, 0, 0, 10, 10, tipo=nav.LISTA_DE_GESTO)]
+    sel = nav.Selecoes()
+    ops: list[dict[str, Any]] = []
+    for ato in (nav.Ato("passo", uniq=P1, direcao="cima"), nav.Ato("x", uniq=P1),
+                nav.Ato("passo", uniq=P1, direcao="baixo"),
+                nav.Ato("passo", uniq=P1, direcao="baixo")):
+        feitos = sel.aplicar([ato], lambda _u: caixas, pref_de={P1: "p1"}, popup=False)
+        pg.evaluate("(ops) => window.__hefNav.aplicar(ops, [])", feitos)
+        ops += feitos
+    assert pg.evaluate("window.mudancas") == [], f"um passo trocou a lista: {ops}"
+    feitos = sel.aplicar([nav.Ato("x", uniq=P1)], lambda _u: caixas,
+                         pref_de={P1: "p1"}, popup=False)
+    pg.evaluate("(ops) => window.__hefNav.aplicar(ops, [])", feitos)
+    assert pg.evaluate("window.mudancas") == ["convite=b"]

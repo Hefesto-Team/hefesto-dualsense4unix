@@ -1204,7 +1204,8 @@ NAV_INSTALAR = r"""
         caixas: lista().map(function(c){
           const r = c.el.getBoundingClientRect();
           const tag = c.el.tagName.toLowerCase();
-          const tipo = tag === 'select' ? 'lista'
+          const convite = tag === 'select' && !!c.el.options[0] && c.el.options[0].value === '';
+          const tipo = tag === 'select' ? (convite ? 'lista-de-gesto' : 'lista')
             : (tag === 'input' && c.el.type === 'range') ? 'trilho' : '';
           return {endereco: c.endereco, x: r.left, y: r.top, w: r.width, h: r.height,
                   tipo: tipo, dono: dono(c.el)};
@@ -1224,7 +1225,12 @@ NAV_INSTALAR = r"""
           if(op.op === 'clicar'){
             if(window.__hef && op.pref) window.__hef.alvoPadrao = op.pref;
             el.click();
-          } else if(op.op === 'escolha'){
+          } else if(op.op === 'convite'){
+            if(el.selectedIndex !== 0) el.selectedIndex = 0;
+          } else if(op.op === 'entregar'){
+            const o = el.options[el.selectedIndex];
+            if(o && o.value !== '') el.dispatchEvent(new Event('change', {bubbles: true}));
+          } else if(op.op === 'escolha' || op.op === 'marcar'){
             const n = el.options.length;
             const escolhivel = function(o){
               return !o.disabled && !o.hidden &&
@@ -1238,7 +1244,7 @@ NAV_INSTALAR = r"""
             if(n && !escolhivel(el.options[i])) i = el.selectedIndex;
             if(i !== el.selectedIndex){
               el.selectedIndex = i;
-              el.dispatchEvent(new Event('change', {bubbles: true}));
+              if(op.op === 'escolha') el.dispatchEvent(new Event('change', {bubbles: true}));
             }
           } else if(op.op === 'trilho'){
             if(op.passo > 0) el.stepUp(); else el.stepDown();

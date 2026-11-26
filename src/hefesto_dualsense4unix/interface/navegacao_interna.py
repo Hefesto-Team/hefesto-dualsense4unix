@@ -29,6 +29,8 @@ REPETICAO_DO_ANALOGICO_S = 0.25
 
 DIRECOES = ("cima", "baixo", "esquerda", "direita")
 
+LISTA_DE_GESTO = "lista-de-gesto"
+
 PRAZO_DO_DONO_S = 3.0
 
 
@@ -290,10 +292,10 @@ class _Selecao:
 class Selecoes:
     """A seleção de cada controle, pelo ``uniq``, e o que cada ato pede à página.
 
-    As operações devolvidas são dicionários que o ``__hef.nav`` da página
-    executa: ``clicar`` (com o assento de quem apertou, para a fita escolher
-    antes), ``escolha`` e ``trilho`` (um passo dentro de uma lista ou de um
-    trilho) e ``fechar`` (a pop-up aberta).
+    As operações são dicionários que a página executa: ``clicar`` (com o assento de quem
+    apertou), ``escolha`` e ``trilho`` (um passo) e ``fechar``. Na lista de GESTO
+    (:data:`LISTA_DE_GESTO`, primeira opção ``value=""``) o passo só ``marcar``, o X
+    ``entregar`` o ``change`` e o O devolve ao ``convite``.
     """
 
     _de: dict[str, _Selecao] = field(default_factory=dict)
@@ -340,6 +342,8 @@ class Selecoes:
             if ato.tipo == "o":
                 if sel.dentro:
                     sel.dentro = False
+                    if atual is not None and caixas[atual].tipo == LISTA_DE_GESTO:
+                        ops.append({"op": "convite", "endereco": caixas[atual].endereco})
                 elif popup:
                     ops.append({"op": "fechar"})
                 continue
@@ -349,7 +353,9 @@ class Selecoes:
                 caixa = caixas[atual]
                 if sel.dentro:
                     sel.dentro = False
-                elif caixa.tipo in ("lista", "trilho"):
+                    if caixa.tipo == LISTA_DE_GESTO:
+                        ops.append({"op": "entregar", "endereco": caixa.endereco})
+                elif caixa.tipo in ("lista", "trilho", LISTA_DE_GESTO):
                     sel.dentro = True
                 else:
                     ops.append({"op": "clicar", "endereco": caixa.endereco,
@@ -357,11 +363,11 @@ class Selecoes:
                 continue
             if sel.dentro and atual is not None and ato.tipo == "passo":
                 caixa = caixas[atual]
-                eixo = (("cima", "baixo") if caixa.tipo == "lista"
+                eixo = (("cima", "baixo") if caixa.tipo in ("lista", LISTA_DE_GESTO)
                         else ("esquerda", "direita"))
                 if ato.direcao in eixo:
-                    ops.append({"op": "escolha" if caixa.tipo == "lista" else "trilho",
-                                "endereco": caixa.endereco,
+                    op = {"lista": "escolha", LISTA_DE_GESTO: "marcar"}.get(caixa.tipo, "trilho")
+                    ops.append({"op": op, "endereco": caixa.endereco,
                                 "passo": 1 if ato.direcao == eixo[1] else -1})
                 continue
             if ato.tipo == "dedo" and ato.ponto is not None:
