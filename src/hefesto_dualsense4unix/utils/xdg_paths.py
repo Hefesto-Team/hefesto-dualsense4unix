@@ -105,9 +105,15 @@ def state_dir(ensure: bool = False) -> Path:
 
 def fechar_as_pastas_do_produto() -> list[Path]:
     """Confere de novo as cinco pastas do produto que existem (sem criar nenhuma), fechando a
-    aberta, e devolve as cinco. Roda na subida do serviço e da janela."""
+    aberta, e devolve as que se resolvem. Roda na subida do serviço e da janela."""
     _JA_CONFERIDAS.clear()
-    return [_fechar(f()) for f in (config_dir, data_dir, cache_dir, state_dir, runtime_dir)]
+    pastas: list[Path] = []
+    for pasta in (config_dir, data_dir, cache_dir, state_dir, runtime_dir):
+        try:
+            pastas.append(_fechar(pasta()))
+        except OSError:
+            continue
+    return pastas
 
 
 def launch_env_dir(ensure: bool = False) -> Path:

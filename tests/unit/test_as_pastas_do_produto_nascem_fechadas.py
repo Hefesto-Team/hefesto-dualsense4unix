@@ -8,7 +8,7 @@ uma vez por processo, com ``ensure`` e na subida do serviço e da janela. As có
 
 MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
 
-- o ``mkdir`` sem ``mode``: ``test_as_cinco_pastas_nascem_0700``;
+- o ``ensure`` sem ``mode`` e sem fechar: ``test_as_cinco_pastas_nascem_0700``;
 - sem o ``chmod`` da aberta: ``test_a_pasta_que_ja_existia_aberta_fecha_na_subida``;
 - ``escrever_inteiro`` trocado por ``write_bytes`` na cópia recusada:
   ``test_a_copia_do_documento_recusado_sai_0600``.
