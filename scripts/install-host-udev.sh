@@ -476,6 +476,7 @@ _render_unit_do_broker() {
     return 0
 }
 
+RENDER_DO_BROKER="$(declare -f _render_unit_do_broker)"
 UNIT_DO_PACOTE=""
 if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
     UNIT_DO_PACOTE="$(_unit_do_pacote_correta /usr/lib/systemd/system /lib/systemd/system || true)"
@@ -605,7 +606,7 @@ _build_install_cmd() {
         _v="$(_opcao_do_modprobe /etc/modprobe.d/hefesto-uhid.conf backpressure)" \
             && cmd+="printf '${_v}' > /sys/module/uhid/parameters/backpressure 2>/dev/null || true; "
     fi
-    if [[ "${BROKER_INSTALL_OK}" -eq 1 && -n "${UNIT_DO_PACOTE}" ]]; then
+    if [[ "${BROKER_INSTALL_OK}" -eq 1 && -n "${UNIT_DO_PACOTE:-}" ]]; then
         cmd+="rm -f /etc/systemd/system/hefesto-hidraw-broker.service "
         cmd+="/etc/systemd/system/hefesto-hidraw-broker.socket; "
         cmd+="systemctl daemon-reload; "
@@ -613,10 +614,10 @@ _build_install_cmd() {
     elif [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
         cmd+="install -Dm755 '${BROKER_BIN_SRC}/hidraw_broker.py' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker; "
-        cmd+="$(declare -f _render_unit_do_broker)"$'\n'
+        cmd+="${RENDER_DO_BROKER:-}"$'\n'
         cmd+="_hbr=\$(mktemp -d /tmp/hefesto-broker-render.XXXXXXXX) "
         cmd+="&& _render_unit_do_broker '${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
-        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' \"\${_hbr}\" '${NO_NASCE_FECHADO}' "
+        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' \"\${_hbr}\" '${NO_NASCE_FECHADO:-1}' "
         cmd+="|| { echo 'ERRO: render do broker falhou ou deixou marcador cru — broker NAO instalado' >&2; "
         cmd+="[ -n \"\${_hbr:-}\" ] && rm -rf \"\${_hbr}\"; _hbr=; }; "
         cmd+="if [ -n \"\${_hbr:-}\" ]; then "

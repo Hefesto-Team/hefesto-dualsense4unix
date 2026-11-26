@@ -40,10 +40,8 @@ def _do_repo(relpath: str) -> Path:
     return encontrar_arquivo_do_repo(relpath) or _RAIZ / relpath
 
 
-CAMINHO_DA_TABELA = "docs/data/receitas-de-ambiente.csv"
-CAMINHO_DO_PINO = "assets/gdk-runtime/pino.txt"
-TABELA = _do_repo(CAMINHO_DA_TABELA)
-PINO_DA_PECA = _do_repo(CAMINHO_DO_PINO)
+TABELA = _do_repo("docs/data/receitas-de-ambiente.csv")
+PINO_DA_PECA = _do_repo("assets/gdk-runtime/pino.txt")
 
 VARIAVEIS_DO_WRAPPER = frozenset({"WINEDLLOVERRIDES", "WINEDLLPATH"})
 
@@ -433,8 +431,6 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
 
 
 __all__ = [
-    "CAMINHO_DA_TABELA",
-    "CAMINHO_DO_PINO",
     "CARREGADORES_DE_MOD",
     "MODOS_DO_OVERRIDE",
     "NOME_DA_PECA_DO_HEFESTO",

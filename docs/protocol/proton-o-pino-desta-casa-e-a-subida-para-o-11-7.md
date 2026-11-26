@@ -122,7 +122,7 @@ Steam fechada.
 
 ### O passo `[11c]` do install
 
-`install.sh:3802-3855` (`PROTON_PIN_PY`), o `--ensure` do passo `11a`, e `install.sh:4023-4048` (`PROTON_PIN_PY`), o `--lock` do passo `11c`, **ligado por default**, opt-out `--no-proton-pin`.
+`install.sh:3802-3855` (`PROTON_PIN_PY`), o `--ensure` do passo `11a`, e `install.sh:4031-4056` (`PROTON_PIN_PY`), o `--lock` do passo `11c`, **ligado por default**, opt-out `--no-proton-pin`.
 Roda `--ensure`, lê o `rc`, e só então `--lock`:
 
 | rc do `--ensure` | o que o install diz |

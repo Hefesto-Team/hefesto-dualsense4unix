@@ -46,6 +46,8 @@ depends=(
     # ferramenta de BUILD. Paridade com o .deb, o .spec e o install.sh nativo.
     'librsvg'
     'bubblewrap'
+    'passt'
+    'xdg-dbus-proxy'
     # Deps Python no pacman (pacotes oficiais):
     'python-pydantic'
     'python-typer'

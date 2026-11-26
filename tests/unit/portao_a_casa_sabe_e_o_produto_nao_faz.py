@@ -35,7 +35,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "própria régua: a fonte era `install.sh` e o commit 304b5f39 do mesmo "
         "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
         "— as dez curas de HOST saíram do instalador e viraram "
-        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1082` (`camada_de_maquina`) passa a "
+        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1090` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
         "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:241`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
@@ -48,7 +48,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "`install.sh:3948` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`install.sh:3956` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:42`); o "
         "`scripts/doctor.sh:1706` (`check_sentinela_wrapper`, --censo) também o roda",
@@ -61,26 +61,26 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`scripts/disable_steam_input.sh:207` (`desligar`), e esse roteiro é "
         "o ExecStart "
         "de `assets/hefesto-steam-input-guard.service:27` (`__SCRIPT__`), que o "
-        "`install.sh:3943` (`__SCRIPT__`) troca pelo caminho dele",
+        "`install.sh:3951` (`__SCRIPT__`) troca pelo caminho dele",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "`install.sh:3980` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
+        "`install.sh:3988` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
         "`uninstall.sh:1791` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1910` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "`install.sh:3845` (`PROTON_PIN_PY`, com `--ensure`) e "
+        "`install.sh:3853` (`PROTON_PIN_PY`, com `--ensure`) e "
         "`uninstall.sh:1719` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3998` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "`install.sh:3937` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
+        "`install.sh:3945` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:68`) — o mesmo "
@@ -90,7 +90,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
-        "`install.sh:3256` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "`install.sh:3264` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:595` (`curar_audio_ks`) o roda a cada jogo lançado; "
         "`uninstall.sh:1830-1831` (`AUDIO_KS_PY`) o "
@@ -100,7 +100,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
         "`scripts/doctor.sh:3939` (`check_exame_da_mesa`) o roda — e o "
-        "`install.sh:4087` (`bash`) roda o doctor",
+        "`install.sh:4095` (`bash`) roda o doctor",
     ),
     "mods/por_dentro_da_caixa.py": (
         "src/hefesto_dualsense4unix/mods/supervisor.py",
@@ -658,7 +658,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "`loginctl` ele não atende ninguém. Nas distros do install os caminhos fixos "
         "`/usr/bin` e `/bin` bastam; o NixOS não tem nenhum dos dois, e quem LIGA a chave é o "
         "pacote Nix, que acrescenta o `Environment=` à unit com o `sed` do "
-        "`packaging/nix/package.nix:281` (`HEFESTO_BROKER_LOGINCTL`). Os testes também a escrevem, "
+        "`packaging/nix/package.nix:286` (`HEFESTO_BROKER_LOGINCTL`). Os testes também a escrevem, "
         "para simular o logind "
         "ausente, mas não são eles que a sustentam."
     ),
@@ -682,7 +682,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "doctor. É "
         "escolha de quem usa por definição. REMEDIDO em 03/10/2026: a mão existe e não "
         "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
-        "grava (`fix_wireplumber_default_source` em `install.sh:3768`). Ver "
+        "grava (`fix_wireplumber_default_source` em `install.sh:3776`). Ver "
         "`_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
@@ -816,7 +816,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "REMEDIDO em 03/10/2026, e a lacuna de 12/08 já estava curada desde "
         "26/08 (DROPIN-AMBIGUO-01): `install.sh --keep-dualsense-mic` grava a "
         "MARCA DO GESTO (`fix_wireplumber_default_source.sh --marcar-gesto-do-mic`, "
-        "`fix_wireplumber_default_source` em `install.sh:3768`), e as duas perguntas leem o mesmo "
+        "`fix_wireplumber_default_source` em `install.sh:3776`), e as duas perguntas leem o mesmo "
         "dono em cinco "
         "degraus — `system_warnings` pelo "
         "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:111` "
@@ -1566,7 +1566,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "02/11/2026 — o override do carregador de mod (o UE4SS) só com a chave «Memória» ligada "
         "(A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-01). O caminho se perde no ambiente que o "
         "daemon entrega ao wrapper "
-        "(`src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py:372` "
+        "(`src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py:370` "
         "(`ambiente_do_jogo`)), que não o pede, porque o pedido do carregador não chega a ele. "
         "A chave já chega ao lançamento (A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02); fecha "
         "quando o pedido do carregador chegar ao ambiente com a chave."
@@ -3484,7 +3484,7 @@ class TestOPortaoMorde:
         )
         assert portas_que_ligam("HEFESTO_BROKER_LOGINCTL") == ["empacotamento"], (
             "o detector não vê a linha que o "
-            "`packaging/nix/package.nix:281` (`HEFESTO_BROKER_LOGINCTL`) acrescenta à "
+            "`packaging/nix/package.nix:286` (`HEFESTO_BROKER_LOGINCTL`) acrescenta à "
             "unit do broker"
         )
 

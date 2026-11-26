@@ -50,6 +50,11 @@
 # default quando nao existe, entao um nixpkgs mais velho nao QUEBRA a
 # derivacao por causa de um acessorio. O `null` e tratado abaixo.
 , wvkbd ? null
+# A CAIXA DAS EXTENSOES: o `bwrap` abre a caixa, o `pasta` (do passt) lhe da rede propria e o
+# `xdg-dbus-proxy` filtra o barramento do Bluetooth. Vao no PATH do wrapper, depois do PATH de quem usa.
+, bubblewrap
+, passt
+, xdg-dbus-proxy
 }:
 
 python3Packages.buildPythonApplication rec {
@@ -396,6 +401,7 @@ python3Packages.buildPythonApplication rec {
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ libayatana-appindicator hidapi ]}"
       ${lib.optionalString (wvkbd != null)
         ''--suffix PATH : "${lib.makeBinPath [ wvkbd ]}"''}
+      --suffix PATH : "${lib.makeBinPath [ bubblewrap passt xdg-dbus-proxy ]}"
     )
   '';
 

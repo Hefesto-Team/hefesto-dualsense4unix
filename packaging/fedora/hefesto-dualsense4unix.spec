@@ -71,6 +71,8 @@ Requires:       python3-numpy
 Requires:       python3-jeepney
 Requires:       python3-cffi
 Requires:       bubblewrap
+Requires:       passt
+Requires:       xdg-dbus-proxy
 # pydualsense, hidapi-usb e python-uinput puxados via pip no %install (sem RPM
 # no Fedora): o hidapi-usb e CFFI (o cffi vem do RPM) e o python-uinput liga
 # na libudev (o rpm acha a dependencia pelo .so).

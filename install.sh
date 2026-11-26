@@ -583,6 +583,12 @@ _pkg_nome() {
         bubblewrap)
             _apt="bubblewrap";        _dnf="bubblewrap"
             _pacman="bubblewrap" ;;
+        passt)
+            _apt="passt";             _dnf="passt"
+            _pacman="passt" ;;
+        xdg-dbus-proxy)
+            _apt="xdg-dbus-proxy";    _dnf="xdg-dbus-proxy"
+            _pacman="xdg-dbus-proxy" ;;
     esac
     case "${_familia}" in
         apt)    printf '%s\n' "${_apt}" ;;
@@ -820,6 +826,8 @@ _DEPS_DE_SISTEMA=(
     "fontconfig|importante|cmd:fc-cache|a interface troca de fonte em silêncio (Space Grotesk e JetBrains Mono não entram)"
     "curl|importante|cmd:curl|as fontes da identidade visual não são baixadas"
     "bubblewrap|importante|cmd:bwrap|as extensões não abrem: falta a caixa que as separa do resto do computador"
+    "passt|importante|cmd:pasta|as extensões com rede alcançam os serviços deste computador"
+    "xdg-dbus-proxy|importante|cmd:xdg-dbus-proxy|a extensão com Bluetooth não abre"
 )
 
 _dep_presente() {
