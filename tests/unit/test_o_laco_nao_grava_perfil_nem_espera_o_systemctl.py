@@ -792,15 +792,17 @@ def test_o_gesto_que_grava_nao_para_o_laco(
         f"{chamada}: a gravação rodou no fio do laço")
     assert all(voltas), f"{chamada}: o status esperou a gravação em {voltas.count(False)} voltas"
     assert not presa.saiu_sozinho, f"{chamada}: o laço esperou a gravação terminar"
-    controles = loader.load_profile("Ensaio").controllers
+    controles = loader.load_profile("Ensaio").controllers or {}
     ultima = _valor(VOLTAS_SOB_CARGA - 1)
     for uniq in (_P1, _P2):
-        dele = controles[uniq.replace(":", "")]
+        dele = controles.get(uniq.replace(":", ""))
         if campo == "fraco_pct":
-            assert dele.rumble is not None and dele.rumble.motor_fraco_pct == ultima, dele
+            assert dele is not None and dele.rumble is not None, controles
+            assert dele.rumble.motor_fraco_pct == ultima, dele
         else:
-            gravado = dele.sensores.giroscopio if dele.sensores is not None else None
-            assert gravado is ultima or (ultima is True and gravado is None), dele
+            sensores = dele.sensores if dele is not None else None
+            gravado = sensores.giroscopio if sensores is not None else None
+            assert gravado is ultima or (ultima is True and gravado is None), controles
 
 
 def test_dois_gestos_no_mesmo_perfil_nao_perdem_um_ao_outro(

@@ -136,7 +136,8 @@ def _uinput_herdado(fd: int, nome: str) -> Any | None:
         from evdev import UInput
 
         uinput_c = importlib.import_module("evdev._uinput")
-    except (ImportError, OSError):
+    except (ImportError, OSError) as exc:
+        logger.warning("uinput_herdado_sem_evdev", err=str(exc))
         return None
     try:
         device: Any = UInput.__new__(UInput)
@@ -157,16 +158,11 @@ def _fechar_o_no(device: Any, no_deposito: str | None) -> None:
     depósito o segura até o systemd decidir (o `stop` o fecha, o reinício o devolve).
     """
     if no_deposito and sd_notify.esta_parando() and sd_notify.no_deposito(no_deposito):
-        dentro = getattr(device, "device", None)
-        if dentro is not None:
-            with contextlib.suppress(Exception):
-                dentro.close()
         fd = getattr(device, "fd", -1)
         if isinstance(fd, int) and fd >= 0:
             with contextlib.suppress(OSError):
                 os.close(fd)
-            with contextlib.suppress(AttributeError, TypeError):
-                device.fd = -1
+            device.fd = -1
         logger.info("uinput_no_fica_no_deposito", nome=no_deposito)
         return
     if no_deposito:

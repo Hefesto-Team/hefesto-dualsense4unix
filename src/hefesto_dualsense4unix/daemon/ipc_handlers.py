@@ -2274,13 +2274,9 @@ class IpcHandlersMixin:
                 em_cena = [d for d in divergencias if d.get("em_cena")]
                 if em_cena:
                     result["gamepad_emulation"]["mascara_divergente"] = em_cena[0]
-            result["gamepad_emulation"]["filas_do_gadget"] = []
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.integrations.uhid_gamepad import (
-                    filas_dos_gadgets,
-                )
+            from hefesto_dualsense4unix.integrations.uhid_gamepad import filas_dos_gadgets
 
-                result["gamepad_emulation"]["filas_do_gadget"] = filas_dos_gadgets()
+            result["gamepad_emulation"]["filas_do_gadget"] = filas_dos_gadgets()
             result["perfil_do_jogo_que_nao_entrou"] = self._perfil_que_nao_entrou()
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
             players_raw = coop_mgr.player_count() if coop_mgr is not None else 1

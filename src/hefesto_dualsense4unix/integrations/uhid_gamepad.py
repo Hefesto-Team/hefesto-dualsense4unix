@@ -3934,8 +3934,10 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
     pad._gadget_caiu = False
     if not falhou and sd_notify.esta_parando():
         gadget._soltar_na_casa()
-        with contextlib.suppress(Exception):
+        try:
             gadget.cliente.close()
+        except OSError as exc:
+            logger.info("pad_usb_conexao_do_gadget_ja_fechada", err=str(exc))
         logger.info("pad_usb_fica_na_graca_do_broker", gadget=gadget.gadget, player=pad.player)
         return True
     if not falhou and gadget.hidraw is not None and pad.identity and JOGO_ABERTO():
