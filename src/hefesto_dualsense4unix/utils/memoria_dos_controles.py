@@ -580,6 +580,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "PROVA-DA-FOTO.txt": ("fora", "saída do instrumento de fotos (olhar.py)"),
     "USB-Audio/Sony/DualSense-PS5-HiFi.conf": ("fora", "o UCM do alsa-ucm-conf; o doctor só lê"),
     "USB-Audio/Hefesto/DualSense-HiFi.conf": ("install", "o verbo UCM do install; o doctor só lê"),
+    "LICENCA-DA-ORIGEM.txt": ("install", "o texto da licença da peça GDK, gravado ao lado da peça"),
 }
 
 
