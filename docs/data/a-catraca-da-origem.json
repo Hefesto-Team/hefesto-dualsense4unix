@@ -259,14 +259,14 @@
       "data": "2026-11-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1328081,
+      "piso": 1329369,
       "por_item": {
-        "docs": 108034,
+        "docs": 108048,
         "scripts": 122925,
-        "src": 328467,
-        "tests": 768655
+        "src": 328732,
+        "tests": 769664
       },
-      "razao": "tamanho: +1078 linhas (1327003 -> 1328081), pagas por Origem: D-2511-A-CHAVE-DA-EXTENSAO-OBEDECE-AO-QUE-A-TELA-MOSTRA, D-2511-O-TETO-DA-EXTENSAO-E-DE-CADA-BRINQUEDO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 167e47f7a801",
+      "razao": "tamanho: +1288 linhas (1328081 -> 1329369), pagas por Origem: D-1911-O-DUPLO-CLIQUE-RENOMEIA-SEM-ATIVAR, D-1911-O-IMPORTADO-DE-NOME-REPETIDO-GANHA-NOME-PROPRIO, D-1911-O-NOME-QUE-NAO-SERVE-SE-RECUSA-ANTES-DE-RENOMEAR, D-1911-O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA; registrado no fecho, topo f73d5f6a3c73",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2613,10 +2613,16 @@
           "de": 1327003,
           "para": 1328081,
           "razao": "tamanho: +1078 linhas (1327003 -> 1328081), pagas por Origem: D-2511-A-CHAVE-DA-EXTENSAO-OBEDECE-AO-QUE-A-TELA-MOSTRA, D-2511-O-TETO-DA-EXTENSAO-E-DE-CADA-BRINQUEDO, D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR; registrado no fecho, topo 167e47f7a801"
+        },
+        {
+          "data": "2026-11-25",
+          "de": 1328081,
+          "para": 1329369,
+          "razao": "tamanho: +1288 linhas (1328081 -> 1329369), pagas por Origem: D-1911-O-DUPLO-CLIQUE-RENOMEIA-SEM-ATIVAR, D-1911-O-IMPORTADO-DE-NOME-REPETIDO-GANHA-NOME-PROPRIO, D-1911-O-NOME-QUE-NAO-SERVE-SE-RECUSA-ANTES-DE-RENOMEAR, D-1911-O-PERFIL-QUE-VALE-SE-REMOVE-COM-A-PERGUNTA; registrado no fecho, topo f73d5f6a3c73"
         }
       ],
       "unidade": "linhas",
-      "universo": 3709
+      "universo": 3713
     }
   }
 }
