@@ -1450,8 +1450,8 @@ justamente por isso. As linhas de ensaio são
 `lightbar-steam-nunca-foi-suspeito`,
 `lightbar-probe-limpa`, `lightbar-probe-suja-steam`, `cor-rota-sysfs-com-steam`,
 `cor-rota-hidraw-com-steam`, `steam-pinta-e-nao-apaga`, `btmon-probe-suja`,
-`btmon-probe-limpa` e `btmon-a-rajada-tem-hora`
-em `docs/data/ensaios.csv:41-51`.
+`btmon-probe-limpa` e
+`btmon-a-rajada-tem-hora` em `docs/data/ensaios.csv:41-51`.
 
 ### 6-bis.1 A Steam tem o `hidraw` aberto, e com permissão de ESCRITA
 
