@@ -190,6 +190,10 @@ def _expandir_pares(secao: str, campos: Iterable[str]) -> set[str]:
 def escolhas_globais_do_jogo(perfil: Profile, secao: str) -> dict[str, Any]:
     """Os campos da seção global ``secao`` que o jogo escolheu, com o valor (JSON).
 
+    Nas seções densas (``leds``, ``rumble``, ``mouse``) o valor igual ao de fábrica é a
+    cópia do arquivo, e só vale como escolha quando o perfil o marca em
+    ``escolhas_de_fabrica`` (D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA).
+
     Para os valores inteiros (``button_actions``, ``key_bindings`` e
     ``teclado_emulado``) a resposta é ``{secao: valor}`` quando o perfil tem
     opinião, e ``{}`` quando não tem.
@@ -203,10 +207,12 @@ def escolhas_globais_do_jogo(perfil: Profile, secao: str) -> dict[str, Any]:
         return {secao: valor}
     dados = valor.model_dump(mode="json")
     fabrica = _DENSAS.get(secao)
+    marcados = set((perfil.escolhas_de_fabrica or {}).get(secao, ()))
     escolhidos = {
         campo for campo in valor.model_fields_set
         if campo in dados and dados[campo] is not None
-        and (fabrica is None or campo not in fabrica or dados[campo] != fabrica[campo])
+        and (fabrica is None or campo not in fabrica or dados[campo] != fabrica[campo]
+             or campo in marcados)
     }
     if secao == "mouse":
         escolhidos &= {"speed", "scroll_speed", "point_and_click"}
@@ -549,6 +555,7 @@ def _no_perfil_so_o_que_mudou(perfil: Profile, globais: Mapping[str, Any],
     cru = perfil.model_dump(mode="json", exclude_unset=True)
     if globais:
         _remendar(cru, globais)
+        _marcar_as_escolhas_de_fabrica(cru, globais)
     if por_controle:
         controles = dict(cru.get("controllers") or {})
         existentes = _entradas_por_chave(controles)
@@ -563,6 +570,48 @@ def _no_perfil_so_o_que_mudou(perfil: Profile, globais: Mapping[str, Any],
         cru["controllers"] = controles or None
     _o_som_vai_inteiro(cru)
     save_profile(Profile.model_validate(cru), origem=origem or "computador-ou-jogo")
+
+
+def _marcar_as_escolhas_de_fabrica(cru: dict[str, Any], globais: Mapping[str, Any]) -> None:
+    """O campo que o gesto grava igual ao de fábrica ganha a marca de escolha; o outro a perde."""
+    marcas = {s: set(c) for s, c in (cru.get("escolhas_de_fabrica") or {}).items()}
+    for secao, valor in globais.items():
+        fabrica = _DENSAS.get(secao)
+        if fabrica is None:
+            continue
+        if not isinstance(valor, Mapping):
+            marcas.pop(secao, None)
+            continue
+        atual = marcas.setdefault(secao, set())
+        for campo, dado in valor.items():
+            if campo not in fabrica:
+                continue
+            if dado is not None and dado == fabrica[campo]:
+                atual.add(campo)
+            else:
+                atual.discard(campo)
+        if not atual:
+            marcas.pop(secao)
+    if marcas:
+        cru["escolhas_de_fabrica"] = {s: sorted(c) for s, c in marcas.items()}
+    else:
+        cru.pop("escolhas_de_fabrica", None)
+
+
+def _sem_a_marca(cru: dict[str, Any], secao: str, campo: str | None = None) -> None:
+    """Tira a marca de escolha de ``secao`` (de um campo, ou da seção inteira)."""
+    marcas = {s: set(c) for s, c in (cru.get("escolhas_de_fabrica") or {}).items()}
+    if secao in marcas:
+        if campo is None:
+            marcas.pop(secao)
+        else:
+            marcas[secao].discard(campo)
+            if not marcas[secao]:
+                marcas.pop(secao)
+    if marcas:
+        cru["escolhas_de_fabrica"] = {s: sorted(c) for s, c in marcas.items()}
+    else:
+        cru.pop("escolhas_de_fabrica", None)
 
 
 def _o_som_vai_inteiro(cru: Mapping[str, Any]) -> None:
@@ -883,6 +932,7 @@ def _sem(perfil: Profile, grupo: Iterable[tuple[str, ...]]) -> Profile:
             atual = dict(cru.get(secao) or {})
             if secao in _DENSAS and campo in _DENSAS[secao]:
                 atual[campo] = _DENSAS[secao][campo]
+                _sem_a_marca(cru, secao, campo)
             else:
                 atual.pop(campo, None)
             if atual:
@@ -1138,6 +1188,8 @@ def voltar_ao_do_computador(cartao: str, uniq: object, perfil: str) -> Profile:
     secao = SECOES[cartao]
     cru = cru_perfil.model_dump(mode="json", exclude_unset=True)
     for nome in secao.globais:
+        if nome in _DENSAS:
+            _sem_a_marca(cru, nome)
         if nome in _DENSAS and nome != "mouse":
             cru[nome] = dict(_DENSAS[nome])
         elif nome == "mouse":

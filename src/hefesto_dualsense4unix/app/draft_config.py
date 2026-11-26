@@ -349,6 +349,7 @@ def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
 
 CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE = (
     "meus_toques", "estilo", "receita_do_tato", "alvo", "evento", "nome_do_jogo",
+    "escolhas_de_fabrica",
 )
 
 CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE: dict[str, tuple[str, ...]] = {

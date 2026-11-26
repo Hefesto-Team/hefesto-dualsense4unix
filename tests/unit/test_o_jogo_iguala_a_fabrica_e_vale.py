@@ -1,22 +1,19 @@
-"""O jogo e o valor de fábrica do mouse.
+"""O jogo e o valor de fábrica das seções densas (mouse, luz, vibração).
 
-(O-JOGO-PODE-APAGAR-E-IGUALAR-A-FABRICA-O-QUE-O-COMPUTADOR-DIZ-01.)
+(O-JOGO-PODE-APAGAR-E-IGUALAR-A-FABRICA-O-QUE-O-COMPUTADOR-DIZ-01 e
+O-JOGO-QUE-ESCOLHE-O-VALOR-DE-FABRICA-VENCE-O-COMPUTADOR-01.)
 
-O QUE FOI MEDIDO (08/10/2026) E É A PREMISSA DESTAS RÉGUAS: o arquivo do jogo
-guarda as seções ``leds``, ``rumble`` e ``mouse`` POR EXTENSO (o ``save_profile``
-escreve o ``model_dump`` inteiro), então o ``model_fields_set`` de quem relê é
-sempre «todos os campos». O valor de fábrica escrito ali é o vocabulário de
-«sem escolha» da casa (``voltar_ao_do_computador`` e ``ceder_ao_computador``
-escrevem o de fábrica para dizer isso), e é por isso que
-``escolhas_globais_do_jogo`` descarta o igual à fábrica. Pelo formato do
-arquivo não há como separar «o usuário escolheu 6» de «a cópia do 6»: separar pede um
-escritor esparso e uma marca de escolha no arquivo (``schema.py``), e a
-sprint manda isso VOLTAR COMO PERGUNTA. A régua do caso aberto é ``xfail``
-estrito: quando a pergunta for resolvida, a régua vira verde e o ``strict`` obriga
-a tirar a marca.
+O QUE FOI MEDIDO (08/10/2026): o arquivo do jogo guarda as seções ``leds``,
+``rumble`` e ``mouse`` POR EXTENSO (o ``save_profile`` escreve o ``model_dump``
+inteiro), então o ``model_fields_set`` de quem relê é sempre «todos os campos».
+Pelo formato do arquivo não se separa «o usuário escolheu 6» de «a cópia do 6».
+A CURA (D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA): o gesto que grava no
+jogo um valor igual ao de fábrica marca o campo em ``Profile.escolhas_de_fabrica``;
+o arquivo de antes, sem a marca, segue com o filtro de fábrica (a cópia não vence).
 
-A MORDIDA das duas que valem hoje: tire o filtro de fábrica de
-``escolhas_globais_do_jogo`` e a cópia do jogo passa a vencer o computador.
+A MORDIDA: tire ``or campo in marcados`` de ``escolhas_globais_do_jogo`` e as réguas
+da marca (mouse, luz e vibração) reprovam; tire o filtro de fábrica e as duas do
+arquivo antigo reprovam.
 """
 from __future__ import annotations
 
@@ -28,7 +25,12 @@ import pytest
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
-from hefesto_dualsense4unix.profiles.schema import Profile, ProfileMouseConfig
+from hefesto_dualsense4unix.profiles.schema import (
+    LedsConfig,
+    Profile,
+    ProfileMouseConfig,
+    RumbleConfig,
+)
 from hefesto_dualsense4unix.utils import maquina as m
 
 JOGO = "Jogo X"
@@ -78,17 +80,85 @@ def test_a_seccao_do_jogo_vai_ao_disco_por_extenso() -> None:
     assert set(bruto["mouse"]) == {"enabled", "speed", "scroll_speed"}, bruto["mouse"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "PERGUNTA ABERTA: o arquivo do jogo é denso e o valor de fábrica por extenso "
-    "é «sem escolha» na casa; separar pede escritor esparso e marca de escolha"))
-def test_o_jogo_que_escolhe_a_fabrica_contra_o_computador_vale() -> None:
-    """O jogo move a velocidade para o 6 de fábrica com o computador em 9: vale 6."""
-    save_profile(_perfil(speed=7))
-
+def _gesto_do_mouse_para_a_fabrica() -> None:
     def _para_a_fabrica(vista: Profile) -> Profile:
         assert vista.mouse is not None
         return vista.model_copy(update={"mouse": vista.mouse.model_copy(
             update={"speed": _FABRICA["speed"]})})
 
     opc.gravar_pelo_gesto("mouse", JOGO, _para_a_fabrica, origem="regua")
+
+
+def test_o_jogo_que_escolhe_a_fabrica_contra_o_computador_vale() -> None:
+    """D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: o 6 vale com o computador em 9."""
+    save_profile(_perfil(speed=7))
+    _gesto_do_mouse_para_a_fabrica()
     assert _vale().mouse is not None and _vale().mouse.speed == _FABRICA["speed"]
+    assert load_profile(JOGO).escolhas_de_fabrica == {"mouse": ["speed"]}
+
+
+def test_a_luz_que_o_jogo_escolhe_igual_a_fabrica_vale_contra_o_computador() -> None:
+    """D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: o brilho de fábrica do jogo vale."""
+    fabrica = LedsConfig.model_fields["lightbar_brightness"].default
+    assert m.gravar_o_computador({"global": {"leds": {"lightbar_brightness": 0.5}}})
+    save_profile(Profile.model_validate({
+        "name": JOGO, "match": {"type": "criteria", "window_class": ["jogo x"]},
+        "leds": {"lightbar_brightness": 0.3}}))
+
+    def _para_a_fabrica(vista: Profile) -> Profile:
+        return vista.model_copy(update={"leds": vista.leds.model_copy(
+            update={"lightbar_brightness": fabrica})})
+
+    opc.gravar_pelo_gesto("luz", JOGO, _para_a_fabrica, origem="regua")
+    assert _vale().leds.lightbar_brightness == fabrica
+    assert load_profile(JOGO).escolhas_de_fabrica == {"leds": ["lightbar_brightness"]}
+
+
+def test_a_vibracao_que_o_jogo_escolhe_igual_a_fabrica_vale_contra_o_computador() -> None:
+    """D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: o passthrough de fábrica do jogo vale."""
+    fabrica = RumbleConfig.model_fields["passthrough"].default
+    assert m.gravar_o_computador({"global": {"rumble": {"passthrough": not fabrica}}})
+    save_profile(Profile.model_validate({
+        "name": JOGO, "match": {"type": "criteria", "window_class": ["jogo x"]},
+        "rumble": {"policy": "max", "passthrough": not fabrica}}))
+
+    def _para_a_fabrica(vista: Profile) -> Profile:
+        return vista.model_copy(update={"rumble": vista.rumble.model_copy(
+            update={"passthrough": fabrica})})
+
+    opc.gravar_pelo_gesto("vibracao", JOGO, _para_a_fabrica, origem="regua")
+    assert _vale().rumble.passthrough is fabrica
+    assert load_profile(JOGO).escolhas_de_fabrica == {"rumble": ["passthrough"]}
+
+
+def test_voltar_ao_do_computador_tira_a_marca_e_o_computador_vale() -> None:
+    """D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: «sem escolha» é o que o voltar grava."""
+    save_profile(_perfil(speed=7))
+    _gesto_do_mouse_para_a_fabrica()
+    opc.voltar_ao_do_computador("mouse", None, JOGO)
+    assert load_profile(JOGO).escolhas_de_fabrica is None
+    assert _vale().mouse is not None and _vale().mouse.speed == DO_COMPUTADOR
+
+
+def test_o_gesto_que_tira_o_campo_da_fabrica_desmarca() -> None:
+    """D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: a marca vale com o valor de fábrica."""
+    save_profile(_perfil(speed=7))
+    _gesto_do_mouse_para_a_fabrica()
+
+    def _para_o_oito(vista: Profile) -> Profile:
+        assert vista.mouse is not None
+        return vista.model_copy(update={"mouse": vista.mouse.model_copy(update={"speed": 8})})
+
+    opc.gravar_pelo_gesto("mouse", JOGO, _para_o_oito, origem="regua")
+    assert load_profile(JOGO).escolhas_de_fabrica is None
+    assert _vale().mouse is not None and _vale().mouse.speed == 8
+
+
+def test_a_marca_de_campo_desconhecido_cai_e_o_perfil_carrega() -> None:
+    """D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA: a marca lida é tolerante."""
+    perfil = Profile.model_validate({
+        "name": JOGO, "match": {"type": "any"},
+        "escolhas_de_fabrica": {"mouse": ["speed", "nao_existe"], "outra": ["x"]}})
+    assert perfil.escolhas_de_fabrica == {"mouse": ["speed"]}
+    assert "escolhas_de_fabrica" not in Profile.model_validate(
+        {"name": JOGO, "match": {"type": "any"}}).model_dump(mode="json")

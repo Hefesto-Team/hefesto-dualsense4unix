@@ -1637,6 +1637,7 @@ class Profile(BaseModel):
     alvo: AlvoDoPerfil | None = None
     evento: EventoDoPerfil | None = None
     nome_do_jogo: str | None = None
+    escolhas_de_fabrica: dict[str, list[str]] | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
@@ -1651,7 +1652,7 @@ class Profile(BaseModel):
                 "analogicos",
                 "cursor", "meus_toques",
                 "controles_modo", "criado_em", "modificado_em",
-                "alvo", "evento", "nome_do_jogo",
+                "alvo", "evento", "nome_do_jogo", "escolhas_de_fabrica",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
@@ -1780,6 +1781,31 @@ class Profile(BaseModel):
         nome que não serve some da lista na leitura seguinte.
         """
         return type(self).model_validate({**self.model_dump(), **campos, "name": nome})
+
+    @field_validator("escolhas_de_fabrica", mode="before")
+    @classmethod
+    def _as_escolhas_de_fabrica_so_de_campo_que_existe(cls, value: object) -> object:
+        """Só o campo que a seção densa conhece fica; o resto cai e o perfil carrega.
+
+        ``escolhas_de_fabrica`` diz, por seção densa do arquivo (``leds``, ``rumble``,
+        ``mouse``), os campos que o jogo escolheu IGUAIS ao valor de fábrica: sem a marca,
+        o igual à fábrica é a cópia que o arquivo denso sempre carregou, e o computador vale.
+        """
+        if not isinstance(value, dict):
+            return None
+        campos_da_secao = {
+            "leds": LedsConfig.model_fields, "rumble": RumbleConfig.model_fields,
+            "mouse": ProfileMouseConfig.model_fields,
+        }
+        limpo: dict[str, list[str]] = {}
+        for secao, campos in value.items():
+            conhecidos = campos_da_secao.get(secao)
+            if conhecidos is None or not isinstance(campos, (list, tuple)):
+                continue
+            ficam = sorted({c for c in campos if isinstance(c, str) and c in conhecidos})
+            if ficam:
+                limpo[secao] = ficam
+        return limpo or None
 
     @field_validator("nome_do_jogo", mode="before")
     @classmethod
@@ -3074,6 +3100,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = o campo «Nome do jogo» mostra o que a regra de janela já diz. É o nome que a "
         "aba Lançadores passou na criação; semear um nome no perfil antigo inventaria um jogo "
         "que o usuário não escolheu.",
+    ),
+    "Profile.escolhas_de_fabrica": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhum campo do jogo escolhido igual ao de fábrica: o valor de fábrica "
+        "escrito no arquivo denso é a cópia, e o computador vale. É a marca do gesto do "
+        "jogo, e semeá-la tornaria escolha o que o usuário nunca escolheu "
+        "(D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA).",
     ),
     "Profile.movimento": Nascimento(
         E_CONTRATO,
