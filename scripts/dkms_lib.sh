@@ -306,6 +306,24 @@ dkms_estado_da_chave() {
 
 DKMS_MODULOS_DA_CASA="hid-nintendo uhid hid-playstation usb_f_hid rtw88_usb"
 
+_render_broker_units() {
+    local service_src="$1" socket_src="$2" out_dir="$3"
+    local fechado="${4:-1}"
+    local binario="${5:-}" binario_do_install="${6:-}"
+    local -a trocas=(-e "s/__NO_NASCE_FECHADO__/${fechado}/")
+    if [[ -n "${binario}" && -n "${binario_do_install}" ]]; then
+        trocas+=(-e "s|${binario_do_install}|${binario}|g")
+    fi
+    sed "${trocas[@]}" "${service_src}" > "${out_dir}/hefesto-hidraw-broker.service" || return 1
+    cat "${socket_src}" > "${out_dir}/hefesto-hidraw-broker.socket" || return 1
+    if grep -q '__[A-Z_]*__' \
+            "${out_dir}/hefesto-hidraw-broker.service" \
+            "${out_dir}/hefesto-hidraw-broker.socket"; then
+        return 1
+    fi
+    return 0
+}
+
 dkms_ler_a_chave_da_casa() {
     local _m _primeiro=""
     DKMS_ESTADO="" DKMS_MODULO=""

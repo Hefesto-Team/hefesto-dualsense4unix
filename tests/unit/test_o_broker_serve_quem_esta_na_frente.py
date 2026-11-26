@@ -441,7 +441,7 @@ def _renderizar_pacote(destino: Path, binario: str) -> subprocess.CompletedProce
 
 
 def _renderizar_install(destino: Path) -> subprocess.CompletedProcess[str]:
-    corpo = CAMADA.read_text(encoding="utf-8")
+    corpo = (REPO / "scripts" / "dkms_lib.sh").read_text(encoding="utf-8")
     i = corpo.index("_render_broker_units() {")
     funcao = corpo[i : corpo.index("\n}\n", i) + 3]
     script = f'{funcao}\n_render_broker_units "{SERVICE}" "{SOCKET}" "{destino}" 1\n'

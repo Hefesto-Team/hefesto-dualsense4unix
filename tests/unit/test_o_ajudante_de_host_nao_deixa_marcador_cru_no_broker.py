@@ -139,9 +139,9 @@ def test_unit_de_pacote_com_marcador_cru_nao_vale_e_o_ajudante_renderiza_a_dele(
 
 
 def _funcao_render() -> str:
-    texto = SCRIPT.read_text(encoding="utf-8")
-    achado = re.search(r"^_render_unit_do_broker\(\) \{\n.*?^\}\n", texto, re.M | re.S)
-    assert achado, "o ajudante não tem a função única de render"
+    texto = (RAIZ / "scripts" / "dkms_lib.sh").read_text(encoding="utf-8")
+    achado = re.search(r"^_render_broker_units\(\) \{\n.*?^\}\n", texto, re.M | re.S)
+    assert achado, "a lib que viaja com o ajudante não tem a função única de render"
     return achado.group(0)
 
 
@@ -149,7 +149,7 @@ def _renderizar(tmp: Path, fechado: str, modelo: Path = MODELO) -> subprocess.Co
     saida = tmp / "saida"
     saida.mkdir(exist_ok=True)
     return subprocess.run(
-        ["bash", "-c", f"{_funcao_render()}\n_render_unit_do_broker '{modelo}' '{SOCKET}' "
+        ["bash", "-c", f"{_funcao_render()}\n_render_broker_units '{modelo}' '{SOCKET}' "
          f"'{saida}' '{fechado}'"],
         capture_output=True, text=True, check=False, timeout=30,
     )

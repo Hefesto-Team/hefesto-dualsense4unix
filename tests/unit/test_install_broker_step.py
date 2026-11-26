@@ -44,7 +44,9 @@ def _extract_bash_function(source: str, name: str) -> str:
 def render_fn_src() -> str:
     if not INSTALL:
         pytest.skip("install.sh / camada_de_maquina.sh não encontrados no repo")
-    return _extract_bash_function(INSTALL, "_render_broker_units")
+    return _extract_bash_function(
+        (REPO_ROOT / "scripts" / "dkms_lib.sh").read_text(encoding="utf-8"),
+        "_render_broker_units")
 
 
 def _run_render(

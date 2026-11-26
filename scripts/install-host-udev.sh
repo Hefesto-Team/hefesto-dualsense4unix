@@ -464,19 +464,12 @@ _unit_do_pacote_correta() {
     return 1
 }
 
-_render_unit_do_broker() {
-    local unit_modelo="$1" socket_modelo="$2" destino="$3" fechado="$4"
-    sed -e "s/__NO_NASCE_FECHADO__/${fechado}/" "${unit_modelo}" \
-        > "${destino}/hefesto-hidraw-broker.service" || return 1
-    cat "${socket_modelo}" > "${destino}/hefesto-hidraw-broker.socket" || return 1
-    if grep -q '__[A-Z_]*__' "${destino}/hefesto-hidraw-broker.service" \
-            "${destino}/hefesto-hidraw-broker.socket"; then
-        return 1
-    fi
-    return 0
-}
-
-RENDER_DO_BROKER="$(declare -f _render_unit_do_broker)"
+RENDER_DO_BROKER=""
+if [[ -n "${DKMS_LIB_SH}" ]]; then
+    # shellcheck source=dkms_lib.sh
+    source "${DKMS_LIB_SH}"
+    RENDER_DO_BROKER="$(declare -f _render_broker_units)"
+fi
 UNIT_DO_PACOTE=""
 if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
     UNIT_DO_PACOTE="$(_unit_do_pacote_correta /usr/lib/systemd/system /lib/systemd/system || true)"
@@ -616,7 +609,7 @@ _build_install_cmd() {
         cmd+="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker; "
         cmd+="${RENDER_DO_BROKER:-}"$'\n'
         cmd+="_hbr=\$(mktemp -d /tmp/hefesto-broker-render.XXXXXXXX) "
-        cmd+="&& _render_unit_do_broker '${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
+        cmd+="&& _render_broker_units '${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
         cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' \"\${_hbr}\" '${NO_NASCE_FECHADO:-1}' "
         cmd+="|| { echo 'ERRO: render do broker falhou ou deixou marcador cru — broker NAO instalado' >&2; "
         cmd+="[ -n \"\${_hbr:-}\" ] && rm -rf \"\${_hbr}\"; _hbr=; }; "

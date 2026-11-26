@@ -5,6 +5,9 @@ declare -F warn >/dev/null 2>&1 || warn() { printf '      aviso: %s\n' "$*"; }
 declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 
 : "${ROOT_DIR:?camada_de_maquina.sh: defina ROOT_DIR (a raiz da árvore) antes do source}"
+# shellcheck source=scripts/dkms_lib.sh
+source "${ROOT_DIR}/scripts/dkms_lib.sh"
+
 : "${SKIP_UDEV:=0}"
 : "${NO_OSK:=0}"
 : "${NO_DKMS:=0}"
@@ -119,21 +122,6 @@ opcao_do_modprobe() {
         }
         END { if (v !~ /^[A-Za-z0-9_.,:-]+$/) exit 1; print v }
     ' "$1" 2>/dev/null
-}
-
-_render_broker_units() {
-    local service_src="$1" socket_src="$2" out_dir="$3"
-    local fechado="${4:-1}"
-    sed -e "s/__NO_NASCE_FECHADO__/${fechado}/" \
-        "${service_src}" \
-        > "${out_dir}/hefesto-hidraw-broker.service"
-    cat "${socket_src}" > "${out_dir}/hefesto-hidraw-broker.socket"
-    if grep -q '__SESSION_\|__NO_NASCE_FECHADO__' \
-            "${out_dir}/hefesto-hidraw-broker.service" \
-            "${out_dir}/hefesto-hidraw-broker.socket"; then
-        return 1
-    fi
-    return 0
 }
 
 install_udev_host() {

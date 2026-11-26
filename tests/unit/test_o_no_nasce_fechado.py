@@ -542,7 +542,7 @@ class TestNoInstallPorDefault:
 
     def test_o_render_do_broker_default_e_fechado(self) -> None:
         """Sem o default 1 aqui, a metade de cima da cura (a udev) ficaria sem"""
-        texto = CAMADA.read_text(encoding="utf-8")
+        texto = (RAIZ / "scripts" / "dkms_lib.sh").read_text(encoding="utf-8")
         assert 'local fechado="${4:-1}"' in texto
         assert "__NO_NASCE_FECHADO__" in texto
 

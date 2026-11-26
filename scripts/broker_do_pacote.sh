@@ -22,16 +22,14 @@ for _f in "${SERVICO_SRC}" "${SOCKET_SRC}"; do
     [[ -f "${_f}" ]] || { echo "ERRO: asset ausente: ${_f}" >&2; exit 1; }
 done
 
+# shellcheck source=scripts/dkms_lib.sh
+source "${RAIZ}/scripts/dkms_lib.sh"
+
 mkdir -p "${DESTINO}"
 _s="${DESTINO}/hefesto-hidraw-broker.service"
 _k="${DESTINO}/hefesto-hidraw-broker.socket"
 
-sed -e "s/__NO_NASCE_FECHADO__/1/" \
-    -e "s|${BINARIO_DO_INSTALL}|${BINARIO}|g" \
-    "${SERVICO_SRC}" > "${_s}"
-cat "${SOCKET_SRC}" > "${_k}"
-
-if grep -q '__[A-Z_]*__' "${_s}" "${_k}"; then
+if ! _render_broker_units "${SERVICO_SRC}" "${SOCKET_SRC}" "${DESTINO}" 1 "${BINARIO}" "${BINARIO_DO_INSTALL}"; then
     rm -f "${_s}" "${_k}"
     echo "ERRO: a unit do broker ficou com placeholder sobrando" >&2
     exit 1

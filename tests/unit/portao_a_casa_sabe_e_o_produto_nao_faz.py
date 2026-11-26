@@ -37,7 +37,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "— as dez curas de HOST saíram do instalador e viraram "
         "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1090` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
-        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:241`) é quem "
+        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:229`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "`assets/systemd/hefesto-hidraw-broker.service:34` (`ExecStart`). O .deb "
