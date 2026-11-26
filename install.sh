@@ -375,7 +375,7 @@ _PULOS_COMECARAM=0
 _anotar_o_pulo_de_root() {
     [[ -n "${_PULOS_DE_ROOT}" ]] || return 0
     case "$1" in
-        *"sudo recusado"*|*"sudo ausente"*|*"sudo indisponível"*|*"sem o comando sudo"*)
+        *"sudo recusado"*|*"sudo ausente"*|*"sudo indisponível"*|*"sem o comando sudo"*|*"sem root agora"*)
             if [[ "${_PULOS_COMECARAM}" -eq 0 ]]; then
                 mkdir -p "${_PULOS_DE_ROOT%/*}" 2>/dev/null && : > "${_PULOS_DE_ROOT}" 2>/dev/null \
                     && _PULOS_COMECARAM=1 || { _PULOS_DE_ROOT=""; return 0; }

@@ -466,21 +466,43 @@ def test_o_ensaio_nao_escreve_o_arquivo_dos_pulos(tmp_path: Path) -> None:
     assert not (tmp_path / "estado").exists()
 
 
-def test_cada_pulo_por_sudo_do_install_cai_na_lista(tmp_path: Path) -> None:
-    """Todo aviso de passo de root pulado diz uma das quatro frases que o install anota."""
+def _o_vocabulario_que_o_install_anota() -> list[str]:
     import re
 
-    frases = ("sudo recusado", "sudo ausente", "sudo indisponível", "sem o comando sudo")
-    avisos = []
+    fonte = (RAIZ / "install.sh").read_text(encoding="utf-8")
+    inicio = fonte.index("_anotar_o_pulo_de_root() {")
+    corpo = fonte[inicio:fonte.index("\n}\n", inicio)]
+    return re.findall(r'\*"([^"]+)"\*', corpo)
+
+
+def test_cada_pulo_por_sudo_do_install_cai_na_lista() -> None:
+    """Toda porta de root do install (`! sudo -n true`) que pula o passo avisa com uma frase que
+    o vocabulário de `_anotar_o_pulo_de_root` reconhece: o aviso se lê da porta, não da lista."""
+    import re
+
+    vocabulario = _o_vocabulario_que_o_install_anota()
+    assert len(vocabulario) >= 4, vocabulario
+    porta = re.compile(r"^\s*(if|elif)\s+!\s+(command -v sudo[^|]*\|\|\s+!\s+)?sudo -n true\b")
+    portas: list[tuple[str, int, str]] = []
     for caminho in (RAIZ / "install.sh", *sorted((RAIZ / "scripts/lib").glob("*.sh"))):
-        for linha in caminho.read_text(encoding="utf-8").splitlines():
-            achado = re.search(r'warn "([^"]*)"', linha)
-            if achado and re.search(r"sudo (recusado|ausente|indisponível)|sem o comando sudo",
-                                    achado.group(1)):
-                avisos.append(achado.group(1))
-    assert len(avisos) > 40, "a régua perdeu os avisos de sudo do install"
-    fora = [a for a in avisos if not any(f in a for f in frases)]
+        linhas = caminho.read_text(encoding="utf-8").splitlines()
+        for numero, linha in enumerate(linhas):
+            if porta.search(linha):
+                aviso = next((seguinte for seguinte in linhas[numero + 1:numero + 3]
+                              if 'warn "' in seguinte), "")
+                portas.append((caminho.name, numero + 1, aviso.strip()))
+    assert len(portas) >= 20, "a régua perdeu as portas de root do install"
+    fora = [p for p in portas if not any(frase in p[2] for frase in vocabulario)]
     assert fora == []
+
+
+@pytest.mark.parametrize("aviso", [
+    "sudo recusado — o modo desempenho pulado (re-execute ./install.sh --desempenho)",
+    "sem root agora — a tabela de conectores da BIOS não foi lida (re-execute ./install.sh)",
+])
+def test_o_aviso_de_cada_porta_de_root_vira_pulo_gravado(tmp_path: Path, aviso: str) -> None:
+    _o_install_de_verdade(f'warn "{aviso}"', tmp_path)
+    assert _os_pulos(tmp_path).read_text(encoding="utf-8") == f"{aviso}\n"
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="o install de root sai antes de pedir sudo")
