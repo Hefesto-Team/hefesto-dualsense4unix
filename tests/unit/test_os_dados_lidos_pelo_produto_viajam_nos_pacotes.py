@@ -28,10 +28,16 @@ PREFIXO_DO_SHARE = "share/hefesto-dualsense4unix/"
 
 SO_DO_CLONE: dict[str, str] = {
     "interface/aba": "gerador do mockup: roda do clone, as páginas prontas é que viajam",
-    "interface/monta.py": "gerador do mockup: roda do clone, as páginas prontas é que viajam",
     "interface/olhar.py": "ferramenta de foto: escreve no clone",
     "interface/desenho_da_experimental.py": "gerador do mockup: roda do clone",
     "app/actions/pecas_do_atualizador.py": "reconstrói a peça da casa a partir das fontes do clone",
+}
+
+DO_PROPRIO_PACOTE: dict[tuple[str, str], str] = {
+    ("interface/monta.py", "assets/hefesto-logo.svg"): (
+        "a janela importa o `monta` em tempo de execução, e o logo que ele lê é o de "
+        "`interface/assets/`, dentro do pacote Python, que o `include` do wheel leva"
+    ),
 }
 
 DADOS_LIDOS_PELOS_TRES = (
@@ -118,16 +124,28 @@ def _coberto(caminho: str, fontes: set[str]) -> bool:
     return caminho in fontes or any(f.startswith(caminho.rstrip("/") + "/") for f in fontes)
 
 
-def _justificado(origem: str) -> bool:
+def _justificado(origem: str, caminho: str) -> bool:
     modulo = origem.rsplit(":", 1)[0]
+    if (modulo, caminho) in DO_PROPRIO_PACOTE:
+        return True
     return any(modulo.startswith(prefixo) for prefixo in SO_DO_CLONE)
+
+
+def test_o_que_se_le_do_proprio_pacote_mora_no_pacote_e_o_wheel_o_leva():
+    """A isenção por arquivo do pacote vale só se o arquivo está ao lado do módulo e no wheel."""
+    inclui = _pyproject()["tool"]["hatch"]["build"]["targets"]["wheel"]["include"]
+    for modulo, caminho in DO_PROPRIO_PACOTE:
+        arquivo = (PACOTE / modulo).parent / caminho
+        assert arquivo.is_file(), f"{modulo} lê {caminho}, que não está no pacote"
+        relativo = arquivo.relative_to(RAIZ).as_posix()
+        assert any(Path(relativo).match(p) for p in inclui), f"o wheel não leva {relativo}"
 
 
 def test_todo_dado_lido_pelo_src_viaja_no_shared_data_do_pyproject():
     """Cada caminho de `docs/data/` e `assets/` que o `src/` abre está no shared-data."""
     fontes = set(_shared_data())
     sem_pacote = {
-        caminho: [o for o in origens if not _justificado(o)]
+        caminho: [o for o in origens if not _justificado(o, caminho)]
         for caminho, origens in _o_que_o_src_le().items()
         if not _coberto(caminho, fontes) and (RAIZ / caminho).exists()
     }
