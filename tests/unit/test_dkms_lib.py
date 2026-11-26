@@ -795,7 +795,8 @@ class TestChaveQueNaoSeLeNaoTiraOModulo:
         if leitura == "sem-lista":
             assert "mokutil --test-key" in saida and "mokutil --import" not in saida, saida
         else:
-            assert "mokutil --import" in saida, saida
+            assert "devolva o certificado da chave" in saida, saida
+            assert "mokutil --import" not in saida, saida
 
     def test_o_modulo_da_casa_carregado_desmente_o_fora_e_nada_se_instala_nem_sai(
         self, tmp_path: Path
@@ -1351,6 +1352,70 @@ class TestAvisoDaChaveNomeiaOModuloELeUmaVez:
         install = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
         assert 'dkms_titulo_da_chave "${DKMS_MODULO}"' in install
         assert "dkms_chave_mok_inscrita" not in install
+
+
+class TestCertificadoQueFaltaNaoMandaGerarChaveNova:
+    """O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA-01.
+
+    D-2611-O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA: com a chave privada do DKMS presente
+    e o certificado ausente, nenhum passo do install manda gerar chave; só com as duas ausentes o
+    passo manda gerar e inscrever.
+    """
+
+    PASSOS = (
+        "dkms_passo_da_mok", "dkms_passo_para_ler_a_chave", "dkms_chave_e_o_passo",
+        "dkms_passo_da_chave",
+    )
+
+    def _passo(self, tmp_path: Path, função: str, *, privada: bool) -> str:
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=True, inscrita=False, leitura="sem-chave-publica",
+            chave_privada=privada)
+        feito = _roda(f"{função} ''", _sem_mokutil(estado), estado)
+        assert feito.returncode == 0, feito
+        return feito.stdout
+
+    @pytest.mark.parametrize("função", PASSOS)
+    def test_com_a_privada_e_sem_o_certificado_o_passo_nomeia_o_certificado(
+        self, tmp_path: Path, função: str
+    ) -> None:
+        """D-2611-O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA."""
+        saida = self._passo(tmp_path, função, privada=True)
+        assert "devolva o certificado da chave" in saida, saida
+        assert str(tmp_path / "sem-chave.pub") in saida, saida
+        assert "generate_mok" not in saida and "--new-key" not in saida, saida
+        assert "mokutil --import" not in saida, saida
+
+    @pytest.mark.parametrize("função", ["dkms_passo_da_mok", "dkms_chave_e_o_passo"])
+    def test_sem_a_privada_e_sem_o_certificado_o_passo_manda_gerar_e_inscrever(
+        self, tmp_path: Path, função: str
+    ) -> None:
+        """D-2611-O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA."""
+        saida = self._passo(tmp_path, função, privada=False)
+        assert "sudo dkms generate_mok" in saida, saida
+        assert "devolva o certificado" not in saida, saida
+
+    def test_a_privada_que_so_o_root_ve_tambem_nao_manda_gerar(self, tmp_path: Path) -> None:
+        """D-2611-O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA: «não sei» não é «falta»."""
+        if os.geteuid() == 0:
+            pytest.skip("o root lê a pasta trancada")
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=True, inscrita=False, leitura="sem-chave-publica")
+        trancada = tmp_path / "trancada"
+        trancada.mkdir()
+        (trancada / "mok.key").write_bytes(b"CHAVE-PRIVADA-DE-MENTIRA")
+        (tmp_path / "framework-da-chave.conf").write_text(
+            f'mok_signing_key="{trancada / "mok.key"}"\n', encoding="utf-8")
+        sudo = tmp_path / "sudo-que-nao-sabe"
+        sudo.mkdir()
+        _stub(sudo, "sudo", "exit 1")
+        trancada.chmod(0o000)
+        try:
+            feito = _roda("dkms_passo_da_mok", f"{sudo}:{_sem_mokutil(estado)}", estado)
+        finally:
+            trancada.chmod(0o755)
+        assert "devolva o certificado da chave" in feito.stdout, feito
+        assert "generate_mok" not in feito.stdout, feito
 
 
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:

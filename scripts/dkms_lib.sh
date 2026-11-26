@@ -338,8 +338,17 @@ _dkms_passo_que_gera_a_chave() {
     fi
 }
 
+dkms_passo_do_certificado() {
+    printf 'devolva o certificado da chave a %s (a chave privada %s existe, e gerar outra chave a trocaria por uma que a MOK não conhece) e rode ./install.sh de novo; se o certificado se perdeu de vez, tire a chave privada %s do lugar e rode ./install.sh de novo, que então diz como gerar e inscrever uma chave nova' \
+        "$(_dkms_mok_pub)" "$(_dkms_mok_chave_privada)" "$(_dkms_mok_chave_privada)"
+}
+
 dkms_passo_da_mok() {
     local _pub; _pub="$(_dkms_mok_pub)"
+    if [[ ! -s "${_pub}" && "$(_dkms_leitura_da_chave_privada)" != "falta" ]]; then
+        dkms_passo_do_certificado
+        return 0
+    fi
     [[ -s "${_pub}" ]] || _dkms_passo_que_gera_a_chave
     printf 'inscreva-a com sudo mokutil --import %s (ele pede uma senha), reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' "${_pub}"
 }
