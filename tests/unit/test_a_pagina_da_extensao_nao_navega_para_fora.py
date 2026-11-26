@@ -10,10 +10,11 @@ páginas, pelo caminho resolvido.
 
 MORDIDAS (26/11/2026, executadas sobre a cura e devolvidas):
 
-- sem o ``connect("decide-policy", ...)``: os casos ``location``, ``refresh``, ``ancora``, ``form``,
-  ``arquivo`` e ``topo`` de ``test_a_pagina_hostil_nao_alcanca_nada``;
-- a lista trocada por «deixa todo ``file://``»: ``arquivo`` e ``topo`` (e
-  ``test_o_destino_da_janela``);
+- sem o ``connect("decide-policy", ...)``: seis dos oito casos de
+  ``test_a_pagina_hostil_nao_alcanca_nada`` (``location``, ``refresh``, ``ancora``, ``arquivo`` e
+  ``vizinha`` entre eles; o ``abrir`` não reprova: sem quem crie a janela, o WebKit não a abre);
+- a lista trocada por «deixa todo ``file://``»: ``topo`` e ``test_o_destino_da_janela`` (o
+  ``arquivo`` segue preso pela recusa na RESPONSE);
 - sem a recusa na RESPONSE: ``vizinha`` (a página da extensão que vai a uma página da pasta carrega
   dentro do quadro e o pedido chega).
 
