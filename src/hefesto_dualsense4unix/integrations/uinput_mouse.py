@@ -293,8 +293,8 @@ class UinputMouseDevice:
     _escolha_do_mouse: dict[str, str] = field(default_factory=dict)
     _mudos: frozenset[str] = field(default_factory=frozenset)
     _cedidos: frozenset[str] = field(default_factory=frozenset)
-    _quem_emite_o_teclado: Callable[[], bool] | None = None
-    _teclado_emitia: bool = False
+    _quem_emite_o_teclado: Callable[[], Iterable[str]] | None = None
+    _teclado_emitia: frozenset[str] = field(default_factory=frozenset)
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível ou módulo ausente."""
@@ -420,7 +420,7 @@ class UinputMouseDevice:
         self._stick_carry_y = 0.0
         self._quem_emite_o_teclado = None
         self._cedidos = frozenset()
-        self._teclado_emitia = False
+        self._teclado_emitia = frozenset()
         if do_mouse is None:
             self._escolha_do_mouse = {}
             self._mudos = frozenset()
@@ -439,9 +439,12 @@ class UinputMouseDevice:
         self._montar_o_dpad_e_o_tap(self._o_teclado_emite())
 
     def ceder_ao_teclado(
-        self, do_teclado: Iterable[str], quem_emite_o_teclado: Callable[[], bool]
+        self, do_teclado: Iterable[str], quem_emite_o_teclado: Callable[[], Iterable[str]]
     ) -> None:
-        """Os botões de `do_teclado` deixam o de fábrica do d-pad e do tap enquanto o teclado emite.
+        """Os botões de `do_teclado` deixam o de fábrica do d-pad e do tap que o teclado emite.
+
+        `quem_emite_o_teclado` devolve os botões que o teclado virtual de pé emite agora (vazio
+        sem teclado): o device que nasce depois, com o de fábrica dele, não leva o botão.
 
         Vale para a tabela entregue por último em :meth:`set_button_actions`, que a zera.
         """
@@ -450,23 +453,24 @@ class UinputMouseDevice:
         self._quem_emite_o_teclado = quem_emite_o_teclado
         self._montar_o_dpad_e_o_tap(self._o_teclado_emite())
 
-    def _o_teclado_emite(self) -> bool:
-        """O teclado virtual está de pé para emitir as ações de teclado? Sem a pergunta, não.
+    def _o_teclado_emite(self) -> frozenset[str]:
+        """Os botões cedidos que o teclado virtual emite agora. Sem a pergunta, nenhum.
 
-        D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE: o dono único da conta. Com
-        o teclado de pé, o d-pad e o tap de fábrica dos botões em `do_teclado` saem do mouse; sem
-        ele o de fábrica segue. Lida a cada `dispatch`, o jogo aberto passa `calados | do_teclado`.
+        D-2511-O-BOTAO-COM-ACAO-DE-TECLADO-CALA-O-DE-FABRICA-DO-MOUSE: o dono único da conta. O
+        d-pad e o tap de fábrica do botão em `do_teclado` saem do mouse só enquanto o teclado de pé
+        tem a ação dele; sem teclado, ou com um teclado sem a tabela, o de fábrica segue. Lida a
+        cada `dispatch`; o jogo aberto passa `calados | do_teclado`.
         """
         if self._quem_emite_o_teclado is None:
-            return False
+            return frozenset()
         try:
-            return bool(self._quem_emite_o_teclado())
+            return self._cedidos & frozenset(self._quem_emite_o_teclado())
         except Exception:
-            return False
+            return frozenset()
 
-    def _montar_o_dpad_e_o_tap(self, teclado_emite: bool) -> None:
+    def _montar_o_dpad_e_o_tap(self, teclado_emite: frozenset[str]) -> None:
         """O d-pad e o tap de fábrica, sem o do mouse, o calado e o que o teclado emite."""
-        fora = self._mudos | (self._cedidos if teclado_emite else frozenset())
+        fora = self._mudos | teclado_emite
         self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items()
                            if b not in self._escolha_do_mouse and b not in fora}
         self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
@@ -474,7 +478,7 @@ class UinputMouseDevice:
         self._teclado_emitia = teclado_emite
 
     def _acompanhar_o_teclado(self) -> None:
-        """O teclado ligou ou desligou depois da tabela: o d-pad e o tap refazem a conta."""
+        """O teclado ligou, desligou ou trocou de tabela: o d-pad e o tap refazem a conta."""
         if self._quem_emite_o_teclado is None or not self._cedidos:
             return
         emite = self._o_teclado_emite()

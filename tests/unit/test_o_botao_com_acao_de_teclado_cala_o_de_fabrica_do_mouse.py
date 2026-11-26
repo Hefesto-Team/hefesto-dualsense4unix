@@ -9,18 +9,22 @@ botões calados; a tabela com o jogo aberto, `calados | do_teclado`.
 
 A pergunta «esta ação de teclado tem quem a emita agora?» tem um dono, o
 `UinputMouseDevice.ceder_ao_teclado` (a tabela e a pergunta que o gerente entrega), e a resposta é
-lida a cada tique: com o teclado virtual de pé o de fábrica do botão sai do mouse; sem ele
-(Função do teclado desligada) o de fábrica segue, e o teclado que liga ou desliga depois da tabela
+lida a cada tique: com o teclado virtual de pé E com a ação do botão na tabela dele, o de fábrica
+do botão sai do mouse; sem ele (Função do teclado desligada), ou com o teclado que acabou de nascer
+com o de fábrica dele, o de fábrica segue, e o teclado que liga, desliga ou recebe a tabela depois
 é acompanhado sem reaplicar o perfil. O jogo aberto tem teclado privado, que sempre existe.
 
 MORDIDAS (cada uma reprova nomeando o botão): arrancar a chamada `ceder` do
 `apply_button_actions` reprova os casos com teclado; trocar a pergunta por «sempre sim»
 (`calados | do_teclado` fixo) reprova os casos sem teclado e o do teclado que desliga; arrancar o
-`_acompanhar_o_teclado` do `dispatch` reprova só o do teclado que liga e desliga depois.
+`_acompanhar_o_teclado` do `dispatch` reprova só o do teclado que liga e desliga depois; voltar a
+pergunta a «há um teclado de pé?», sem olhar a tabela dele, reprova o do teclado que nasce sem a
+tabela (o botão ficava mudo: o mouse cedia e o teclado novo não emitia nada).
 """
 from __future__ import annotations
 
 import sys
+from typing import Any
 
 import pytest
 
@@ -79,11 +83,11 @@ def _dois_devices(mod: _UinputPorDevice, escolhas: dict[str, str], *, com_teclad
     """O caminho do computador: o `ProfileManager` entrega o perfil; `de_pe` liga o teclado."""
     mouse, teclado = UinputMouseDevice(), UinputKeyboardDevice()
     assert mouse.start() and teclado.start()
-    de_pe = {"teclado": com_teclado}
+    de_pe: dict[str, Any] = {"teclado": com_teclado, "qual": teclado}
     gerente = ProfileManager(
         controller=None,
         mouse_device_provider=lambda: mouse,
-        keyboard_device_provider=lambda: teclado if de_pe["teclado"] else None)
+        keyboard_device_provider=lambda: de_pe["qual"] if de_pe["teclado"] else None)
     perfil = Profile(name="ensaio", match={"type": "any"}, button_actions=escolhas)
     if com_teclado:
         gerente.apply_keyboard(perfil)
@@ -93,7 +97,7 @@ def _dois_devices(mod: _UinputPorDevice, escolhas: dict[str, str], *, com_teclad
 
 
 def _apertar(mouse: UinputMouseDevice, teclado: UinputKeyboardDevice, botao: str, *,
-             de_pe: dict[str, bool] | None = None, volta: int = 0) -> None:
+             de_pe: dict[str, Any] | None = None, volta: int = 0) -> None:
     for i, apertado in enumerate((frozenset({botao}), frozenset())):
         mouse.dispatch(buttons=apertado, now=1.0 + volta * 10 + i, **CENTRO)  # type: ignore[arg-type]
         if de_pe is None or de_pe["teclado"]:
@@ -193,6 +197,31 @@ def test_o_teclado_que_liga_e_desliga_depois_da_tabela_e_acompanhado(
     assert _toques(uinput, NOME_DO_TECLADO) == ["KEY_F11"]
 
 
+@pytest.mark.parametrize("botao", OS_SEIS)
+@pytest.mark.parametrize("com_teclado", [True, False], ids=["religado", "ligado-depois"])
+def test_o_teclado_que_nasce_sem_a_tabela_nao_cala_o_de_fabrica(
+    uinput: _UinputPorDevice, botao: str, com_teclado: bool,
+) -> None:
+    """Ligar a Função do teclado cria um device novo, com o de fábrica dele e sem a tabela do
+    perfil: ninguém emite a ação escolhida, e o de fábrica do mouse segue (o botão não fica mudo).
+    """
+    mouse, _velho, de_pe = _dois_devices(uinput, {botao: "KEY_F11"}, com_teclado=com_teclado)
+    novo = UinputKeyboardDevice()
+    assert novo.start()
+    de_pe["teclado"], de_pe["qual"] = True, novo
+    _apertar(mouse, novo, botao, de_pe=de_pe)
+    saiu = _toques(uinput, NOME_DO_MOUSE) + _toques(uinput, NOME_DO_TECLADO)
+    assert saiu == [DE_FABRICA[botao]], (
+        f"{botao}=KEY_F11 com um teclado novo sem a tabela: saiu {saiu}; o mouse cedeu a quem "
+        f"não emite a ação")
+
+    novo.set_bindings({botao: ("KEY_F11",)})
+    _zerar(uinput)
+    _apertar(mouse, novo, botao, de_pe=de_pe, volta=1)
+    saiu = _toques(uinput, NOME_DO_MOUSE) + _toques(uinput, NOME_DO_TECLADO)
+    assert saiu == ["KEY_F11"], f"{botao}: a tabela chegou ao teclado novo e saiu {saiu}"
+
+
 def test_o_perfil_sem_opiniao_no_direcional_nao_o_faz_sair_duas_vezes(
     uinput: _UinputPorDevice,
 ) -> None:
@@ -215,7 +244,7 @@ def test_sem_a_pergunta_o_device_e_o_de_antes() -> None:
     do_mouse: dict[str, str] = {}
     velho, novo = UinputMouseDevice(), UinputMouseDevice()
     velho.set_button_actions(do_mouse, frozenset({"dpad_up"}))
-    novo.ceder_ao_teclado((), lambda: True)
+    novo.ceder_ao_teclado((), lambda: ("dpad_up", "circle"))
     novo.set_button_actions(do_mouse, frozenset({"dpad_up"}))
     assert velho._mapa_dpad == novo._mapa_dpad == {
         b: k for b, k in DPAD_TO_KEY.items() if b != "dpad_up"}
@@ -223,7 +252,7 @@ def test_sem_a_pergunta_o_device_e_o_de_antes() -> None:
 
 
 def test_a_pergunta_que_levanta_conta_como_ninguem(uinput: _UinputPorDevice) -> None:
-    def quebrada() -> bool:
+    def quebrada() -> frozenset[str]:
         raise RuntimeError("provider caiu")
 
     mouse = UinputMouseDevice()

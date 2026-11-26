@@ -848,22 +848,24 @@ class ProfileManager:
             return
         teclado_provider = self.keyboard_device_provider
 
-        def _ha_teclado() -> bool:
-            return (teclado_provider() if teclado_provider is not None
-                    else self.keyboard_device) is not None
+        def _o_que_o_teclado_emite() -> frozenset[str]:
+            vivo = (teclado_provider() if teclado_provider is not None
+                    else self.keyboard_device)
+            ligacoes = getattr(vivo, "bindings", None) or {}
+            return frozenset(b for b, toks in ligacoes.items() if toks)
 
         try:
             device.set_button_actions(  # type: ignore[attr-defined]
                 do_mouse, calados)
-            ceder = getattr(device, "ceder_ao_teclado", None)
-            if callable(ceder):
-                ceder(frozenset(do_teclado), _ha_teclado)
             teclado = (teclado_provider() if teclado_provider is not None
                        else self.keyboard_device)
             if teclado is not None:
                 teclado.set_bindings(  # type: ignore[attr-defined]
                     resolve_key_bindings(dict(
                         (b, list(toks)) for b, toks in do_teclado.items())))
+            ceder = getattr(device, "ceder_ao_teclado", None)
+            if callable(ceder):
+                ceder(frozenset(do_teclado), _o_que_o_teclado_emite)
         except Exception as exc:
             logger.warning(
                 "button_actions_apply_failed", profile=profile.name, err=str(exc))
