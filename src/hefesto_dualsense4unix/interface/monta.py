@@ -174,16 +174,24 @@ def partes_do_modelo(c: dict[str, Any]) -> list[str]:
 
 
 def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
-    """O rótulo de um controle, e ele tem UMA ordem só."""
+    """O rótulo de um controle, e ele tem UMA ordem só.
+
+    Todo texto sai escapado (o nome é livre: quem usa o escreve); marcação é só o separador e o
+    `quem` da forma «peca», que o gerador monta.
+    """
+    def texto(*partes: Any) -> list[str]:
+        return [html.escape(str(p), quote=False) for p in partes if p]
+
     if forma == "modelo":
         return SEPARADOR.join(html.escape(p) for p in partes_do_modelo(c))
     if forma == "curta":
-        return SEPARADOR.join(p for p in [f'P{c["jogador"]}', c["nome"], c["via"]] if p)
+        return SEPARADOR.join(texto(f'P{c["jogador"]}', c["nome"], c["via"]))
     if forma == "peca":
-        corpo = SEPARADOR.join([c["nome"], c["via"]])
+        corpo = SEPARADOR.join(html.escape(str(p), quote=False) for p in (c["nome"], c["via"]))
         quem = c.get("quem")
         return f'<span class="so-aberto">{quem}{SEPARADOR}</span>{corpo}' if quem else corpo
-    return SEPARADOR.join(["Sony", f'Player {c["jogador"]}', c["nome"], c["via"]])
+    return SEPARADOR.join(html.escape(str(p), quote=False) for p in (
+        "Sony", f'Player {c["jogador"]}', c["nome"], c["via"]))
 
 
 TOM_DA_CASA = {
@@ -519,7 +527,7 @@ def campo_da_extensao(gesto: str, aba: str, modo: str) -> dict[str, str]:
 def rotulo_do_chip(c: dict[str, Any]) -> str:
     """O rótulo curto com a VIA marcada, para o chip da fita."""
     texto = rotulo(c, "curta")
-    via = str(c.get("via") or "")
+    via = html.escape(str(c.get("via") or ""), quote=False)
     if via and texto.endswith(via):
         return f'{texto[:-len(via)]}<span class="via">{via}</span>'
     return texto
@@ -604,7 +612,7 @@ def fita(ativo: str = "todos", inerte: bool = False,
         pintado = f' style="--plastico:{cor_da_zona(slug)}"' if slug else ""
         porque = "a borda é a cor do plástico" if slug else ""
         dica = " — ".join(str(x) for x in (nome, porque) if x)
-        com_dica = f' title="{dica}"' if dica else ""
+        com_dica = f' title="{html.escape(dica, quote=True)}"' if dica else ""
         chips.append(
             f'<label class="chip{" plastico" if slug else ""}{on}" data-campo="fita-chip"'
             + _endereco_do_chip(str(c["pref"]), inerte)

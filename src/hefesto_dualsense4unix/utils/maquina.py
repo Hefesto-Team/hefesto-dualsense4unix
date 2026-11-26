@@ -936,6 +936,22 @@ class ControleDeclarado(BaseModel):
             )
         return limpo
 
+    @field_validator("cor")
+    @classmethod
+    def _cor_aparada_do_tamanho_e_sem_controle(cls, valor: str | None) -> str | None:
+        """O nome dado ao plástico: aparado, até 248 bytes e sem caractere de controle."""
+        if valor is None:
+            return None
+        limpo = valor.strip()
+        if not limpo:
+            return None
+        if len(limpo.encode("utf-8")) > _MAXIMO_DO_NOME_DO_CONTROLE:
+            raise ValueError(f"cor de {len(limpo.encode('utf-8'))} bytes passa de "
+                             f"{_MAXIMO_DO_NOME_DO_CONTROLE}")
+        if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in limpo):
+            raise ValueError("cor com caractere de controle")
+        return limpo
+
 
 _MAXIMO_DO_NOME_DO_CONTROLE = 248
 

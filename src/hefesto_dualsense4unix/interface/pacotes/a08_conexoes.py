@@ -1205,18 +1205,15 @@ def rotulo_do_controle(c: Any, completo: bool = True) -> str:
     """A ordem, 26/08: marca • player • plástico • transporte."""
     marca = 'Sony <span class="pt">•</span> ' if completo else ""
     jogador = f'Player {c["jogador"]}' if completo else f'P{c["jogador"]}'
-    nome = str(c.get("nome") or "")
-    plastico = (f'{nome} <span class="pt">•</span> '
-                if nome and nome != _cor_desconhecida() else "")
-    return f'{marca}{jogador} <span class="pt">•</span> {plastico}{c["via"]}'
+    return f'{marca}{jogador} <span class="pt">•</span> {rotulo_curto_do_controle(c)}'
 
 
 def rotulo_curto_do_controle(c: Any) -> str:
     """«Cosmic Red • USB» — o rótulo da linha do Check-up, sem a marca e sem o jogador."""
     nome = str(c.get("nome") or "")
-    plastico = (f'{nome} <span class="pt">•</span> '
+    plastico = (f'{html.escape(nome, quote=False)} <span class="pt">•</span> '
                 if nome and nome != _cor_desconhecida() else "")
-    return f'{plastico}{c.get("via") or ""}'
+    return f'{plastico}{html.escape(str(c.get("via") or ""), quote=False)}'
 
 
 _PONTO = ' <span class="pt">•</span> '
