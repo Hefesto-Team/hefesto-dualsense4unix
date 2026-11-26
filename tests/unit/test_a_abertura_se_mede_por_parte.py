@@ -6,10 +6,12 @@ em ordem de chegada. O primeiro `state_full` é pedido quando a janela nasce, ju
 página, e não depois do bootstrap.
 
 Mordida: tirar o `self._estado_vivo.comecar()` do fim de `Piloto.__init__` faz a segunda régua
-reprovar (nenhuma leitura do serviço antes de a página carregar).
+reprovar (nenhuma leitura do serviço antes de a página carregar); tirar um `_marcar_a_abertura` do
+piloto, ou devolver a montagem ao tique, faz a terceira reprovar.
 """
 from __future__ import annotations
 
+import pathlib
 import re
 import threading
 import time
@@ -23,7 +25,8 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("constrói o `Piloto` de verdade, com o WebKit")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo as hv
-from tests.unit.janela_aberta_comum import _args
+from hefesto_dualsense4unix.interface import mesa_viva
+from tests.unit.janela_aberta_comum import _args, _correr, publicar_as_de_hoje
 
 MARCOS = ("committed", "abas", "carga", "bootstrap", "estado", "pintura")
 
@@ -58,7 +61,7 @@ def test_o_primeiro_estado_e_pedido_quando_a_janela_nasce(
         leu.set()
         return {"connected": True, "controllers": []}
 
-    monkeypatch.setattr(hv.mesa_viva, "estado_do_daemon", estado)
+    monkeypatch.setattr(mesa_viva, "estado_do_daemon", estado)
     piloto = hv.Piloto(_args())
     try:
         assert not piloto.pronto, "o bootstrap instalou sem o laço do GTK"
@@ -70,3 +73,34 @@ def test_o_primeiro_estado_e_pedido_quando_a_janela_nasce(
     finally:
         piloto._estado_vivo.parar()
         piloto.tela.janela.destroy()
+
+
+@pytest.fixture(scope="module")
+def publicado_de_hoje(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+    return publicar_as_de_hoje(tmp_path_factory)
+
+
+def test_a_janela_de_verdade_anota_os_seis_marcos_e_pinta_o_que_o_fio_montou(
+        publicado_de_hoje: pathlib.Path) -> None:
+    """A janela oculta de verdade, com a chave do processo da janela ligada como no produto: os
+    seis marcos se anotam sozinhos e a primeira pintura leva a carga montada no `hefesto-pacote`."""
+    montaram: list[str] = []
+
+    def como_no_produto(mp: pytest.MonkeyPatch, vivo: Any) -> None:
+        mp.setattr(vivo.pacotes.fios, "_NA_JANELA", [True])
+        original = vivo.pacotes.pacote_da_pagina
+
+        def anotado(pagina: str, ctx: Any) -> Any:
+            montaram.append(threading.current_thread().name)
+            return original(pagina, ctx)
+
+        mp.setattr(vivo.pacotes, "pacote_da_pagina", anotado)
+
+    def ate_pintar(_fora: Any, piloto: Any, t: float) -> bool:
+        return "pintura" not in piloto._abertura and t < 20.0
+
+    fora = _correr(publicado_de_hoje, "01-jogar.html", 2, ate_pintar, ajuste=como_no_produto)
+    abertura = fora.piloto._abertura
+    assert not [m for m in MARCOS if m not in abertura], sorted(abertura)
+    assert fora.pinturas, "a janela não pintou a carga montada no fundo"
+    assert montaram and set(montaram) == {"hefesto-pacote"}, montaram
