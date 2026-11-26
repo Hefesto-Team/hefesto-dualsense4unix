@@ -44,19 +44,28 @@ DEVICE_NAME = "Hefesto - Dualsense4Unix Virtual Keyboard"
 
 CODIGO_MAXIMO_DE_TECLA = 255
 _NAO_E_TECLA = frozenset({"KEY_RESERVED", "KEY_UNKNOWN"})
+DE_ENERGIA_SESSAO_E_RADIO = frozenset({
+    "KEY_POWER", "KEY_SLEEP", "KEY_SUSPEND", "KEY_WAKEUP",
+    "KEY_COFFEE", "KEY_SCREENLOCK",
+    "KEY_BLUETOOTH", "KEY_WLAN", "KEY_UWB", "KEY_WWAN", "KEY_WIMAX", "KEY_RFKILL",
+})
 
 
 def _teclas_do_teclado() -> tuple[str, ...]:
     """Toda tecla de teclado e de mídia que o `evdev.ecodes` nomeia, de `KEY_ESC` a `KEY_MICMUTE`.
 
-    É o dono único da lista: o nó nasce com todas, e o perfil só aceita as que ele emite.
+    É o dono único da lista: o nó nasce com todas, e o perfil só aceita as que ele emite. Ficam de
+    fora, pelo código (o apelido vai junto), as de `DE_ENERGIA_SESSAO_E_RADIO`: o perfil recebido de
+    outra pessoa não desliga o computador, não tranca a sessão nem tira o rádio do controle do ar.
     """
     from evdev import ecodes
 
+    fora = {ecodes.ecodes[nome] for nome in DE_ENERGIA_SESSAO_E_RADIO if nome in ecodes.ecodes}
     codigos = {
         nome: codigo for nome, codigo in ecodes.ecodes.items()
         if nome.startswith("KEY_") and nome not in _NAO_E_TECLA
         and isinstance(codigo, int) and 1 <= codigo <= CODIGO_MAXIMO_DE_TECLA
+        and codigo not in fora
     }
     return tuple(sorted(codigos, key=lambda nome: (codigos[nome], nome)))
 

@@ -290,7 +290,8 @@ def test_o_gatilho_do_outro_controle_vira_botao_pelo_limiar(
 def test_com_o_jogo_aberto_o_teclado_so_dentro_do_jogo_le_todo_controle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """«Só dentro do jogo» sem tabela: o teclado do desktop despacha a união dos controles.
+    """D-2511-A-TECLA-DE-TODO-CONTROLE-CHEGA-AO-COMPUTADOR: «Só dentro do jogo» sem tabela, o
+    teclado do desktop despacha a união dos controles.
 
     MORDIDA: tirar `botoes_para_o_teclado` do ramo do `despachar_no_jogo`.
     """

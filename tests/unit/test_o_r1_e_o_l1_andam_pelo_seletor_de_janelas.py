@@ -84,7 +84,8 @@ def _toques_do_tab_com_o_shift(eventos: list[tuple[str, int]]) -> list[bool]:
 
 
 def test_r1_de_pe_e_l1_tocado_duas_vezes_volta_duas_janelas(uinput: _Uinput) -> None:
-    """O Alt fica preso do começo ao fim, o Tab desce três vezes e duas com o Shift de pé.
+    """D-2511-O-R1-E-O-L1-ANDAM-PELO-SELETOR-DE-JANELAS: o Alt fica preso do começo ao fim, o Tab
+    desce três vezes e duas com o Shift de pé.
 
     MORDIDA: tirar o retoque da tecla final de `_emit_sequence_press` (o Tab sobe uma vez só).
     """

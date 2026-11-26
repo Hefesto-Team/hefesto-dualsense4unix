@@ -73,9 +73,15 @@ def uinput(monkeypatch: pytest.MonkeyPatch) -> _Uinput:
 
 
 def _teclas_de_teclado_do_kernel() -> set[int]:
-    """Os códigos 1 a 255 que o `ecodes.KEY` nomeia, sem o reservado e o desconhecido."""
-    fora = {ecodes.KEY_RESERVED, ecodes.KEY_UNKNOWN}
+    """Os códigos 1 a 255 do `ecodes.KEY`, sem o reservado, o desconhecido e os da recusa."""
+    fora = {ecodes.KEY_RESERVED, ecodes.KEY_UNKNOWN} | {ecodes.ecodes[n] for n in _RECUSADAS}
     return {codigo for codigo in ecodes.KEY if 1 <= codigo <= 255 and codigo not in fora}
+
+
+_RECUSADAS = (
+    "KEY_POWER", "KEY_SLEEP", "KEY_SUSPEND", "KEY_WAKEUP", "KEY_COFFEE", "KEY_SCREENLOCK",
+    "KEY_BLUETOOTH", "KEY_WLAN", "KEY_UWB", "KEY_WWAN", "KEY_WIMAX", "KEY_RFKILL",
+)
 
 
 def _aceita_em_key_bindings(nome: str) -> bool:
@@ -92,7 +98,8 @@ def _aceita_em_button_actions(nome: str) -> bool:
 
 
 def test_o_no_nasce_com_toda_tecla_de_teclado_do_kernel(uinput: _Uinput) -> None:
-    """As capacidades que o nó declara são todas as teclas 1 a 255, nem mais nem menos.
+    """D-2511-O-NO-DO-TECLADO-TEM-TODA-TECLA-DO-KERNEL: o nó declara as teclas 1 a 255, menos as de
+    energia, de sessão e de rádio, nem mais nem menos.
 
     MORDIDA: tirar a F24 da lista (ou voltar à lista escrita à mão) reprova.
     """
@@ -101,8 +108,27 @@ def test_o_no_nasce_com_toda_tecla_de_teclado_do_kernel(uinput: _Uinput) -> None
     declaradas = {codigo for tipo, codigo in uinput.capacidades if tipo == ecodes.EV_KEY}
     assert declaradas == _teclas_de_teclado_do_kernel()
     for nome in ("KEY_MINUS", "KEY_EQUAL", "KEY_F13", "KEY_F24", "KEY_PAUSE", "KEY_102ND",
-                 "KEY_KP5", "KEY_CAPSLOCK", "KEY_PLAYPAUSE", "KEY_SYSRQ"):
+                 "KEY_KP5", "KEY_CAPSLOCK", "KEY_PLAYPAUSE", "KEY_SYSRQ", "KEY_VOLUMEUP",
+                 "KEY_MUTE", "KEY_BRIGHTNESSUP"):
         assert nome in SUPPORTED_KEYS, nome
+
+
+@pytest.mark.parametrize("nome", _RECUSADAS)
+def test_a_tecla_de_energia_de_sessao_e_de_radio_fica_fora_do_no_e_do_perfil(
+    uinput: _Uinput, nome: str,
+) -> None:
+    """D-2511-O-NO-DO-TECLADO-TEM-TODA-TECLA-DO-KERNEL: o perfil recebido de outra pessoa não liga
+    um botão a desligar o computador, trancar a sessão ou tirar o rádio do controle do ar.
+
+    MORDIDA: esvaziar `DE_ENERGIA_SESSAO_E_RADIO` reprova os doze.
+    """
+    teclado = UinputKeyboardDevice()
+    assert teclado.start()
+    declaradas = {codigo for tipo, codigo in uinput.capacidades if tipo == ecodes.EV_KEY}
+    assert ecodes.ecodes[nome] not in declaradas
+    assert nome not in SUPPORTED_KEYS
+    assert not _aceita_em_key_bindings(nome)
+    assert not _aceita_em_button_actions(nome)
 
 
 def test_toda_tecla_aceita_por_qualquer_validacao_esta_no_no_e_vice_versa(
