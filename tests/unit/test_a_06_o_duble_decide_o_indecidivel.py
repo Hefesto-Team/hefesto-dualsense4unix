@@ -52,6 +52,10 @@ o dublê o discorda com a Interna desligada (a `interna_ligada` que o cadeado es
 Steam» só tem uma escolha com dono (o Big Picture), e por isso é o único endereço que nenhum dublê
 consegue mover (`SEM_VARIACAO`).
 
+A janela Acessibilidade acesa (A-ACESSIBILIDADE-DA-NAVEGACAO-GRAVA-O-QUE-SE-CLICA-01, 26/11/2026)
+pinta o que o perfil diz: o dublê traz a ativação e os analógicos fora do desenho, o giroscópio do
+primário no analógico esquerdo e o «Em todo perfil» apagado.
+
 A MORDIDA: faça o dublê concordar com o desenho em qualquer campo — troque `speed` para 6, ligue
 a `interna_ligada`, tire o `button_actions`, ou esvazie `CORES_LIDAS` — e a régua nomeia o
 endereço que voltou a ser indecidível.
@@ -75,7 +79,8 @@ CONTROLES = [
     {"uniq": "aa:bb:cc:00:00:01", "connected": True, "transport": "bt",
      "player_slot": 2, "is_primary": False},
     {"uniq": "02:fe:00:00:00:02", "connected": True, "transport": "usb",
-     "player_slot": 3, "is_primary": True},
+     "player_slot": 3, "is_primary": True,
+     "mira": {"virtual": True, "lado": "analogico_esquerdo"}},
     {"uniq": "e8:47:3a:00:00:03", "connected": True, "transport": "usb",
      "player_slot": 4, "is_primary": False},
     {"uniq": "aa:bb:cc:00:00:04", "connected": True, "transport": "usb",
@@ -138,7 +143,11 @@ def _button_actions() -> dict[str, str]:
     return fora
 
 
-PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions()}
+PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions(),
+          "ativacao": {"duplo_ms": 200, "repete_apos_ms": 700,  # (noqa-acento)
+                       "repete_por_segundo": 8, "ps_travado_ms": 600},
+          "analogicos": {"mao": "direita",  # (noqa-acento)
+                         "curva": "precisa", "sensibilidade": 90}}
 
 SEM_VARIACAO = {"na-steam"}
 
@@ -182,6 +191,8 @@ def _no_mundo_de(monkeypatch, publicado: bool):
     from hefesto_dualsense4unix.interface import mesa_viva, onde, regua_do_mockup
 
     monkeypatch.setattr(perfil, "ativo", lambda nome: dict(PERFIL) if nome else {})
+    monkeypatch.setattr(a06_navegacao, "_AC_RASCUNHO", {})
+    monkeypatch.setattr(a06_navegacao, "_AC_ESCOPO", {"todo_perfil": False})
     monkeypatch.setattr(a06_navegacao, "_a_maquina", _a_maquina_do_duble)
     monkeypatch.setattr(
         a06_navegacao, "_o_que_a_pagina_oferece",
