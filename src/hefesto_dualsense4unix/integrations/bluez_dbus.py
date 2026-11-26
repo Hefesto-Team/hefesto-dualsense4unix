@@ -32,6 +32,31 @@ RAIZ_DO_BLUEZ = "/org/bluez"
 CAMINHO_DO_BARRAMENTO = "/org/freedesktop/DBus"
 ACORDAR = "StartServiceByName"
 
+FILTRO_DO_BLUEZ: tuple[str, ...] = (
+    "--filter", f"--see={SERVICO}",
+    *(f"--call={SERVICO}={regra}" for regra in (
+        f"{OBJETOS}.GetManagedObjects",
+        f"{PROPRIEDADES}.Get",
+        f"{PROPRIEDADES}.GetAll",
+        "org.freedesktop.DBus.Introspectable.Introspect",
+        f"{ADAPTADOR}.SetDiscoveryFilter",
+        f"{ADAPTADOR}.StartDiscovery",
+        f"{ADAPTADOR}.StopDiscovery",
+        f"{APARELHO}.Connect",
+        f"{APARELHO}.Disconnect",
+        "org.bluez.GattCharacteristic1.ReadValue",
+        "org.bluez.GattCharacteristic1.WriteValue",
+        "org.bluez.GattCharacteristic1.StartNotify",
+        "org.bluez.GattCharacteristic1.StopNotify",
+        "org.bluez.GattCharacteristic1.AcquireNotify",
+        "org.bluez.GattCharacteristic1.AcquireWrite",
+        "org.bluez.GattDescriptor1.ReadValue",
+        "org.bluez.GattDescriptor1.WriteValue",
+    )),
+    f"--broadcast={SERVICO}=@{RAIZ_DO_BLUEZ}/*",
+    f"--broadcast={SERVICO}={OBJETOS}.*@/",
+)
+
 FERRAMENTA = "busctl"
 
 ERRO_REJEITADO = "org.bluez.Error.Rejected"
@@ -1982,6 +2007,7 @@ __all__ = [
     "ESPERA_DO_CONNECT_S",
     "ESPERA_DO_PAIR_S",
     "FERRAMENTA",
+    "FILTRO_DO_BLUEZ",
     "FRASE_OUTRO_APARELHO",
     "GERENTE_DE_AGENTES",
     "JANELA_DA_VAGA_S",

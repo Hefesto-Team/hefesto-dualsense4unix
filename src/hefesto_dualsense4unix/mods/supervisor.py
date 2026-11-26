@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import IO, Any
 
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.integrations.bluez_dbus import FILTRO_DO_BLUEZ
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES, opcoes
 from hefesto_dualsense4unix.mods.instalador import (
     CHAVES_OFICIAIS,
@@ -129,33 +130,6 @@ SOQUETE_DO_SISTEMA_NA_CAIXA = "/run/dbus/system_bus_socket"
 BARRAMENTO_DO_SISTEMA_NA_CAIXA = f"unix:path={SOQUETE_DO_SISTEMA_NA_CAIXA}"
 
 PRAZO_DO_PROXY_S = 5.0
-
-_BLUEZ = "org.bluez"
-
-FILTRO_DO_BLUEZ: tuple[str, ...] = (
-    "--filter", f"--see={_BLUEZ}",
-    *(f"--call={_BLUEZ}={regra}" for regra in (
-        "org.freedesktop.DBus.ObjectManager.GetManagedObjects",
-        "org.freedesktop.DBus.Properties.Get",
-        "org.freedesktop.DBus.Properties.GetAll",
-        "org.freedesktop.DBus.Introspectable.Introspect",
-        "org.bluez.Adapter1.SetDiscoveryFilter",
-        "org.bluez.Adapter1.StartDiscovery",
-        "org.bluez.Adapter1.StopDiscovery",
-        "org.bluez.Device1.Connect",
-        "org.bluez.Device1.Disconnect",
-        "org.bluez.GattCharacteristic1.ReadValue",
-        "org.bluez.GattCharacteristic1.WriteValue",
-        "org.bluez.GattCharacteristic1.StartNotify",
-        "org.bluez.GattCharacteristic1.StopNotify",
-        "org.bluez.GattCharacteristic1.AcquireNotify",
-        "org.bluez.GattCharacteristic1.AcquireWrite",
-        "org.bluez.GattDescriptor1.ReadValue",
-        "org.bluez.GattDescriptor1.WriteValue",
-    )),
-    f"--broadcast={_BLUEZ}=@/org/bluez/*",
-    f"--broadcast={_BLUEZ}=org.freedesktop.DBus.ObjectManager.*@/",
-)
 
 ENTRAM_NA_CAIXA: tuple[str, ...] = (
     "/usr", "/etc", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32")
