@@ -10,6 +10,7 @@ sem essa porta, PS + R2 é o que sempre foi. O contrato: docs/protocol/porta-das
 """
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
@@ -120,7 +121,11 @@ class _Mao:
 
 
 class GestosDosAcessorios:
-    """A máquina dos gestos, por controle. Sem relógio próprio: o instante vem de quem chama."""
+    """A máquina dos gestos, por controle. Sem relógio próprio: o instante vem de quem chama.
+
+    Dois fios a leem, o da entrada (o repasse ao pad) e o do laço (os atalhos): a trava põe a
+    leitura e a escrita da mão em fila, e a borda de cada membro nasce uma vez só.
+    """
 
     def __init__(
         self,
@@ -133,6 +138,7 @@ class GestosDosAcessorios:
         self._emitir = emitir
         self._relogio = relogio
         self._maos: dict[str | None, _Mao] = {}
+        self._trava = threading.RLock()
 
     def opcoes_de(self, de: str | None) -> Opcoes | None:
         """As opções que valem para o controle ``de``, ou None (os gestos não valem)."""
@@ -151,8 +157,9 @@ class GestosDosAcessorios:
         return PS_DUPLO_S if opcoes is not None and opcoes.camada else 0.0
 
     def camada_ligada(self, de: str | None) -> bool:
-        mao = self._maos.get(de)
-        return bool(mao and mao.camada)
+        with self._trava:
+            mao = self._maos.get(de)
+            return bool(mao and mao.camada)
 
     def parceiros(self, de: str | None) -> frozenset[str]:
         """Os botões que fazem gesto com o PS neste controle (vazio sem gestos)."""
@@ -163,18 +170,20 @@ class GestosDosAcessorios:
 
     def consumir(self, de: str | None) -> tuple[bool, bool]:
         """``(o PS fez gesto, a camada virou)`` desde a última pergunta; zera os dois."""
-        mao = self._maos.get(de)
-        if mao is None:
-            return False, False
-        usou, virou = mao.usou_o_ps, mao.camada_virou
-        mao.usou_o_ps = mao.camada_virou = False
-        return usou, virou
+        with self._trava:
+            mao = self._maos.get(de)
+            if mao is None:
+                return False, False
+            usou, virou = mao.usou_o_ps, mao.camada_virou
+            mao.usou_o_ps = mao.camada_virou = False
+            return usou, virou
 
     def soltar_quem_saiu(self, ficam: Iterable[str | None]) -> None:
         """Solta a mão de cada controle que saiu com o que segurava (:meth:`_soltar_a_mao`)."""
         manter = set(ficam)
-        for chave in [c for c in self._maos if c not in manter]:
-            self._soltar_a_mao(chave)
+        with self._trava:
+            for chave in [c for c in self._maos if c not in manter]:
+                self._soltar_a_mao(chave)
 
     def _soltar_a_mao(self, de: str | None) -> None:
         """A mão sai emitindo o que segurava: o zero do acelerador, o «desce» do lado segurado
@@ -198,17 +207,19 @@ class GestosDosAcessorios:
         self._dizer(de, "camada", 0)
 
     def botoes_calados(self, de: str | None) -> frozenset[str]:
-        mao = self._maos.get(de)
-        if mao is None:
-            return frozenset()
-        return frozenset(BOTAO_DO_MEMBRO[m] for m in mao.calados)
+        with self._trava:
+            mao = self._maos.get(de)
+            if mao is None:
+                return frozenset()
+            return frozenset(BOTAO_DO_MEMBRO[m] for m in mao.calados)
 
     def eixos_calados(self, de: str | None) -> frozenset[str]:
         """Os eixos de gatilho (``l2``, ``r2``) que o gesto de ``de`` cala ao jogo."""
-        mao = self._maos.get(de)
-        if mao is None:
-            return frozenset()
-        return frozenset(m for m in mao.calados if m in ("l2", "r2"))
+        with self._trava:
+            mao = self._maos.get(de)
+            if mao is None:
+                return frozenset()
+            return frozenset(m for m in mao.calados if m in ("l2", "r2"))
 
     def avaliar(
         self,
@@ -223,8 +234,20 @@ class GestosDosAcessorios:
 
         Idempotente: o mesmo instante lido duas vezes (o laço do pad e o dos atalhos leem o mesmo
         tique) não emite duas vezes: o gesto nasce da MUDANÇA do membro. Devolve as opções que
-        valem, ou None quando os gestos não valem (e então não há latch nenhum).
+        valem, ou None quando os gestos não valem (e então não há latch nenhum). Um fio por vez.
         """
+        with self._trava:
+            return self._avaliar(pressed, gatilhos, now=now, de=de, ps_virtual=ps_virtual)
+
+    def _avaliar(
+        self,
+        pressed: Iterable[str],
+        gatilhos: tuple[int, int] | None,
+        *,
+        now: float | None,
+        de: str | None,
+        ps_virtual: bool,
+    ) -> Opcoes | None:
         opcoes = self.opcoes_de(de)
         if opcoes is None:
             self._soltar_a_mao(de)

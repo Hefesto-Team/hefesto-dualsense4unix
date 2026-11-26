@@ -84,14 +84,16 @@ def _campos_do_daemon_config() -> list[str]:
 
 
 def _envs_lidas_na_subida() -> set[str]:
-    """Todo literal `HEFESTO_*` passado a `os.getenv` em `daemon/main.py`."""
+    """Todo literal `HEFESTO_*` passado a `os.getenv` ou ao leitor único `numero_do_ambiente`
+    em `daemon/main.py`."""
     arvore = ast.parse(DAEMON_MAIN.read_text(encoding="utf-8"))
     nomes: set[str] = set()
     for no in ast.walk(arvore):
         if not isinstance(no, ast.Call):
             continue
         alvo = no.func
-        e_getenv = isinstance(alvo, ast.Attribute) and alvo.attr == "getenv"
+        e_getenv = (isinstance(alvo, ast.Attribute) and alvo.attr == "getenv") or (
+            isinstance(alvo, ast.Name) and alvo.id == "numero_do_ambiente")
         if not e_getenv or not no.args:
             continue
         primeiro = no.args[0]

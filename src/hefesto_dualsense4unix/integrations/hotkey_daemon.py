@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import threading
 import time
 from collections.abc import Callable, Iterable, Mapping
 from contextvars import ContextVar
@@ -150,6 +151,8 @@ class HotkeyManager:
     relogio: Callable[[], float] = time.monotonic
 
     _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
+    _trava_dos_apertos: threading.Lock = field(
+        default_factory=threading.Lock, init=False, repr=False, compare=False)
     _gestos: GestosDosAcessorios | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -237,16 +240,18 @@ class HotkeyManager:
             _QUEM_FAZ_O_GESTO.reset(marca)
 
     def _aperto_de(self, de: str | None) -> _Aperto:
-        aperto = self._apertos.get(de)
-        if aperto is None:
-            aperto = self._apertos[de] = _Aperto()
-        return aperto
+        with self._trava_dos_apertos:
+            aperto = self._apertos.get(de)
+            if aperto is None:
+                aperto = self._apertos[de] = _Aperto()
+            return aperto
 
     def soltar_quem_saiu(self, ficam: Iterable[str | None]) -> None:
-        """Esquece o aperto de quem não foi lido neste tique."""
+        """Esquece o aperto de quem não foi lido neste tique; o fio da entrada também o cria."""
         manter = set(ficam)
-        for chave in [c for c in self._apertos if c not in manter]:
-            del self._apertos[chave]
+        with self._trava_dos_apertos:
+            for chave in [c for c in self._apertos if c not in manter]:
+                del self._apertos[chave]
         if self._gestos is not None:
             self._gestos.soltar_quem_saiu(manter)
 

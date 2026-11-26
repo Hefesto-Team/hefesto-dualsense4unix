@@ -30,6 +30,11 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems import coop as co
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
+from hefesto_dualsense4unix.integrations import hotkey_daemon as hd
+from hefesto_dualsense4unix.integrations.gestos_dos_acessorios import (
+    GestosDosAcessorios,
+    Opcoes,
+)
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
 PARADA_S = 3.0
@@ -332,3 +337,91 @@ def test_o_p1_com_o_pad_dualsense_recebe_o_aperto_com_o_laco_preso(
     depois = [t for t in escritas if t >= apertou["em"]]
     assert depois, "nenhum report saiu depois do aperto"
     assert depois[0] - apertou["em"] < TETO_S, f"{(depois[0] - apertou['em']) * 1000:.1f} ms"
+
+
+_FIO_DA_ENTRADA = "entrada-de-mentira"
+
+
+def _o_laco_espera(chamada: Any, dentro: threading.Event, seguir: threading.Event) -> bool:
+    """Com o fio da entrada parado dentro da máquina, ``chamada`` no outro fio espera ele sair?"""
+    assert dentro.wait(2.0), "o fio da entrada não entrou na máquina"
+    acabou = threading.Event()
+
+    def laco() -> None:
+        chamada()
+        acabou.set()
+
+    fio = threading.Thread(target=laco, name="laco-de-mentira", daemon=True)
+    fio.start()
+    cedo = acabou.wait(0.2)
+    seguir.set()
+    fio.join(2.0)
+    return not cedo and acabou.is_set()
+
+
+@pytest.mark.parametrize("chamada", ["soltar_quem_saiu", "consumir", "avaliar"])
+def test_a_maquina_dos_gestos_atende_um_fio_por_vez(chamada: str) -> None:
+    """O fio da entrada (o repasse) e o laço (os atalhos) leem a mesma mão dos gestos: com o fio
+    da entrada no meio da avaliação, o laço espera, e a borda do PS e do gatilho nasce uma vez.
+
+    Prova da D-2611-A-MAQUINA-DOS-GESTOS-ATENDE-UM-FIO-POR-VEZ.
+    """
+    dentro = threading.Event()
+    seguir = threading.Event()
+
+    def emitir(_de: str | None, _gesto: str, _valor: float) -> None:
+        if threading.current_thread().name == _FIO_DA_ENTRADA:
+            dentro.set()
+            seguir.wait(2.0)
+
+    maquina = GestosDosAcessorios(
+        valem=lambda _de: Opcoes(acelerador=True), emitir=emitir, relogio=lambda: 100.0)
+    p1 = _UNIQ[1]
+    maquina.avaliar({"ps"}, (0, 0), now=100.0, de=p1)
+    entrada = threading.Thread(
+        target=lambda: maquina.avaliar({"ps", "r2_btn"}, (0, 255), now=100.05, de=p1),
+        name=_FIO_DA_ENTRADA, daemon=True)
+    entrada.start()
+    do_laco = {
+        "soltar_quem_saiu": lambda: maquina.soltar_quem_saiu([]),
+        "consumir": lambda: maquina.consumir(p1),
+        "avaliar": lambda: maquina.avaliar({"ps", "r2_btn"}, (0, 255), now=100.05, de=p1),
+    }[chamada]
+    try:
+        assert _o_laco_espera(do_laco, dentro, seguir), (
+            f"o {chamada} do laço correu no meio da avaliação do fio da entrada")
+    finally:
+        seguir.set()
+        entrada.join(2.0)
+
+
+def test_o_aperto_de_cada_controle_nasce_e_sai_um_fio_por_vez(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O fio da entrada cria o aperto do controle novo enquanto o laço esquece quem saiu: o laço
+    espera, e o dicionário dos apertos nunca muda no meio da volta.
+
+    Prova da D-2611-A-MAQUINA-DOS-GESTOS-ATENDE-UM-FIO-POR-VEZ.
+    """
+    dentro = threading.Event()
+    seguir = threading.Event()
+    original = hd._Aperto
+
+    def aperto_lento() -> Any:
+        if threading.current_thread().name == _FIO_DA_ENTRADA:
+            dentro.set()
+            seguir.wait(2.0)
+        return original()
+
+    monkeypatch.setattr(hd, "_Aperto", aperto_lento)
+    gerente = hd.HotkeyManager()
+    entrada = threading.Thread(
+        target=lambda: gerente.combo_buttons_active({"cross"}, de=_UNIQ[2]),
+        name=_FIO_DA_ENTRADA, daemon=True)
+    entrada.start()
+    try:
+        assert _o_laco_espera(lambda: gerente.soltar_quem_saiu([]), dentro, seguir), (
+            "o laço esqueceu os apertos no meio da criação do fio da entrada")
+    finally:
+        seguir.set()
+        entrada.join(2.0)
