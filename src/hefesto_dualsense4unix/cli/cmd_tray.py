@@ -16,11 +16,12 @@ from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
     abrir_o_painel as _abrir_o_painel,
 )
 from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
-    mexer_no_servico as _servico,
-)
-from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
+    bandeja_desligada_pela_escolha,
     soltar_a_vez,
     tomar_a_vez,
+)
+from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
+    mexer_no_servico as _servico,
 )
 
 console = Console()
@@ -116,6 +117,9 @@ def tray_cmd() -> None:
     """Sobe o ícone de bandeja e fica em primeiro plano até `Sair`."""
     from hefesto_dualsense4unix.app.tray import AppTray, probe_gi_availability
 
+    if bandeja_desligada_pela_escolha():
+        console.print("o ícone na bandeja está desligado nas configurações; nada a subir")
+        raise typer.Exit(code=0)
     ok, motivo = probe_gi_availability()
     if not ok:
         console.print(f"[yellow]Tray indisponível:[/] {motivo}")

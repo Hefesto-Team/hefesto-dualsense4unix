@@ -1,9 +1,10 @@
 """Os atos da bandeja que o controle também faz: abrir o painel e o serviço.
 
 E o dono da própria bandeja (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, S3 e S4): a escolha de ter o
-ícone mora no autostart da sessão (`X-GNOME-Autostart-enabled`), a bandeja viva é a que segura a vez
-da sessão (uma trava no runtime), e `garantir_a_bandeja` a sobe quando a escolha está ligada e
-ninguém segura a vez.
+ícone mora no autostart da sessão (`X-GNOME-Autostart-enabled` para o GNOME e `Hidden` para o
+gerador do systemd, que o COSMIC e o Plasma usam; qualquer uma dizendo desligado desliga), a bandeja
+viva é a que segura a vez da sessão (uma trava no runtime), e `garantir_a_bandeja` a sobe quando a
+escolha está ligada e ninguém segura a vez.
 """
 from __future__ import annotations
 
@@ -94,7 +95,32 @@ def _avisar_no_desktop(frase: str) -> None:
 
 
 CHAVE_DO_AUTOSTART = "X-GNOME-Autostart-enabled"
+CHAVE_HIDDEN = "Hidden"
 _LINHA_DA_CHAVE = re.compile(rf"^{CHAVE_DO_AUTOSTART}=.*$", re.M)
+_LINHA_DO_HIDDEN = re.compile(rf"^{CHAVE_HIDDEN}=.*$", re.M)
+
+
+def _valor_da_chave(linha: re.Pattern[str], texto: str) -> str | None:
+    achado = linha.search(texto)
+    return achado.group(0).split("=", 1)[1].strip().lower() if achado else None
+
+
+def _escolha_do_texto(texto: str) -> bool:
+    """O dono da leitura: desligada se o GNOME diz `false` ou o gerador diz `Hidden=true`."""
+    return not (_valor_da_chave(_LINHA_DA_CHAVE, texto) == "false"
+                or _valor_da_chave(_LINHA_DO_HIDDEN, texto) == "true")
+
+
+def _com_a_chave(linha: re.Pattern[str], chave: str, valor: str, texto: str) -> str:
+    nova = f"{chave}={valor}"
+    return (linha.sub(nova, texto) if linha.search(texto)
+            else texto.rstrip("\n") + f"\n{nova}\n")
+
+
+def _escolha_no_texto(texto: str, ligada: bool) -> str:
+    """O dono da escrita: as duas chaves juntas, para valer em toda sessão."""
+    texto = _com_a_chave(_LINHA_DA_CHAVE, CHAVE_DO_AUTOSTART, "true" if ligada else "false", texto)
+    return _com_a_chave(_LINHA_DO_HIDDEN, CHAVE_HIDDEN, "false" if ligada else "true", texto)
 
 
 def caminho_do_autostart() -> Path:
@@ -145,13 +171,21 @@ def soltar_a_vez() -> None:
 
 
 def bandeja_ligada() -> bool:
-    """A escolha «Ícone na bandeja»: o autostart existe e não diz `false`."""
+    """A escolha «Ícone na bandeja»: o autostart existe e nenhuma das duas chaves o desliga."""
     try:
         texto = caminho_do_autostart().read_text(encoding="utf-8")
     except OSError:
         return False
-    achado = _LINHA_DA_CHAVE.search(texto)
-    return not (achado and achado.group(0).split("=", 1)[1].strip().lower() == "false")
+    return _escolha_do_texto(texto)
+
+
+def bandeja_desligada_pela_escolha() -> bool:
+    """O autostart existe e diz desligado; sem arquivo não há escolha e a bandeja pedida sobe."""
+    try:
+        texto = caminho_do_autostart().read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return not _escolha_do_texto(texto)
 
 
 def bandeja_viva() -> int | None:
@@ -283,11 +317,8 @@ def escolher_a_bandeja(ligada: bool) -> None:
         texto = alvo.read_text(encoding="utf-8")
     except OSError:
         texto = _o_autostart_de_fabrica()
-    linha = f"{CHAVE_DO_AUTOSTART}={'true' if ligada else 'false'}"
-    texto = (_LINHA_DA_CHAVE.sub(linha, texto) if _LINHA_DA_CHAVE.search(texto)
-             else texto.rstrip("\n") + f"\n{linha}\n")
     alvo.parent.mkdir(parents=True, exist_ok=True)
-    alvo.write_text(texto, encoding="utf-8")
+    alvo.write_text(_escolha_no_texto(texto, ligada), encoding="utf-8")
     if ligada:
         garantir_a_bandeja()
         return
@@ -320,6 +351,7 @@ __all__ = [
     "LANCADOR_DO_PAINEL",
     "abrir_o_painel",
     "argv_do_ato",
+    "bandeja_desligada_pela_escolha",
     "bandeja_ligada",
     "bandeja_viva",
     "bandejas_da_sessao",

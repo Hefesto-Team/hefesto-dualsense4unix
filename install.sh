@@ -3169,8 +3169,10 @@ _AUTOSTART_DIR="${HOME}/.config/autostart"
 _AUTOSTART_TARGET="${_AUTOSTART_DIR}/${APP_ID}-tray.desktop"
 _AUTOSTART_FONTE="${ROOT_DIR}/packaging/${APP_ID}-tray.desktop"
 _AUTOSTART_LIGADO=true
-if grep -qx 'X-GNOME-Autostart-enabled=false' "${_AUTOSTART_TARGET}" 2>/dev/null; then
+_AUTOSTART_HIDDEN=false
+if grep -qiE '^(X-GNOME-Autostart-enabled=false|Hidden=true)[[:space:]]*$' "${_AUTOSTART_TARGET}" 2>/dev/null; then
     _AUTOSTART_LIGADO=false
+    _AUTOSTART_HIDDEN=true
 fi
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "escrever o autostart do tray em ${_AUTOSTART_TARGET} (ligado=${_AUTOSTART_LIGADO})"
@@ -3178,6 +3180,7 @@ elif [[ -r "${_AUTOSTART_FONTE}" ]]; then
     mkdir -p "${_AUTOSTART_DIR}"
     sed -e "s|@RAIZ@|${ROOT_DIR}|g" \
         -e "s|^X-GNOME-Autostart-enabled=.*|X-GNOME-Autostart-enabled=${_AUTOSTART_LIGADO}|" \
+        -e "s|^Hidden=.*|Hidden=${_AUTOSTART_HIDDEN}|" \
         "${_AUTOSTART_FONTE}" > "${_AUTOSTART_TARGET}"
     printf '      autostart do tray: %s (ligado=%s)\n' "${_AUTOSTART_TARGET}" "${_AUTOSTART_LIGADO}"
 else

@@ -27,6 +27,9 @@ Categories=Settings;HardwareSettings;
 Terminal=false
 StartupNotify=false
 X-GNOME-Autostart-enabled=true
+# A escolha «Ícone na bandeja» desligada grava as duas chaves: o GNOME lê a de cima, e o gerador
+# de autostart do systemd (COSMIC, Plasma) só conhece esta.
+Hidden=false
 X-GNOME-Autostart-Delay=5
 # Mesma declaração do `.desktop` do menu: enquanto o `Exec=` for caminho de
 # árvore, este arquivo não entra em .deb/.rpm/Arch/Nix.
