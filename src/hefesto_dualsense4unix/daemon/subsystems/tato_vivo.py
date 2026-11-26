@@ -4635,6 +4635,13 @@ def _volta_em_curso(volta: Any) -> bool:
         getattr(volta, nome, None) for nome in ("_toques", "_medidores", "_pulsos"))
 
 
+def refazer_o_destino_do_ouvido(daemon: DaemonProtocol, destino: str) -> bool:
+    """O ouvido pede ao dono dos nós de som que refaça o destino preso do som do jogo."""
+    refazer = getattr(
+        getattr(daemon, "_alto_falante_subsystem", None), "refazer_o_no_do_destino", None)
+    return bool(callable(refazer) and refazer(destino) is True)
+
+
 def _acordar_com(fila: asyncio.Queue[Any], acordar: Callable[[], object]) -> None:
     """Quem põe na fila acorda o laço: o que chega num repouso não espera o passo seguinte."""
     original = fila.put_nowait
@@ -4668,6 +4675,7 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
                 else lambda carga: barramento_do_som.publish(EventTopic.JOGO_SOM, carga)),
             assinado=passo.som_assinado,
             ao_estalo=motor.de_fora.guardar_o_estalo,
+            refazer_o_destino=lambda fluxo: refazer_o_destino_do_ouvido(daemon, fluxo.destino),
         )
     diario = asyncio.create_task(
         _diario_do_corpo_loop(daemon, passo), name="tato_diario_do_corpo")

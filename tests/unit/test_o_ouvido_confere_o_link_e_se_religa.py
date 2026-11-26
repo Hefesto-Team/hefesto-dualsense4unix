@@ -18,6 +18,7 @@ import pytest
 import structlog.testing
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from hefesto_dualsense4unix.integrations import transiente_do_jogo as tj
 from hefesto_dualsense4unix.integrations.alto_falante_bt import OrigemDoGravador
@@ -61,7 +62,10 @@ def _fluxo(serial: int = SERIAL_DO_JOGO, *, pausado: bool = False) -> tj.FluxoDo
 class _Mesa:
     """O ouvido do produto, com o alvo lido do grafo pelo conferente do produto."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch, grafo: str | None = None) -> None:
+    def __init__(
+        self, monkeypatch: pytest.MonkeyPatch, grafo: str | None = None,
+        refazer: Callable[[tj.FluxoDoJogo], bool] | None = None,
+    ) -> None:
         self.agora = 100.0
         self.grafo: str | None = _grafo() if grafo is None else grafo
         self.fluxo: tj.FluxoDoJogo | None = _fluxo()
@@ -78,6 +82,7 @@ class _Mesa:
             abrir=self._abrir,
             derrubar=lambda proc, **_k: self.derrubados.append(proc),
             relogio=lambda: self.agora,
+            refazer_o_destino=refazer,
         )
 
     def _abrir(self, _argv: list[str]) -> _Gravador:
@@ -566,3 +571,145 @@ def test_depois_da_religada_cada_controle_que_escolheu_o_corpo_volta_a_receber(
     assert len(gravadores) == 2
     passo._levar_o_corpo(passo.receita_vigente, ordem, lambda u: estados[u])
     assert sorted(alto.corpo) == donos
+
+
+MESA_DE_QUATRO = tuple(f"aa:bb:cc:00:00:{n:02x}" for n in (0x71, 0x72, 0x73, 0x74))
+
+
+class _ServidorDeSom:
+    """O servidor de som de mentira: um nó por controle, e o fluxo do jogo preso a um deles.
+
+    O cabo que sai e volta deixa o nó do destino preso: o fluxo segue tocando nele, o link do
+    gravador fica de pé e o PCM não chega. Religar o gravador não solta; o nó novo solta.
+    """
+
+    def __init__(self) -> None:
+        self.presos: set[str] = set()
+        self.nascidos: list[str] = []
+
+    def no(self, uniq: str) -> Any:
+        servidor = self
+        nome = f"hefesto_som_{uniq.replace(':', '')}"
+
+        class _No:
+            def __init__(self) -> None:
+                self.nome = nome
+                self.uniq = uniq
+
+            def iniciar(self) -> bool:
+                servidor.nascidos.append(nome)
+                servidor.presos.discard(nome)
+                return True
+
+            def parar(self) -> None:
+                return None
+
+        return _No()
+
+
+def _o_dono_dos_nos(servidor: _ServidorDeSom) -> tuple[Any, Any]:
+    gerenciador = af.GerenciadorDeNosDeSom(fabrica=servidor.no)
+    gerenciador.reconciliar(list(MESA_DE_QUATRO))
+    alto = af.AltoFalanteSubsystem(gerenciador=gerenciador)
+    alto._gerenciador = gerenciador
+    return gerenciador, SimpleNamespace(_alto_falante_subsystem=alto)
+
+
+def _jogar_ate_ouvir(
+    mesa: _Mesa, servidor: _ServidorDeSom, gerenciador: Any, destino: str, voltas: int = 12
+) -> int:
+    """Voltas do ouvido e do supervisor do som; o PCM chega enquanto o destino não está preso.
+    Devolve quantas religadas houve até o PCM voltar, ou -1 se nunca voltou."""
+    for _ in range(voltas):
+        mesa.volta()
+        gerenciador.reconciliar(list(MESA_DE_QUATRO))
+        if destino not in servidor.presos:
+            mesa.pcm()
+            return mesa.religadas
+    return -1
+
+
+@pytest.mark.parametrize("quem", range(4), ids=[f"P{n}" for n in range(1, 5)])
+def test_o_cabo_que_sai_e_volta_o_destino_renasce_e_o_ouvido_volta_sem_reinicio(
+    quem: int, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O-OUVIDO-DA-HAPTICA-VOLTA-SOZINHO-DEPOIS-DE-O-CABO-SAIR-E-VOLTAR-01.
+
+    MORDIDA: sem o ``_talvez_refazer_o_destino`` o ouvido segue surdo depois de três religadas.
+    """
+    servidor = _ServidorDeSom()
+    gerenciador, daemon = _o_dono_dos_nos(servidor)
+    destino = f"hefesto_som_{MESA_DE_QUATRO[quem].replace(':', '')}"
+    mesa = _Mesa(
+        monkeypatch, refazer=lambda f: tv.refazer_o_destino_do_ouvido(daemon, f.destino))
+    mesa.fluxo = replace(_fluxo(), destino=destino, estado_do_destino="SUSPENDED")
+    mesa.volta()
+    mesa.pcm()
+    servidor.presos.add(destino)
+    mesa.agora += tj.PRAZO_DO_SILENCIO_S
+    with structlog.testing.capture_logs() as linhas:
+        religadas = _jogar_ate_ouvir(mesa, servidor, gerenciador, destino)
+    assert 0 < religadas <= 3, "o ouvido seguiu surdo depois de três religadas"
+    refeitos = [x for x in linhas if x["event"] == "tato_ouvido_refaz_o_destino"]
+    assert [(x["destino"], x["feito"]) for x in refeitos] == [(destino, True)]
+    assert servidor.nascidos.count(destino) == 2
+    outros = [n for n in servidor.nascidos if n != destino]
+    assert len(outros) == len(MESA_DE_QUATRO) - 1, "a cura refez o nó de outro controle"
+
+
+def test_o_destino_de_outro_dono_se_diz_uma_vez_e_nada_se_refaz(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pedidos: list[str] = []
+
+    def refazer(fluxo: tj.FluxoDoJogo) -> bool:
+        pedidos.append(fluxo.destino)
+        return False
+
+    mesa = _Mesa(monkeypatch, refazer=refazer)
+    mesa.fluxo = replace(_fluxo(), destino="alsa_output.caixas", estado_do_destino="RUNNING")
+    mesa.volta()
+    mesa.pcm()
+    mesa.agora += tj.PRAZO_DO_SILENCIO_S
+    for _ in range(10):
+        mesa.volta()
+    assert mesa.religadas >= 3
+    assert pedidos == ["alsa_output.caixas"], "o pedido ao dono das saídas se repetiu"
+
+
+def test_a_primeira_religada_e_so_do_gravador(monkeypatch: pytest.MonkeyPatch) -> None:
+    pedidos: list[str] = []
+    mesa = _Mesa(monkeypatch, refazer=lambda f: pedidos.append(f.destino) or True)
+    mesa.fluxo = replace(_fluxo(), destino="hefesto_som_X")
+    mesa.volta()
+    mesa.pcm()
+    mesa.volta(tj.PRAZO_DO_SILENCIO_S + 0.1)
+    assert mesa.religadas == 1 and pedidos == []
+
+
+def test_o_pcm_que_volta_arma_de_novo_a_cura_do_destino(monkeypatch: pytest.MonkeyPatch) -> None:
+    pedidos: list[str] = []
+    mesa = _Mesa(monkeypatch, refazer=lambda f: pedidos.append(f.destino) or True)
+    mesa.fluxo = replace(_fluxo(), destino="hefesto_som_X")
+    mesa.volta()
+    mesa.pcm()
+    mesa.agora += tj.PRAZO_DO_SILENCIO_S
+    while not pedidos:
+        mesa.volta()
+    mesa.volta()
+    mesa.pcm()
+    mesa.volta(1.0)
+    mesa.agora += tj.PRAZO_DO_SILENCIO_S + tj.RECUO_TETO_S
+    for _ in range(10):
+        mesa.volta()
+    assert pedidos == ["hefesto_som_X", "hefesto_som_X"]
+
+
+def test_o_no_que_nao_e_desta_casa_nao_renasce() -> None:
+    servidor = _ServidorDeSom()
+    gerenciador, daemon = _o_dono_dos_nos(servidor)
+    assert gerenciador.pedir_o_no_novo("alsa_output.caixas") is None
+    assert tv.refazer_o_destino_do_ouvido(daemon, "alsa_output.caixas") is False
+    antes = list(servidor.nascidos)
+    gerenciador.reconciliar(list(MESA_DE_QUATRO))
+    assert servidor.nascidos == antes

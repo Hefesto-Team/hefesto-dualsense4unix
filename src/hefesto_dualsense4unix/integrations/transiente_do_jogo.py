@@ -618,6 +618,7 @@ MOTIVO_LINK_CAIDO = "link_caido"
 MOTIVO_FLUXO_NOVO = "fluxo_novo"
 MOTIVO_SEM_PCM = "sem_pcm"
 MOTIVO_ALVO_ERRADO = "alvo_errado"
+RELIGADAS_ANTES_DO_DESTINO = 1
 
 
 class OuvidoDoJogo:
@@ -639,8 +640,11 @@ class OuvidoDoJogo:
         publicar: Callable[[dict[str, Any]], object] | None = None,
         assinado: Callable[[], bool] | None = None,
         ao_estalo: Callable[[Transiente], object] | None = None,
+        refazer_o_destino: Callable[[FluxoDoJogo], bool] | None = None,
     ) -> None:
         self._querer = querer
+        self._refazer_o_destino = refazer_o_destino
+        self._destino_refeito_para: int | None = None
         self._publicar = publicar
         self._ao_estalo = ao_estalo
         self._assinado = assinado or (lambda: False)
@@ -748,6 +752,8 @@ class OuvidoDoJogo:
             return MOTIVO_ALVO_ERRADO
         self._conferido = True
         agora = self._relogio()
+        if self._ultimo_pcm > self._ligado_em:
+            self._destino_refeito_para = None
         if self._ultimo_pcm > self._ligado_em and agora - self._ligado_em >= LINK_FIRME_S:
             self._seguidas = 0
             self._religar_em = float("-inf")
@@ -760,7 +766,31 @@ class OuvidoDoJogo:
         self.pausado = achado is not None and achado.pausado
         if achado is None or achado.pausado:
             return None
-        return MOTIVO_SEM_PCM if achado.serial == fluxo.serial else MOTIVO_FLUXO_NOVO
+        if achado.serial != fluxo.serial:
+            return MOTIVO_FLUXO_NOVO
+        self._talvez_refazer_o_destino(achado)
+        return MOTIVO_SEM_PCM
+
+    def _talvez_refazer_o_destino(self, achado: FluxoDoJogo) -> None:
+        """O gravador refeito não curou e o mesmo fluxo segue tocando sem PCM: o destino dele
+        ficou preso (o cabo saiu e voltou), e quem é dono das saídas o refaz, uma vez por
+        episódio. Religar só o gravador não cura; o reinício do serviço, que refaz os nós, curava.
+        """
+        refazer = self._refazer_o_destino
+        if refazer is None or self._destino_refeito_para == achado.serial:
+            return
+        if self._seguidas < RELIGADAS_ANTES_DO_DESTINO:
+            return
+        self._destino_refeito_para = achado.serial
+        try:
+            feito = bool(refazer(achado))
+        except Exception:
+            logger.debug("tato_ouvido_refazer_o_destino_falhou", exc_info=True)
+            feito = False
+        logger.info(
+            "tato_ouvido_refaz_o_destino", feito=feito, fluxo=achado.nome, serial=achado.serial,
+            destino=achado.destino, estado_do_destino=achado.estado_do_destino,
+        )
 
     def _perder(self, motivo: str) -> None:
         self._serial_de_antes = self._fluxo.serial if self._fluxo is not None else None
@@ -768,7 +798,7 @@ class OuvidoDoJogo:
         self._motivo = motivo
 
     def _esquecer_a_religada(self) -> None:
-        self._motivo = self._serial_de_antes = None
+        self._motivo = self._serial_de_antes = self._destino_refeito_para = None
         self._seguidas = 0
         self._religar_em = float("-inf")
 

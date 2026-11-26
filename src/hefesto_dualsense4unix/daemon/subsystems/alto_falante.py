@@ -240,6 +240,7 @@ class GerenciadorDeNosDeSom:
         self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
         self._nos: dict[str, Any] = {}
         self._transportes: dict[str, str] = {}
+        self._renascer: set[str] = set()
         self._acordar = threading.Event()
         self._trava = threading.RLock()
 
@@ -257,6 +258,22 @@ class GerenciadorDeNosDeSom:
         """Reabre a porta para um ``start`` novo com este mesmo gerenciador."""
         with self._trava:
             self._acordar.clear()
+
+    def pedir_o_no_novo(self, nome: str) -> str | None:
+        """O nó de nome ``nome`` renasce na próxima volta, como no reinício do serviço.
+
+        É do ouvido do jogo: o fluxo preso a um nó cujo controle saiu e voltou segue sem PCM
+        com a rota refeita, e só o nó novo o solta. Devolve o ``uniq`` do nó, ou ``None`` quando
+        o nome não é de um nó desta casa.
+        """
+        with self._trava:
+            uniq = next(
+                (u for u, no in self._nos.items() if str(getattr(no, "nome", "") or "") == nome),
+                None,
+            )
+            if uniq is not None:
+                self._renascer.add(uniq)
+        return uniq
 
     def _guardar(self, uniq: str, no: Any) -> bool:
         """O nó que subiu entra em ``_nos``; com a porta fechada, desce. True = guardou."""
@@ -510,7 +527,12 @@ class GerenciadorDeNosDeSom:
             transporte = vistos[uniq] or TRANSPORTE_CABO
             self._transportes[uniq] = transporte
             vivo = self._nos.get(uniq)
-            if vivo is not None and self._o_rotulo_envelheceu(uniq, vivo):
+            with self._trava:
+                renascer = uniq in self._renascer
+                self._renascer.discard(uniq)
+            if vivo is not None and (renascer or self._o_rotulo_envelheceu(uniq, vivo)):
+                if renascer:
+                    logger.info("som_no_renasce_pelo_ouvido", uniq=uniq)
                 self._republicar(uniq, transporte, mesa)
             vivo = self._nos.get(uniq)
             if vivo is not None:
@@ -1436,6 +1458,15 @@ class AltoFalanteSubsystem:
         tocador, sink = alvo
         tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave, fonte=fonte)
         return TOCOU
+
+    def refazer_o_no_do_destino(self, destino: str) -> bool:
+        """O nó de som de ``destino`` renasce na próxima volta e a volta acorda; ``False`` quando
+        o destino não é um nó desta casa (a saída é de outro dono)."""
+        pedir = getattr(self._gerenciador, "pedir_o_no_novo", None)
+        if not destino or not callable(pedir) or pedir(destino) is None:
+            return False
+        self._acordar_a_volta("ouvido")
+        return True
 
     def _carimbar_a_haptica(self) -> None:
         """O relógio da conexão: quem já tem o laço da háptica de pé no cabo."""
