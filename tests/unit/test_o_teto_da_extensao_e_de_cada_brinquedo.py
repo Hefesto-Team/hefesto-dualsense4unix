@@ -75,7 +75,7 @@ VIVO_COM_O_TETO = {"ligado": True, "nivel": 3, "perfil": "Ondas", "aparelhos": C
 
 def _com_a_barra(grupo: str | None = "Aparelhos") -> dict[str, Any]:
     pecas = _pecas(grupo)
-    pecas["aparelhos_acoes"]["barra"] = copy.deepcopy(TETO)  # (noqa-acento)
+    pecas["aparelhos_acoes"]["barra"] = copy.deepcopy(TETO)
     return pecas
 
 
@@ -111,7 +111,7 @@ def test_o_manifesto_declara_uma_barra_por_aparelho_e_a_confere() -> None:
     with pytest.raises(ValidationError, match="pede o grupo"):
         Manifesto.model_validate(_manifesto(**sem_grupo))
     repetida = _com_a_barra()
-    repetida["aparelhos_acoes"]["barra"]["id"] = "testar"  # (noqa-acento)
+    repetida["aparelhos_acoes"]["barra"]["id"] = "testar"
     with pytest.raises(ValidationError, match="repete o id da ação testar"):
         Manifesto.model_validate(_manifesto(**repetida))
     torta = _com_a_barra()
@@ -465,7 +465,7 @@ def test_no_webkit_a_barra_tem_linha_propria_com_a_largura_do_cartao_e_o_nome_in
 
     _, instalar, abrir = barras
     pecas = pecas_da_lovense()
-    pecas["aparelhos_acoes"]["barra"] = {**TETO, "id": "limite"}  # (noqa-acento)
+    pecas["aparelhos_acoes"]["barra"] = {**TETO, "id": "limite"}
     instalar(mod_id=MOD, **pecas)
     html = abrir(_Ponte({**VIVO_COM_O_TETO, "aparelhos": NA_TELA}),
                  mod_id=MOD)["blocos"]["#mod-janela"]

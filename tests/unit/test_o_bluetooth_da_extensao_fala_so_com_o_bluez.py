@@ -150,7 +150,7 @@ def test_de_dentro_da_caixa_so_o_bluez_responde(
     exigir_caixa_do_bwrap()
     pasta = curto / "fonte-exemplo"
     pasta.mkdir()
-    corpo = _manifesto(permissoes=["bluetooth"])  # (noqa-acento)
+    corpo = _manifesto(permissoes=["bluetooth"])
     (pasta / "hefesto-mod.json").write_text(json.dumps(corpo), encoding="utf-8")
     (pasta / "mod.py").write_text(_SONDA, encoding="utf-8")
     instalar(str(pasta), lugares=lar)
@@ -213,7 +213,7 @@ def test_a_abertura_que_falha_depois_do_proxy_o_solta(curto: Path, lar: Lugares)
     """D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ: a caixa que não abre leva o proxy."""
     pasta = curto / "fonte-exemplo"
     pasta.mkdir()
-    corpo = _manifesto(permissoes=["bluetooth"])  # (noqa-acento)
+    corpo = _manifesto(permissoes=["bluetooth"])
     (pasta / "hefesto-mod.json").write_text(json.dumps(corpo), encoding="utf-8")
     (pasta / "mod.py").write_text("import time\ntime.sleep(60)\n", encoding="utf-8")
     instalar(str(pasta), lugares=lar)
@@ -245,7 +245,7 @@ def test_sem_o_proxy_a_extensao_com_bluetooth_recusa(curto: Path, lar: Lugares) 
     """D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ: sem o filtro, não abre, com frase."""
     pasta = curto / "fonte-exemplo"
     pasta.mkdir()
-    corpo = _manifesto(permissoes=["bluetooth"])  # (noqa-acento)
+    corpo = _manifesto(permissoes=["bluetooth"])
     (pasta / "hefesto-mod.json").write_text(json.dumps(corpo), encoding="utf-8")
     (pasta / "mod.py").write_text("import time\ntime.sleep(60)\n", encoding="utf-8")
     instalar(str(pasta), lugares=lar)

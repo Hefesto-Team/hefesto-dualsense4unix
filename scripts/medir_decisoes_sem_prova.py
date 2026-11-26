@@ -312,6 +312,21 @@ COLISOES_DECLARADAS = {
         "a chama de processo pela palavra «caducos» (o registro dos fatos trocados da página), e "
         "«instalador» e «página» não estão no vocabulário de produto (23/11/2026)."
     ),
+    "D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI": (
+        "É de PRODUTO: a decisão diz o que o conferidor do Hefesto reprova numa extensão (versão "
+        "divergente, licença, README, manifesto e leitor), e `test_conferir_as_extensoes.py::"
+        "test_o_pyproject_com_outra_versao_reprova` mede a recusa. A triagem a chama de processo "
+        "pelas palavras «versão», «CHANGELOG» e «release», que aqui são os arquivos conferidos "
+        "da extensão, não o envio do Hefesto (25/11/2026)."
+    ),
+    "D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA": (
+        "É de PRODUTO: a decisão diz o que o install e o atualizador gravam junto da peça e o "
+        "que cada pacote publica, e `test_cr05_licencas_de_terceiros_viajam.py::"
+        "test_a_licenca_da_peca_gdk_viaja_com_a_release_o_install_e_o_atualizador` mede os três "
+        "caminhos. A triagem a chama de processo pelas palavras «release» e «leva» («cada "
+        "arquivo publicado leva o aviso»), que aqui são o arquivo publicado e o verbo da "
+        "pergunta (25/11/2026)."
+    ),
 }
 
 

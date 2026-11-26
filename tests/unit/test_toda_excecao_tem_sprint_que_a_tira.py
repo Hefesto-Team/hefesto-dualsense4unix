@@ -234,6 +234,11 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "tests/unit/test_a_atualizacao_da_extensao_espera_o_jogo_e_volta_se_cair.py"
+    "::_ACEITE_DA_NOVA": (
+        "o aceite que a versão nova da extensão pede no ensaio (ref, permissões, aparelhos, "
+        "alcances, aviso e preparo): dado de entrada do teste, e nenhum caso fica de fora de "
+        "regra nenhuma"),
     "tests/unit/test_o_laco_do_daemon_nao_le_o_disco.py::_FORA_DO_EXT4": (
         "as leituras de /sys e /dev, que moram na memória do kernel e não no ext4: a régua "
         "pergunta pelo disco, e nenhum caso de disco fica fora da conta"),

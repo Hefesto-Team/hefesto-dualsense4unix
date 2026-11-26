@@ -1397,6 +1397,9 @@ _DONOS_DA_FORMA_DA_CONTA = {
         "o piso e o numerado do vpad: o endereço que o produto fabrica, não o que mascara",
     "scripts/check_o_endereco_em_toda_forma.py":
         "a régua de forma monta o mascarado para comparar com o achado",
+    "scripts/github/triagem.py":
+        "roda no Actions só com a biblioteca padrão, sem o pacote instalado; a conta só lê os "
+        "octetos 4 e 5 para achar o endereço inteiro e não mascara nada",
 }
 
 
