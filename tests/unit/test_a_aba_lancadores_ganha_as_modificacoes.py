@@ -428,7 +428,7 @@ def test_a_janela_da_extensao_traz_o_valor_de_agora_de_cada_opcao(lar, ctx, tmp_
 
 
 def _guardado(lar) -> dict:
-    arquivo = lar.dados / "toque" / "opcoes.json"
+    arquivo = lar.da_pessoa / "toque" / "opcoes.json"
     return json.loads(arquivo.read_text(encoding="utf-8")) if arquivo.exists() else {}
 
 
@@ -499,6 +499,7 @@ def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp
     assert segundo["recado"] == "Toque removida."
     assert _entrada(lar, "toque") is None
     assert not (lar.codigo / "toque").exists() and not (lar.dados / "toque").exists()
+    assert not (lar.da_pessoa / "toque").exists()
     assert "Nenhuma extensão instalada" in segundo["blocos"][".ext-lista"]
 
 

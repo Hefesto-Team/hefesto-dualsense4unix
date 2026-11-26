@@ -9,7 +9,8 @@ processo deixou os dois, e a de tema que a substitui os herdou no instalar. O ``
 
 MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
 
-- ``meu_css.caminho`` de volta a ``<dados>``: ``test_o_css_plantado_em_dados_nao_veste_a_janela``;
+- ``meu_css.caminho`` e ``opcoes.caminho`` de volta a ``<dados>``:
+  ``test_o_css_plantado_em_dados_nao_veste_a_janela``;
 - a pasta da pessoa com ``--bind`` na linha do ``bwrap``:
   ``test_a_caixa_recebe_o_que_e_da_pessoa_so_de_leitura`` e
   ``test_de_dentro_da_caixa_escrever_no_que_e_da_pessoa_falha``;
@@ -176,7 +177,7 @@ def _linha(base: Path, comando: list[str]) -> tuple[list[str], Path, Path]:
 def test_a_caixa_recebe_o_que_e_da_pessoa_so_de_leitura(curto: Path) -> None:
     argv, dados, pessoa = _linha(curto, ["true"])
     pares = list(zip(argv, argv[1:], argv[2:], strict=False))
-    assert ("--ro-bind", str(pessoa), str(pessoa)) in pares
+    assert ("--ro-bind", str(pessoa), sup.OPCOES_NA_CAIXA) in pares
     assert not any(a in ("--bind", "--bind-try") and b == str(pessoa) for a, b, _ in pares)
     assert ("--bind", str(dados), str(dados)) in pares
 
@@ -197,7 +198,7 @@ print(json.dumps(fora))
 
 def test_de_dentro_da_caixa_escrever_no_que_e_da_pessoa_falha(curto: Path) -> None:
     exigir_caixa_do_bwrap()
-    alvo_da_pessoa = curto / "pessoa" / "opcoes.json"
+    alvo_da_pessoa = Path(sup.OPCOES_NA_CAIXA) / "opcoes.json"
     alvo_dos_dados = curto / "dados" / "opcoes.json"
     argv, _dados, pessoa = _linha(curto, [sys.executable, "-c", _ESCREVER,
                                           str(alvo_da_pessoa), str(alvo_dos_dados)])

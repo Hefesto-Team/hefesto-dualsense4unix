@@ -214,7 +214,8 @@ def test_todo_comando_que_muda_o_lar_anota_o_gesto_com_os_caminhos(
     lugares = instalador.Lugares.do_xdg()
     guarda = [lugares.codigo / f".{MOD}.anterior"] if verbo == "atualizar" else []
     assert (f"[gesto] mod {verbo} {MOD}", tuple(str(c) for c in (
-        lugares.codigo / MOD, *guarda, lugares.dados / MOD, lugares.pasta_do_diario(MOD),
+        lugares.codigo / MOD, *guarda, lugares.dados / MOD, lugares.da_pessoa / MOD,
+        lugares.pasta_do_diario(MOD),
         lugares.registro))) in gestos, gestos
 
 

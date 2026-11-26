@@ -1,7 +1,8 @@
 """Paths XDG do Hefesto - DualSense4Unix, via `platformdirs`.
 
 Centraliza config / data / cache / state / runtime paths. Com ``ensure=True`` cada uma nasce
-``0700``; a que já existia aberta fecha na primeira vez que o processo a pede.
+``0700``, e a que já existia aberta fecha; a subida do serviço e da janela fecha as cinco
+(:func:`fechar_as_pastas_do_produto`). Pedir o caminho sem ``ensure`` não muda nada.
 """
 from __future__ import annotations
 
@@ -45,10 +46,15 @@ _JA_CONFERIDAS: set[str] = set()
 
 
 def _do_produto(p: Path, ensure: bool) -> Path:
-    """A pasta do produto: nasce ``0700`` com ``ensure``; a que já existe com acesso de grupo ou
-    de outros fecha uma vez por processo (a subida do serviço e da janela)."""
+    """A pasta do produto; com ``ensure``, nasce ``0700`` e a que já existe fecha."""
     if ensure:
         p.mkdir(mode=MODO_DAS_PASTAS, parents=True, exist_ok=True)
+        _fechar(p)
+    return p
+
+
+def _fechar(p: Path) -> Path:
+    """A pasta que existe com acesso de grupo ou de outros fica ``0700``, uma vez por processo."""
     chave = str(p)
     if chave in _JA_CONFERIDAS:
         return p
@@ -99,9 +105,9 @@ def state_dir(ensure: bool = False) -> Path:
 
 def fechar_as_pastas_do_produto() -> list[Path]:
     """Confere de novo as cinco pastas do produto que existem (sem criar nenhuma), fechando a
-    aberta, e devolve as cinco."""
+    aberta, e devolve as cinco. Roda na subida do serviço e da janela."""
     _JA_CONFERIDAS.clear()
-    return [f() for f in (config_dir, data_dir, cache_dir, state_dir, runtime_dir)]
+    return [_fechar(f()) for f in (config_dir, data_dir, cache_dir, state_dir, runtime_dir)]
 
 
 def launch_env_dir(ensure: bool = False) -> Path:

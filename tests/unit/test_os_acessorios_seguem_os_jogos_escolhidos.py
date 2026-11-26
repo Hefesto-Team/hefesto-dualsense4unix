@@ -315,7 +315,7 @@ def test_o_deslizante_e_marcar_o_jogo_gravam_na_hora_e_a_janela_repinta(lar, ctx
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:jogos:steam_app_9924912", "valor": "on", "evento": "change"}, _Ponte())
     assert "checked" in janela_pintada(carga["blocos"])
-    guardado = json.loads((lar.dados / "acess" / "opcoes.json").read_text(encoding="utf-8"))
+    guardado = json.loads((lar.da_pessoa / "acess" / "opcoes.json").read_text(encoding="utf-8"))
     assert guardado == {"vibracao": 17.0, "jogos": ["steam_app_9924912"]}
 
     assert a07.guardar_opcao_da_modificacao(
@@ -337,7 +337,7 @@ def test_o_gesto_recusa_o_valor_fora_da_faixa_e_o_jogo_sem_perfil(lar, ctx, tmp_
     with pytest.raises(RuntimeError, match="Qual jogo"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "acess:jogos", "valor": "on", "evento": "change"}, _Ponte())
-    assert not (lar.dados / "acess" / "opcoes.json").exists(), "a recusa gravou"
+    assert not (lar.da_pessoa / "acess" / "opcoes.json").exists(), "a recusa gravou"
 
 
 def _manifesto_de(lar):

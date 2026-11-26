@@ -187,8 +187,8 @@ def test_o_destino_da_janela(tmp_path: Path) -> None:
     assert jn.destino_da_janela(dentro + "#trocar", pasta)
     assert jn.destino_da_janela("about:srcdoc", pasta)
     assert jn.destino_da_janela("about:blank", pasta)
+    assert jn.destino_da_janela((pasta / "sumida.html").as_uri(), pasta), "a falha de sempre"
     for fora in (None, "", "http://127.0.0.1:9/x", "https://exemplo.org/",
                  "data:text/html,oi", "blob:null/abc", (tmp_path / "fora.html").as_uri(),
-                 f"file://{pasta}/../fora.html", (pasta / "sumida.html").as_uri(),
-                 "file:///etc/hostname", f"file://outra-maquina{pasta}/07-lancadores.html"):
+                 f"file://{pasta}/../fora.html", "file:///etc/hostname", f"file://outra-maquina{pasta}/07-lancadores.html"):
         assert not jn.destino_da_janela(fora, pasta), fora

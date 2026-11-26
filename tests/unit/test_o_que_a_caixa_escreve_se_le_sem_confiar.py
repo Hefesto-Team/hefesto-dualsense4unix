@@ -1,7 +1,9 @@
 """O que a caixa escreve se lê sem confiar (O-QUE-A-CAIXA-ESCREVE-SE-LE-SEM-CONFIAR-01).
 
 Medido em 07/11/2026: a caixa monta ``<dados>/<id>`` com escrita, e a janela lia dali sem confiar
-só no nome. FIFO em ``opcoes.json`` travou o leitor (rc=137 no teto de 6 s), 3 GiB esparsos também;
+só no nome. Desde 25/11/2026 a janela lê o que é da pessoa em ``<config>/mods/<id>``, que a caixa só
+lê; a régua segue valendo ali (O-QUE-E-DA-PESSOA-MORA-ONDE-A-CAIXA-SO-LE-01).
+FIFO em ``opcoes.json`` travou o leitor (rc=137 no teto de 6 s), 3 GiB esparsos também;
 link em ``meu.css`` ou na cópia importada entregou arquivo de fora; a corrida entre arquivo comum e
 FIFO travou o retrato do tema; o ``meu.css`` gigante da substituída se copiou até o ``ENOSPC``; e
 JSON ou CSS fundo demais levantou ``RecursionError`` na janela. Tudo em lar de mentira.
@@ -127,7 +129,7 @@ def lg(tmp_path: Path) -> Lugares:
     lugares = Lugares(codigo=tmp_path / "codigo",  # (noqa-acento)
                       dados=tmp_path / "dados",
                       registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
-    (lugares.dados / _ID).mkdir(parents=True)
+    (lugares.da_pessoa / _ID).mkdir(parents=True)
     return lugares
 
 
@@ -169,7 +171,7 @@ def test_o_plantio_nao_alcanca_o_leitor(
     lg: Lugares, registro: _Registro, leitor: str, plantio: str,
 ) -> None:
     nome, corpo, ler, esperado = _LEITORES[leitor]
-    motivo = _plantar(lg.dados / _ID / nome, plantio, corpo)
+    motivo = _plantar(lg.da_pessoa / _ID / nome, plantio, corpo)
 
     assert diario._em_fio(lambda: ler(lg), _TETO_S) == esperado
     assert registro.motivos == [motivo]
@@ -178,7 +180,7 @@ def test_o_plantio_nao_alcanca_o_leitor(
 @pytest.mark.parametrize("leitor", list(_LEITORES))
 def test_o_arquivo_comum_chega_ao_leitor(lg: Lugares, registro: _Registro, leitor: str) -> None:
     nome, corpo, ler, esperado = _LEITORES[leitor]
-    (lg.dados / _ID / nome).write_bytes(corpo)
+    (lg.da_pessoa / _ID / nome).write_bytes(corpo)
 
     assert ler(lg) != esperado
     assert registro.motivos == []
@@ -186,7 +188,7 @@ def test_o_arquivo_comum_chega_ao_leitor(lg: Lugares, registro: _Registro, leito
 
 @pytest.mark.parametrize("nome", list(_TETOS))
 def test_no_teto_exato_ainda_se_le(lg: Lugares, registro: _Registro, nome: str) -> None:
-    alvo = lg.dados / _ID / nome
+    alvo = lg.da_pessoa / _ID / nome
     alvo.write_bytes(b" " * _TETOS[nome])
 
     assert leitura_da_caixa.ler_da_caixa(alvo, _TETOS[nome]) == alvo.read_bytes()
@@ -196,7 +198,7 @@ def test_no_teto_exato_ainda_se_le(lg: Lugares, registro: _Registro, nome: str) 
 @pytest.mark.parametrize("leitor", [n for n in _LEITORES if n not in ("levar", "logo")])
 def test_o_que_nao_e_texto_vale_o_padrao(lg: Lugares, leitor: str) -> None:
     nome, _corpo, ler, esperado = _LEITORES[leitor]
-    (lg.dados / _ID / nome).write_bytes(b"\xff\xfe")
+    (lg.da_pessoa / _ID / nome).write_bytes(b"\xff\xfe")
 
     assert ler(lg) == esperado
 
@@ -215,7 +217,7 @@ def test_sem_arquivo_o_registro_cala(
 def test_a_troca_entre_arquivo_e_fifo_nao_trava(lg: Lugares, leitor: str) -> None:
     """A corrida que travou o retrato: entre a conferência e o ``open`` o arquivo vira FIFO."""
     nome, corpo, ler, _esperado = _LEITORES[leitor]
-    pasta = lg.dados / _ID
+    pasta = lg.da_pessoa / _ID
     alvo = pasta / nome
     alvo.write_bytes(corpo)
     parar = threading.Event()
@@ -420,8 +422,7 @@ def test_o_plantio_de_dentro_do_bwrap_nao_alcanca_a_janela(
 
     assert diario._em_fio(ler_tudo, _TETO_S) == ({}, "", "", "", ())
     assert fora.read_text(encoding="utf-8") == _CSS
-    assert sorted(set(registro.motivos)) == [leitura_da_caixa.GRANDE_DEMAIS,
-                                             leitura_da_caixa.NAO_E_COMUM]
+    assert registro.motivos == [], "a janela leu a pasta que a caixa escreve"
 
 
 def test_o_tema_da_casa_nao_trava(lg: Lugares) -> None:
@@ -459,8 +460,8 @@ def test_a_janela_da_extensao_abre_igual_com_o_plantio(
 
     a07._montar_a_janela_da_extensao(NOVA)
     limpa = a07._MEXIDA.html_mod
-    pasta = lg.dados / NOVA
-    pasta.mkdir(exist_ok=True)
+    pasta = lg.da_pessoa / NOVA
+    pasta.mkdir(parents=True, exist_ok=True)
     os.mkfifo(opcoes.caminho(NOVA, lg))
     _plantar(meu_css.caminho(NOVA, lg), "link", _CSS.encode())
     _plantar(importados.caminho(NOVA, "logo", lg), "esparso", b"")

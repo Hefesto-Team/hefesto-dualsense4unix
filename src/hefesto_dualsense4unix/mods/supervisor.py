@@ -79,6 +79,7 @@ from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import (
     IPC_SOCKET_DEFAULT_NAME,
+    fechar_as_pastas_do_produto,
     ipc_socket_name,
     mods_socket_path,
     state_dir,
@@ -593,6 +594,8 @@ async def _esvaziar_a_copia(copia: asyncio.Task[None] | None, prazo: float) -> N
 
 CHAVE_DOS_APELIDOS = "mods-apelidos.chave"
 
+OPCOES_NA_CAIXA = "/var/hefesto-opcoes"
+
 
 def _uniqs_de_agora(controles: Callable[[], Any] | None,
                     uniq_do_posto: Callable[[], str | None]) -> list[str]:
@@ -630,8 +633,8 @@ def comando_na_caixa(
     os ``pela_porta`` (``retrato`` recebe os hubs vivos), o :data:`PASTA_DO_HID` só o ``hid``. O
     ``--unshare-pid`` leva junto TUDO o que a modificação abriu; dentro do ``pasta`` o ``bwrap``
     devolve o ``uid`` e o ``gid`` de quem roda. O barramento do sistema nunca entra: ``bluez`` é
-    o soquete do proxy (:data:`FILTRO_DO_BLUEZ`), montado onde o barramento mora. Só ``dados``
-    se escreve; ``da_pessoa``, o que é da pessoa, entra só de leitura.
+    o soquete do proxy (:data:`FILTRO_DO_BLUEZ`), montado onde o barramento mora. ``da_pessoa``
+    entra só de leitura em :data:`OPCOES_NA_CAIXA`, sem mostrar a configuração da casa.
     """
     entram = ENTRAM_NA_CAIXA
     propria = pasta is not None and manifesto.rede != "nenhuma"
@@ -670,7 +673,7 @@ def comando_na_caixa(
     argv += [
         "--ro-bind", str(codigo), str(codigo),
         "--bind", str(dados), str(dados),
-        *(["--ro-bind", str(da_pessoa), str(da_pessoa)] if da_pessoa is not None else []),
+        *(["--ro-bind", str(da_pessoa), OPCOES_NA_CAIXA] if da_pessoa is not None else []),
         "--ro-bind", str(porta), str(porta),
     ]
     if "jogos" in manifesto.permissoes:
@@ -1663,6 +1666,7 @@ class Supervisor:
             logger.warning("mods_estado_nao_gravou", err=str(exc))
 
     async def iniciar(self) -> None:
+        fechar_as_pastas_do_produto()
         await self.reconciliar()
         self._laco = asyncio.create_task(self._vigiar_o_registro(), name="mods-registro")
         self._ouvido = asyncio.create_task(self._ouvir_o_barramento(), name="mods-barramento")
@@ -2131,7 +2135,8 @@ class Supervisor:
             "HEFESTO_MOD_SOCKET": str(self.porta.caminho),
             "HEFESTO_MOD_FICHA": vigiada.ficha,
             "HEFESTO_MOD_DADOS": str(dados),
-            "HEFESTO_MOD_OPCOES": str(da_pessoa / opcoes.NOME_DO_ARQUIVO),
+            "HEFESTO_MOD_OPCOES": str(
+                (Path(OPCOES_NA_CAIXA) if self.bwrap else da_pessoa) / opcoes.NOME_DO_ARQUIVO),
             "HEFESTO_MOD_API": str(API_DAS_MODIFICACOES),
         }
         if execucao_bruta:

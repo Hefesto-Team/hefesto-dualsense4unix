@@ -3,7 +3,8 @@
 Medido em 25/11/2026 (lar de mentira, umask 022, ``medir_pastas.py`` da leva): as cinco pastas
 (config, data, cache, state, runtime) nasciam ``0755`` pelo ``mkdir`` sem modo, e a que já existia
 aberta ficava aberta. O ``xdg_paths`` passa a ser o dono do modo: nascem ``0700``, e a aberta fecha
-uma vez por processo. As cópias do ``maquina.json`` já passavam pelo escritor atômico (``0600``).
+uma vez por processo, com ``ensure`` e na subida do serviço e da janela. As cópias do
+``maquina.json`` já passavam pelo escritor atômico (``0600``).
 
 MORDIDAS (25/11/2026, executadas sobre a cura e devolvidas):
 
@@ -57,11 +58,22 @@ def test_as_cinco_pastas_nascem_0700(lar: Path) -> None:
 def test_a_pasta_que_ja_existia_aberta_fecha_na_subida(lar: Path) -> None:
     for nome in _PASTAS:
         getattr(xdg_paths, nome)(ensure=True).chmod(0o755)
-    xdg_paths._JA_CONFERIDAS.clear()
     pastas = [getattr(xdg_paths, nome)() for nome in _PASTAS]
-    assert [_modo(p) for p in pastas] == [0o700] * 5
-    pastas[0].chmod(0o750)
-    assert _modo(xdg_paths.fechar_as_pastas_do_produto()[0]) == 0o700
+    assert [_modo(p) for p in pastas] == [0o755] * 5, "pedir o caminho mudou o modo"
+    assert [_modo(p) for p in xdg_paths.fechar_as_pastas_do_produto()] == [0o700] * 5
+    pastas[3].chmod(0o750)
+    xdg_paths._JA_CONFERIDAS.clear()
+    assert _modo(xdg_paths.state_dir(ensure=True)) == 0o700
+
+
+def test_a_subida_do_servico_e_da_janela_fecha_as_pastas() -> None:
+    import inspect
+
+    from hefesto_dualsense4unix.mods import supervisor
+
+    assert "fechar_as_pastas_do_produto()" in inspect.getsource(supervisor.Supervisor.iniciar)
+    janela = (Path(supervisor.__file__).parents[1] / "interface" / "janela.py").read_text("utf-8")
+    assert "fechar_as_pastas_do_produto()" in janela
 
 
 def test_a_pasta_que_nao_existe_nao_nasce_sem_o_ensure(lar: Path) -> None:

@@ -67,8 +67,8 @@ def _instalada_com_o_css(lg: instalador.Lugares, tmp_path: Path) -> Path:
     instalador.instalar(str(_fonte(tmp_path)), lugares=lg)
     alvo = meu_css.garantir("tema-z", lg)
     alvo.write_text(ESCRITO, encoding="utf-8")
-    (lg.dados / "tema-z" / "opcoes.json").write_text('{"meu_css": true}', encoding="utf-8")
-    (lg.dados / "tema-z" / "cache").mkdir()
+    (lg.da_pessoa / "tema-z" / "opcoes.json").write_text('{"meu_css": true}', encoding="utf-8")
+    (lg.dados / "tema-z" / "cache").mkdir(parents=True)
     (lg.dados / "tema-z" / "cache" / "x.bin").write_bytes(b"x")
     return alvo
 
@@ -106,7 +106,8 @@ def test_remover_deixa_o_meu_css_e_apaga_o_resto(lg: instalador.Lugares, tmp_pat
     alvo = _instalada_com_o_css(lg, tmp_path)
     assert instalador.remover("tema-z", lugares=lg, prazo=0.1) == []
     assert alvo.read_text(encoding="utf-8") == ESCRITO, "a remoção apagou o CSS da pessoa"
-    assert sorted(p.name for p in (lg.dados / "tema-z").iterdir()) == ["meu.css"]
+    assert sorted(p.name for p in (lg.da_pessoa / "tema-z").iterdir()) == ["meu.css"]
+    assert not (lg.dados / "tema-z").exists()
     assert not (lg.codigo / "tema-z").exists()
     assert "tema-z" not in instalador.ler_registro(lg.registro)
     assert instalador.conferir_remocao("tema-z", lugares=lg) == []
@@ -128,7 +129,8 @@ def test_o_que_sobra_alem_do_meu_css_ainda_e_resto(
         lg: instalador.Lugares, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _instalada_com_o_css(lg, tmp_path)
     monkeypatch.setattr(instalador, "_apagar_os_dados", lambda lg, mod_id: None)
-    assert instalador.remover("tema-z", lugares=lg, prazo=0.1) == [str(lg.dados / "tema-z")]
+    assert instalador.remover("tema-z", lugares=lg, prazo=0.1) == [
+        str(lg.dados / "tema-z"), str(lg.da_pessoa / "tema-z")]
 
 
 def test_reinstalar_encontra_o_mesmo_meu_css(lg: instalador.Lugares, tmp_path: Path) -> None:

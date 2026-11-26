@@ -254,7 +254,7 @@ def test_o_tirar_que_nao_apaga_diz_na_linha(
 
 
 def test_a_pasta_de_dados_que_nao_e_pasta_diz(lg: Lugares, nova: Manifesto) -> None:  # noqa: F811
-    pasta = lg.dados / NOVA
+    pasta = lg.da_pessoa / NOVA
     shutil.rmtree(pasta, ignore_errors=True)
     pasta.parent.mkdir(parents=True, exist_ok=True)
     pasta.write_text("não é pasta", encoding="utf-8")
@@ -312,7 +312,7 @@ def test_o_plantio_de_dentro_do_bwrap_nao_segura_os_gestos(lar: Lugares, curto: 
             await supervisor.parar()
 
     assert diario._em_fio(lambda: asyncio.run(corrida())) == "plantei"
-    assert opcoes.caminho(diario._ID, lar).is_dir()
+    assert opcoes.copia_da_extensao(diario._ID, lar).is_dir()
     logo = _arquivo(curto, "minha-logo.png", _png())
 
     opcoes.guardar(manifesto, "faz", True, lar)

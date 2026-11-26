@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.mods import meu_css as _meu_css  # noqa: E402
 from hefesto_dualsense4unix.mods import tema as _tema_das_mods  # noqa: E402
 from hefesto_dualsense4unix.utils import area_de_transferencia as _area  # noqa: E402
 from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
+from hefesto_dualsense4unix.utils import xdg_paths as _xdg_paths  # noqa: E402
 
 _CASA = _identidade.atual()
 
@@ -134,7 +135,8 @@ DESTINOS_SEM_ARQUIVO = frozenset({"about:srcdoc", "about:blank"})
 
 def destino_da_janela(uri: str | None, pasta: pathlib.Path) -> bool:
     """A janela navega, em qualquer quadro, só para :data:`DESTINOS_SEM_ARQUIVO` e para os
-    arquivos que existem na ``pasta`` das páginas, comparados pelo caminho resolvido. O resto
+    arquivos da ``pasta`` das páginas, comparados pelo caminho resolvido (o que não existe
+    carrega a falha de sempre). O resto
     (http, https, data, blob e qualquer outro ``file://``) fica fora."""
     if not uri:
         return False
@@ -145,7 +147,7 @@ def destino_da_janela(uri: str | None, pasta: pathlib.Path) -> bool:
         return False
     try:
         caminho = pathlib.Path(unquote(partes.path)).resolve()
-        return caminho.is_file() and caminho.parent == pasta.resolve()
+        return caminho.parent == pasta.resolve()
     except (OSError, RuntimeError, ValueError):
         return False
 
@@ -850,6 +852,7 @@ class JanelaDaAba:
         self._tamanho_dito_em = float("-inf")
         self._tamanho_agendado = False
 
+        _xdg_paths.fechar_as_pastas_do_produto()
         self.ponte = PonteDaTela(
             canal=canal, ao_receber=ao_receber, ao_recusar=ao_recusar, folha=folha,
             esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,

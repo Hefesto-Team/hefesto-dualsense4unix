@@ -164,11 +164,11 @@ def test_o_sim_lista_as_portas_pelo_nome(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "o Intiface desta máquina (12345)" in frase
     assert "a ponte que os jogos usam (20010, 30010)" in frase
     assert "DSX" not in frase
-    assert sup.frase_da_rede(_manifesto(["rede:local"])) == sup.A_REDE_INCLUI_A_INTERNET
+    assert sup.frase_da_rede(_manifesto(["rede:local"])) == ""
     assert sup.frase_da_rede(_manifesto(["rede:nenhuma"])) == ""
     monkeypatch.setattr(sup, "o_pasta_entrega_a_ponte", lambda _pasta: False)
     assert sup.frase_da_rede(_lovense()) == sup.A_REDE_INCLUI_A_MAQUINA
-    assert sup.frase_da_rede(_manifesto(["rede:local"])) == sup.A_REDE_INCLUI_A_INTERNET
+    assert sup.frase_da_rede(_manifesto(["rede:local"])) == ""
     monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: None)
     assert sup.frase_da_rede(_lovense()) == sup.A_REDE_INCLUI_A_MAQUINA
 

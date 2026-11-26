@@ -2,7 +2,8 @@
 
 Medido em 22/10/2026: a folha do tema só aceita ``:root{...}`` de cores com contraste, e quem
 queria mexer no layout não tinha onde. Agora a extensão de tema declara uma opção ``css`` (desligada
-de início), a pessoa escreve o ``<dados>/<id>/meu.css`` e a janela o põe POR CIMA do tema, pelo
+de início), a pessoa escreve o
+``<config>/mods/<id>/meu.css`` e a janela o põe POR CIMA do tema, pelo
 mesmo vigia, sem reabrir. A régua é de segurança: nada busca arquivo nem endereço, nada escapa, o
 teto é 16 KB, e o recusado diz a linha: a tela, só a forma curta («Linha 2: url()», em
 vermelho, escolha de 22/10/2026); a frase longa vai ao log da janela. O WebKit só deixa a
@@ -158,7 +159,7 @@ def test_passar_de_16_kb_recusa_sem_ler() -> None:
 
 def test_garantir_cria_o_exemplo_uma_vez_e_nunca_reescreve(lg: instalador.Lugares) -> None:
     alvo = meu_css.garantir("tema-x", lg)
-    assert alvo == lg.dados / "tema-x" / "meu.css"
+    assert alvo == lg.da_pessoa / "tema-x" / "meu.css"
     assert alvo.read_text(encoding="utf-8") == meu_css.EXEMPLO
     alvo.write_text(".a{color:red}", encoding="utf-8")
     assert meu_css.garantir("tema-x", lg).read_text(encoding="utf-8") == ".a{color:red}"
@@ -166,7 +167,7 @@ def test_garantir_cria_o_exemplo_uma_vez_e_nunca_reescreve(lg: instalador.Lugare
 
 def test_ler_diz_a_folha_ou_a_recusa_e_nunca_escreve(lg: instalador.Lugares) -> None:
     assert meu_css.ler("tema-x", lg) == meu_css.FolhaDeQuemUsa()
-    assert not (lg.dados / "tema-x").exists(), "ler criou a pasta"
+    assert not (lg.da_pessoa / "tema-x").exists(), "ler criou a pasta"
     _escrever(lg, ".a{color:red}")
     assert meu_css.ler("tema-x", lg).folha == ".a{color:red !important;}"
     _escrever(lg, "\n.a{background:url(x)}")

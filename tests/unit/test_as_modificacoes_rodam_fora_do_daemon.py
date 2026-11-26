@@ -851,8 +851,8 @@ def test_remover_para_o_processo_e_deixa_os_tres_lugares_vazios(
     lar: Lugares, curto: Path
 ) -> None:
     _instalar_e_ligar(lar, curto, "fica")
-    (lar.dados / "exemplo").mkdir(parents=True, exist_ok=True)
-    (lar.dados / "exemplo" / "meu.css").write_text(".a{color:red}", encoding="utf-8")
+    (lar.da_pessoa / "exemplo").mkdir(parents=True, exist_ok=True)
+    (lar.da_pessoa / "exemplo" / "meu.css").write_text(".a{color:red}", encoding="utf-8")
 
     async def corrida() -> list[str]:
         supervisor = _supervisor(lar, procurar_bwrap=False, intervalo_s=0.05)
@@ -871,8 +871,9 @@ def test_remover_para_o_processo_e_deixa_os_tres_lugares_vazios(
 
     assert asyncio.run(corrida()) == []
     assert not (lar.codigo / "exemplo").exists()
-    assert [p.name for p in (lar.dados / "exemplo").iterdir()] == ["meu.css"]
-    assert (lar.dados / "exemplo" / "meu.css").read_text(encoding="utf-8") == ".a{color:red}"
+    assert not (lar.dados / "exemplo").exists()
+    assert [p.name for p in (lar.da_pessoa / "exemplo").iterdir()] == ["meu.css"]
+    assert (lar.da_pessoa / "exemplo" / "meu.css").read_text(encoding="utf-8") == ".a{color:red}"
     assert "exemplo" not in ler_registro(lar.registro)
     assert conferir_remocao("exemplo", lugares=lar) == []
 
