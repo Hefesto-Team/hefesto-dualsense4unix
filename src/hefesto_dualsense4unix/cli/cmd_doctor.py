@@ -561,15 +561,21 @@ def _print_storm_block() -> int:
 def _linhas_perfis() -> tuple[list[tuple[str, str]], bool]:
     """Verificação SEMÂNTICA dos perfis. Devolve (linhas, houve_erro)."""
     from hefesto_dualsense4unix.profiles import sanidade
-    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles, perfis_ilegiveis
 
     try:
         perfis = load_all_profiles()
     except OSError as exc:
         return ([("[WARN]", f"não deu para ler os perfis: {exc}")], False)
+    ilegiveis = [
+        ("[FAIL]", f"{i.arquivo}: ilegível: {i.motivo}. Restaure uma versão guardada "
+                   f"(profile restore {Path(i.arquivo).stem}) ou apague o arquivo "
+                   f"(profile delete {Path(i.arquivo).stem})")
+        for i in perfis_ilegiveis()
+    ]
     achados = sanidade.verificar_perfis(perfis)
-    linhas = sanidade.linhas_de_relatorio(achados, total_perfis=len(perfis))
-    houve_erro = any(a.gravidade == "erro" for a in achados)
+    linhas = ilegiveis + sanidade.linhas_de_relatorio(achados, total_perfis=len(perfis))
+    houve_erro = bool(ilegiveis) or any(a.gravidade == "erro" for a in achados)
     return (linhas, houve_erro)
 
 

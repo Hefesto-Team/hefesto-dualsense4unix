@@ -2189,6 +2189,55 @@ def perfis_de_versao_mais_nova() -> list[PerfilDeVersaoMaisNova]:
     return achados
 
 
+class PerfilIlegivel(NamedTuple):
+    """Um arquivo da pasta de perfis que não abre como perfil: o arquivo e o motivo em uma frase."""
+
+    arquivo: str
+    motivo: str
+
+
+def frase_do_perfil_ilegivel(exc: BaseException) -> str:
+    """O motivo de um perfil não abrir, em uma frase: o mesmo na lista, no doctor e nos comandos."""
+    if isinstance(exc, PerfilDeVersaoMaisNovaError):
+        return str(exc)
+    if isinstance(exc, json.JSONDecodeError):
+        if not exc.doc.strip():
+            return "o arquivo está vazio"
+        return f"o JSON está cortado ou inválido (linha {exc.lineno}, coluna {exc.colno})"
+    if isinstance(exc, UnicodeDecodeError):
+        return "o arquivo não é texto UTF-8"
+    if isinstance(exc, ValidationError):
+        erros = exc.errors()
+        if not erros:
+            return "o perfil não valida contra o esquema"
+        onde = ".".join(str(parte) for parte in erros[0]["loc"])
+        motivo = str(erros[0]["msg"]).removeprefix("Value error, ")
+        alvo = f"{onde}: " if onde else ""
+        return f"o perfil não valida: {alvo}{motivo}"
+    return str(exc) or type(exc).__name__
+
+
+def perfis_ilegiveis() -> list[PerfilIlegivel]:
+    """Os arquivos da pasta que não abrem como perfil, com o motivo (sem os de versão mais nova)."""
+    achados: list[PerfilIlegivel] = []
+    try:
+        arquivos = sorted(profiles_dir(ensure=True).glob("*.json"))
+    except OSError:
+        return achados
+    for path in arquivos:
+        try:
+            with _trava_da_leitura(path):
+                cru = json.loads(path.read_text(encoding="utf-8"))
+            perfil_do_cru(cru)
+        except PerfilDeVersaoMaisNovaError:
+            continue
+        except _PROFILE_DECODE_ERRORS as exc:
+            achados.append(PerfilIlegivel(path.name, frase_do_perfil_ilegivel(exc)))
+        except OSError as exc:
+            achados.append(PerfilIlegivel(path.name, f"não deu para ler o arquivo: {exc}"))
+    return achados
+
+
 def _read_profile(path: Path) -> Profile:
     with _trava_da_leitura(path):
         raw = _ler_o_cru(path)
@@ -2936,36 +2985,26 @@ class OFreestyleNaoSeApagaError(RuntimeError):
     """O perfil que o produto pede no disco (o Freestyle) não se remove."""
 
 
-def delete_profile(identifier: str) -> None:
-    """Remove o arquivo do perfil. Aceita slug ou display name.
+def delete_profile(identifier: str) -> Path:
+    """Remove o arquivo que ``arquivo_do_perfil`` resolveu e devolve o caminho que saiu.
 
+    Aceita slug ou display name, e NÃO exige que o arquivo valide: o perfil ilegível se apaga
+    pelo mesmo comando, com a cópia no histórico. O arquivo apagado é o pedido, nunca o do
+    ``name`` que o conteúdo diz (dois arquivos de mesmo nome interno não se confundem).
     O Freestyle se recusa com `OFreestyleNaoSeApagaError` (a linha de comando e a janela chamam
     esta mesma função): o botão «Modo Freestyle» pede o arquivo no disco.
     """
+    candidate = arquivo_do_perfil(identifier, profiles_dir(ensure=True))
+    if candidate is None:
+        raise FileNotFoundError(f"perfil não encontrado: {identifier}")
+    nome = candidate.stem
+    with contextlib.suppress(*_PROFILE_DECODE_ERRORS, PerfilDeVersaoMaisNovaError, OSError):
+        nome = _read_profile(candidate).name
     try:
-        profile = load_profile(identifier)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"perfil não encontrado: {identifier}") from None
-
-    directory = profiles_dir(ensure=True)
-    slug = slugify(profile.name)
-    candidate = directory / f"{slug}.json"
-    if not candidate.exists():
-        direct = directory / f"{identifier}.json"
-        if direct.exists():
-            candidate = direct
-        else:
-            for path in directory.glob("*.json"):
-                try:
-                    other = _read_profile(path)
-                except _PROFILE_DECODE_ERRORS as exc:
-                    _avisa_perfil_invalido(path, exc)
-                    continue
-                if other.name == profile.name:
-                    candidate = path
-                    break
-
-    if candidate.name == ARQUIVO_DO_PADRAO or slugify(profile.name) == SLUG_DO_PADRAO:
+        e_o_padrao = slugify(nome) == SLUG_DO_PADRAO
+    except ValueError:
+        e_o_padrao = False
+    if candidate.name == ARQUIVO_DO_PADRAO or e_o_padrao:
         raise OFreestyleNaoSeApagaError(
             f"O {NOME_DO_PADRAO} não se apaga: é o perfil do botão Modo {NOME_DO_PADRAO}."
         )
@@ -2981,12 +3020,13 @@ def delete_profile(identifier: str) -> None:
     with contextlib.suppress(Exception):
         logger.info(
             "profile_apagado",
-            nome=profile.name,
+            nome=nome,
             arquivo=candidate.name,
             origem=_origem_do_processo(),
             pid=os.getpid(),
             backup=str(backup) if backup is not None else None,
         )
+    return candidate
 
 
 def _atomic_write_json(target: Path, payload: object) -> None:
@@ -3074,6 +3114,7 @@ __all__ = [
     "OFreestyleNaoSeApagaError",
     "PerfilDeVersaoMaisNova",
     "PerfilDeVersaoMaisNovaError",
+    "PerfilIlegivel",
     "PerfilSemeado",
     "ResultadoDaSemeadura",
     "ResultadoDosEstilos",
@@ -3084,6 +3125,7 @@ __all__ = [
     "delete_profile",
     "e_perfil_de_jogo_automatico",
     "enxugar_perfis_de_jogo",
+    "frase_do_perfil_ilegivel",
     "gesto_de_agora",
     "historico_dir",
     "listar_historico",
@@ -3105,6 +3147,7 @@ __all__ = [
     "perfil_do_molde",
     "perfis_de_jogo_semeados",
     "perfis_de_versao_mais_nova",
+    "perfis_ilegiveis",
     "perfis_para_consulta",
     "perfis_que_casam_com_o_cliente_steam",
     "reapontar_perfis_com_chave_de_executavel",

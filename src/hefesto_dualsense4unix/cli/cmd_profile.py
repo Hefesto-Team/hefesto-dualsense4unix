@@ -12,14 +12,17 @@ via pydantic, salva e ativa via IPC/hardware) e `save <nome>
 """
 from __future__ import annotations
 
+import functools
 import json as _json
+from collections.abc import Callable
 from datetime import datetime as _datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import typer
 from pydantic import ValidationError
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from hefesto_dualsense4unix.utils import identidade
@@ -29,6 +32,43 @@ if TYPE_CHECKING:
 
 app = typer.Typer(name="profile", help="Gerencia perfis Hefesto - DualSense4Unix.", no_args_is_help=True)  # noqa: E501
 console = Console()
+
+_Comando = TypeVar("_Comando", bound=Callable[..., Any])
+
+
+def _o_arquivo_do_pedido(pedido: object) -> str | None:
+    """O nome do arquivo que o pedido (nome, slug ou caminho) aponta, ou ``None``."""
+    if isinstance(pedido, Path):
+        return pedido.name
+    if not isinstance(pedido, str):
+        return None
+    from hefesto_dualsense4unix.profiles.loader import arquivo_do_perfil
+
+    try:
+        alvo = arquivo_do_perfil(pedido)
+    except (ValueError, OSError):
+        return None
+    return alvo.name if alvo is not None else None
+
+
+def _com_a_frase_no_lugar_do_traceback(comando: _Comando) -> _Comando:
+    """O erro de leitura ou de nome vira UMA frase com o arquivo e sai com rc=1, sem traceback."""
+    from pydantic import ValidationError as _Invalido
+
+    @functools.wraps(comando)
+    def _envolvido(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return comando(*args, **kwargs)
+        except (ValueError, _Invalido, UnicodeDecodeError) as exc:
+            from hefesto_dualsense4unix.profiles.loader import frase_do_perfil_ilegivel
+
+            pedido = kwargs.get("file", kwargs.get("name"))
+            arquivo = _o_arquivo_do_pedido(pedido) or (str(pedido) if pedido else "")
+            quem = f"{arquivo}: " if arquivo else ""
+            console.print(f"[red]{escape(quem + frase_do_perfil_ilegivel(exc))}[/red]")
+            raise typer.Exit(code=1) from None
+
+    return _envolvido  # type: ignore[return-value]
 
 
 def _guarda_slug(name: str, *, force: bool, atualiza: bool = False) -> None:
@@ -68,6 +108,17 @@ def _guarda_slug(name: str, *, force: bool, atualiza: bool = False) -> None:
     raise typer.Exit(code=1)
 
 
+def _diz_que_a_anterior_ficou(nome: str, existia: bool) -> None:
+    """Gravar por cima com ``--force`` diz onde a versão de antes ficou."""
+    if existia:
+        from hefesto_dualsense4unix.profiles.slug import slugify
+
+        console.print(
+            f"[dim]a versão anterior de '{escape(nome)}' ficou no histórico "
+            f"(profile historico {escape(slugify(nome))}).[/dim]"  # (noqa-acento)
+        )
+
+
 def _igual_ao_que_esta_no_disco(profile: Profile) -> bool:
     """O perfil de MESMO nome que já está na pasta tem o conteúdo deste (fora as datas)?"""
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
@@ -89,11 +140,13 @@ def cmd_list(
     from hefesto_dualsense4unix.profiles.loader import (
         load_all_profiles,
         perfis_de_versao_mais_nova,
+        perfis_ilegiveis,
     )
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
     profiles = os_perfis_de_escolher(load_all_profiles())
     mais_novos = perfis_de_versao_mais_nova()
+    ilegiveis = perfis_ilegiveis()
     if como_json:
         console.print_json(data=[
             {
@@ -107,9 +160,13 @@ def cmd_list(
         ] + [
             {"nome": n.nome, "de_versao_mais_nova": True, "formato": n.versao}
             for n in mais_novos
+        ] + [
+            {"nome": Path(i.arquivo).stem, "arquivo": i.arquivo, "ilegivel": True,
+             "motivo": i.motivo}
+            for i in ilegiveis
         ])
         return
-    if not profiles and not mais_novos:
+    if not profiles and not mais_novos and not ilegiveis:
         console.print("[dim]nenhum perfil encontrado[/dim]")
         return
 
@@ -131,9 +188,12 @@ def cmd_list(
             f"[yellow]{n.nome}[/yellow]: de uma versão mais nova do Hefesto "
             f"(formato {n.versao}); esta versão não o usa."
         )
+    for i in ilegiveis:
+        console.print(f"[yellow]{escape(i.arquivo)}[/yellow]: ilegível: {escape(i.motivo)}")
 
 
 @app.command("show")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_show(name: str) -> None:
     """Mostra o JSON bruto de um perfil."""
     from hefesto_dualsense4unix.profiles.loader import (
@@ -153,6 +213,7 @@ def cmd_show(name: str) -> None:
 
 
 @app.command("activate")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_activate(name: str) -> None:
     """Ativa um perfil pelo daemon vivo (`profile.switch`), que troca no processo e grava a escolha.
 
@@ -203,6 +264,7 @@ def cmd_activate(name: str) -> None:
 
 
 @app.command("create")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_create(
     name: str = typer.Argument(..., help="Nome do perfil."),
     priority: int = typer.Option(
@@ -226,7 +288,7 @@ def cmd_create(
     ),
 ) -> None:
     """Cria um perfil enxuto: só nome, alvo e prioridade; o resto herda o computador."""
-    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.loader import nome_ocupado, save_profile
     from hefesto_dualsense4unix.profiles.schema import (
         MatchAny,
         MatchCriteria,
@@ -235,6 +297,7 @@ def cmd_create(
     )
 
     _guarda_slug(name, force=force)
+    existia = force and nome_ocupado(name)
     match: Match
     if fallback:
         match = MatchAny()
@@ -255,6 +318,7 @@ def cmd_create(
     profile = Profile(name=name, match=match, priority=priority)
     path = save_profile(profile, enxuto=True)
     console.print(f"[green]perfil criado: {path}[/green]")
+    _diz_que_a_anterior_ficou(name, existia)
     if isinstance(match, MatchCriteria) and profile.e_catch_all:
         console.print(
             "[yellow]sem --match-class/--match-regex/--match-exe: este perfil "
@@ -264,6 +328,7 @@ def cmd_create(
 
 
 @app.command("delete")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_delete(
     name: str,
     yes: bool = typer.Option(False, "--yes", "-y", help="Confirma delete."),
@@ -286,7 +351,7 @@ def cmd_delete(
     if not yes:
         typer.confirm(f"Deletar perfil {name!r}?", abort=True)
     try:
-        delete_profile(name)
+        apagado = delete_profile(name)
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
@@ -294,7 +359,10 @@ def cmd_delete(
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from None
     esquecer_o_perfil_apagado(name)
-    console.print(f"[green]perfil deletado: {name}[/green]")
+    console.print(
+        f"[green]perfil deletado: {name}[/green] [dim](arquivo {escape(apagado.name)}; "
+        f"a cópia fica no histórico)[/dim]"
+    )
 
 
 def _estado_do_daemon() -> dict[str, object] | None:
@@ -310,6 +378,7 @@ def _estado_do_daemon() -> dict[str, object] | None:
 
 
 @app.command("historico")  # (noqa-acento)
+@_com_a_frase_no_lugar_do_traceback
 def cmd_historico(
     name: str = typer.Argument(..., help="Nome ou slug do perfil."),
 ) -> None:
@@ -341,6 +410,7 @@ def cmd_historico(
 
 
 @app.command("restore")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_restore(
     name: str = typer.Argument(..., help="Nome ou slug do perfil."),
     em: str | None = typer.Option(
@@ -397,6 +467,7 @@ def _quando_legivel(carimbo: str) -> str:
 
 
 @app.command("apply")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_apply(
     file: Path = typer.Option(  # noqa: B008
         ..., "--file", "-f", exists=True, readable=True, dir_okay=False,
@@ -447,8 +518,10 @@ def cmd_apply(
                 path = save_profile(profile)
                 console.print(f"[green]perfil salvo:[/green] {path}")
         else:
+            existia = force and nome_ocupado(profile.name)
             path = save_profile(profile)
             console.print(f"[green]perfil salvo:[/green] {path}")
+            _diz_que_a_anterior_ficou(profile.name, existia)
     else:
         try:
             load_profile(profile.name)
@@ -463,6 +536,7 @@ def cmd_apply(
 
 
 @app.command("save")
+@_com_a_frase_no_lugar_do_traceback
 def cmd_save(
     name: str = typer.Argument(..., help="Nome do novo perfil a criar."),
     from_active: bool = typer.Option(
@@ -476,7 +550,7 @@ def cmd_save(
     """Cria um perfil clonando o ativo (snapshot do que está em uso)."""
     from pydantic import ValidationError
 
-    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.loader import load_profile, nome_ocupado, save_profile
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     if not from_active:
@@ -503,6 +577,7 @@ def cmd_save(
         raise typer.Exit(code=1) from None
 
     _guarda_slug(name, force=force, atualiza=True)
+    existia = force and nome_ocupado(name)
 
     payload = source.model_dump(mode="json")
     payload["name"] = name
@@ -518,6 +593,7 @@ def cmd_save(
     console.print(
         f"[green]perfil clonado:[/green] {active_name} -> {name} ({path})"
     )
+    _diz_que_a_anterior_ficou(name, existia)
 
 
 def _activate_via_ipc_or_fallback(name: str) -> None:

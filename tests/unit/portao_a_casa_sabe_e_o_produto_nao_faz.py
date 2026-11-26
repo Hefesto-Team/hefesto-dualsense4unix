@@ -197,7 +197,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DOCTOR_CONTAGEM": (
         "25/11/2026 — o contrato que o comando `doctor` passa ao `scripts/doctor.sh`: "
-        "`src/hefesto_dualsense4unix/cli/cmd_doctor.py:775` (`HEFESTO_DOCTOR_CONTAGEM`); "
+        "`src/hefesto_dualsense4unix/cli/cmd_doctor.py:781` (`HEFESTO_DOCTOR_CONTAGEM`); "
         "o script anota as falhas e os avisos no arquivo e cala o veredito dele, para o "
         "comando fechar com uma linha só. O produto escreve a chave no ambiente do filho e "
         "não a lê; nenhuma feature se liga pela chave."
