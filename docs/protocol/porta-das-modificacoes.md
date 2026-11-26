@@ -529,8 +529,8 @@ conexão não responde. A função `instalar(…, aviso_visto=…)` recusa com
 
 Cada extensão da casa mora no seu repositório, `Hefesto-Team/hefesto-mod-<nome>`, com o
 `hefesto-mod.json` (o `aviso` dentro), o código, os testes (`python3 -m pytest testes`, só a biblioteca
-padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` MIT com os mesmos autores do Hefesto e
-o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
+padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` GPL-3.0-or-later (o texto da GPL-3, o mesmo do Hefesto) com os mesmos autores do Hefesto, o
+`licenca` do manifesto e a seção «Licença» do `README.md` com o mesmo identificador, e o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
 
 ## O preparo da extensão
 
@@ -1032,6 +1032,10 @@ A nova fica ligada quando alguma das antigas estava ligada e nada novo espera o 
 substitui outra não troca o código: espera o «Atualizar», com a frase «A versão X toma o lugar de «Y».». O
 `Resultado` da instalação traz os `id` que saíram (`substituidas`), e a linha de comando e a aba Experimental
 dizem «Saiu a «Y».» pelo nome que a substituída tinha no registro (sem ele, pelo `id`).
+
+A extensão cujo `id` está no `substitui` de uma instalada não se instala nem se atualiza por cima: a instalação recusa,
+antes de gravar qualquer coisa, com a frase ««X» está substituída por «Y», que já está instalada.», e a instalada fica
+inteira. Vale para toda extensão; removida a substituta, a antiga volta a instalar.
 
 ## Os erros
 
