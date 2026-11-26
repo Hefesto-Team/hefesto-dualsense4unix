@@ -69,6 +69,70 @@ def lido(chave: str) -> Any:
     return None if visto is None else visto[1]
 
 
+class Montagem:
+    """A carga da aba se monta num fio próprio, e o tique pega a última pronta.
+
+    Uma montagem por vez, sempre da aba pedida. O selo anda a cada gesto (`esquecer`): a carga
+    que começou antes dele não pinta por cima do que o gesto mudou, e a aba trocada também
+    descarta a da aba que saiu. `avisar` roda no fio da montagem quando uma carga fica pronta.
+    """
+
+    def __init__(self, avisar: Callable[[], Any] | None = None) -> None:
+        self._trava = threading.Lock()
+        self._no_ar = False
+        self._selo = 0
+        self._pronta: tuple[str, int, Any] | None = None
+        self._avisar = avisar
+        self.ultima_ms = 0.0
+
+    def esquecer(self) -> None:
+        """Um gesto mudou o que se vê: a carga pronta ou no ar não pinta mais."""
+        with self._trava:
+            self._selo += 1
+            self._pronta = None
+
+    def no_ar(self) -> bool:
+        """Uma montagem corre agora?"""
+        with self._trava:
+            return self._no_ar
+
+    def pegar(self, pagina: str) -> Any:
+        """A carga pronta da aba pedida, uma vez só; `None` se não há."""
+        with self._trava:
+            pronta, self._pronta = self._pronta, None
+            selo = self._selo
+        if pronta is None or pronta[0] != pagina or pronta[1] != selo:
+            return None
+        return pronta[2]
+
+    def pedir(self, pagina: str, montar: Callable[[], Any]) -> bool:
+        """Solta `montar` num fio se nenhuma montagem corre; `True` se soltou."""
+        with self._trava:
+            if self._no_ar:
+                return False
+            self._no_ar = True
+            selo = self._selo
+
+        def trabalhar() -> None:
+            t0 = time.perf_counter()
+            valor: Any = None
+            try:
+                valor = montar()
+            finally:
+                ms = (time.perf_counter() - t0) * 1000
+                with self._trava:
+                    self._no_ar = False
+                    self.ultima_ms = ms
+                    fresca = valor is not None and selo == self._selo
+                    if fresca:
+                        self._pronta = (pagina, selo, valor)
+            if fresca and self._avisar is not None:
+                self._avisar()
+
+        fios.soltar("hefesto-pacote", trabalhar)
+        return True
+
+
 def ler_o_bluez() -> tuple[tuple[Any, ...], tuple[Any, ...]] | None:
     """`(adaptadores, aparelhos)` do dono do BlueZ. Sob a suíte, nada: a régua injeta."""
     perfil._com_o_src()

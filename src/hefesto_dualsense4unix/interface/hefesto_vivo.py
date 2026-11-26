@@ -1807,6 +1807,54 @@ def _pintar_a_atualizacao(piloto: Any, ctx: Any) -> None:
         print(f"[atualizações] a caixa não pintou: {erro}", file=sys.stderr)
 
 
+def _a_carga_na_hora(pagina: str, ctx: Any, para_pref: dict[str, str]) -> dict[str, Any] | None:
+    """A carga da aba montada por quem chama; `None` quando não há o que pintar."""
+    try:
+        pacote = pacotes.pacote_da_pagina(pagina, ctx)
+    except pacotes.fios.AindaNaoChegou:
+        return None
+    except Exception as e:
+        print(f"[{pagina}] o pacote levantou: {e}", file=sys.stderr)
+        return None
+    carga = pacotes.normalizar(pacote or {}, para_pref)
+    for chave, valor in pacotes.topo(ctx).items():
+        carga["mesa"].setdefault(chave, valor)
+    carga["fita"] = ("" if pagina.removesuffix(".html") in monta.ABAS_SEM_A_FITA
+                     else _fita(ctx.mesa, pagina))
+    alvo = _pref_escolhido(ctx.mesa) if _a_fita_desta_pagina_escolhe(pagina) else ""
+    carga["alvo"] = "" if alvo == "todos" else alvo
+    pacotes.apagar_os_lugares_sem_dono(carga, _com_dono(ctx), pagina=pagina)
+    return carga
+
+
+def _a_carga_montada_no_fundo(piloto: Any, ctx: Any,
+                              para_pref: dict[str, str]) -> dict[str, Any] | None:
+    """A última carga pronta da aba do `piloto`, e a próxima pedida ao fio `hefesto-pacote`.
+
+    O tique nunca espera o pacote: o que ele pinta é o que o fio já montou com o contexto de
+    um tique antes (O-PACOTE-DE-TODA-ABA-SE-MONTA-FORA-DO-FIO-DO-GTK-01).
+    """
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo
+
+    montagem = vars(piloto).get("_montagem")
+    if montagem is None:
+        montagem = piloto._montagem = em_fundo.Montagem()
+    pagina = piloto.pagina
+
+    def montar() -> dict[str, Any] | None:
+        t0 = time.perf_counter()
+        carga = _a_carga_na_hora(pagina, ctx, para_pref)
+        ms = (time.perf_counter() - t0) * 1000
+        if ms > TIQUE_MS:
+            print(f"[pacote lento] {pagina}: {ms:.0f} ms no fio do pacote, a janela seguiu",
+                  file=sys.stderr)
+        return carga
+
+    pronta = montagem.pegar(pagina)
+    montagem.pedir(pagina, montar)
+    return pronta  # type: ignore[no-any-return]
+
+
 class Piloto:
     SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = 4.0
     SEGUNDOS_DE_ESPERA_DOS_EXTERNOS = 3.0
@@ -1904,6 +1952,9 @@ class Piloto:
         self.view.connect("load-changed", self._carregou)
         self._abertura["janela"] = self._relogio()
         _importar_as_abas(self.tela)
+        from hefesto_dualsense4unix.interface.pacotes import em_fundo
+
+        self._montagem = em_fundo.Montagem(avisar=self._a_carga_ficou_pronta)
         self._ctx_de_agora = pacotes.Contexto(state={})
         self._estado_vivo = LeitorDoEstado(avisar=self._a_primeira_resposta_chegou)
         if getattr(args, "cenario", "parado") == "mudo":
@@ -2498,6 +2549,11 @@ class Piloto:
         """No fio do leitor: a primeira pintura vai ao laço do GTK, sem esperar o tique."""
         GLib.idle_add(lambda: self._tique() and False)
 
+    def _a_carga_ficou_pronta(self) -> None:
+        """No fio do pacote: a carga inteira (a primeira, a da aba nova, a de depois do gesto) pinta já."""
+        if self._pintada is None:
+            GLib.idle_add(lambda: self._tique() and False)
+
     def _estado_do_tique(self) -> dict[str, Any]:
         """O estado que ESTE tique pinta — e ele não espera por ninguém."""
         st_lido, erro_lido, geracao = self._estado_vivo.ultimo()
@@ -2581,30 +2637,14 @@ class Piloto:
         _pintar_a_atualizacao(self, ctx)
         self._navegar(st, ctx)
         t_pacote0 = time.perf_counter()
-        try:
-            pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
-        except pacotes.fios.AindaNaoChegou:
-            return True
-        except Exception as e:
-            print(f"[{self.pagina}] o pacote levantou: {e}", file=sys.stderr)
-            return True
-        if pacote is None:
-            pacote = {}
+        if pacotes.fios.no_fio_da_janela():
+            montada = _a_carga_montada_no_fundo(self, ctx, para_pref)
+        else:
+            montada = _a_carga_na_hora(self.pagina, ctx, para_pref)
         t_pacote = (time.perf_counter() - t_pacote0) * 1000
-
-        carga = pacotes.normalizar(pacote, para_pref)
-        for chave, valor in pacotes.topo(ctx).items():
-            carga["mesa"].setdefault(chave, valor)
-
-        carga["fita"] = ("" if self.pagina.removesuffix(".html") in monta.ABAS_SEM_A_FITA
-                         else _fita(ctx.mesa, self.pagina))
-
-        alvo = (_pref_escolhido(ctx.mesa)
-                if _a_fita_desta_pagina_escolhe(self.pagina) else "")
-        carga["alvo"] = "" if alvo == "todos" else alvo
-
-        pacotes.apagar_os_lugares_sem_dono(carga, _com_dono(ctx), pagina=self.pagina)
-
+        if montada is None:
+            return True
+        carga = montada
 
         def contou(valor: Any, erro: Any) -> None:
             self._pintura_no_ar = False
@@ -2643,8 +2683,10 @@ class Piloto:
             self._pular += 1
             viagem = getattr(getattr(self, "_estado_vivo", None), "ultima_viagem_ms", None)
             daemon_ms = viagem() if callable(viagem) else 0.0
+            montagem = getattr(self, "_montagem", None)
+            no_fundo = f" · no fundo {montagem.ultima_ms:.0f}" if montagem is not None else ""
             print(f"[tique lento] {self.pagina}: {custo:.0f} ms "
-                  f"(pacote {t_pacote:.0f} · contexto {t_ipc:.0f} · daemon "
+                  f"(pacote {t_pacote:.0f}{no_fundo} · contexto {t_ipc:.0f} · daemon "
                   f"{daemon_ms:.0f}) — teto {TIQUE_MS} ms, pulando o próximo · janela: "
                   f"{getattr(getattr(self, 'tela', None), 'mudancas_de_tamanho', 0)} "
                   f"mudança(s) de tamanho",
@@ -3467,8 +3509,11 @@ def _so_abre_a_lista(o: dict[str, Any]) -> bool:
 
 
 def _esquecer_a_pintura(piloto: Any) -> None:
-    """O próximo tique do `piloto` manda a carga INTEIRA, e não só o que mudou."""
+    """O próximo tique do `piloto` manda a carga INTEIRA, montada depois deste instante."""
     piloto._pintada = None
+    montagem = getattr(piloto, "_montagem", None)
+    if montagem is not None:
+        montagem.esquecer()
 
 
 def _soltar_as_ondas() -> None:
