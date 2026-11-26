@@ -60,6 +60,8 @@ def _arquivo_do_repo(relpath: str) -> Path:
     if candidato.is_file():
         return candidato
     return repo_files.encontrar_arquivo_do_repo(relpath) or candidato
+
+
 API_DO_GITHUB = "https://api.github.com/repos/{}/releases/latest"
 API_DA_TAG = "https://api.github.com/repos/{}/releases/tags/{}"
 REPO_DO_MANGOHUD = "flightlessmango/MangoHud"
@@ -1242,8 +1244,9 @@ def _versao_instalada() -> str:
     with contextlib.suppress(OSError):
         instalada = _versao_do_pyproject(
             (RAIZ_DO_REPOSITORIO / "pyproject.toml").read_text(encoding="utf-8"))
-    with contextlib.suppress(metadata.PackageNotFoundError):
-        instalada = metadata.version(PACOTE_DO_PRODUTO)
+    if not instalada:
+        with contextlib.suppress(metadata.PackageNotFoundError):
+            instalada = metadata.version(PACOTE_DO_PRODUTO)
     return instalada
 
 

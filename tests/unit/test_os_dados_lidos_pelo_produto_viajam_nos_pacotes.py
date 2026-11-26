@@ -425,3 +425,20 @@ def test_o_atualizador_sem_clone_baixa_a_peca_da_versao_do_pacote_instalado(tmp_
     with pytest.raises(pa.EtapaFalhouError):
         pa._baixar_a_gdk(pa.Passo(), {})
     assert baixados == ["https://x/v7.7.7/xgameruntime.dll"], baixados
+
+
+def test_a_versao_da_peca_e_a_do_clone_quando_ha_clone(tmp_path, monkeypatch):
+    """D-2611-O-PINO-DO-PROTON-SE-ACHA-EM-TODA-INSTALACAO: no clone, o `pyproject.toml` diz a
+    versão (a do pacote editável pode estar atrás do `git pull`); sem o clone, a do pacote."""
+    from importlib import metadata
+
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    clone = tmp_path / "clone"
+    clone.mkdir()
+    (clone / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n', encoding="utf-8")
+    monkeypatch.setattr(pa, "RAIZ_DO_REPOSITORIO", clone)
+    monkeypatch.setattr(metadata, "version", lambda _nome: "7.7.7")
+    assert pa._versao_instalada() == "9.9.9"
+    (clone / "pyproject.toml").unlink()
+    assert pa._versao_instalada() == "7.7.7"
