@@ -1416,6 +1416,36 @@ class TestCertificadoQueFaltaNaoMandaGerarChaveNova:
             trancada.chmod(0o755)
         assert "devolva o certificado da chave" in feito.stdout, feito
         assert "generate_mok" not in feito.stdout, feito
+        assert "existe," not in feito.stdout, feito
+        assert "só o root abre" in feito.stdout, feito
+
+    def test_o_certificado_que_so_o_root_ve_nao_se_da_por_perdido(self, tmp_path: Path) -> None:
+        """D-2611-O-CERTIFICADO-QUE-FALTA-NAO-MANDA-GERAR-CHAVE-NOVA: o certificado numa pasta que
+        só o root abre é «não sei», e o passo pede para deixá-lo legível, sem mandar devolver o
+        que pode estar lá nem gerar chave."""
+        if os.geteuid() == 0:
+            pytest.skip("o root lê a pasta trancada")
+        estado = _estado_do_secure_boot(
+            tmp_path, ligado=True, inscrita=False, leitura="sem-chave-publica")
+        trancada = tmp_path / "trancada"
+        trancada.mkdir()
+        (trancada / "mok.pub").write_bytes(CHAVE)
+        estado["HEFESTO_DKMS_MOK_PUB"] = str(trancada / "mok.pub")
+        sudo = tmp_path / "sudo-que-nao-sabe"
+        sudo.mkdir()
+        _stub(sudo, "sudo", "exit 1")
+        trancada.chmod(0o000)
+        try:
+            saidas = {
+                f: _roda(f"{f} ''", f"{sudo}:{_sem_mokutil(estado)}", estado).stdout
+                for f in self.PASSOS
+            }
+        finally:
+            trancada.chmod(0o755)
+        for função, saida in saidas.items():
+            assert f"deixe a chave {trancada / 'mok.pub'} legível" in saida, (função, saida)
+            assert "devolva o certificado" not in saida, (função, saida)
+            assert "generate_mok" not in saida and "--new-key" not in saida, (função, saida)
 
 
 def test_os_cinco_preparadores_sao_o_mesmo_arquivo() -> None:
