@@ -61,6 +61,7 @@ def test_o_modelo_traz_o_hidden_ligado() -> None:
 
 def test_a_pilula_grava_as_duas_chaves(lar: pathlib.Path,
                                        monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2611-A-BANDEJA-DESLIGADA-GRAVA-AS-DUAS-CHAVES-DO-AUTOSTART: desligar grava as duas."""
     monkeypatch.setattr(ab, "garantir_a_bandeja", lambda *_a, **_k: False)
     monkeypatch.setattr(ab, "fechar_as_bandejas", lambda *_a, **_k: [])
     monkeypatch.setattr(ab, "bandejas_da_sessao", lambda: [])

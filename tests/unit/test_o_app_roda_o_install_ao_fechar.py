@@ -381,6 +381,7 @@ def test_sem_autorizacao_a_parte_do_usuario_roda_e_a_do_sistema_fica_pendente(
 def test_o_install_que_falhou_diz_o_erro_real_mesmo_sem_autorizacao(
     casa: Casa, tmp_path: Path,
 ) -> None:
+    """D-2611-A-NOTA-DO-INSTALL-NASCE-DO-PULO-DE-ROOT-QUE-O-INSTALL-GRAVA: a falha diz o erro."""
     _sudo_de_mentira(casa, tmp_path / "bin", aceita="nunca")
     casa.pulou.touch()
     casa.quebra.touch()
