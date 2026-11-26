@@ -7,6 +7,7 @@ import contextvars
 import functools
 import importlib
 import inspect
+import math
 import os
 import pkgutil
 import signal
@@ -5368,25 +5369,65 @@ def _o_movimento_vai_ao_stick(daemon: Any, uniq: str | None) -> bool:
     return arranjo is not None and roteador.virtual_aceso(arranjo)
 
 
-class _OAperto:
-    """O evento do aperto de UM laço, e a hora da última volta do jogo."""
+ESPERA_DO_FIO_DA_ENTRADA_S: Final[float] = 0.25
 
-    __slots__ = ("evento", "laco", "previsto", "ultima_volta")
+
+class _FioDaEntrada:
+    """O fio que leva o aperto ao pad sem passar pelo laço asyncio.
+
+    O leitor acorda este fio (o despertador do ``evdev_reader``) num aperto ou num eixo que
+    andou; o fio roda :func:`_volta_do_aperto`, no máximo uma vez a cada
+    ``INTERVALO_MINIMO_DA_VOLTA_S``. Sai quando o laço fecha ou o daemon para.
+    """
+
+    __slots__ = ("_acordado", "_daemon", "_fio", "_laco")
+
+    def __init__(self, laco: asyncio.AbstractEventLoop, daemon: Any) -> None:
+        self._laco = laco
+        self._daemon = daemon
+        self._acordado = threading.Event()
+        self._fio = threading.Thread(
+            target=self._correr, name="hefesto-entrada", daemon=True)
+        self._fio.start()
+
+    def acordar(self) -> None:
+        self._acordado.set()
+
+    def vivo(self) -> bool:
+        return self._fio.is_alive()
+
+    def _de_pe(self) -> bool:
+        if self._laco.is_closed():
+            return False
+        parada = getattr(self._daemon, "_stop_event", None)
+        return not (isinstance(parada, asyncio.Event) and parada.is_set())
+
+    def _correr(self) -> None:
+        ultima = -math.inf
+        while self._de_pe():
+            if not self._acordado.wait(ESPERA_DO_FIO_DA_ENTRADA_S):
+                continue
+            self._acordado.clear()
+            cedo = ultima + INTERVALO_MINIMO_DA_VOLTA_S - time.monotonic()
+            if cedo > 0:
+                time.sleep(cedo)
+            _volta_do_aperto(self._daemon)
+            ultima = time.monotonic()
+
+
+class _OAperto:
+    """O fio da entrada de UM laço, ligado ao despertador do leitor, e o prazo da espera."""
+
+    __slots__ = ("fio", "laco", "previsto")
 
     def __init__(self, laco: asyncio.AbstractEventLoop, daemon: Any = None) -> None:
         from hefesto_dualsense4unix.core.evdev_reader import definir_o_despertador
 
         self.laco = laco
-        self.evento = asyncio.Event()
-        self.ultima_volta = laco.time()
         self.previsto: float | None = None
-        evento = self.evento
-
-        def acordar() -> None:
-            if not evento.is_set() and not laco.is_closed():
-                laco.call_soon_threadsafe(evento.set)
-
-        definir_o_despertador(acordar, lambda uniq: _o_movimento_vai_ao_stick(daemon, uniq))
+        self.fio = _FioDaEntrada(laco, daemon)
+        definir_o_despertador(
+            self.fio.acordar, lambda uniq: _o_movimento_vai_ao_stick(daemon, uniq))
 
     def levar_o_previsto(self) -> float | None:
         """O prazo da última espera, uma vez só: o tique sem espera não tem atraso a medir."""
@@ -5395,51 +5436,20 @@ class _OAperto:
 
 
 def _o_aperto_do_laco(daemon: Any) -> _OAperto:
-    """O `_OAperto` do laço que roda agora, ligado ao despertador do leitor."""
+    """O `_OAperto` do laço que roda agora, com o fio da entrada de pé."""
     laco = asyncio.get_running_loop()
     aperto = getattr(daemon, "_o_aperto_do_laco", None)
-    if not isinstance(aperto, _OAperto) or aperto.laco is not laco:
+    if not isinstance(aperto, _OAperto) or aperto.laco is not laco or not aperto.fio.vivo():
         aperto = _OAperto(laco, daemon)
         daemon._o_aperto_do_laco = aperto
     return aperto
 
 
 async def _esperar_o_tique(daemon: Any, stop_event: asyncio.Event, timeout: float) -> None:
-    """A espera do laço, que acorda com a parada OU com o aperto."""
+    """A espera do laço até a parada ou o prazo; o aperto vai ao jogo pelo fio da entrada."""
     aperto = _o_aperto_do_laco(daemon)
-    laco = aperto.laco
-    prazo = laco.time() + timeout
-    aperto.previsto = prazo
-    aperto.ultima_volta = laco.time()
-    parada = laco.create_task(stop_event.wait())
-    try:
-        while True:
-            resto = prazo - laco.time()
-            if resto <= 0:
-                raise asyncio.TimeoutError
-            acordou = laco.create_task(aperto.evento.wait())
-            try:
-                await asyncio.wait(
-                    (parada, acordou), timeout=resto, return_when=asyncio.FIRST_COMPLETED
-                )
-            finally:
-                acordou.cancel()
-            if stop_event.is_set():
-                return
-            if not aperto.evento.is_set():
-                continue
-            aperto.evento.clear()
-            cedo = aperto.ultima_volta + INTERVALO_MINIMO_DA_VOLTA_S - laco.time()
-            if cedo > 0:
-                await asyncio.wait((parada,), timeout=min(cedo, max(prazo - laco.time(), 0.0)))
-                if stop_event.is_set():
-                    return
-            if prazo - laco.time() < INTERVALO_MINIMO_DA_VOLTA_S:
-                continue
-            _volta_do_aperto(daemon)
-            aperto.ultima_volta = laco.time()
-    finally:
-        parada.cancel()
+    aperto.previsto = aperto.laco.time() + timeout
+    await asyncio.wait_for(stop_event.wait(), timeout=timeout)
 
 
 def _o_primario_agora(daemon: Any, estado: Any) -> tuple[Any, frozenset[str]]:
@@ -5467,14 +5477,19 @@ def _o_primario_agora(daemon: Any, estado: Any) -> tuple[Any, frozenset[str]]:
 
 
 def _volta_do_aperto(daemon: Any) -> None:
-    """A volta que o aperto acorda: SÓ o caminho do jogo. Nunca levanta."""
-    try:
-        if asyncio.get_running_loop().time() < daemon._input_ready_at:
-            return
-        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+    """A volta que o aperto acorda, no fio da entrada: SÓ o repasse ao jogo. Nunca levanta.
 
+    O relógio é o ``time.monotonic`` (o mesmo do laço asyncio), sem pedir o laço: a volta
+    anda com o laço parado. A manutenção do co-op e do pad fica no tique.
+    """
+    if time.monotonic() < getattr(daemon, "_input_ready_at", 0.0):
+        return
+    from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import dispatch_gamepad
+
+    with passos_do_daemon(daemon, "entrada").isolado("volta"):
         daemon.store.bump("poll.volta_do_aperto")
-        get_coop_manager(daemon).forward_all()
+        get_coop_manager(daemon).forward_all(manter=False)
         estado = getattr(daemon, "_last_state", None)
         if (
             daemon._gamepad_device is not None
@@ -5482,9 +5497,7 @@ def _volta_do_aperto(daemon: Any) -> None:
             and daemon.controller.is_connected()
         ):
             estado, botoes = _o_primario_agora(daemon, estado)
-            daemon._dispatch_gamepad_emulation(estado, botoes)
-    except Exception as exc:
-        logger.debug("volta_do_aperto_falhou", err=str(exc))
+            dispatch_gamepad(daemon, estado, botoes, manter=False)
 
 
 def _o_pad_do_jogo_volta_no_boot(daemon: Any, perfil_do_boot: str | None) -> bool:

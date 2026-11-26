@@ -564,6 +564,7 @@ class UinputGamepad:
     _ff_pare: threading.Event = field(default_factory=threading.Event)
     _sysname: str | None = None
     _leitor_trava: threading.Lock = field(default_factory=threading.Lock)
+    _escrita_trava: threading.RLock = field(default_factory=threading.RLock)
     _leitor_consulta: threading.Thread | None = None
     _leitor_conferido_em: float | None = None
     _leitor_mortos: int = 0
@@ -776,8 +777,9 @@ class UinputGamepad:
             return None
         if fio is not None:
             self._ff_pare.set()
-        device = self.__dict__.pop("_device", None)
-        self._device = None
+        with self._escrita_trava:
+            device = self.__dict__.pop("_device", None)
+            self._device = None
         no_deposito: str | None = self.__dict__.pop("_no_deposito", None)
         return lambda: self._terminar_a_parada(fio, device, no_deposito)
 
@@ -892,7 +894,11 @@ class UinputGamepad:
         l2: int,
         r2: int,
     ) -> None:
-        """Aplica valores analógicos no device virtual (só o que MUDOU)."""
+        """Aplica valores analógicos no device virtual (só o que MUDOU), um escritor por vez."""
+        with self._escrita_trava:
+            self._forward_analog(lx, ly, rx, ry, l2, r2)
+
+    def _forward_analog(self, lx: int, ly: int, rx: int, ry: int, l2: int, r2: int) -> None:
         if self._device is None or self._ecodes is None:
             return
         axes = (lx, ly, rx, ry, l2, r2)
@@ -943,7 +949,15 @@ class UinputGamepad:
         return valor >= LIMIAR_GATILHO_PRESSIONADO
 
     def forward_buttons(self, pressed: frozenset[str]) -> None:
-        """Aplica set de botões pressionados. Diff com último snapshot."""
+        """Aplica set de botões pressionados (diff com o último), um escritor por vez.
+
+        O pad tem dois escritores, o fio da entrada e o tique do laço: a trava fecha o report
+        inteiro (as teclas, o direcional e o ``syn``) antes de o outro escrever.
+        """
+        with self._escrita_trava:
+            self._forward_buttons(pressed)
+
+    def _forward_buttons(self, pressed: frozenset[str]) -> None:
         if self._device is None or self._ecodes is None:
             return
 

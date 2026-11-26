@@ -423,7 +423,8 @@ def test_o_laco_liga_a_pergunta_do_movimento_ao_despertador() -> None:
 
 
 def test_o_despertador_nao_empilha_chamadas_enquanto_a_volta_nao_come_a_anterior() -> None:
-    """Um quadro seguido de outro antes de o laço correr: a fila do laço leva uma chamada."""
+    """Três quadros seguidos: o despertador acorda o fio da entrada, nunca o laço asyncio, e o
+    fio não empilha uma volta por quadro."""
     leitor = _leitor(1)
     daemon = _daemon_do_primario(leitor, _PadDoJogo())
     chamadas: list[int] = []
@@ -437,12 +438,10 @@ def test_o_despertador_nao_empilha_chamadas_enquanto_a_volta_nao_come_a_anterior
             return original(*a, **k)
 
         aperto.laco.call_soon_threadsafe = contar  # type: ignore[method-assign, assignment]
-        er._acordar_quem_entrega_ao_jogo()
-        await asyncio.sleep(0.01)
-        assert aperto.evento.is_set()
-        er._acordar_quem_entrega_ao_jogo()
-        er._acordar_quem_entrega_ao_jogo()
-        await asyncio.sleep(0.01)
+        for _ in range(3):
+            er._acordar_quem_entrega_ao_jogo()
+        await asyncio.sleep(0.05)
 
     asyncio.run(cenario())
-    assert len(chamadas) == 1, f"{len(chamadas)} chamadas ao laço para um evento já armado"
+    assert chamadas == [], f"{len(chamadas)} chamadas ao laço asyncio"
+    assert 1 <= daemon.store.counter("poll.volta_do_aperto") <= 2

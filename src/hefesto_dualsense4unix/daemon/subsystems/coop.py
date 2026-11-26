@@ -2343,112 +2343,118 @@ class CoopManager:
                 logger.debug("coop_player_led_revert_indisponivel", identity=mac)
 
 
-    def forward_all(self) -> None:
-        """Repassa cada secundário ao seu gamepad virtual. Chamado por tick."""
-        self._fio_do_laco = threading.get_ident()
-        if self._ordem_pendente:
-            self._ordem_pendente = False
-            if self.should_be_active():
-                self._corrigir_a_ordem()
-        self._recolher_os_cedidos()
-        self._andar_a_fila()
-        self._promote_pending()
-        store = getattr(self._daemon, "store", None)
-        com_modo = alguma_ativacao(store)
-        com_filtro = alguma_filtro(store)
-        com_curva = alguma_curva(store)
-        arranjo_de_movimento = roteador_ativo(store)
-        for player in list(self._players.values()):
-            if player.vpad is None or self._espera(player) or player.cedido_ao_primario:
-                continue
-            try:
-                if o_pad_da_peca_muda_repousa(player.vpad, player.motion_reader):
+    def forward_all(self, *, manter: bool = True) -> None:
+        """O co-op no tique: a manutenção (só no laço) e o repasse de cada secundário ao pad dele.
+
+        ``manter=False`` é o fio da entrada: só o repasse, que não marca o fio do laço; a
+        ordem, a fila e os nascimentos ficam com o laço. O repasse roda sob a trava da entrada.
+        """
+        if manter:
+            self._fio_do_laco = threading.get_ident()
+            if self._ordem_pendente:
+                self._ordem_pendente = False
+                if self.should_be_active():
+                    self._corrigir_a_ordem()
+            self._recolher_os_cedidos()
+            self._andar_a_fila()
+            self._promote_pending()
+        with trava_da_entrada(self._daemon):
+            store = getattr(self._daemon, "store", None)
+            com_modo = alguma_ativacao(store)
+            com_filtro = alguma_filtro(store)
+            com_curva = alguma_curva(store)
+            arranjo_de_movimento = roteador_ativo(store)
+            for player in list(self._players.values()):
+                if player.vpad is None or self._espera(player) or player.cedido_ao_primario:
                     continue
-                snap = player.reader.snapshot()
-                andar_os_acionadores(self._daemon)
-                botoes = snap.buttons_pressed
-                do_edge = self._botoes_do_edge(player)
-                if do_edge:
-                    botoes = botoes | do_edge
-                botoes = com_os_acionadores(self._daemon, player.identity, botoes)
-                l2, r2 = cortar_pelo_limiar(store, player.identity, snap.l2_raw, snap.r2_raw)
-                lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
-                soltos = self._apertos_vistos_de(player.identity).soltos(
-                    leitor=player.reader,
-                    pad=player.vpad,
-                    pronto_em=getattr(self._daemon, "_input_ready_at", None),
-                    apertos=getattr(snap, "apertos", None),
-                    apertados=botoes,
-                )
-                com_o_ps = botoes
-                botoes = sem_o_gesto_do_ps(self._daemon, player.identity, botoes)
-                l2, r2 = sem_o_eixo_do_gesto(
-                    self._daemon, player.identity, com_o_ps, (snap.l2_raw, snap.r2_raw), l2, r2
-                )
-                l2, r2 = gatilhos_dos_acionadores(self._daemon, player.identity, l2, r2)
-                botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
-                botoes, soltos = levar_o_big_picture(
-                    self._daemon, player.identity, botoes, soltos
-                )
-                if arranjo_de_movimento is not None:
-                    botoes, l2 = aplicar_o_toque(
-                        self._daemon,
-                        arranjo_de_movimento,
-                        uniq=player.identity,
-                        botoes=botoes,
-                        l2=l2,
-                        r2=r2,
+                try:
+                    if o_pad_da_peca_muda_repousa(player.vpad, player.motion_reader):
+                        continue
+                    snap = player.reader.snapshot()
+                    andar_os_acionadores(self._daemon)
+                    botoes = snap.buttons_pressed
+                    do_edge = self._botoes_do_edge(player)
+                    if do_edge:
+                        botoes = botoes | do_edge
+                    botoes = com_os_acionadores(self._daemon, player.identity, botoes)
+                    l2, r2 = cortar_pelo_limiar(store, player.identity, snap.l2_raw, snap.r2_raw)
+                    lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
+                    soltos = self._apertos_vistos_de(player.identity).soltos(
+                        leitor=player.reader,
+                        pad=player.vpad,
+                        pronto_em=getattr(self._daemon, "_input_ready_at", None),
+                        apertos=getattr(snap, "apertos", None),
+                        apertados=botoes,
                     )
-                if com_filtro:
-                    botoes, l2, r2, soltos = filtrar_o_botao(
-                        store, player.identity, botoes, l2, r2, soltos)
-                if com_curva:
-                    lx, ly, rx, ry = moldar_os_analogicos(
-                        store, player.identity, lx, ly, rx, ry)
-                if arranjo_de_movimento is not None:
-                    lx, ly, rx, ry = aplicar_o_movimento(
-                        self._daemon,
-                        arranjo_de_movimento,
-                        uniq=player.identity,
+                    com_o_ps = botoes
+                    botoes = sem_o_gesto_do_ps(self._daemon, player.identity, botoes)
+                    l2, r2 = sem_o_eixo_do_gesto(
+                        self._daemon, player.identity, com_o_ps, (snap.l2_raw, snap.r2_raw), l2, r2
+                    )
+                    l2, r2 = gatilhos_dos_acionadores(self._daemon, player.identity, l2, r2)
+                    botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
+                    botoes, soltos = levar_o_big_picture(
+                        self._daemon, player.identity, botoes, soltos
+                    )
+                    if arranjo_de_movimento is not None:
+                        botoes, l2 = aplicar_o_toque(
+                            self._daemon,
+                            arranjo_de_movimento,
+                            uniq=player.identity,
+                            botoes=botoes,
+                            l2=l2,
+                            r2=r2,
+                        )
+                    if com_filtro:
+                        botoes, l2, r2, soltos = filtrar_o_botao(
+                            store, player.identity, botoes, l2, r2, soltos)
+                    if com_curva:
+                        lx, ly, rx, ry = moldar_os_analogicos(
+                            store, player.identity, lx, ly, rx, ry)
+                    if arranjo_de_movimento is not None:
+                        lx, ly, rx, ry = aplicar_o_movimento(
+                            self._daemon,
+                            arranjo_de_movimento,
+                            uniq=player.identity,
+                            lx=lx,
+                            ly=ly,
+                            rx=rx,
+                            ry=ry,
+                            botoes=botoes,
+                        )
+                    da_mao = botoes
+                    troca = remapeamento_da_peca(store, player.identity)
+                    if troca:
+                        botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
+                    if com_modo:
+                        tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
+                        botoes, l2, r2, tocados = ativar_o_botao(
+                            store, player.identity, botoes, l2, r2, tocados)
+                    if com_curva:
+                        lx, ly, rx, ry, l2, r2 = entregar_os_analogicos(
+                            store, player.identity, lx, ly, rx, ry, l2, r2)
+                    player.vpad.forward_analog(
                         lx=lx,
                         ly=ly,
                         rx=rx,
                         ry=ry,
-                        botoes=botoes,
+                        l2=l2,
+                        r2=r2,
                     )
-                da_mao = botoes
-                troca = remapeamento_da_peca(store, player.identity)
-                if troca:
-                    botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
-                if com_modo:
-                    tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
-                    botoes, l2, r2, tocados = ativar_o_botao(
-                        store, player.identity, botoes, l2, r2, tocados)
-                if com_curva:
-                    lx, ly, rx, ry, l2, r2 = entregar_os_analogicos(
-                        store, player.identity, lx, ly, rx, ry, l2, r2)
-                player.vpad.forward_analog(
-                    lx=lx,
-                    ly=ly,
-                    rx=rx,
-                    ry=ry,
-                    l2=l2,
-                    r2=r2,
-                )
-                if com_modo:
-                    if tocados:
-                        player.vpad.forward_buttons(botoes | tocados)
-                elif soltos:
-                    com_soltos = da_mao | soltos
-                    if troca:
-                        com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
-                    player.vpad.forward_buttons(com_soltos)
-                player.vpad.forward_buttons(botoes)
-                pump = getattr(player.vpad, "pump_ff", None)
-                if pump is not None:
-                    pump()
-            except Exception as exc:
-                logger.warning("coop_forward_failed", evdev=player.evdev_path, err=str(exc))
+                    if com_modo:
+                        if tocados:
+                            player.vpad.forward_buttons(botoes | tocados)
+                    elif soltos:
+                        com_soltos = da_mao | soltos
+                        if troca:
+                            com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
+                        player.vpad.forward_buttons(com_soltos)
+                    player.vpad.forward_buttons(botoes)
+                    pump = getattr(player.vpad, "pump_ff", None)
+                    if pump is not None:
+                        pump()
+                except Exception as exc:
+                    logger.warning("coop_forward_failed", evdev=player.evdev_path, err=str(exc))
 
 
     def _jogo_com_a_autoridade(self) -> bool:
@@ -3338,6 +3344,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     sem_o_eixo_do_gesto,
     sem_o_gesto_do_ps,
     soltar_a_ativacao,
+    trava_da_entrada,
 )
 from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (  # noqa: E402
     roubar_o_que_navega,

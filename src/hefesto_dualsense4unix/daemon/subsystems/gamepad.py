@@ -65,7 +65,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from hefesto_dualsense4unix.core.evdev_reader import BOTOES_DO_EDGE
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
@@ -2668,90 +2668,127 @@ def o_pad_da_peca_muda_repousa(device: Any, leitor: Any) -> bool:
     return True
 
 
+_ATRIBUTO_DA_TRAVA_DA_ENTRADA = "_trava_da_entrada"
+_trava_das_travas = threading.Lock()
+_TRAVA_SEM_DONO = threading.RLock()
+
+
+def trava_da_entrada(daemon: Any) -> threading.RLock:
+    """A trava do caminho da entrada deste daemon: o fio da entrada e o tique repassam um por vez.
+
+    O caminho (mistura, remapeamento e escrita no pad, do P1 ao P4) tem dois chamadores, o fio
+    que o aperto acorda e o tique do laço; a trava os põe em fila, e nenhum dos dois espera o
+    laço asyncio.
+    """
+    trava = getattr(daemon, _ATRIBUTO_DA_TRAVA_DA_ENTRADA, None)
+    if trava is not None:
+        return cast(threading.RLock, trava)
+    with _trava_das_travas:
+        trava = getattr(daemon, _ATRIBUTO_DA_TRAVA_DA_ENTRADA, None)
+        if trava is None:
+            trava = threading.RLock()
+            try:
+                setattr(daemon, _ATRIBUTO_DA_TRAVA_DA_ENTRADA, trava)
+            except (AttributeError, TypeError):
+                return _TRAVA_SEM_DONO
+        return cast(threading.RLock, trava)
+
+
 def dispatch_gamepad(
-    daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]
+    daemon: DaemonProtocol,
+    state: Any,
+    buttons_pressed: frozenset[str],
+    *,
+    manter: bool = True,
 ) -> None:
-    """Repassa o estado do controle ao gamepad virtual."""
-    _avisar_troca_de_modo(daemon)
-    bater_a_vibracao(daemon)
-    _bater_os_eventos_do_jogo(daemon)
-    device = daemon._gamepad_device
-    if device is None or _o_p1_e_do_de_fora(daemon):
-        return
-    if o_pad_da_peca_muda_repousa(device, getattr(daemon, "_motion_reader", None)):
-        return
-    buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
-    do_edge = _os_do_edge(state)
-    if do_edge:
-        buttons_pressed = buttons_pressed | do_edge
-    andar_os_acionadores(daemon)
-    buttons_pressed = com_os_acionadores(daemon, primary_identity(daemon), buttons_pressed)
-    com_o_ps = buttons_pressed
-    buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
-    buttons_pressed, soltos = roubar_o_que_navega(daemon, buttons_pressed, soltos)
-    buttons_pressed, soltos = levar_o_big_picture(daemon, None, buttons_pressed, soltos)
-    store = getattr(daemon, "store", None)
-    try:
-        l2, r2 = cortar_pelo_limiar(store, primary_identity(daemon), state.l2_raw, state.r2_raw)
-        l2, r2 = sem_o_eixo_do_gesto(
-            daemon, primary_identity(daemon), com_o_ps, (state.l2_raw, state.r2_raw), l2, r2
-        )
-        l2, r2 = gatilhos_dos_acionadores(daemon, primary_identity(daemon), l2, r2)
-        botoes = buttons_pressed
-        arranjo = roteador_ativo(store)
-        uniq = primary_identity(daemon) if arranjo is not None else None
-        if arranjo is not None:
-            botoes, l2 = aplicar_o_toque(
-                daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2, r2=r2)
-        if getattr(daemon, "_cursor_do_toque", None):
-            _conferir_o_cursor_do_toque(daemon, store)
-        if filtro_de_botao.alguma(store):
-            botoes, l2, r2, soltos = filtrar_o_botao(
-                store, primary_identity(daemon), botoes, l2, r2, soltos)
-        da_mao = botoes
-        troca = remapeamento_da_peca(store, primary_identity(daemon))
-        if troca:
-            botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
-        com_modo = ativacao_de_botao.alguma(store)
-        if com_modo:
-            tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
-            botoes, l2, r2, tocados = ativar_o_botao(
-                store, primary_identity(daemon), botoes, l2, r2, tocados)
-        lx, ly = state.raw_lx, state.raw_ly
-        rx, ry = state.raw_rx, state.raw_ry
-        com_curva = curva_do_analogico.alguma(store)
-        if com_curva:
-            lx, ly, rx, ry = moldar_os_analogicos(
-                store, primary_identity(daemon), lx, ly, rx, ry)
-        if arranjo is not None:
-            lx, ly, rx, ry = aplicar_o_movimento(
-                daemon,
-                arranjo,
-                uniq=uniq,
-                lx=lx,
-                ly=ly,
-                rx=rx,
-                ry=ry,
-                botoes=da_mao,
+    """O pad do P1: a manutenção (só no laço) e o caminho da entrada ao pad virtual.
+
+    ``manter=False`` é o fio da entrada: só o caminho (mistura, remapeamento e escrita), sem
+    o aviso da troca de modo, a vibração e os eventos do jogo. O caminho roda sob a
+    :func:`trava_da_entrada` e não toca disco, processo nem o laço asyncio.
+    """
+    if manter:
+        _avisar_troca_de_modo(daemon)
+        bater_a_vibracao(daemon)
+        _bater_os_eventos_do_jogo(daemon)
+    with trava_da_entrada(daemon):
+        device = daemon._gamepad_device
+        if device is None or _o_p1_e_do_de_fora(daemon):
+            return
+        if o_pad_da_peca_muda_repousa(device, getattr(daemon, "_motion_reader", None)):
+            return
+        buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
+        do_edge = _os_do_edge(state)
+        if do_edge:
+            buttons_pressed = buttons_pressed | do_edge
+        andar_os_acionadores(daemon)
+        buttons_pressed = com_os_acionadores(daemon, primary_identity(daemon), buttons_pressed)
+        com_o_ps = buttons_pressed
+        buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
+        buttons_pressed, soltos = roubar_o_que_navega(daemon, buttons_pressed, soltos)
+        buttons_pressed, soltos = levar_o_big_picture(daemon, None, buttons_pressed, soltos)
+        store = getattr(daemon, "store", None)
+        try:
+            l2, r2 = cortar_pelo_limiar(store, primary_identity(daemon), state.l2_raw, state.r2_raw)
+            l2, r2 = sem_o_eixo_do_gesto(
+                daemon, primary_identity(daemon), com_o_ps, (state.l2_raw, state.r2_raw), l2, r2
             )
-        if com_curva:
-            lx, ly, rx, ry, l2, r2 = entregar_os_analogicos(
-                store, primary_identity(daemon), lx, ly, rx, ry, l2, r2)
-        device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
-        if com_modo:
-            if tocados:
-                device.forward_buttons(botoes | tocados)
-        elif soltos:
-            com_soltos = da_mao | soltos
+            l2, r2 = gatilhos_dos_acionadores(daemon, primary_identity(daemon), l2, r2)
+            botoes = buttons_pressed
+            arranjo = roteador_ativo(store)
+            uniq = primary_identity(daemon) if arranjo is not None else None
+            if arranjo is not None:
+                botoes, l2 = aplicar_o_toque(
+                    daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2, r2=r2)
+            if getattr(daemon, "_cursor_do_toque", None):
+                _conferir_o_cursor_do_toque(daemon, store)
+            if filtro_de_botao.alguma(store):
+                botoes, l2, r2, soltos = filtrar_o_botao(
+                    store, primary_identity(daemon), botoes, l2, r2, soltos)
+            da_mao = botoes
+            troca = remapeamento_da_peca(store, primary_identity(daemon))
             if troca:
-                com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
-            device.forward_buttons(com_soltos)
-        device.forward_buttons(botoes)
-        pump = getattr(device, "pump_ff", None)
-        if pump is not None:
-            pump()
-    except Exception as exc:
-        logger.warning("gamepad_dispatch_failed", err=str(exc))
+                botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
+            com_modo = ativacao_de_botao.alguma(store)
+            if com_modo:
+                tocados = traduzir_remapeamento(soltos, 0, 0, troca)[0] if troca else soltos
+                botoes, l2, r2, tocados = ativar_o_botao(
+                    store, primary_identity(daemon), botoes, l2, r2, tocados)
+            lx, ly = state.raw_lx, state.raw_ly
+            rx, ry = state.raw_rx, state.raw_ry
+            com_curva = curva_do_analogico.alguma(store)
+            if com_curva:
+                lx, ly, rx, ry = moldar_os_analogicos(
+                    store, primary_identity(daemon), lx, ly, rx, ry)
+            if arranjo is not None:
+                lx, ly, rx, ry = aplicar_o_movimento(
+                    daemon,
+                    arranjo,
+                    uniq=uniq,
+                    lx=lx,
+                    ly=ly,
+                    rx=rx,
+                    ry=ry,
+                    botoes=da_mao,
+                )
+            if com_curva:
+                lx, ly, rx, ry, l2, r2 = entregar_os_analogicos(
+                    store, primary_identity(daemon), lx, ly, rx, ry, l2, r2)
+            device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
+            if com_modo:
+                if tocados:
+                    device.forward_buttons(botoes | tocados)
+            elif soltos:
+                com_soltos = da_mao | soltos
+                if troca:
+                    com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
+                device.forward_buttons(com_soltos)
+            device.forward_buttons(botoes)
+            pump = getattr(device, "pump_ff", None)
+            if pump is not None:
+                pump()
+        except Exception as exc:
+            logger.warning("gamepad_dispatch_failed", err=str(exc))
 
 
 def _dedos_do_toque(estado: Any) -> list[tuple[int, int, int]]:
@@ -3565,6 +3602,7 @@ __all__ = [
     "stop_gamepad_emulation",
     "stop_motion_reader",
     "sync_steam_input_exception",
+    "trava_da_entrada",
     "upgrade_primary_vpad_to_uhid",
     "vibrar_o_externo",
     "vpad_vivo",
