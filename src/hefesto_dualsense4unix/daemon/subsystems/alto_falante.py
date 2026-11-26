@@ -125,6 +125,7 @@ from hefesto_dualsense4unix.daemon.subsystems.diario_do_corpo import (
     RECUSA_RADIO_CEDE,
     RECUSA_SEM_APARELHO,
     RECUSA_SEM_ENDPOINT,
+    RECUSA_SEM_TOCADOR,
     TOCOU,
     DesfechoDoCorpo,
 )
@@ -1090,6 +1091,10 @@ class AltoFalanteSubsystem:
             if self._a_haptica_esta_em_uso(endpoint):
                 logger.debug("haptica_rotulo_velho_espera_o_jogo_fechar")
                 return
+            tocador = self._tocadores.get(str(getattr(endpoint, "marca", "") or ""))
+            avisar = getattr(tocador, "o_no_vai_renascer", None)
+            if callable(avisar):
+                avisar()
             renovar()
         except Exception:
             logger.debug("haptica_rotulo_nao_renovou", exc_info=True)
@@ -1352,13 +1357,15 @@ class AltoFalanteSubsystem:
     def rota_do_padrao(self, uniq: str) -> str:
         """Por onde o padrão do gatilho sai agora: uma pergunta só, para os dois lados.
 
-        O áudio soma ao que o jogo toca, também com o jogo no endpoint; sem caminho de áudio vai
-        o motor, onde o jogo manda. A Força 0 cala, e não cai para o motor.
+        O áudio soma ao que o jogo toca, também com o jogo no endpoint; sem caminho de áudio, ou
+        com o tocador recusado, vai o motor, onde o jogo manda. A Força 0 cala, e não cai para o
+        motor.
         """
         if GANHO.pct(uniq) <= 0:
             return padroes_de_vibracao.ROTA_CALADA
         chave = self._chave_do_rumble(uniq)
         if (chave is None or self._o_que_falta_ao_audio(chave) is not None
+                or self._o_tocador_recusou(chave)
                 or not self._o_caminho_do_audio_esta_de_pe(chave)):
             return padroes_de_vibracao.ROTA_MOTOR
         return padroes_de_vibracao.ROTA_AUDIO
@@ -1373,6 +1380,8 @@ class AltoFalanteSubsystem:
 
         chave = self._chave_do_rumble(uniq)
         if chave is None or self._o_que_falta_ao_audio(chave) is not None:
+            return False
+        if self._o_tocador_recusou(chave):
             return False
         alvo = self._o_tocador_de(chave)
         if alvo is None:
@@ -1399,7 +1408,15 @@ class AltoFalanteSubsystem:
             return DesfechoDoCorpo(falta)
         if self._o_radio_cede(chave):
             return DesfechoDoCorpo(RECUSA_RADIO_CEDE)
+        if self._o_tocador_recusou(chave):
+            return DesfechoDoCorpo(RECUSA_SEM_TOCADOR)
         return TOCOU
+
+    def _o_tocador_recusou(self, chave: str) -> bool:
+        """O tocador do aparelho deste controle recusou e ainda não tenta de novo."""
+        marca = self._aparelho_de.get(chave)
+        tocador = self._tocadores.get(marca) if marca is not None else None
+        return getattr(tocador, "recusado", False) is True
 
     def tocar_o_corpo(
         self, uniq: str, amostras: Any, lado: str = "centro", *, fonte: str = ""
@@ -1461,7 +1478,7 @@ class AltoFalanteSubsystem:
         if not sink:
             return False
         tocador = self._tocador_do_estalo(sink)
-        if tocador is None:
+        if tocador is None or getattr(tocador, "recusado", False) is True:
             return False
         tocador.tocar(recorte)
         return True

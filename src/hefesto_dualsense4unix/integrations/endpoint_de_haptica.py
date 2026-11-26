@@ -739,6 +739,16 @@ LATENCIA_DO_TOCADOR_MS = 20
 
 RECUSA_DO_TOCADOR_S = 60.0
 
+RECUO_INICIAL_DO_TOCADOR_S = 1.0
+
+VIVO_QUE_ZERA_O_RECUO_S = 10.0
+
+PRAZO_DO_NO_RENOVADO_S = 3.0
+
+SAIDAS_SEM_RECUSA = frozenset({"silencio", "trocou_de_endpoint", "parado", "no_renovado"})
+
+SAIDAS_QUE_ZERAM_O_RECUO = frozenset({"silencio", "trocou_de_endpoint"})
+
 PRAZO_DA_ESCRITA_S = 1.0
 
 CANO_DO_TOCADOR = 4096
@@ -1104,6 +1114,105 @@ def fluxos_nos_endpoints(
     return frozenset(nossos), frozenset(com_outro)
 
 
+def escrever_o_bloco(
+    fd: int,
+    dados: bytes,
+    fim: threading.Event,
+    relogio: Callable[[], float],
+    *,
+    continuar_no_cheio: bool,
+) -> str:
+    """Escreve ``dados`` inteiro no cano ``fd`` e devolve ``""``; senão o motivo do fim.
+
+    ``parado`` quando ``fim`` se armou no meio (o ``parar()``), ``parou_de_ler`` quando o cano
+    fechou, deu erro ou ficou cheio por :data:`PRAZO_DA_ESCRITA_S`. ``continuar_no_cheio`` volta
+    a esperar o cano no ``BlockingIOError``; sem ele, a volta escreve zero e segue.
+    """
+    vista = memoryview(dados)
+    espera = select.poll()
+    espera.register(fd, select.POLLOUT)
+    parado_desde: float | None = None
+
+    def falhou() -> str:
+        return "parado" if fim.is_set() else "parou_de_ler"
+
+    while vista and not fim.is_set():
+        try:
+            prontos = espera.poll(100)
+        except (OSError, ValueError):
+            return falhou()
+        if any(ev & (select.POLLERR | select.POLLHUP | select.POLLNVAL) for _, ev in prontos):
+            return falhou()
+        if not prontos:
+            agora = relogio()
+            parado_desde = agora if parado_desde is None else parado_desde
+            if agora - parado_desde >= PRAZO_DA_ESCRITA_S:
+                return falhou()
+            continue
+        parado_desde = None
+        try:
+            escritos = os.write(fd, vista)
+        except BlockingIOError:
+            if continuar_no_cheio:
+                continue
+            escritos = 0
+        except OSError:
+            return falhou()
+        vista = vista[escritos:]
+    return "" if not vista else falhou()
+
+
+class RecuoDoTocador:
+    """Quanto um tocador espera antes de tentar de novo, e por quê.
+
+    A falha que pode passar (o processo que morre, que não sobe, que para de ler) espera 1, 2,
+    4 s, até :data:`RECUSA_DO_TOCADOR_S`; ``fixo`` (não há tocador instalado, o nó errado) espera
+    o teto de uma vez. Quem usa segura a própria trava.
+    """
+
+    def __init__(self, relogio: Callable[[], float]) -> None:
+        self._relogio = relogio
+        self.ate = float("-inf")
+        self.motivo = ""
+        self._seguidas = 0
+
+    @property
+    def vale(self) -> bool:
+        """A recusa vale agora."""
+        return self._relogio() < self.ate
+
+    def recusar(self, motivo: str, *, fixo: bool = False) -> float:
+        """Arma a recusa e devolve a espera, em segundos."""
+        if fixo:
+            espera = RECUSA_DO_TOCADOR_S
+        else:
+            espera = min(RECUO_INICIAL_DO_TOCADOR_S * 2 ** self._seguidas, RECUSA_DO_TOCADOR_S)
+            self._seguidas += 1
+        self.ate = self._relogio() + espera
+        self.motivo = str(motivo)
+        return espera
+
+    def zerar(self) -> None:
+        """O tocador tocou de verdade: a próxima falha volta ao primeiro degrau."""
+        self._seguidas = 0
+
+
+def motivo_da_saida(
+    motivo: str, *, parado: bool, renovado: bool, vivo_s: float | None, recuo: RecuoDoTocador
+) -> str:
+    """O motivo com que o tocador saiu, já lido: o fim pedido é ``parado``, a perda do nó que o
+    próprio dono recriou é ``no_renovado``; o tocador que tocou o bastante zera o recuo."""
+    if parado:
+        return "parado"
+    if renovado and motivo not in SAIDAS_SEM_RECUSA:
+        motivo = "no_renovado"
+    if motivo in SAIDAS_QUE_ZERAM_O_RECUO or (
+        vivo_s is not None and vivo_s >= VIVO_QUE_ZERA_O_RECUO_S
+    ):
+        recuo.zerar()
+    return motivo
+
+
 class TocadorDoRumble:
     """O rumble do jogo tocado como háptica no endpoint de UM aparelho."""
 
@@ -1133,7 +1242,9 @@ class TocadorDoRumble:
         self._dono = ""
         self._proc: Any = None
         self._vivo = False
-        self._recusado_ate = 0.0
+        self._vivo_desde: float | None = None
+        self._recuo = RecuoDoTocador(relogio)
+        self._renasce_ate = float("-inf")
         self._acordar = threading.Event()
         self._fim = threading.Event()
         self._fio: threading.Thread | None = None
@@ -1173,6 +1284,22 @@ class TocadorDoRumble:
         """De pé e escrevendo no endpoint — o processo, e não a lembrança."""
         proc = self._proc
         return bool(self._vivo and proc is not None and proc.poll() is None)
+
+    @property
+    def recusado(self) -> bool:
+        """O tocador recusou e ainda não tenta de novo: o que se pede a ele não toca."""
+        return self._recuo.vale
+
+    @property
+    def motivo_da_recusa(self) -> str:
+        """Por que recusou, enquanto a recusa vale; vazio sem recusa."""
+        return self._recuo.motivo if self._recuo.vale else ""
+
+    def o_no_vai_renascer(self) -> None:
+        """Quem é dono do nó vai derrubá-lo e recriá-lo: o tocador que perder o nó agora troca
+        de endpoint, sem recusa, e volta no nó novo."""
+        self._renasce_ate = self._relogio() + PRAZO_DO_NO_RENOVADO_S
+        self._acordar.set()
 
 
     def levar(
@@ -1414,9 +1541,13 @@ class TocadorDoRumble:
         except Exception as exc:
             logger.debug("haptica_fina_aviso_falhou", controle=self.marca, err=str(exc))
 
-    def _recusar(self, motivo: str) -> None:
-        self._recusado_ate = self._relogio() + RECUSA_DO_TOCADOR_S
-        logger.info("haptica_fina_recusada", controle=self.marca, motivo=motivo)
+    def _recusar(self, motivo: str, *, fixo: bool = False) -> None:
+        """Arma a recusa e solta o corpo que esperava: o pedaço velho nunca toca depois."""
+        with self._trava:
+            espera = self._recuo.recusar(motivo, fixo=fixo)
+            self._corpos.clear()
+        logger.info(
+            "haptica_fina_recusada", controle=self.marca, motivo=motivo, espera_s=espera)
 
     def _correr(self) -> None:
         while not self._fim.is_set():
@@ -1427,16 +1558,14 @@ class TocadorDoRumble:
             with self._trava:
                 nivel, sink, toque = self._nivel, self._sink, self._toque
                 corpo = any(self._corpos.values()) or any(self.lados)
-            if (not any(nivel) and toque is None and not corpo) or not sink or (
-                self._relogio() < self._recusado_ate
-            ):
+            if (not any(nivel) and toque is None and not corpo) or not sink or self.recusado:
                 continue
             self._tocar(sink)
 
     def _tocar(self, sink: str) -> None:
         argv = self._argv_de(sink, self.rotulo)
         if not argv:
-            self._recusar("sem_tocador")
+            self._recusar("sem_tocador", fixo=True)
             return
         try:
             proc = self._lancar(
@@ -1460,10 +1589,15 @@ class TocadorDoRumble:
             motivo = "falhou"
         finally:
             estava_vivo = self._vivo
+            desde, self._vivo_desde = self._vivo_desde, None
             self._vivo = False
             self._matar(proc)
             self._proc = None
-            if motivo not in ("silencio", "trocou_de_endpoint", "parado"):
+            motivo = motivo_da_saida(
+                motivo, parado=self._fim.is_set(),
+                renovado=self._relogio() < self._renasce_ate,
+                vivo_s=None if desde is None else self._relogio() - desde, recuo=self._recuo)
+            if motivo not in SAIDAS_SEM_RECUSA:
                 self._recusar(motivo)
             logger.info("haptica_fina_saiu", controle=self.marca, motivo=motivo)
             if estava_vivo:
@@ -1487,10 +1621,12 @@ class TocadorDoRumble:
                 silencio_desde = agora
             elif agora - silencio_desde >= self._folga_s:
                 return "silencio"
-            if not self._escrever(fd, self.proximo_bloco(nivel, antes, fase)):
-                return "parou_de_ler"
+            fim = self._escrever(fd, self.proximo_bloco(nivel, antes, fase))
+            if fim:
+                return fim
             if not self._vivo:
                 self._vivo = True
+                self._vivo_desde = self._relogio()
                 logger.info("haptica_fina_de_pe", controle=self.marca, tocador=binario)
                 threading.Thread(
                     target=self._conferir_o_destino, args=(proc, sink), daemon=True,
@@ -1522,34 +1658,10 @@ class TocadorDoRumble:
             self._memoria[chave] = bloco
         return bloco
 
-    def _escrever(self, fd: int, dados: bytes) -> bool:
-        """Escreve o bloco inteiro; ``False`` = o tocador parou de ler ou morreu."""
-        vista = memoryview(dados)
-        espera = select.poll()
-        espera.register(fd, select.POLLOUT)
-        parado_desde: float | None = None
-        while vista and not self._fim.is_set():
-            try:
-                prontos = espera.poll(100)
-            except (OSError, ValueError):
-                return False
-            if any(ev & (select.POLLERR | select.POLLHUP | select.POLLNVAL) for _, ev in prontos):
-                return False
-            if not prontos:
-                agora = self._relogio()
-                parado_desde = agora if parado_desde is None else parado_desde
-                if agora - parado_desde >= PRAZO_DA_ESCRITA_S:
-                    return False
-                continue
-            parado_desde = None
-            try:
-                escritos = os.write(fd, vista)
-            except BlockingIOError:
-                continue
-            except OSError:
-                return False
-            vista = vista[escritos:]
-        return not vista
+    def _escrever(self, fd: int, dados: bytes) -> str:
+        """Escreve o bloco inteiro e devolve ``""``; senão, o motivo do fim: ``parado`` quando
+        o fim foi pedido, ``parou_de_ler`` quando o tocador parou de ler ou morreu."""
+        return escrever_o_bloco(fd, dados, self._fim, self._relogio, continuar_no_cheio=True)
 
     def _conferir_o_destino(self, proc: Any, sink: str) -> None:
         """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV da máquina."""
@@ -1566,7 +1678,7 @@ class TocadorDoRumble:
             if destino == sink:
                 return
             logger.warning("haptica_fina_ligada_a_outro_no", controle=self.marca)
-            self._recusado_ate = self._relogio() + RECUSA_DO_TOCADOR_S
+            self._recusar("ligada_a_outro_no", fixo=True)
             self._matar(proc)
             return
         logger.debug("haptica_fina_nao_conferida", controle=self.marca)
@@ -1603,11 +1715,13 @@ __all__ = [
     "PID_DUALSENSE",
     "PRIORIDADE_DO_RELOGIO",
     "QUADROS_POR_BLOCO",
+    "RECUSA_DO_TOCADOR_S",
     "SEM_PORTA",
     "VID_SONY",
     "Ancora",
     "EndpointDeHaptica",
     "LimitadorSuave",
+    "RecuoDoTocador",
     "TocadorDoRumble",
     "a_porta_e_dele",
     "ancora_da_interface",
@@ -1619,11 +1733,13 @@ __all__ = [
     "descricao_da_haptica",
     "e_sem_porta",
     "endpoints_de_pe",
+    "escrever_o_bloco",
     "fluxos_nos_endpoints",
     "forma_do_toque",
     "ganho_do_perfil",
     "marca_do_aparelho",
     "misturar_o_toque",
+    "motivo_da_saida",
     "nasceu_com_o_relogio",
     "nome_da_marca",
     "nome_do_endpoint",

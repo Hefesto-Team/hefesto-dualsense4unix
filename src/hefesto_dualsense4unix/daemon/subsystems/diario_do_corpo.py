@@ -25,6 +25,7 @@ RECUSA_SEM_ENDPOINT = "sem_endpoint"
 RECUSA_JOGO_NO_ENDPOINT = "jogo_no_endpoint"
 RECUSA_RADIO_CEDE = "radio_cede"
 RECUSA_ECONOMIA = "economia"
+RECUSA_SEM_TOCADOR = "sem_tocador"
 FALA_DA_RECUSA = {
     RECUSA_SEM_APARELHO: "sem aparelho",
     RECUSA_FORCA_ZERO: "Força em 0",
@@ -32,6 +33,7 @@ FALA_DA_RECUSA = {
     RECUSA_JOGO_NO_ENDPOINT: "o jogo no endpoint",
     RECUSA_RADIO_CEDE: "o rádio sem fatia",
     RECUSA_ECONOMIA: "economia",
+    RECUSA_SEM_TOCADOR: "o tocador recusado",
 }
 
 PREFIXO_DO_CONTROLE = "corpo.controle."

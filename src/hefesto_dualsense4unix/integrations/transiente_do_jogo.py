@@ -36,7 +36,6 @@ import functools
 import math
 import operator
 import os
-import select
 import shutil
 import subprocess
 import threading
@@ -1004,8 +1003,6 @@ LATENCIA_DO_ESTALO_MS = 20
 CANO_DO_ESTALO = 4096
 PRAZO_DO_RECORTE_S = 0.2
 VALIDADE_DA_GUARDA_S = 1.0
-RECUSA_DO_ESTALO_S = 60.0
-PRAZO_DA_ESCRITA_S = 1.0
 PRAZO_DO_FIO_DO_ESTALO_S = 2.0
 VIGIA_DO_ESTALO_S = 1.0
 PRAZO_DA_MORTE_DO_ESTALO_S = 2.0
@@ -1131,8 +1128,11 @@ class TocadorDoEstalo:
         self._fim = threading.Event()
         self._fio: threading.Thread | None = None
         self._proc: Any = None
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import RecuoDoTocador
+
         self._vivo = False
-        self._recusado_ate = float("-inf")
+        self._vivo_desde: float | None = None
+        self._recuo = RecuoDoTocador(relogio)
         self._pendente: tuple[Recorte, float] | None = None
         self._tocando = b""
         self._guarda: tuple[float, bool | None] | None = None
@@ -1142,6 +1142,16 @@ class TocadorDoEstalo:
     def vivo(self) -> bool:
         proc = self._proc
         return bool(self._vivo and proc is not None and proc.poll() is None)
+
+    @property
+    def recusado(self) -> bool:
+        """O tocador recusou e ainda não tenta de novo: o estalo pedido agora não toca."""
+        return self._recuo.vale
+
+    @property
+    def motivo_da_recusa(self) -> str:
+        """Por que recusou, enquanto a recusa vale; vazio sem recusa."""
+        return self._recuo.motivo if self._recuo.vale else ""
 
     def tocar(self, recorte: Recorte) -> None:
         """Põe o estalo na vez: o novo toma o lugar do que ainda não acabou."""
@@ -1215,9 +1225,9 @@ class TocadorDoEstalo:
             with contextlib.suppress(Exception):
                 aviso()
 
-    def _recusar(self, motivo: str) -> None:
-        self._recusado_ate = self._relogio() + RECUSA_DO_ESTALO_S
-        logger.info("tato_estalo_recusado", no=self.sink, motivo=motivo)
+    def _recusar(self, motivo: str, *, fixo: bool = False) -> None:
+        espera = self._recuo.recusar(motivo, fixo=fixo)
+        logger.info("tato_estalo_recusado", no=self.sink, motivo=motivo, espera_s=espera)
 
     def _correr(self) -> None:
         while not self._fim.is_set():
@@ -1227,7 +1237,7 @@ class TocadorDoEstalo:
                 return
             if not self.em_curso:
                 continue
-            if self._relogio() < self._recusado_ate:
+            if self.recusado:
                 with self._trava:
                     self._pendente, self._tocando = None, b""
                 continue
@@ -1236,7 +1246,7 @@ class TocadorDoEstalo:
     def _tocar(self) -> None:
         argv = self._argv_de(self.sink, self.rotulo)
         if not argv:
-            self._recusar("sem_tocador")
+            self._recusar("sem_tocador", fixo=True)
             return
         try:
             proc = self._lancar(
@@ -1259,11 +1269,20 @@ class TocadorDoEstalo:
             logger.debug("tato_estalo_falhou", no=self.sink, err=str(exc))
             motivo = "falhou"
         finally:
+            from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+                SAIDAS_SEM_RECUSA,
+                motivo_da_saida,
+            )
+
             estava_vivo = self._vivo
+            desde, self._vivo_desde = self._vivo_desde, None
             self._vivo = False
             self._matar(proc)
             self._proc = None
-            if motivo not in ("silencio", "parado"):
+            motivo = motivo_da_saida(
+                motivo, parado=self._fim.is_set(), renovado=False,
+                vivo_s=None if desde is None else self._relogio() - desde, recuo=self._recuo)
+            if motivo not in SAIDAS_SEM_RECUSA:
                 self._recusar(motivo)
             logger.info("tato_estalo_saiu", no=self.sink, motivo=motivo)
             if estava_vivo:
@@ -1281,10 +1300,12 @@ class TocadorDoEstalo:
                 silencio_desde = agora
             elif agora - silencio_desde >= self._folga_s:
                 return "silencio"
-            if not self._escrever(fd, self.proximo_bloco()):
-                return "parou_de_ler"
+            fim = self._escrever(fd, self.proximo_bloco())
+            if fim:
+                return fim
             if not self._vivo:
                 self._vivo = True
+                self._vivo_desde = self._relogio()
                 logger.info("tato_estalo_de_pe", no=self.sink)
                 threading.Thread(
                     target=self._conferir_o_destino, args=(proc,), daemon=True,
@@ -1293,34 +1314,11 @@ class TocadorDoEstalo:
                 self._avisar()
         return "parado"
 
-    def _escrever(self, fd: int, dados: bytes) -> bool:
-        """Escreve o bloco inteiro; ``False`` = o tocador parou de ler ou morreu."""
-        vista = memoryview(dados)
-        espera = select.poll()
-        espera.register(fd, select.POLLOUT)
-        parado_desde: float | None = None
-        while vista and not self._fim.is_set():
-            try:
-                prontos = espera.poll(100)
-            except (OSError, ValueError):
-                return False
-            if any(ev & (select.POLLERR | select.POLLHUP | select.POLLNVAL) for _, ev in prontos):
-                return False
-            if not prontos:
-                agora = self._relogio()
-                parado_desde = agora if parado_desde is None else parado_desde
-                if agora - parado_desde >= PRAZO_DA_ESCRITA_S:
-                    return False
-                continue
-            parado_desde = None
-            try:
-                escritos = os.write(fd, vista)
-            except BlockingIOError:
-                escritos = 0
-            except OSError:
-                return False
-            vista = vista[escritos:]
-        return not vista
+    def _escrever(self, fd: int, dados: bytes) -> str:
+        """Escreve o bloco inteiro e devolve ``""``; senão, ``parado`` ou ``parou_de_ler``."""
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import escrever_o_bloco
+
+        return escrever_o_bloco(fd, dados, self._fim, self._relogio, continuar_no_cheio=False)
 
     def _conferir_o_destino(self, proc: Any) -> None:
         """Ligado a outro nó que não o do controle, o tocador morre: nunca na caixa."""
@@ -1336,7 +1334,7 @@ class TocadorDoEstalo:
             if destino == self.sink:
                 return
             logger.warning("tato_estalo_ligado_a_outro_no", no=self.sink)
-            self._recusado_ate = self._relogio() + RECUSA_DO_ESTALO_S
+            self._recusar("ligado_a_outro_no", fixo=True)
             self._matar(proc)
             return
 
