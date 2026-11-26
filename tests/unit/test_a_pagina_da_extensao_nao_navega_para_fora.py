@@ -13,7 +13,9 @@ MORDIDAS (26/11/2026, executadas sobre a cura e devolvidas):
 - sem o ``connect("decide-policy", ...)``: os casos ``location``, ``refresh``, ``ancora``, ``form``,
   ``arquivo`` e ``topo`` de ``test_a_pagina_hostil_nao_alcanca_nada``;
 - a lista trocada por «deixa todo ``file://``»: ``arquivo`` e ``topo`` (e
-  ``test_o_destino_da_janela``).
+  ``test_o_destino_da_janela``);
+- sem a recusa na RESPONSE: ``vizinha`` (a página da extensão que vai a uma página da pasta carrega
+  dentro do quadro e o pedido chega).
 
 Tudo roda num filho sob ``xvfb-run``, num lar de mentira, com o servidor dentro do filho.
 """
@@ -83,6 +85,7 @@ _FILHO = textwrap.dedent(
         "form": f"<form id=f action='{B}/pelo-form'><input name=d value=segredo></form>"
                 "<script>document.getElementById('f').submit()</script>",
         "arquivo": f"<script>location.href='{fora.as_uri()}'</script>",
+        "vizinha": f"<script>location.href='{(pasta / '01-jogar.html').as_uri()}'</script>",
         "fala": "<script>hefesto.enviar({oi: 1})</script>",
         "topo": "<p>quieta</p>",
         "aba": "<p>quieta</p>",
@@ -93,8 +96,9 @@ _FILHO = textwrap.dedent(
     alvo.write_text(f"<!doctype html><meta charset='utf-8'><title>Prova</title><body>{casa}"
                       f"<div id='mod-janela'>{area}</div><script>{exp.SCRIPT_DA_PAGINA}</script>"
                       "</body>", encoding="utf-8")
+    vizinha = f"<img src='{B}/pela-vizinha'>" if modo == "vizinha" else ""
     (pasta / "01-jogar.html").write_text(
-        f"<!doctype html><meta charset='utf-8'><title>Outra</title><body>{casa}</body>",
+        f"<!doctype html><meta charset='utf-8'><title>Outra</title><body>{casa}{vizinha}</body>",
         encoding="utf-8")
     recebidos, fim = [], {}
 
@@ -158,7 +162,7 @@ def _abrir(lar: Path, modo: str) -> dict[str, object]:
 
 
 @pytest.mark.parametrize("modo", ["location", "refresh", "ancora", "abrir", "form", "arquivo",
-                                  "topo"])
+                                  "vizinha", "topo"])
 def test_a_pagina_hostil_nao_alcanca_nada(lar: Path, modo: str) -> None:
     fim = _abrir(lar, modo)
     assert fim["pedidos"] == [], fim

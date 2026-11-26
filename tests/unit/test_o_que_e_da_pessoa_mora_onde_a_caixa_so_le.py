@@ -101,6 +101,36 @@ def test_a_mudanca_nao_leva_o_css_da_extensao_com_processo(lg: Lugares, tmp_path
     assert not meu_css.caminho("tema-proc", lg).exists()
 
 
+def test_a_mudanca_nao_confia_na_extensao_que_ja_teve_processo(
+        lg: Lugares, tmp_path: Path) -> None:
+    """A versão de agora é só tema, mas a anterior guardada tinha processo: o que está em
+    ``<dados>/<id>`` pode ter sido escrito pela caixa, e o ``meu.css`` fica para trás."""
+    _ligada(lg, _pasta(tmp_path, _manifesto("tema-ex")))
+    guarda = lg.codigo / ".tema-ex.anterior"
+    guarda.mkdir(parents=True)
+    (guarda / "hefesto-mod.json").write_text(json.dumps(_manifesto(
+        "tema-ex", tipos=["tema", "processo"], processo={"executar": ["sh", "x.sh"]})),
+        encoding="utf-8")
+    shutil.rmtree(lg.da_pessoa, ignore_errors=True)
+    _plantar(lg, "tema-ex", {"meu_css": True, "tema": "Claro"}, HOSTIL)
+    assert tm.tema_da_casa(lg).css == ""
+    assert not meu_css.caminho("tema-ex", lg).exists()
+    guardado = json.loads(opcoes.caminho("tema-ex", lg).read_text(encoding="utf-8"))
+    assert guardado == {"tema": "Claro"}
+
+
+def test_a_extensao_com_preparo_conta_como_quem_escreveu_nos_dados(
+        lg: Lugares, tmp_path: Path) -> None:
+    so_tema = Manifesto.model_validate(_manifesto("t"))
+    com_preparo = Manifesto.model_validate(_manifesto("t", preparar=["sh", "p.sh"]))
+    entrada = instalador.Entrada(id="t", nome="T", versao="1.0.0", origem="local",
+                                 endereco=str(tmp_path))
+    assert not instalador._escreveu_nos_dados(lg, "t", so_tema, entrada)
+    assert instalador._escreveu_nos_dados(lg, "t", com_preparo, entrada)
+    aceito = entrada.model_copy(update={"preparo_aceito": ["sh", "p.sh"]})
+    assert instalador._escreveu_nos_dados(lg, "t", so_tema, aceito)
+
+
 def test_o_css_herdado_pelo_substitui_nao_veste_a_janela(lg: Lugares, tmp_path: Path) -> None:
     antiga = {"id": "aa", "nome": "A", "versao": "1.0.0", "api": ">=2,<3",  # (noqa-acento)
               "licenca": "MIT", "tipos": ["processo"], "permissoes": [],  # (noqa-acento)

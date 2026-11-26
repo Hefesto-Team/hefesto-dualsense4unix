@@ -387,10 +387,10 @@ def migrar_o_que_e_da_pessoa(lg: Lugares) -> list[str]:
     """Uma vez só, o que era da pessoa em ``<dados>/<id>`` vai para :attr:`Lugares.da_pessoa`.
 
     Vai o ``opcoes.json`` de cada extensão instalada que ainda não tem o seu. O ``meu.css`` e os
-    importados vão só da extensão sem ``processo``, a que nunca escreveu na pasta; na que tem, a
-    opção ``css`` e as ``importar`` voltam ao padrão (desligada, vazia). A extensão cujo manifesto
-    não se lê não leva nada. A marca fica no fim; o que não grava tenta de novo na próxima vez.
-    Devolve os ids que mudaram.
+    importados vão só da extensão que nunca escreveu na pasta (:func:`_escreveu_nos_dados`); na
+    que escreveu, a opção ``css`` e as ``importar`` voltam ao padrão (desligada, vazia). A
+    extensão cujo manifesto não se lê não leva nada. A marca fica no fim; o que não grava tenta
+    de novo na próxima vez. Devolve os ids que mudaram.
     """
     marca = lg.da_pessoa / MARCA_DA_MUDANCA_DA_PESSOA
     if os.path.lexists(marca):
@@ -399,7 +399,8 @@ def migrar_o_que_e_da_pessoa(lg: Lugares) -> list[str]:
         registro = ler_registro(lg.registro)
     except InstalacaoRecusadaError:
         return []
-    mudaram = [mod_id for mod_id in registro if _mudar_o_que_e_da_pessoa(lg, mod_id)]
+    mudaram = [mod_id for mod_id, entrada in registro.items()
+               if _mudar_o_que_e_da_pessoa(lg, mod_id, entrada)]
     try:
         lg.da_pessoa.mkdir(mode=0o700, parents=True, exist_ok=True)
         with open(marca, "ab", opener=abrir_sem_seguir):
@@ -409,7 +410,25 @@ def migrar_o_que_e_da_pessoa(lg: Lugares) -> list[str]:
     return mudaram
 
 
-def _mudar_o_que_e_da_pessoa(lg: Lugares, mod_id: str) -> bool:
+def _escreveu_nos_dados(lg: Lugares, mod_id: str, manifesto: Manifesto,
+                        entrada: Entrada) -> bool:
+    """A extensão que escreveu, ou pode ter escrito, em ``<dados>/<id>``: com ``processo`` ou
+    ``preparar`` no manifesto de agora, com preparo aceito no registro, ou cuja versão anterior
+    guardada trazia um dos dois (ou não se lê)."""
+    if manifesto.processo is not None or manifesto.preparar is not None \
+            or entrada.preparo_aceito:
+        return True
+    guarda = _guarda_do_codigo(lg.codigo / mod_id)
+    if not os.path.lexists(guarda):
+        return False
+    try:
+        anterior = ler_manifesto(guarda, exigir_api=False)
+    except ManifestoRecusadoError:
+        return True
+    return anterior.processo is not None or anterior.preparar is not None
+
+
+def _mudar_o_que_e_da_pessoa(lg: Lugares, mod_id: str, entrada: Entrada) -> bool:
     from hefesto_dualsense4unix.mods import importados, opcoes
 
     origem, destino = lg.dados / mod_id, lg.da_pessoa / mod_id
@@ -419,7 +438,7 @@ def _mudar_o_que_e_da_pessoa(lg: Lugares, mod_id: str) -> bool:
         manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
     except ManifestoRecusadoError:
         return False
-    da_caixa = manifesto.processo is not None
+    da_caixa = _escreveu_nos_dados(lg, mod_id, manifesto, entrada)
     arquivos: dict[str, bytes] = {}
     try:
         guardados = json.loads(ler_ou_vazio(origem / opcoes.NOME_DO_ARQUIVO,
