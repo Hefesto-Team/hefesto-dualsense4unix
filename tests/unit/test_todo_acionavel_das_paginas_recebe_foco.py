@@ -19,6 +19,9 @@ publicação é de quem costura) e mede o DOM depois dele.
 
 MORDIDA: com o ``base-comum.js`` anterior à sprint, ``test_nenhuma_pagina_tem_acionavel_sem_papel``,
 ``..._sem_nome`` e ``test_o_estado_acompanha_a_classe`` reprovam.
+
+DECISÃO D-2611-O-LEITOR-DE-TELA-NAO-NARRA-O-GESTO-QUE-DEU-CERTO (a validar): só o texto que
+a tela já diz (a ressalva) vira região viva; o gesto que deu certo não é narrado.
 """
 from __future__ import annotations
 

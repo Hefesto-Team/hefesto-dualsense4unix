@@ -5,6 +5,9 @@ Sprint AS-JANELAS-DA-EXPERIMENTAL-NAO-ABREM-COM-O-EXEMPLO-01 (25/11/2026): a fol
 («Configurar · Minha extensão», o «Parar tudo» de exemplo). Agora uma regra por seletor esconde a
 ``.tela-nova`` inteira até o carimbo, e o ``base-comum.js`` não prende o Tab na janela escondida.
 
+DECISÃO D-2611-A-JANELA-DA-EXPERIMENTAL-SO-APARECE-COM-O-DADO-REAL (a validar): a janela
+que recebe bloco não abre com título nem botão de exemplo; sem resposta, fica fechada.
+
 MORDIDA: tirar ``#mod-janela`` da regra (a lista de três de antes) reprova
 ``test_toda_janela_que_recebe_bloco_nasce_escondida_inteira``; tirar o ``aparece`` do ``aberta`` do
 ``base-comum.js`` reprova ``test_a_janela_escondida_nao_prende_o_teclado_e_leva_o_foco``.
