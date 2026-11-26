@@ -230,6 +230,26 @@ def test_o_processo_que_morre_recua_um_dois_quatro_ate_o_teto(relogio: _Relogio)
     assert len(lancar.lancados) == 8, "a tentativa depois do recuo não aconteceu"
 
 
+@pytest.mark.parametrize("qual", range(4))
+def test_a_recusa_solta_o_corpo_que_esperava_na_fila(qual: int, relogio: _Relogio) -> None:
+    """O pedaço que esperava quando o processo morreu nunca toca depois que a recusa vence.
+
+    MORDIDA: o ``_recusar`` sem o ``_corpos.clear()`` guarda o corpo velho na fila.
+    """
+    lancar = _Lancador(morto=True)
+    tocador = eh.TocadorDoRumble(
+        f"m0{qual + 1}", argv_de=lambda *_a: ["pw-cat"], lancar=lancar, conferir=_sem_conferir,
+        relogio=relogio)
+    try:
+        tocador.levar_o_corpo(
+            array("f", [0.5] * 480), "centro", sink="s", dono=P[qual], fonte="som")
+        assert _esperar(lambda: tocador.recusado), "o processo morto não recusou"
+        assert tocador.motivo_da_recusa == "morreu"
+        assert not tocador.tocando_o_corpo, "o corpo velho ficou na fila para tocar depois"
+    finally:
+        tocador.parar()
+
+
 def test_o_processo_que_morre_uma_vez_volta_em_ate_dois_segundos(relogio: _Relogio) -> None:
     lancar = _Lancador(morto=True)
     tocador = eh.TocadorDoRumble(
@@ -241,10 +261,12 @@ def test_o_processo_que_morre_uma_vez_volta_em_ate_dois_segundos(relogio: _Relog
     assert not tocador.recusado, "o processo que morreu uma vez tirou mais de 2 s da háptica"
 
 
-def test_quem_tocou_o_bastante_volta_ao_primeiro_degrau() -> None:
-    recuo = eh.RecuoDoTocador(lambda: 0.0)
+def test_quem_tocou_o_bastante_volta_ao_primeiro_degrau(relogio: _Relogio) -> None:
+    recuo = eh.RecuoDoTocador(relogio)
     for _ in range(4):
         recuo.recusar("morreu")
+        relogio.t = recuo.ate
+    relogio.t += eh.VIVO_QUE_ZERA_O_RECUO_S
     assert eh.motivo_da_saida(
         "morreu", parado=False, renovado=False, vivo_s=eh.VIVO_QUE_ZERA_O_RECUO_S, recuo=recuo
     ) == "morreu"
@@ -355,6 +377,73 @@ def test_o_estalo_sem_tocador_recusa_e_o_alto_falante_diz_que_nao_tocou(
         assert alto.tocar_o_estalo(P[0], SimpleNamespace()) is False
     finally:
         estalo.parar()
+
+
+class _ProcessoQueFechaAoMorrer(_Processo):
+    """Morto pelo tocador, solta o cano como o ``pw-cat`` de verdade."""
+
+    def kill(self) -> None:
+        super().kill()
+        if self.stdin.leitura >= 0:
+            os.close(self.stdin.leitura)
+            self.stdin.leitura = -1
+
+
+def _tocar_ate_sair(alvo: Any, tocador: Any, lancados: list[_Processo]) -> None:
+    """Toca até sair; o cano se esvazia até o primeiro bloco, para a conferência nascer."""
+    fio = threading.Thread(target=alvo, daemon=True)
+    fio.start()
+    assert _esperar(lambda: lancados), "o tocador não lançou o processo"
+    cano = lancados[0].stdin
+    os.set_blocking(cano.leitura, False)
+    while not tocador._vivo and fio.is_alive() and cano.leitura >= 0:
+        try:
+            os.read(cano.leitura, 65536)
+        except (BlockingIOError, OSError):
+            time.sleep(0.001)
+    fio.join(5.0)
+    assert not fio.is_alive(), "o tocador ligado ao nó errado não saiu"
+
+
+@pytest.mark.parametrize("qual", ["rumble", "estalo"])
+def test_o_no_errado_segura_o_teto_mesmo_com_a_morte_que_vem_depois(
+    qual: str, relogio: _Relogio
+) -> None:
+    """O tocador ligado a outro nó (a caixa da sala) recusa o teto; a morte que o próprio
+    tocador causa não encurta essa recusa para o primeiro degrau do recuo.
+
+    MORDIDA: o ``recusar`` que sempre sobrescreve o prazo devolve o tocador à caixa em 1 s.
+    """
+    lancados: list[_Processo] = []
+
+    def lancar(_argv: Any, **_kw: Any) -> _Processo:
+        proc = _ProcessoQueFechaAoMorrer(morto=False)
+        lancados.append(proc)
+        return proc
+
+    tocador: Any
+    if qual == "rumble":
+        tocador = eh.TocadorDoRumble(
+            "m01", argv_de=lambda *_a: ["pw-cat"], lancar=lancar,
+            conferir=lambda _r: "a_caixa_da_sala", relogio=relogio)
+        tocador._nivel, tocador._sink = (200, 200), "s"
+        _tocar_ate_sair(lambda: tocador._tocar("s"), tocador, lancados)
+    else:
+        tocador = tj.TocadorDoEstalo(
+            "hefesto_som_m01", argv_de=lambda *_a: ["pw-cat"], lancar=lancar,
+            conferir=lambda _r: "a_caixa_da_sala", folga_s=60.0, relogio=relogio)
+        _tocar_ate_sair(tocador._tocar, tocador, lancados)
+    try:
+        assert len(lancados) == 1
+        relogio.t += 2 * eh.RECUO_INICIAL_DO_TOCADOR_S + 1
+        assert tocador.recusado, "o nó errado voltou a tocar na caixa depois do primeiro degrau"
+        assert tocador.motivo_da_recusa in ("ligada_a_outro_no", "ligado_a_outro_no")
+        relogio.t += eh.RECUSA_DO_TOCADOR_S
+        assert not tocador.recusado
+    finally:
+        tocador.parar()
+        for proc in lancados:
+            proc.stdin.close()
 
 
 def test_o_estalo_que_morre_recua_como_o_tocador(relogio: _Relogio) -> None:

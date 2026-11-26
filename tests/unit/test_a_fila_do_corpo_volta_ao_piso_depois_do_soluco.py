@@ -1,7 +1,8 @@
 """A-FILA-DO-CORPO-VOLTA-AO-PISO-DEPOIS-DO-SOLUCO-01: o soluço do laço não deixa o corpo atrasado.
 
-O tocador é o real, sem processo, em tempo simulado: o laço do tato leva um tique de amostras
-a cada 1/60 s e o tocador tira um bloco a cada 10 ms. Um soluço de 150 ms para o laço, que
+O tocador é o real, parado antes do primeiro pedaço (sem fio nem processo, só a fila), em tempo
+simulado: o laço do tato leva um tique de amostras a cada 1/60 s e o tocador tira um bloco a
+cada 10 ms. Um soluço de 150 ms para o laço, que
 volta entregando de uma vez o que deve. Cada amostra leva o próprio número, e o atraso é a
 distância entre a última levada e a que toca: ele volta ao piso, e o mudo não passa do soluço
 e um bloco. Cada fila por fonte segue a mesma regra, no cabo e no rádio.
@@ -39,6 +40,7 @@ def _tocar(soluco_s: float, *, de_s: float = 20.0, ate_s: float = 30.0) -> tuple
     tocador = eh.TocadorDoRumble(
         "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=lambda _dono: 1.0
     )
+    tocador.parar()
     levadas = mudas = 0
     entregue_ate = -tv.INTERVALO_S
     proximo_tique = 0.0
@@ -85,6 +87,7 @@ def test_o_padrao_de_fora_toca_desde_o_primeiro_golpe() -> None:
     tocador = eh.TocadorDoRumble(
         "APARELHOTESTEX", argv_de=lambda *_a: [], ganho_da_via=lambda _dono: 1.0
     )
+    tocador.parar()
     origem, uniq = tv.PREFIXO_DA_EXTENSAO + "a", "aa:bb:cc:00:00:71"
 
     def levar(_uniq: str, amostras: array[float], lado: str) -> bool:

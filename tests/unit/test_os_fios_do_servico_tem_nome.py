@@ -140,3 +140,32 @@ def test_o_doctor_sem_servico_de_pe_so_informa() -> None:
     assert cmd_doctor._linhas_dos_fios(None) == [
         ("[INFO]", "fios do serviço: o serviço não está de pé")
     ]
+
+
+def test_o_doctor_em_json_leva_o_bloco_dos_fios(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O bloco entra no doctor de verdade, não só na função que monta as linhas.
+
+    MORDIDA: o ``_rodar_o_doctor`` sem o ``_print_bloco_fios`` deixa o bloco fora.
+    """
+    from typer.testing import CliRunner
+
+    from hefesto_dualsense4unix.cli.app import app
+
+    async def _sem_daemon() -> list[tuple[str, str]]:
+        return []
+
+    for bloco in (
+        "_print_storm_block",
+        "_print_bloco_contratos",
+        "_print_bloco_proton_fixado",
+        "_print_bloco_entrada",
+        "_print_bloco_registro",
+        "_print_bloco_install",
+    ):
+        monkeypatch.setattr(cmd_doctor, bloco, lambda: 0)
+    monkeypatch.setattr(cmd_doctor, "_print_bloco_perfis", lambda: False)
+    monkeypatch.setattr(cmd_doctor, "_daemon_checks", _sem_daemon)
+    monkeypatch.setattr(cmd_doctor, "_pid_do_servico", lambda: None)
+    r = CliRunner().invoke(app, ["doctor", "--json"])
+    assert r.exit_code == 0, r.output
+    assert "fios do serviço: o serviço não está de pé" in r.output

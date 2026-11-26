@@ -1,8 +1,9 @@
 """O-CORPO-SOMA-CADA-FONTE-NO-SEU-LADO-01: cada fonte do corpo tem a própria fila, e o bloco soma.
 
-O tocador é o real, sem processo (``argv_de`` vazio), em tempo simulado: a cada tique de 10 ms
-cada fonte viva leva 480 amostras e sai um bloco. A contínua vale 0,1 no centro por 1 s; o
-padrão vale 0,3 à esquerda por 0,5 s. O mesmo tocador serve o cabo e o rádio, nos dois modos.
+O tocador é o real, parado antes do primeiro pedaço (sem fio nem processo, só a fila), em
+tempo simulado: a cada tique de 10 ms cada fonte viva leva 480 amostras e sai um bloco. A
+contínua vale 0,1 no centro por 1 s; o padrão vale 0,3 à esquerda por 0,5 s. O mesmo tocador
+serve o cabo e o rádio, nos dois modos.
 
 A MORDIDA (executada, com o md5 conferido na volta): a fila única de volta (a fonte ignorada)
 → ``test_a_continua_e_o_padrao_somam_cada_um_no_seu_lado`` reprova com 0 amostras somadas; a
@@ -24,6 +25,7 @@ ESQUERDO, DIREITO = eh.CANAIS_DO_LADO["esquerdo"][0], eh.CANAIS_DO_LADO["direito
 def _tocar(fontes: dict[tuple[str, str], tuple[float, int]]) -> np.ndarray:
     """``{(fonte, lado): (valor, tiques)}``: o que sai do tocador, quadro a quadro."""
     tocador = eh.TocadorDoRumble("APARELHOTESTEX", argv_de=lambda *_a: [])
+    tocador.parar()
     blocos = []
     for tique in range(max(t for _v, t in fontes.values())):
         for (fonte, lado), (valor, tiques) in fontes.items():

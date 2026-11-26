@@ -1182,13 +1182,21 @@ class RecuoDoTocador:
         return self._relogio() < self.ate
 
     def recusar(self, motivo: str, *, fixo: bool = False) -> float:
-        """Arma a recusa e devolve a espera, em segundos."""
+        """Arma a recusa e devolve a espera, em segundos.
+
+        A recusa em vigor mais longa guarda o próprio prazo e o próprio motivo: a morte que o nó
+        errado causa não encurta o teto para o primeiro degrau.
+        """
+        agora = self._relogio()
         if fixo:
             espera = RECUSA_DO_TOCADOR_S
         else:
             espera = min(RECUO_INICIAL_DO_TOCADOR_S * 2 ** self._seguidas, RECUSA_DO_TOCADOR_S)
+        if self.ate - agora >= espera:
+            return self.ate - agora
+        if not fixo:
             self._seguidas += 1
-        self.ate = self._relogio() + espera
+        self.ate = agora + espera
         self.motivo = str(motivo)
         return espera
 
