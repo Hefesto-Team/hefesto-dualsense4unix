@@ -116,6 +116,7 @@ class _Mao:
     segurou: dict[str, float] = field(default_factory=dict)
     parou_segurando: set[str] = field(default_factory=set)
     gatilhos: tuple[int, int] | None = None
+    opcoes: Opcoes | None = None
 
 
 class GestosDosAcessorios:
@@ -170,9 +171,31 @@ class GestosDosAcessorios:
         return usou, virou
 
     def soltar_quem_saiu(self, ficam: Iterable[str | None]) -> None:
+        """Solta a mão de cada controle que saiu com o que segurava (:meth:`_soltar_a_mao`)."""
         manter = set(ficam)
         for chave in [c for c in self._maos if c not in manter]:
-            del self._maos[chave]
+            self._soltar_a_mao(chave)
+
+    def _soltar_a_mao(self, de: str | None) -> None:
+        """A mão sai emitindo o que segurava: o zero do acelerador, o «desce» do lado segurado
+        e a camada 0, pelas opções com que a mão foi lida por último."""
+        mao = self._maos.get(de)
+        if mao is None:
+            return
+        opcoes = mao.opcoes
+        if opcoes is not None:
+            for membro in sorted(mao.calados):
+                self._soltou(mao, opcoes, membro, mao.t, de)
+        mao.calados.clear()
+        self._fechar_a_camada(mao, de)
+        self._maos.pop(de, None)
+
+    def _fechar_a_camada(self, mao: _Mao, de: str | None) -> None:
+        if not mao.camada:
+            return
+        mao.camada = False
+        mao.camada_ate = None
+        self._dizer(de, "camada", 0)
 
     def botoes_calados(self, de: str | None) -> frozenset[str]:
         mao = self._maos.get(de)
@@ -204,11 +227,12 @@ class GestosDosAcessorios:
         """
         opcoes = self.opcoes_de(de)
         if opcoes is None:
-            self._maos.pop(de, None)
+            self._soltar_a_mao(de)
             return None
         mao = self._maos.get(de)
         if mao is None:
             mao = self._maos[de] = _Mao()
+        mao.opcoes = opcoes
         if gatilhos is None:
             gatilhos = mao.gatilhos
         else:
@@ -220,11 +244,9 @@ class GestosDosAcessorios:
         ps = PS_BUTTON in botoes or ps_virtual
 
         if mao.camada and mao.camada_ate is not None and t >= mao.camada_ate:
-            mao.camada = False
-            mao.camada_ate = None
+            self._fechar_a_camada(mao, de)
         if not opcoes.camada and mao.camada:
-            mao.camada = False
-            mao.camada_ate = None
+            self._fechar_a_camada(mao, de)
 
         borda_do_ps = ps and not mao.ps_apertado
         mao.ps_apertado = ps

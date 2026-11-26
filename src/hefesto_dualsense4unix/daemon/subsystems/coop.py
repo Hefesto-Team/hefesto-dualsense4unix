@@ -2371,7 +2371,6 @@ class CoopManager:
                     if o_pad_da_peca_muda_repousa(player.vpad, player.motion_reader):
                         continue
                     snap = player.reader.snapshot()
-                    andar_os_acionadores(self._daemon)
                     botoes = snap.buttons_pressed
                     do_edge = self._botoes_do_edge(player)
                     if do_edge:
@@ -3329,7 +3328,6 @@ from hefesto_dualsense4unix.daemon.subsystems.big_picture import (  # noqa: E402
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ApertosVistos,
-    andar_os_acionadores,
     aplicar_o_movimento,
     aplicar_o_toque,
     ativar_o_botao,

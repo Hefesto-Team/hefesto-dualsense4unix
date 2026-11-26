@@ -33,7 +33,7 @@ def registrar_o_store_do_processo(store: Any) -> None:
 
 
 def store_do_processo() -> Any:
-    """O store registrado pelo daemon; sem ele, um store próprio do processo."""
+    """O store registrado pelo daemon; sem registro, um store próprio do processo."""
     global _store_do_processo
     with _trava_do_processo:
         if _store_do_processo is None:
@@ -79,7 +79,7 @@ class PassosDoLaco:
 
     @contextlib.contextmanager
     def isolado(self, nome: str) -> Iterator[None]:
-        """O bloco que levanta conta como falha de ``nome``, e o laço segue depois dele."""
+        """O bloco que levanta conta como falha de ``nome``, e o laço segue depois do bloco."""
         try:
             yield
         except Exception as exc:
@@ -109,7 +109,7 @@ class PassosDoLaco:
 
 
 def passos_do_daemon(daemon: Any, laco: str) -> PassosDoLaco:
-    """O :class:`PassosDoLaco` do laço ``laco`` deste daemon, sobre o store dele: um por laço."""
+    """O :class:`PassosDoLaco` do laço ``laco`` deste daemon, sobre o store do daemon."""
     with _trava_do_processo:
         por_laco = getattr(daemon, _ATRIBUTO_NO_DAEMON, None)
         if not isinstance(por_laco, dict):

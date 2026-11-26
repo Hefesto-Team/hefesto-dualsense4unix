@@ -48,6 +48,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     LAUNCH_RECONCILE_INTERVAL_SEC,
     OrigemEmulacao,
     ancorar_o_p1_no_aparelho,
+    andar_os_acionadores,
     depois_do_p1,
     fechar_o_p1_que_nasceu,
     primary_identity,
@@ -4380,6 +4381,7 @@ class Daemon:
         while not self._is_stopping():
             tick_started = loop.time()
             medidor.abrir(tick_started, aperto.levar_o_previsto())
+            andar_os_acionadores(self)
             grace_passed = tick_started >= self._input_ready_at
             if grace_passed:
                 with passos.isolado("coop_repasse"):

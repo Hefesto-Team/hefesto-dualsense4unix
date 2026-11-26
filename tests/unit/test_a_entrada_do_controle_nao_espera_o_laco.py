@@ -1,7 +1,7 @@
 """A entrada do controle não espera o laço: o aperto vai do leitor ao pad pelo fio da entrada.
 
 Com o laço asyncio parado 3 s (ou o fio do tique preso 3 s), o aperto de cada jogador, do P1 ao
-P4, chega ao pad dele em menos de 20 ms, pelo ``UinputGamepad`` de produção sobre um nó de
+P4, chega ao pad do jogador em menos de 20 ms, pelo ``UinputGamepad`` de produção sobre um nó de
 mentira. O que solta durante a parada sai solto, cinco toques chegam como cinco, e o pad com
 dois escritores (o fio da entrada e o tique) nunca rasga um report.
 """
@@ -98,7 +98,7 @@ def _sem_a_maquina(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 def _mesa() -> tuple[Any, dict[int, EvdevReader], dict[int, _NoDeMentira]]:
-    """P1 na mesa com o pad dele, e P2 a P4 no co-op, cada um com leitor e pad próprios."""
+    """P1 na mesa com o próprio pad, e P2 a P4 no co-op, cada um com leitor e pad próprios."""
     leitores = {n: _leitor(n) for n in (1, 2, 3, 4)}
     pads: dict[int, Any] = {}
     nos: dict[int, _NoDeMentira] = {}

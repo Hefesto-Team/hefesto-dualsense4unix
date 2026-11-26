@@ -2721,7 +2721,6 @@ def dispatch_gamepad(
         do_edge = _os_do_edge(state)
         if do_edge:
             buttons_pressed = buttons_pressed | do_edge
-        andar_os_acionadores(daemon)
         buttons_pressed = com_os_acionadores(daemon, primary_identity(daemon), buttons_pressed)
         com_o_ps = buttons_pressed
         buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
@@ -3226,12 +3225,12 @@ class PonteDosAcionadores:
         if not alvo or not self._abertos:
             return frozenset()
         botoes: set[str] = set()
-        for chave_do_aparelho, aberto in self._abertos.items():
+        for chave_do_aparelho, aberto in list(self._abertos.items()):
             declarado = self._declarados.get(chave_do_aparelho)
             if declarado is None or getattr(declarado, "controle", None) != alvo:
                 continue
             teclas = getattr(declarado, "teclas", None) or {}
-            for codigo in aberto.apertadas:
+            for codigo in tuple(aberto.apertadas):
                 botao = teclas.get(str(codigo))
                 if botao:
                     botoes.add(GATILHOS.get(botao, botao))
@@ -3334,7 +3333,11 @@ def ponte_dos_acionadores(daemon: Any) -> PonteDosAcionadores | None:
 
 
 def andar_os_acionadores(daemon: Any) -> None:
-    """Um tique da ponte, pela declaração viva do daemon (o ``machine.declare`` a troca)."""
+    """Um tique da ponte, pela declaração viva do daemon (o ``machine.declare`` a troca).
+
+    Roda uma vez por volta do laço do serviço, antes do pad e do co-op, com ou sem pad e com o
+    leitor do controle mudo: o prender e o soltar pelo foco do jogo não dependem da entrada.
+    """
     ponte = ponte_dos_acionadores(daemon)
     if ponte is None:
         return
