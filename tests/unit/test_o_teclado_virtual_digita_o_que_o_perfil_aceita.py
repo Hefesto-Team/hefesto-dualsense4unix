@@ -6,6 +6,8 @@ aceitava qualquer `KEY_*` do `evdev.ecodes` e o nó nunca a digitava. Agora o n�
 teclas de teclado e de mídia do `evdev.ecodes` (código 1 a 255), as duas validações perguntam a
 mesma lista, e a tecla fora das capacidades do nó é recusada com aviso em vez de emitida ao vazio.
 
+Decisão: D-2511-O-NO-DO-TECLADO-TEM-TODA-TECLA-DO-KERNEL (o nó e o perfil falam a mesma lista).
+
 O leitor é o `uinput` de mentira que grava as capacidades que o nó declara e cada evento que ele
 emite, e a enumeração do `evdev.ecodes` aqui é feita pelo mapa de código para nome (`ecodes.KEY`),
 não pela função que a cura usa.
