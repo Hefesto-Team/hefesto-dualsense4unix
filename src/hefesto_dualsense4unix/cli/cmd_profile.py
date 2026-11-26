@@ -47,7 +47,7 @@ def _o_arquivo_do_pedido(pedido: object) -> str | None:
     try:
         alvo = arquivo_do_perfil(pedido)
     except (ValueError, OSError):
-        return None
+        alvo = None
     return alvo.name if alvo is not None else None
 
 

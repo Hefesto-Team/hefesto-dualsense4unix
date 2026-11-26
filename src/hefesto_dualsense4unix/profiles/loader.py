@@ -2229,12 +2229,9 @@ def perfis_ilegiveis() -> list[PerfilIlegivel]:
             with _trava_da_leitura(path):
                 cru = json.loads(path.read_text(encoding="utf-8"))
             perfil_do_cru(cru)
-        except PerfilDeVersaoMaisNovaError:
-            continue
-        except _PROFILE_DECODE_ERRORS as exc:
-            achados.append(PerfilIlegivel(path.name, frase_do_perfil_ilegivel(exc)))
-        except OSError as exc:
-            achados.append(PerfilIlegivel(path.name, f"não deu para ler o arquivo: {exc}"))
+        except (ValueError, OSError) as exc:
+            if not isinstance(exc, PerfilDeVersaoMaisNovaError):
+                achados.append(PerfilIlegivel(path.name, frase_do_perfil_ilegivel(exc)))
     return achados
 
 
