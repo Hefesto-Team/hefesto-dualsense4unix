@@ -1021,7 +1021,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (`larg_rotulos` em "
-        "`src/hefesto_dualsense4unix/interface/monta.py:287`), "
+        "`src/hefesto_dualsense4unix/interface/monta.py:294`), "
         "chamado só pelos "
         "dez `interface/abaNN.py` — que são INSTRUMENTO e saem da conta pela poda de "
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "

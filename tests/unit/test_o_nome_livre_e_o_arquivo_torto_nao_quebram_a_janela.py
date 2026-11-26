@@ -81,6 +81,32 @@ def test_o_apostrofo_do_modelo_fica_como_esta() -> None:
     assert "Marvel's Spider-Man 2" in monta.rotulo(_controle("Marvel's Spider-Man 2"), "curta")
 
 
+def test_a_peca_com_endereco_leva_o_nome_escrito_dentro_do_endereco() -> None:
+    """Na forma «peca», `campos` embrulha o nome e a via já escapados no endereço de cada um."""
+    monta = _monta()
+    c = {**_controle(HOSTIL), "campos": {"nome": "peca", "via": "via"}}
+    saida = monta.rotulo(c, "peca")
+    assert f'<span data-campo="peca">{html.escape(HOSTIL, quote=False)}</span>' in saida, saida
+    assert '<span data-campo="via">USB</span>' in saida, saida
+    assert "&lt;span" not in saida and "<img" not in saida, saida
+
+
+def test_o_miolo_gerado_das_abas_01_e_02_nao_mostra_a_marcacao_escrita() -> None:
+    """O gerador das abas 01 e 02 endereça o nome de cada controle do desenho sem escapar o
+    endereço: o miolo traz o nome dentro de `data-campo="peca"` e nenhum `&lt;span` escrito."""
+    import sys
+
+    interface = str(pathlib.Path(_monta().__file__).resolve().parent)
+    if interface not in sys.path:
+        sys.path.insert(0, interface)
+    from hefesto_dualsense4unix.interface import aba01
+
+    monta = _monta()
+    assert "&lt;span" not in aba01.MIOLO
+    for c in monta.CONECTADOS:
+        assert f'<span data-campo="peca">{c["nome"]}</span>' in aba01.MIOLO, c["nome"]
+
+
 def test_as_paginas_geradas_nao_mudam() -> None:
     """Os nomes e as vias do desenho não têm o que escapar: as páginas geradas saem iguais."""
     monta = _monta()

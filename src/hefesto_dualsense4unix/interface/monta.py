@@ -176,8 +176,8 @@ def partes_do_modelo(c: dict[str, Any]) -> list[str]:
 def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só.
 
-    Todo texto sai escapado (o nome é livre: quem usa o escreve); marcação é só o separador e o
-    `quem` da forma «peca», que o gerador monta.
+    Todo texto sai escapado (o nome é livre: quem usa o escreve); marcação é só o separador e, na
+    forma «peca», o `quem` que o gerador monta e o endereço que `campos` pede para o nome e a via.
     """
     def texto(*partes: Any) -> list[str]:
         return [html.escape(str(p), quote=False) for p in partes if p]
@@ -187,7 +187,14 @@ def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     if forma == "curta":
         return SEPARADOR.join(texto(f'P{c["jogador"]}', c["nome"], c["via"]))
     if forma == "peca":
-        corpo = SEPARADOR.join(html.escape(str(p), quote=False) for p in (c["nome"], c["via"]))
+        campos = c.get("campos") or {}
+
+        def parte(chave: str) -> str:
+            escrito = html.escape(str(c[chave]), quote=False)
+            campo = campos.get(chave)
+            return f'<span data-campo="{campo}">{escrito}</span>' if campo else escrito
+
+        corpo = SEPARADOR.join(parte(chave) for chave in ("nome", "via"))
         quem = c.get("quem")
         return f'<span class="so-aberto">{quem}{SEPARADOR}</span>{corpo}' if quem else corpo
     return SEPARADOR.join(html.escape(str(p), quote=False) for p in (

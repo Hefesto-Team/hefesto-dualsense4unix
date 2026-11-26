@@ -499,8 +499,8 @@ def identidade(c, *, bat, carga=None, meio="", com_mascara=True):
     n_com_endereco = numero_do_jogador(c["jogador"])
     com_endereco = {
         **c,
-        "nome": f'<span data-campo="peca">{c["nome"]}</span>',
-        "via": f'<span data-campo="via">{via_na_tela}</span>',
+        "via": via_na_tela,
+        "campos": {"nome": "peca", "via": "via"},
         "quem": f'<span data-campo="quem-joga" data-hef-alvo="html">P{n_com_endereco}</span>',
     }
     return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}<span class="so-vaga">Player {n_com_endereco} <span class="pt">•</span> {SEM_NINGUEM_AQUI}</span></span>
