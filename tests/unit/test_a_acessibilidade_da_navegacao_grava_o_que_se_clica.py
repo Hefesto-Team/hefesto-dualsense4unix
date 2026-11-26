@@ -345,6 +345,28 @@ def test_em_todo_perfil_aceso_vale_em_todo_perfil_e_apagado_so_na_peca_do_para(
     assert "profile.reaplicar" in [metodo for metodo, _ in m.ponte.chamadas[-3:]]
 
 
+def test_em_todo_perfil_o_botao_que_muda_de_modo_sai_do_outro_no_computador(
+    tmp_path: pathlib.Path,
+) -> None:
+    """D-2611-EM-TODO-PERFIL-GRAVA-NO-PADRAO-DO-COMPUTADOR:
+    o perfil ativo que esconde o «Botão que trava» do computador não deixa o L1 em dois modos lá.
+    """
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileAtivacaoConfig
+
+    save_profile(Profile(name="Outro", match=MatchAny(type="any")))
+    m = _Mesa(tmp_path)
+    m.liga("ativacao.travar", "l1")
+    m.clica("ac-guarda")
+    propria = ProfileAtivacaoConfig(travar=[])
+    save_profile(_do_disco().model_copy(update={"ativacao": propria}))  # (noqa-acento)
+    assert m.pintura()["ac-ativacao-travar-l1"] == ""
+    m.liga("ativacao.alternar", "l1")
+    m.clica("ac-guarda")
+    outro = _vale("Outro").ativacao
+    assert outro.alternar == ["l1"] and outro.travar == [], "o L1 ficou em dois modos no computador"
+
+
 def test_o_giroscopio_vai_ao_mira_set_do_controle_do_para(tmp_path: pathlib.Path) -> None:
     """D-2611-A-ACESSIBILIDADE-DA-NAVEGACAO-GRAVA-NO-GUARDAR:
     o giro e o gatilho chegam ao `mira.set` da peça.
