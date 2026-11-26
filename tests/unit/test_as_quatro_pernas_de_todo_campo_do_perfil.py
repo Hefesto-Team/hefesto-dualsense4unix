@@ -387,6 +387,17 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
         )
         for p in PERNAS
     },
+    "escolhas_de_fabrica": {
+        p: NaoSeAplica(
+            "não chega ao controle: é a marca, por seção densa, dos campos que o perfil do jogo "
+            "escolheu com o valor de fábrica (D-2611-O-JOGO-MARCA-O-QUE-ESCOLHEU-IGUAL-A-FABRICA), "
+            "lida só pela composição do padrão do computador "
+            "(`profiles/o_padrao_do_computador.py::escolhas_globais_do_jogo`); o que volta no "
+            "replug e resiste ao jogo são as seções que a marca qualifica, cada uma com as "
+            "próprias pernas."
+        )
+        for p in PERNAS
+    },
     "name": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "version": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
     "priority": {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS},
