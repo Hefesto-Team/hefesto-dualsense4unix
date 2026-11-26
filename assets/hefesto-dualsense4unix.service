@@ -39,6 +39,13 @@ WatchdogSec=30
 ExecStart=%h/.local/bin/hefesto-dualsense4unix daemon start --foreground
 Restart=on-failure
 RestartSec=2
+# OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01: o depósito de descritores guarda o nó de cada
+# controle virtual (uhid e uinput, até quatro de cada), e o serviço que volta os recebe pelo
+# `LISTEN_FDS` (`utils/sd_notify.py`): o jogo segue com os mesmos controles. `restart` (systemd
+# 254 ou mais) guarda o depósito na queda e no reinício, e o solta no `stop`, quando os nós saem
+# do kernel junto com o serviço; com `yes` o controle ficaria no jogo depois de desligar o Hefesto.
+FileDescriptorStoreMax=16
+FileDescriptorStorePreserve=restart
 # BUG-MULTI-INSTANCE-01: SIGTERM (143) é desligamento limpo — o takeover da
 # próxima instância e o "Sair" do tray não devem disparar respawn.
 SuccessExitStatus=143 SIGTERM

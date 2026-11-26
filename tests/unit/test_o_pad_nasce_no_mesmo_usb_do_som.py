@@ -433,12 +433,18 @@ class TestOBrokerMontaOGadgetSoHid:
         os.close(fd)
         assert kernel.concedidos == [(str(Path(kernel.raizes.dev) / "hidg1"), 1000)]
 
-    def test_o_eof_da_conexao_desmonta_o_gadget(self, kernel: KernelDeMentira) -> None:
+    def test_o_eof_da_conexao_desmonta_o_gadget_vencida_a_graca(
+        self, kernel: KernelDeMentira, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01: o EOF põe o gadget na graça; vencida
+        a graça (aqui, zero), o gadget desce como antes."""
+        monkeypatch.setattr(broker, "GRACA_DO_PAD_USB_S", 0.0)
         estado = kernel.estado()
         resposta, fd = estado.handle_line(7, 1000, _pedido())
         assert fd is not None
         os.close(fd)
         estado.on_conn_closed(7)
+        estado.vencer_a_graca_dos_pads()
         assert os.listdir(kernel.raizes.configfs) == []
         assert kernel.lido(Path(kernel.raizes.plataforma) / "vhci_hcd.0/detach") == str(
             resposta["porta"]
@@ -586,10 +592,12 @@ class TestOClienteRecebeOPadPeloSocket:
     """Ponta a ponta: o cliente do daemon pede, o broker monta e cede, o EOF desmonta."""
 
     def test_o_cliente_reabre_o_no_cedido_e_o_eof_desmonta(
-        self, kernel: KernelDeMentira
+        self, kernel: KernelDeMentira, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import socket
         import threading
+
+        monkeypatch.setattr(broker, "GRACA_DO_PAD_USB_S", 0.0)
 
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
 

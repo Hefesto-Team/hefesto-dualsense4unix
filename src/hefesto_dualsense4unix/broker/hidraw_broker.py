@@ -1884,6 +1884,18 @@ class _ExpostoNode:
     pai: str | None = None
 
 
+@dataclass
+class _PadNaGraca:
+    """O gadget da conexão que caiu, à espera de o serviço voltar e pedir o mesmo serial."""
+
+    gadget: str
+    porta: Any
+    uid: int | None
+    roupa: tuple[Any, ...]
+    prazo: float
+
+
+GRACA_DO_PAD_USB_S = 15.0
 GRACA_DA_ENTREGA_S = 30.0
 GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
 PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
@@ -2048,6 +2060,8 @@ class BrokerState:
         self._pad_ops = pad_ops if pad_ops is not None else PadUsbOps()
         self.pads_by_conn: dict[int, dict[str, int]] = {}
         self._serial_do_gadget: dict[str, str] = {}
+        self._roupa_do_gadget: dict[str, tuple[Any, ...]] = {}
+        self._pads_na_graca: dict[str, _PadNaGraca] = {}
         self.entregue = False
         self.herdados: set[str] = set()
         self._binario = binario
@@ -2848,6 +2862,10 @@ class BrokerState:
                 or not isinstance(product, int) or isinstance(product, bool) \
                 or (vendor, product) not in PAD_USB_VESTIDOS:
             return ({"ok": False, "cmd": cmd, "error": "reject_bad_product"}, None)
+        roupa = (vendor, product, hashlib.sha256(descritor).hexdigest())
+        herdado = self._herdar_da_graca(conn_id, serial, roupa)
+        if herdado is not None:
+            return herdado
         if serial in self._serial_do_gadget.values():
             return ({"ok": False, "cmd": cmd, "error": "reject_serial_repetido"}, None)
         existentes = set(self._pad_ops.gadgets_nossos()) | set(self._serial_do_gadget)
@@ -2891,6 +2909,7 @@ class BrokerState:
                     None)
         self.pads_by_conn.setdefault(conn_id, {})[nome] = porta
         self._serial_do_gadget[nome] = serial
+        self._roupa_do_gadget[nome] = (*roupa, uid_do_pad)
         self._log("pad_usb_montado", gadget=nome, udc=udcs[0], porta=porta, conn=conn_id)
         return ({"ok": True, "cmd": cmd, "gadget": nome, "porta": porta, "udc": udcs[0]}, fd)
 
@@ -2901,6 +2920,7 @@ class BrokerState:
             return {"ok": False, "cmd": cmd, "error": "reject_not_held"}
         porta = pads.pop(gadget)
         self._serial_do_gadget.pop(gadget, None)
+        self._roupa_do_gadget.pop(gadget, None)
         try:
             self._pad_ops.desmontar(gadget, porta)
         except OSError as exc:
@@ -2912,13 +2932,77 @@ class BrokerState:
 
     def _desmontar_os_pads_da(self, conn_id: int) -> None:
         for gadget, porta in sorted(self.pads_by_conn.pop(conn_id, {}).items()):
-            self._serial_do_gadget.pop(gadget, None)
-            try:
-                self._pad_ops.desmontar(gadget, porta)
-            except OSError as exc:
-                self._log("pad_usb_desmontar_falhou", gadget=gadget, errno=exc.errno)
+            self._desmontar_agora(gadget, porta, conn_id)
+
+    def _desmontar_agora(self, gadget: str, porta: Any, conn_id: int | None) -> None:
+        self._serial_do_gadget.pop(gadget, None)
+        self._roupa_do_gadget.pop(gadget, None)
+        try:
+            self._pad_ops.desmontar(gadget, porta)
+        except OSError as exc:
+            self._log("pad_usb_desmontar_falhou", gadget=gadget, errno=exc.errno)
+            return
+        self._log("pad_usb_desmontado_no_eof", gadget=gadget, conn=conn_id)
+
+    def _pads_da_conexao_entram_na_graca(self, conn_id: int) -> None:
+        """O EOF não desmonta na hora: o gadget espera ``GRACA_DO_PAD_USB_S`` o serviço que
+        volta (a queda, o reinício) pedir o mesmo serial com a mesma roupa e o mesmo uid.
+
+        O jogo segue com o mesmo aparelho USB. Vencida a graça, desce como antes
+        (:meth:`vencer_a_graca_dos_pads`). OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01.
+        """
+        prazo = self._relogio_da_sessao() + GRACA_DO_PAD_USB_S
+        for gadget, porta in sorted(self.pads_by_conn.pop(conn_id, {}).items()):
+            serial = self._serial_do_gadget.get(gadget)
+            roupa = self._roupa_do_gadget.get(gadget)
+            if serial is None or roupa is None:
+                self._desmontar_agora(gadget, porta, conn_id)
                 continue
-            self._log("pad_usb_desmontado_no_eof", gadget=gadget, conn=conn_id)
+            self._pads_na_graca[serial] = _PadNaGraca(
+                gadget=gadget, porta=porta, uid=roupa[-1], roupa=roupa[:-1], prazo=prazo
+            )
+            self._log("pad_usb_na_graca", gadget=gadget, conn=conn_id,
+                      segundos=GRACA_DO_PAD_USB_S)
+
+    def _herdar_da_graca(
+        self, conn_id: int, serial: str, roupa: tuple[Any, ...]
+    ) -> tuple[dict[str, object], int | None] | None:
+        """O pedido do mesmo serial dentro da graça herda o gadget de pé; outra roupa ou outro
+        uid o desce antes de montar de novo. None = montar como sempre."""
+        na_graca = self._pads_na_graca.pop(serial, None)
+        if na_graca is None:
+            return None
+        uid = self.uid_autorizado()
+        if na_graca.roupa != roupa or uid is None or uid != na_graca.uid:
+            self._desmontar_agora(na_graca.gadget, na_graca.porta, None)
+            return None
+        try:
+            fd = self._pad_ops.ceder_hidg(na_graca.gadget, uid)
+        except OSError as exc:
+            self._log("pad_usb_heranca_falhou", gadget=na_graca.gadget, errno=exc.errno)
+            self._desmontar_agora(na_graca.gadget, na_graca.porta, None)
+            return None
+        self.pads_by_conn.setdefault(conn_id, {})[na_graca.gadget] = na_graca.porta
+        self._log("pad_usb_herdado_na_graca", gadget=na_graca.gadget, conn=conn_id)
+        return (
+            {"ok": True, "cmd": "pad_usb_montar", "gadget": na_graca.gadget,
+             "porta": na_graca.porta, "herdado": True},
+            fd,
+        )
+
+    def vencer_a_graca_dos_pads(self, *, todos: bool = False) -> list[str]:
+        """Desce o gadget cuja graça venceu (``todos``: o broker que para desce todos)."""
+        agora = self._relogio_da_sessao()
+        vencidos = [
+            serial for serial, pad in self._pads_na_graca.items()
+            if todos or agora >= pad.prazo
+        ]
+        descidos: list[str] = []
+        for serial in vencidos:
+            pad = self._pads_na_graca.pop(serial)
+            self._desmontar_agora(pad.gadget, pad.porta, None)
+            descidos.append(pad.gadget)
+        return descidos
 
     def _cmd_open_acionador(
         self, conn_id: int, node: object, chave: object
@@ -3037,7 +3121,7 @@ class BrokerState:
         """
         self._pediram.discard(conn_id)
         self._podar_o_que_saiu()
-        self._desmontar_os_pads_da(conn_id)
+        self._pads_da_conexao_entram_na_graca(conn_id)
         restored: list[str] = self._soltar_os_externos_da(conn_id)
         failed: list[str] = []
         entradas_da_conn = self.entradas_by_conn.pop(conn_id, set())
@@ -3320,6 +3404,7 @@ class BrokerState:
         self.entradas_by_conn.clear()
         for conn_id in sorted(self.pads_by_conn):
             self._desmontar_os_pads_da(conn_id)
+        self.vencer_a_graca_dos_pads(todos=True)
         with contextlib.suppress(OSError):
             self._pad_ops.desmontar_todos()
         return restored
@@ -3606,6 +3691,7 @@ class Broker:
                 self.register_client(client)
             else:
                 self._service(sock, conn_id)
+        self._state.vencer_a_graca_dos_pads()
 
     def _pausar_a_escuta(self, sock: socket.socket, exc: OSError) -> None:
         """Sem descritor para aceitar, a escuta sai do seletor (legível, faria o laço girar)."""

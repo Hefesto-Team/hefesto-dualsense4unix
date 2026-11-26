@@ -45,6 +45,7 @@ import functools
 import importlib
 import math
 import os
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -53,6 +54,7 @@ from typing import Any, NamedTuple, Protocol
 
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import classe_do_rumble
+from hefesto_dualsense4unix.utils import sd_notify
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -123,6 +125,54 @@ FLAVORS: dict[str, dict[str, Any]] = {
 DEFAULT_FLAVOR = "xbox"
 
 DEVICE_NAME = XBOX360_NAME
+
+
+def _uinput_herdado(fd: int, nome: str) -> Any | None:
+    """O `UInput` do python-evdev em volta de um fd que já tem o device criado (o herdado do
+    depósito do systemd): escreve, lê o FF e fecha como o criado aqui."""
+    try:
+        import ctypes
+
+        from evdev import UInput
+
+        uinput_c = importlib.import_module("evdev._uinput")
+    except (ImportError, OSError):
+        return None
+    try:
+        device: Any = UInput.__new__(UInput)
+        device.fd = fd
+        device.name = nome
+        device.device = None
+        device.dll = ctypes.CDLL(uinput_c.__file__)
+    except (OSError, AttributeError, TypeError) as exc:
+        logger.warning("uinput_herdado_ilegivel", err=str(exc))
+        return None
+    return device
+
+
+def _fechar_o_no(device: Any, no_deposito: str | None) -> None:
+    """O `close` do nó, que o destrói no kernel; o guardado no depósito sai dele antes.
+
+    Com o serviço parando, o nó guardado só fecha o fd daqui, sem `UI_DEV_DESTROY`: o
+    depósito o segura até o systemd decidir (o `stop` o fecha, o reinício o devolve).
+    """
+    if no_deposito and sd_notify.esta_parando() and sd_notify.no_deposito(no_deposito):
+        dentro = getattr(device, "device", None)
+        if dentro is not None:
+            with contextlib.suppress(Exception):
+                dentro.close()
+        fd = getattr(device, "fd", -1)
+        if isinstance(fd, int) and fd >= 0:
+            with contextlib.suppress(OSError):
+                os.close(fd)
+            with contextlib.suppress(AttributeError, TypeError):
+                device.fd = -1
+        logger.info("uinput_no_fica_no_deposito", nome=no_deposito)
+        return
+    if no_deposito:
+        sd_notify.soltar_descritor(no_deposito)
+    with contextlib.suppress(Exception):
+        device.close()
 
 
 def _sysname_do_uinput(device: Any) -> str | None:
@@ -492,6 +542,7 @@ class UinputGamepad:
     time_fn: Callable[[], float] = time.monotonic
     fallback_motivo: str | None = None
     aparelho: str | None = None
+    identidade: str | None = None
 
     _device: Any = None
     _ecodes: Any = None
@@ -586,15 +637,20 @@ class UinputGamepad:
         from hefesto_dualsense4unix.integrations.uhid_gamepad import esperar_os_nos_que_saem
 
         esperar_os_nos_que_saem()
-        device = self._create_device(with_ff=True)
-        if device is not None:
-            self._ff_supported = True
+        herdado = self._adotar_o_herdado()
+        if herdado is not None:
+            device, self._ff_supported = herdado
         else:
-            device = self._create_device(with_ff=False)
-            if device is None:
-                return False
-            self._ff_supported = False
-            logger.warning("uinput_ff_indisponivel_vpad_sem_rumble", name=self.name)
+            device = self._create_device(with_ff=True)
+            if device is not None:
+                self._ff_supported = True
+            else:
+                device = self._create_device(with_ff=False)
+                if device is None:
+                    return False
+                self._ff_supported = False
+                logger.warning("uinput_ff_indisponivel_vpad_sem_rumble", name=self.name)
+            self._guardar_no_deposito(device)
         self._device = device
         self._ecodes = ecodes
         self._sysname = _sysname_do_uinput(device)
@@ -605,6 +661,44 @@ class UinputGamepad:
                     vendor=hex(self.vendor), product=hex(self.product),
                     ff=self._ff_supported)
         return True
+
+    def _nome_no_deposito(self, com_ff: bool) -> str | None:
+        """O ``FDNAME`` do nó deste pad: a roupa, o FF e o aparelho; None sem a identidade."""
+        so_hex = re.sub(r"[^0-9a-f]", "", (self.identidade or "").lower())
+        if len(so_hex) != 12:
+            return None
+        return sd_notify.nome_no_deposito(
+            "hefesto-uinput", self.mascara_no_jogo, f"{self.vendor:04x}{self.product:04x}",
+            "ff1" if com_ff else "ff0", so_hex,
+        )
+
+    def _adotar_o_herdado(self) -> tuple[Any, bool] | None:
+        """O nó que o serviço anterior guardou no depósito vira o deste pad, sem
+        `UI_DEV_CREATE`: o jogo segue com o mesmo `event`. Devolve ``(device, com_ff)``.
+        OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01."""
+        for com_ff in (True, False):
+            nome = self._nome_no_deposito(com_ff)
+            fd = sd_notify.tomar_herdado(nome)
+            if fd is None or nome is None:
+                continue
+            device = _uinput_herdado(fd, self.name)
+            if device is None:
+                sd_notify.soltar_descritor(nome)
+                with contextlib.suppress(OSError):
+                    os.close(fd)
+                continue
+            self.__dict__["_no_deposito"] = nome
+            logger.info("uinput_device_herdado", name=self.name, no_jogo=self.mascara_no_jogo,
+                        ff=com_ff)
+            return device, com_ff
+        return None
+
+    def _guardar_no_deposito(self, device: Any) -> None:
+        """Guarda o nó recém-criado no depósito do systemd (sem identidade, não guarda)."""
+        fd = getattr(device, "fd", None)
+        nome = self._nome_no_deposito(self._ff_supported)
+        if isinstance(fd, int) and fd >= 0 and nome and sd_notify.guardar_descritor(fd, nome):
+            self.__dict__["_no_deposito"] = nome
 
     def _iniciar_o_fio_da_vibracao(self) -> None:
         """Sobe o fio que responde a vibração na hora (só com fd de verdade)."""
@@ -688,9 +782,12 @@ class UinputGamepad:
             self._ff_pare.set()
         device = self.__dict__.pop("_device", None)
         self._device = None
-        return lambda: self._terminar_a_parada(fio, device)
+        no_deposito: str | None = self.__dict__.pop("_no_deposito", None)
+        return lambda: self._terminar_a_parada(fio, device, no_deposito)
 
-    def _terminar_a_parada(self, fio: threading.Thread | None, device: Any) -> None:
+    def _terminar_a_parada(
+        self, fio: threading.Thread | None, device: Any, no_deposito: str | None = None
+    ) -> None:
         """O resto do :meth:`parar_sem_esperar`, no fio de quem o recebeu."""
         if fio is not None:
             fio.join(timeout=2 * _FF_FIO_ACORDA_S + 0.5)
@@ -701,8 +798,7 @@ class UinputGamepad:
         if self._ff_last_sent != (0, 0) and self.rumble_sink is not None:
             with contextlib.suppress(Exception):
                 self.rumble_sink(0, 0)
-        with contextlib.suppress(Exception):
-            device.close()
+        _fechar_o_no(device, no_deposito)
         if self._device is not None:
             return
         self._ecodes = None

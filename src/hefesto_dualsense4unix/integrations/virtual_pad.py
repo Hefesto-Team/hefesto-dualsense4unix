@@ -468,6 +468,7 @@ def make_virtual_pad(
         )
     if motivo is not None:
         pad.fallback_motivo = motivo
+    pad.identidade = identity
     if not pad.start():
         return None
     _o_pad_nasceu(pad, resolvido, identity)

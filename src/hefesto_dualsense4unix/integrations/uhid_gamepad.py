@@ -69,6 +69,7 @@ from hefesto_dualsense4unix.core import system_check
 from hefesto_dualsense4unix.core.numeros_da_sony import BOTOES2_DA_ROUPA, roupa_normalizada
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import o_cabo_em_espera, pad_usb, usb_pai
+from hefesto_dualsense4unix.utils import sd_notify
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
@@ -918,6 +919,8 @@ class UhidDualSense:
         except (KeyError, TypeError, ValueError) as exc:
             logger.warning("uhid_blueprint_invalido", err=str(exc), player=self.player)
             return False
+        if self._adotar_o_herdado(features):
+            return True
         retomado = _retomar_o_estacionado(self)
         if _esperar_o_kernel_soltar_o_endereco(self, esperar_o_kernel_s, retomado):
             features = self._features_com_mac_proprio()
@@ -939,12 +942,46 @@ class UhidDualSense:
             os.close(fd)
             return False
         os.set_blocking(fd, False)
+        nome = _nome_do_uhid_no_deposito(self)
         with self._lock:
             self._features = features
             self._fd = fd
+            if sd_notify.guardar_descritor(fd, nome):
+                self.__dict__["_no_deposito"] = nome
         self._iniciar_o_fio_do_uhid(fd)
         logger.info("uhid_device_created", name=self.name, mac=self.mac,
                     player=self.player)
+        return True
+
+    def _adotar_o_herdado(self, features: dict[int, bytes]) -> bool:
+        """O nó que o serviço anterior guardou no depósito do systemd vira o deste pad.
+
+        Sem `UHID_CREATE2`: o kernel segue com o mesmo device, o mesmo `hidraw` e o mesmo
+        `event`, e o jogo não vê o controle sair. O `UHID_START` e o `UHID_OPEN` já saíram para
+        o serviço anterior (o `hid_playstation` abre o aparelho na probe), e não voltam.
+        OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01.
+        """
+        nome = _nome_do_uhid_no_deposito(self)
+        fd = sd_notify.tomar_herdado(nome)
+        if fd is None:
+            return False
+        try:
+            os.set_blocking(fd, False)
+        except OSError as exc:
+            logger.warning("uhid_herdado_ilegivel", err=str(exc), player=self.player)
+            sd_notify.soltar_descritor(nome)
+            with contextlib.suppress(OSError):
+                os.close(fd)
+            return False
+        with self._lock:
+            self._features = features
+            self._fd = fd
+            self.__dict__["_no_deposito"] = nome
+        self._started = True
+        self._bound_at = self.time_fn()
+        self._game_open = True
+        self._iniciar_o_fio_do_uhid(fd)
+        logger.info("uhid_device_herdado", name=self.name, mac=self.mac, player=self.player)
         return True
 
     def _features_com_mac_proprio(self) -> dict[int, bytes]:
@@ -987,6 +1024,7 @@ class UhidDualSense:
             if fd is None:
                 return
             self._fd = None
+            no_deposito: str | None = self.__dict__.pop("_no_deposito", None)
             self._rumble_pico_a_entregar = None
             self._rumble_toque_restante = 0
             self._entregar_o_pendente()
@@ -994,9 +1032,9 @@ class UhidDualSense:
             self._end_game_session()
             if not _soltar_o_gadget(self):
                 if adiar is None:
-                    _desfazer_o_fd(fd)
+                    _desfazer_o_fd(fd, no_deposito)
                 else:
-                    adiar(lambda: _desfazer_o_fd(fd))
+                    adiar(lambda: _desfazer_o_fd(fd, no_deposito))
             self._features = {}
             self._last_sent = (0, 0)
             self._output_count = 0
@@ -3795,8 +3833,27 @@ def _report_neutro(pad: UhidDualSense) -> bytes:
     return bytes([_INPUT_REPORT_USB]) + bytes(body)
 
 
-def _desfazer_o_fd(fd: int) -> None:
-    """O `UHID_DESTROY` e o `close` do fd do uhid: o que o kernel leva para tirar o nó."""
+def _nome_do_uhid_no_deposito(pad: UhidDualSense) -> str:
+    """O ``FDNAME`` do nó uhid do pad: a roupa e o MAC que ele veste (o kernel guarda os dois)."""
+    return sd_notify.nome_no_deposito(
+        "hefesto-uhid", f"{pad.product:04x}", re.sub(r"[^0-9a-f]", "", pad.mac.lower())
+    )
+
+
+def _desfazer_o_fd(fd: int, no_deposito: str | None = None) -> None:
+    """O `UHID_DESTROY` e o `close` do fd do uhid: o que o kernel leva para tirar o nó.
+
+    O nó guardado no depósito do systemd (``no_deposito``) sai do depósito antes. Com o serviço
+    parando, só o `close`: o depósito segura o nó, e o systemd o fecha no `stop` ou o devolve
+    no reinício (OS-PADS-VIRTUAIS-SOBREVIVEM-A-QUEDA-DO-SERVICO-01).
+    """
+    if no_deposito and sd_notify.esta_parando() and sd_notify.no_deposito(no_deposito):
+        with contextlib.suppress(OSError):
+            os.close(fd)
+        logger.info("uhid_no_fica_no_deposito", nome=no_deposito)
+        return
+    if no_deposito:
+        sd_notify.soltar_descritor(no_deposito)
     with contextlib.suppress(OSError):
         os.write(fd, struct.pack("<I", UHID_DESTROY))
     with contextlib.suppress(OSError):
@@ -3875,6 +3932,12 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
     pad._gadget_prazo = None
     pad._gadget_falhou = False
     pad._gadget_caiu = False
+    if not falhou and sd_notify.esta_parando():
+        gadget._soltar_na_casa()
+        with contextlib.suppress(Exception):
+            gadget.cliente.close()
+        logger.info("pad_usb_fica_na_graca_do_broker", gadget=gadget.gadget, player=pad.player)
+        return True
     if not falhou and gadget.hidraw is not None and pad.identity and JOGO_ABERTO():
         with contextlib.suppress(OSError):
             os.write(gadget.fd, _report_neutro(pad))

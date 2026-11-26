@@ -223,7 +223,7 @@ fuzz 16 e flat 128; gatilhos `0..255` (`0..1023` no Xbox One); direcional
 `xpad.c:1743`). Um aparelho, um nó, sete eixos.
 
 **A consequência para este projeto, e é a consequência que custa:** a máscara Xbox 360
-(`045e:028e`, `integrations/uinput_gamepad.py:61-63`) **não tem onde pôr**
+(`045e:028e`, `integrations/uinput_gamepad.py:63-65`) **não tem onde pôr**
 giroscópio, touchpad, lightbar RGB, gatilhos adaptativos ou bateria. Não é bug
 nosso nem falta de trabalho: é o formato do aparelho que estamos imitando.
 Quem escolhe a máscara Xbox escolhe **rumble por evdev que funciona em tudo** e
@@ -330,7 +330,7 @@ Três funções, todas em `libsdl-org/SDL` branch `main`:
 
   ATENÇÃO: **no macOS o critério é `045e:028e` com `version == 0`** — que é
   exatamente o par da máscara Xbox 360 deste projeto
-  (`integrations/uinput_gamepad.py:61-62`). No Linux isso **não** acontece, e
+  (`integrations/uinput_gamepad.py:63-64`). No Linux isso **não** acontece, e
   esta página só se responsabiliza pelo Linux; mas quem um dia portar o projeto
   precisa saber que a colisão existe. **GRAU: ALTA.**
 
@@ -605,7 +605,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:103`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:104`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -630,7 +630,7 @@ entrada, e a entrada é de Bluetooth**:
 
 enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 `050000004c050000e60c...` para BT). O vpad nasce `BUS_USB`
-(`integrations/uhid_gamepad.py:98`), então **não casa com entrada nenhuma do
+(`integrations/uhid_gamepad.py:99`), então **não casa com entrada nenhuma do
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
@@ -1385,7 +1385,7 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:494-523` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:495-524` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 
