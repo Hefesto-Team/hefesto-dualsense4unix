@@ -276,6 +276,26 @@ def _o_jogo_escolheu_o_efeito_do_gatilho(perfil: Profile) -> bool:
                for g in gatilhos for lado in ("left", "right") if lado in g.model_fields_set)
 
 
+_CAMPOS_DA_COR = ("lightbar", "lightbar_para_o_numero")
+_O_QUE_A_COR_DO_JOGO_CALA = ("modo", "efeito")
+
+
+def _o_jogo_escolheu_a_cor(perfil: Profile) -> bool:
+    """O jogo escreveu a cor da barra (no perfil ou num controle): sem ``modo``, é Personalizado.
+
+    É a regra do modo da luz (``decidir_o_modo_da_luz``) lida no perfil do jogo: a cor escrita já
+    escolhe o modo, e o modo e o efeito do computador não a calam. O Freestyle não sobrepõe nada.
+    """
+    if e_o_freestyle(perfil.name):
+        return False
+    if set(escolhas_globais_do_jogo(perfil, "leds")) & set(_CAMPOS_DA_COR):
+        return True
+    return any(
+        getattr(c.leds, campo, None) is not None
+        for c in (perfil.controllers or {}).values() if c.leds is not None
+        for campo in _CAMPOS_DA_COR if campo in c.leds.model_fields_set)
+
+
 def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
     """O perfil com o computador por baixo, na precedência do cabeçalho."""
     if computador_vazio(computador):
@@ -294,6 +314,8 @@ def perfil_que_vale(perfil: Profile, computador: Any) -> Profile:
         escolhas = set(escolhas_globais_do_jogo(perfil, secao))
         if secao == "triggers" and _o_jogo_escolheu_o_efeito_do_gatilho(perfil):
             escolhas.add("modo")
+        if secao == "leds" and _o_jogo_escolheu_a_cor(perfil):
+            escolhas.update(_O_QUE_A_COR_DO_JOGO_CALA)
         atual = dict(cru.get(secao) or {})
         for campo, valor in do_computador.items():
             if campo not in escolhas:
@@ -361,6 +383,8 @@ def _controles_que_valem(
     }
     globais["triggers"] = set(escolhas_globais_do_jogo(perfil, "triggers")) - {
         "intensidade", "modo"}
+    if _o_jogo_escolheu_a_cor(perfil):
+        globais["leds"] |= set(_O_QUE_A_COR_DO_JOGO_CALA)
     for identidade, do_computador in computador.controles.items():
         dados = do_computador.model_dump(mode="json", exclude_unset=True)
         original = originais.get(identidade, identidade)
