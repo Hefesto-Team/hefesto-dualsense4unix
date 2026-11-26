@@ -1713,10 +1713,51 @@ if (( ${#_btmic_faltando[@]} )); then
 fi
 unset _btmic_faltando
 
+_ESTADO_DO_INSTALL="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
+_PIP_REGISTRO="${_ESTADO_DO_INSTALL}/install-pip.log"
+
+_pip_do_install() {
+    mkdir -p "${_ESTADO_DO_INSTALL}" 2>/dev/null || true
+    "${VENV_DIR}/bin/pip" install "$@" > "${_PIP_REGISTRO}" 2>&1
+}
+
+_pip_a_causa() {
+    local registro="$1"
+    if grep -qiE 'ResolutionImpossible|conflicting dependencies|incompatible with' "${registro}" 2>/dev/null; then
+        printf 'conflito\n'
+    elif grep -qiE 'fatal error:|Failed building wheel|Failed to build|\bgcc\b|g\+\+|cc1|Python\.h|cannot find -l|error: command' "${registro}" 2>/dev/null; then
+        printf 'compilacao\n'
+    elif grep -qiE 'require a different python|Requires-Python' "${registro}" 2>/dev/null; then
+        printf 'outra\n'
+    elif grep -qiE 'Failed to establish a new connection|Temporary failure in name resolution|Name or service not known|Network is unreachable|Connection (refused|reset|timed out|aborted)|ConnectTimeout|ReadTimeout|Max retries exceeded|SSLError|No matching distribution|Could not find a version that satisfies' "${registro}" 2>/dev/null; then
+        printf 'rede\n'
+    else
+        printf 'outra\n'
+    fi
+}
+
+_pip_a_frase() {
+    case "$(_pip_a_causa "$1")" in
+        rede)       printf 'pip install do pacote falhou por falta de rede ou do índice de pacotes do Python — verifique a conexão e reexecute' ;;
+        compilacao) printf 'pip install do pacote falhou ao compilar uma biblioteca — faltam o compilador ou os cabeçalhos do Python (build-essential e python3-dev, ou o equivalente da distribuição)' ;;
+        conflito)   printf 'pip install do pacote falhou por versões em conflito entre as dependências' ;;
+        *)          printf 'pip install do pacote falhou' ;;
+    esac
+}
+
+_pip_morre_com_a_causa() {
+    printf '\n      últimas linhas do pip:\n'
+    tail -n 12 "${_PIP_REGISTRO}" 2>/dev/null | sed 's/^/        /'
+    die "$(_pip_a_frase "${_PIP_REGISTRO}"); o registro inteiro está em ${_PIP_REGISTRO}"
+}
+
 printf '      instalando pacote Python...\n'
 if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
-"${VENV_DIR}/bin/python" -m pip install \
-    --quiet --disable-pip-version-check --upgrade pip packaging 2>/dev/null
+    mkdir -p "${_ESTADO_DO_INSTALL}" 2>/dev/null || true
+    if ! "${VENV_DIR}/bin/python" -m pip install --quiet --disable-pip-version-check \
+            --upgrade pip packaging > "${_ESTADO_DO_INSTALL}/install-pip-atualizacao.log" 2>&1; then
+        warn "não consegui atualizar o pip e o packaging da venv; sigo com os da venv (registro em ${_ESTADO_DO_INSTALL}/install-pip-atualizacao.log)"
+    fi
 fi
 
 _extras="emulation,cosmic"
@@ -1728,15 +1769,13 @@ _provadas="${XDG_CACHE_HOME:-${HOME}/.cache}/hefesto-dualsense4unix/atualizador/
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "atualizar pip e packaging dentro de ${VENV_DIR}"
     _faria "instalar o pacote em modo editável no venv: pip install ${_travas[*]} -e '${ROOT_DIR}[${_extras}]'"
-elif ! "${VENV_DIR}/bin/pip" install \
-        --quiet --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[${_extras}]" 2>/dev/null; then
+elif ! _pip_do_install --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[${_extras}]"; then
     if [[ "${WITH_DEV}" -eq 1 ]]; then
         warn "pip install com [dev] falhou — tentando só o essencial (ruff/mypy/pytest ficam de fora)"
-        "${VENV_DIR}/bin/pip" install \
-            --quiet --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[emulation,cosmic]" 2>/dev/null \
-            || die "pip install do pacote falhou — verifique a conexão e reexecute"
+        _pip_do_install --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[emulation,cosmic]" \
+            || _pip_morre_com_a_causa
     else
-        die "pip install do pacote falhou — verifique a conexão e reexecute"
+        _pip_morre_com_a_causa
     fi
 fi
 ok
