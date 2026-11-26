@@ -259,14 +259,14 @@
       "data": "2026-11-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1330117,
+      "piso": 1330115,
       "por_item": {
-        "docs": 108051,
+        "docs": 108049,
         "scripts": 122940,
         "src": 328935,
         "tests": 770191
       },
-      "razao": "tamanho: +40 linhas (1330077 -> 1330117), pagas por Origem: D-2511-CADA-EXTENSAO-CONFERE-A-PROPRIA-VERSAO-NO-CI, D-2511-O-AVISO-DE-LICENCA-VIAJA-COM-A-PECA, D-2511-O-BLUETOOTH-DA-EXTENSAO-FALA-SO-COM-O-BLUEZ, D-2511-O-PAINEL-DA-ENTRADA-DIZ-O-LUGAR-E-MOVE-SEM-ARRASTO; registrado no fecho, topo c06775cd770c",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
