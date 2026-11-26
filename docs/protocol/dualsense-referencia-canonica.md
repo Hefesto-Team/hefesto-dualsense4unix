@@ -1742,7 +1742,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:319` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:46` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:947-982` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1362` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:298` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1348`, offset `_STATUS1_OFFSET = 53` em `:273` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1348`, offset `_STATUS1_OFFSET = 53` em `:294 (`_STATUS1_OFFSET`)` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
