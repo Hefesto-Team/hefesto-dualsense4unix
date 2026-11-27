@@ -207,6 +207,7 @@ def _montar_prefixo(destino: Path, sem: tuple[str, ...] = ()) -> dict[str, str]:
 
 PERGUNTA = """
 import json, os, sys
+sys.prefix = os.path.join(os.environ["LIB"], "sem-prefixo")
 sys.path.insert(0, os.environ["LIB"])
 from hefesto_dualsense4unix.integrations import (
     canal_sem_imu, curas_da_casa, receitas_de_ambiente as r)
