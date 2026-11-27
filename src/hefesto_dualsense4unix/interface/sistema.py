@@ -54,7 +54,7 @@ ENDERECOS: dict[str, str] = {
     "tamanho-da-interface": "`a09_sistema.tamanho_da_interface` — a escolha guardada em "
     "`interface_escala` (100, 125 ou 150)",
     "bandeja": "`atos_da_bandeja.bandeja_ligada` — o `X-GNOME-Autostart-enabled` do autostart "
-    "da bandeja, que a sessão lê ao entrar",
+    "da bandeja, que a sessão lê ao entrar", "janela-ao-entrar": "`janela_ao_entrar.ligada`",
 }
 
 GESTOS: dict[str, str] = {
@@ -86,7 +86,7 @@ GESTOS: dict[str, str] = {
     "`interface_escala`; quem aplica o zoom nas abas é a janela.",
     "bandeja": "`a09_sistema.bandeja` — `atos_da_bandeja.escolher_a_bandeja`: grava a escolha "
     "no autostart e sobe a bandeja (`garantir_a_bandeja`) ou encerra todas as da sessão "
-    "(`fechar_as_bandejas`).",
+    "(`fechar_as_bandejas`).", "janela-ao-entrar": "`a09_sistema.janela_ao_entrar`",
 }
 
 SEM_FONTE: dict[str, str] = {

@@ -16,7 +16,8 @@ from hefesto_dualsense4unix.interface import aba09
 from hefesto_dualsense4unix.interface import atualizacoes as tela
 
 RAIZ = Path(__file__).resolve().parents[2]
-GESTOS_DA_SECAO = {"atualizacoes-abrir", "atualizar-sozinho", "prazo-da-atualizacao", "bandeja"}
+GESTOS_DA_SECAO = {"atualizacoes-abrir", "atualizar-sozinho", "prazo-da-atualizacao", "bandeja",
+                   "janela-ao-entrar"}
 GRADE_DE_ANTES = ('<div class="at-grade"><div class="col-lista"><div class="saude">'
                   '<input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" '
                   'data-v="proton"><span class="selo nova">NOVA</span><span class="txt">'

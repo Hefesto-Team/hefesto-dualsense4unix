@@ -125,6 +125,7 @@ ESCREVEM = {
     "curar_todos",
     "gravar_camadas_da_steam_fora",
     "escolher_a_bandeja",
+    "escolher_a_janela_ao_entrar",
     "tirar",
     "criar_para_o_jogo",
     "_ligar_ou_desligar_a_modificacao",

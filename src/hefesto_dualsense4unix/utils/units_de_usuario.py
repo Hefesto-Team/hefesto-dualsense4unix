@@ -24,9 +24,11 @@ from pathlib import Path
 
 NOME_DO_PRODUTO = "hefesto-dualsense4unix"
 
+UNIT_DA_JANELA_AO_ENTRAR = f"{NOME_DO_PRODUTO}-gui-hotplug.service"
+
 UNITS_DE_PACOTE: tuple[str, ...] = (
     f"{NOME_DO_PRODUTO}.service",
-    f"{NOME_DO_PRODUTO}-gui-hotplug.service",
+    UNIT_DA_JANELA_AO_ENTRAR,
     f"{NOME_DO_PRODUTO}-presenca.service",
 )
 

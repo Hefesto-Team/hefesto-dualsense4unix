@@ -15,7 +15,11 @@ de pé. Com o padrão dele, a janela do início da sessão morria junto com a un
 
 ## Ligar e desligar
 
-O instalador pergunta, com a resposta padrão «não». Para decidir sem a pergunta:
+Pela janela: na aba Sistema, a chave «Abrir a janela ao entrar» liga e desliga a
+unidade. A chave nasce desligada; desligada, o início da sessão sobe só o serviço e o
+ícone na bandeja.
+
+O instalador também pergunta, com a resposta padrão «não». Para decidir sem a pergunta:
 
 ```bash
 ./install.sh --enable-hotplug-gui    # instala e liga

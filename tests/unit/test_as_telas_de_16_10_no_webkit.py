@@ -66,9 +66,12 @@ MEDIR_09 = r"""
   const cor = (el) => { const c = getComputedStyle(el); return [c.borderTopColor, c.color]; };
   const parar = document.querySelector('[data-gesto="parar-ou-retomar"]');
   const rest = document.querySelector('[data-gesto="restaurar-de-fabrica"]');
-  const pil = document.querySelector('.quadro-topo > .cadeado');
+  const pil = document.querySelector('.quadro-topo > .cadeado[data-gesto="bandeja"]');
+  const viz = pil.previousElementSibling;
   const topo = pil.parentElement.getBoundingClientRect();
   const r = pil.getBoundingClientRect();
+  const rv = viz.getBoundingClientRect();
+  const rgv = document.createRange(); rgv.selectNodeContents(viz.lastChild);
   const rg = document.createRange(); rg.selectNodeContents(pil.lastChild);
   const visto = {
     rola: [m.scrollHeight - m.clientHeight, document.scrollingElement.scrollHeight - innerHeight],
@@ -78,6 +81,11 @@ MEDIR_09 = r"""
              corta: pil.scrollWidth - pil.clientWidth,
              linhas: new Set([...rg.getClientRects()].map(x => Math.round(x.top))).size,
              texto: pil.textContent.trim(), fonte: getComputedStyle(pil).fontSize},
+    vizinha: {gesto: viz.dataset.gesto, h: Math.round(rv.height), texto: viz.textContent.trim(),
+              vao: Math.round(r.left - rv.right), desnivel: Math.round(rv.top - r.top),
+              corta: viz.scrollWidth - viz.clientWidth, fonte: getComputedStyle(viz).fontSize,
+              linhas: new Set([...rgv.getClientRects()].map(x => Math.round(x.top))).size,
+              vaza: pil.parentElement.scrollWidth - pil.parentElement.clientWidth},
   };
   parar.classList.add('verde'); visto.retomar = cor(parar); parar.classList.remove('verde');
   document.querySelector('[data-campo="status-lista"]').innerHTML = NOTAS[0];
@@ -281,6 +289,12 @@ def test_a_sistema_tem_a_bandeja_e_as_cores(tamanho: tuple[int, int]) -> None:
     assert pil["h"] == 34 and 166 <= pil["w"] <= 240 and pil["direita"] <= 20, pil
     assert pil["fonte"] == "13.5px", f"a pílula não tem a letra do «Modo Freestyle»: {pil}"
     assert pil["corta"] <= 0 and pil["linhas"] == 1, f"a pílula da bandeja corta o nome: {pil}"
+    viz = lido["vizinha"]
+    assert viz["gesto"] == "janela-ao-entrar" and viz["texto"] == "Abrir a janela ao entrar", viz
+    assert viz["h"] == 34 and viz["fonte"] == "13.5px" and viz["desnivel"] == 0, viz
+    assert viz["vao"] == 16, f"as duas pílulas do canto saíram do vão do desenho escolhido: {viz}"
+    assert viz["corta"] <= 0 and viz["linhas"] == 1, f"a pílula da janela corta o nome: {viz}"
+    assert viz["vaza"] <= 0, f"o cabeçalho da Sistema não cabe com as duas pílulas: {viz}"
     assert lido["notas"] == [3, 3, 2], lido["notas"]
     assert len(set(lido["topos"])) == 1, lido["topos"]
     assert lido["rola_com_oito"] <= 0, "as oito notas empurraram a Sistema para a rolagem"

@@ -89,7 +89,7 @@ _DO_PACOTE = _constantes(
     R / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py",
     {"APELIDO_NA_TELA", "CAMPO_DO_MODO_AVULSO", "CAMPO_DO_STATUS", "CAMPO_DO_VERDE",
      "CAMPO_DAS_CORRECOES", "TAMANHOS_DA_INTERFACE", "CAMPO_DO_TAMANHO",
-     "CAMPO_DA_BANDEJA"})
+     "CAMPO_DA_BANDEJA", "CAMPO_DA_JANELA_AO_ENTRAR"})
 APELIDO_NA_TELA = _DO_PACOTE["APELIDO_NA_TELA"]
 CAMPO_DO_MODO_AVULSO = _DO_PACOTE["CAMPO_DO_MODO_AVULSO"]
 CAMPO_DO_STATUS = _DO_PACOTE["CAMPO_DO_STATUS"]
@@ -260,6 +260,13 @@ LIGAVEIS = (
 BANDEJA = ("Ícone na bandeja", CAMPO_DA_BANDEJA, CAMPO_DA_BANDEJA, True,
            "Mostra o Hefesto na barra do sistema e o traz de volta ao entrar")
 
+CAMPO_DA_JANELA_AO_ENTRAR = _DO_PACOTE["CAMPO_DA_JANELA_AO_ENTRAR"]
+JANELA_AO_ENTRAR = ("Abrir a janela ao entrar", CAMPO_DA_JANELA_AO_ENTRAR,
+                    CAMPO_DA_JANELA_AO_ENTRAR, False,
+                    "Abre a janela do Hefesto quando a sessão começa")
+
+DO_CANTO = (JANELA_AO_ENTRAR, BANDEJA)
+
 
 def ligavel(rotulo, gesto, campo, ligado, dica):
     """A pílula que liga e desliga — a do «Modo Freestyle», com o endereço do produto."""
@@ -381,7 +388,8 @@ EM_VOO_ATUALIZAR = "Relendo…"
 DICA_ATUALIZAR = "Os atalhos e os arquivos da Steam"
 
 CSS_DAS_ATUALIZACOES = """  .quadro-topo > .at-cab{display:flex;align-items:center;gap:12px;margin-left:auto;flex:0 0 auto}
-  .quadro-topo > .at-cab ~ .cadeado{margin-left:18px}
+  .quadro-topo > .at-cab ~ .cadeado{margin-left:18px}\
+ .quadro-topo > .at-cab ~ .cadeado + .cadeado{margin-left:8px}
   .at-cab .btn.at-mapa{height:32px;padding:0 10px 0 12px;gap:8px;font-size:13px;font-weight:600;
     color:var(--fg);border-color:var(--border-forte);width:auto}
   .at-cab .btn.at-mapa:hover{border-color:var(--purple)}
@@ -466,7 +474,7 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="{DICA_DO_TITULO}">Sistema</span>
 {_cabecalho_das_atualizacoes()}
-{ligavel(*BANDEJA)}
+{ligavel(*JANELA_AO_ENTRAR)}{ligavel(*BANDEJA)}
       </div>
       <div class="quadro-corpo">
 
@@ -624,10 +632,10 @@ if _SEM_GLIFO:
 
 _PILULAS_LIGAVEIS = re.findall(
     r'<button class="cadeado( ligada)?"(?![^>]*data-gesto="atualizar-sozinho")[^>]*>', MIOLO)
-if len(_PILULAS_LIGAVEIS) != len(LIGAVEIS) + 1:
+if len(_PILULAS_LIGAVEIS) != len(LIGAVEIS) + len(DO_CANTO):
     raise SystemExit(f"ERRO: a página tem {len(_PILULAS_LIGAVEIS)} ligáveis e o desenho "
-                     f"declara {len(LIGAVEIS)} na coluna e a da bandeja no canto.")
-for _rot, _g, _c, _lig, _d in LIGAVEIS:
+                     f"declara {len(LIGAVEIS)} na coluna e {len(DO_CANTO)} no canto.")
+for _rot, _g, _c, _lig, _d in (*LIGAVEIS, *DO_CANTO):
     _tag = re.search(r'<button class="cadeado[^"]*"[^>]*data-gesto="' + re.escape(_g)
                      + r'"[^>]*>', MIOLO)
     if not _tag:

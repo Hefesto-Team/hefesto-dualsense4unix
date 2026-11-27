@@ -1170,7 +1170,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 CAMPO_DO_VERDE: "",
                 "exame-lista": nada,
                 CAMPO_DAS_CORRECOES: _vigia.interruptor_ligado(),
-                CAMPO_DA_BANDEJA: _bandeja.bandeja_ligada(),
+                CAMPO_DA_BANDEJA: _bandeja.bandeja_ligada(), **_da_janela_ao_entrar(),
                 CAMPO_DO_TAMANHO: str(tamanho_da_interface()),
                 **razoes_do_cinza(ctx),
                 **campos_das_atualizacoes(),
@@ -1183,7 +1183,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora[CAMPO_DO_STATUS] = _html_do_status(do_status)
     fora["hefesto-autostart"] = bruto.get("autostart")
     fora[CAMPO_DAS_CORRECOES] = _vigia.interruptor_ligado()
-    fora[CAMPO_DA_BANDEJA] = _bandeja.bandeja_ligada()
+    fora.update({CAMPO_DA_BANDEJA: _bandeja.bandeja_ligada(), **_da_janela_ao_entrar()})
     fora[CAMPO_DO_TAMANHO] = str(tamanho_da_interface())
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
@@ -2892,9 +2892,32 @@ PROVAS = [
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
 ]
 
+CAMPO_DA_JANELA_AO_ENTRAR = "janela-ao-entrar"
+
+
+def _da_janela_ao_entrar() -> dict[str, bool]:
+    """O campo da pílula «Abrir a janela ao entrar», lido do link que o systemd de usuário segue."""
+    from hefesto_dualsense4unix.app.actions import janela_ao_entrar as _janela
+
+    return {CAMPO_DA_JANELA_AO_ENTRAR: _janela.ligada()}
+
+
+@gesto("09-sistema.html", CAMPO_DA_JANELA_AO_ENTRAR, grava="escolher_a_janela_ao_entrar",
+       um_por_vez=True)
+def janela_ao_entrar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A pílula «Abrir a janela ao entrar»: inverte a escolha lida do systemd de usuário.
+
+    Ligada, a janela abre uma vez quando a sessão começa; desligada, a sessão sobe só o serviço e o
+    ícone. Mexe no início de sessão de quem usa, e por isso a prova botão a botão não a clica.
+    """
+    from hefesto_dualsense4unix.app.actions import janela_ao_entrar as _janela
+
+    _janela.escolher_a_janela_ao_entrar(not _janela.ligada())
+
+
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar",
            "copiar-registro", CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro",
-           CAMPO_DA_BANDEJA)
+           CAMPO_DA_BANDEJA, CAMPO_DA_JANELA_AO_ENTRAR)
 
 
 def _a_primeira_da_faixa_lenta(state: dict[str, Any] | None,
