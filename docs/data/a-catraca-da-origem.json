@@ -259,14 +259,14 @@
       "data": "2026-11-27",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1346874,
+      "piso": 1346954,
       "por_item": {
         "docs": 108163,
         "scripts": 123018,
         "src": 333786,
-        "tests": 781907
+        "tests": 781987
       },
-      "razao": "tamanho: +373 linhas (1346501 -> 1346874), pagas por Origem: D-2611-A-JANELA-AO-ENTRAR-E-CHAVE-NA-ABA-SISTEMA; registrado no fecho, topo 497b58270d7f",
+      "razao": "tamanho: +80 linhas (1346874 -> 1346954), pagas por Origem: D-2611-A-JANELA-AO-ENTRAR-E-CHAVE-NA-ABA-SISTEMA; registrado no fecho, topo ce71a1644471",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2769,10 +2769,16 @@
           "de": 1346501,
           "para": 1346874,
           "razao": "tamanho: +373 linhas (1346501 -> 1346874), pagas por Origem: D-2611-A-JANELA-AO-ENTRAR-E-CHAVE-NA-ABA-SISTEMA; registrado no fecho, topo 497b58270d7f"
+        },
+        {
+          "data": "2026-11-27",
+          "de": 1346874,
+          "para": 1346954,
+          "razao": "tamanho: +80 linhas (1346874 -> 1346954), pagas por Origem: D-2611-A-JANELA-AO-ENTRAR-E-CHAVE-NA-ABA-SISTEMA; registrado no fecho, topo ce71a1644471"
         }
       ],
       "unidade": "linhas",
-      "universo": 3771
+      "universo": 3772
     }
   }
 }
