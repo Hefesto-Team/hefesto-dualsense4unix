@@ -252,7 +252,9 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     resto do tempo do cenário anda na mesma razão. `tempo_real=True` é a cadência do produto.
     `atraso_da_pintura_s` segura a volta de cada pintura esse tanto de relógio de parede: o WebKit
     de uma máquina cheia, sem carregar a máquina. Quando o roteiro acaba, o tique para e a corrida
-    espera a volta das pinturas no ar (até `_teto_da_espera_s`): a que não voltou foi perdida."""
+    espera a volta das pinturas no ar (até `_teto_da_espera_s`): a que não voltou foi perdida.
+    A semeadura de perfis fica desligada na corrida, chame quem chamar: a fixture de módulo roda
+    antes do isolamento por teste, e a janela não cria perfil dos jogos da máquina de quem roda."""
     cadencia_ms = None if tempo_real else CADENCIA_ACELERADA_MS
     gtk = _gtk()
     from gi.repository import GLib
@@ -264,6 +266,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     from hefesto_dualsense4unix.interface import onde
     from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
     from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+    from hefesto_dualsense4unix.profiles.loader import SEED_SKIP_ENV_VAR
 
     estado = _Estado(n, anda)
     fora = SimpleNamespace(ticks=[], pinturas=[], marcos={}, estado=estado,
@@ -284,6 +287,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         return (1, "")
 
     with pytest.MonkeyPatch.context() as mp:
+        mp.setenv(SEED_SKIP_ENV_VAR, "1")
         mp.setattr(hv.mesa_viva, "estado_do_daemon", estado)
         mp.setattr(hv, "ponte", fora.ponte)
         mp.setattr(onde, "PUBLICADO", publicado)
